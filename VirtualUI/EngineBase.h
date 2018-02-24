@@ -69,7 +69,11 @@ namespace Engine
 		int Length(void) const;
 
 		bool friend operator == (const ImmutableString & a, const ImmutableString & b);
+		bool friend operator == (const widechar * a, const ImmutableString & b);
+		bool friend operator == (const ImmutableString & a, const widechar * b);
 		bool friend operator != (const ImmutableString & a, const ImmutableString & b);
+		bool friend operator != (const widechar * a, const ImmutableString & b);
+		bool friend operator != (const ImmutableString & a, const widechar * b);
 
 		static int Compare(const ImmutableString & a, const ImmutableString & b);
 		static int CompareIgnoreCase(const ImmutableString & a, const ImmutableString & b);
@@ -79,6 +83,8 @@ namespace Engine
 		ImmutableString ToString(void) const override;
 		
 		ImmutableString friend operator + (const ImmutableString & a, const ImmutableString & b);
+		ImmutableString friend operator + (const widechar * a, const ImmutableString & b);
+		ImmutableString friend operator + (const ImmutableString & a, const widechar * b);
 		ImmutableString & operator += (const ImmutableString & str);
 
 		int FindFirst(widechar letter) const;
