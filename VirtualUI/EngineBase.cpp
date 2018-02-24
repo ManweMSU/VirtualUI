@@ -197,8 +197,9 @@ namespace Engine
 	int ImmutableString::Compare(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a.text, b.text); }
 	int ImmutableString::CompareIgnoreCase(const ImmutableString & a, const ImmutableString & b) { return StringCompareCaseInsensitive(a.text, b.text); }
 	widechar ImmutableString::operator[](int index) const { return text[index]; }
+	widechar ImmutableString::CharAt(int index) const { return text[index]; }
 	ImmutableString ImmutableString::ToString(void) const { return *this; }
-	ImmutableString & ImmutableString::operator+=(const ImmutableString & str)
+	void ImmutableString::Concatenate(const ImmutableString & str)
 	{
 		int len = Length();
 		widechar * alloc = new (std::nothrow) widechar[len + str.Length() + 1];
@@ -207,8 +208,8 @@ namespace Engine
 		StringCopy(alloc + len, str.text);
 		delete[] text;
 		text = alloc;
-		return *this;
 	}
+	ImmutableString & ImmutableString::operator+=(const ImmutableString & str) { Concatenate(str); return *this; }
 	int ImmutableString::FindFirst(widechar letter) const { for (int i = 0; i < Length(); i++) if (text[i] == letter) return i; return -1; }
 	int ImmutableString::FindFirst(const ImmutableString & str) const
 	{
@@ -264,6 +265,37 @@ namespace Engine
 	ImmutableString ImmutableString::Replace(widechar Substring, widechar with) const { return GeneralizedReplace(&Substring, 1, &with, 1); }
 	ImmutableString ImmutableString::LowerCase(void) const { ImmutableString result = *this; StringLower(result.text, Length()); return result; }
 	ImmutableString ImmutableString::UpperCase(void) const { ImmutableString result = *this; StringUpper(result.text, Length()); return result; }
+	int ImmutableString::GetEncodedLength(Encoding encoding) const { return MeasureSequenceLength(text, Length(), SystemEncoding, encoding); }
+	void ImmutableString::Encode(void * buffer, Encoding encoding, bool include_terminator) const { ConvertEncoding(buffer, text, Length() + (include_terminator ? 1 : 0), SystemEncoding, encoding); }
+	Array<uint8>* ImmutableString::EncodeSequence(Encoding encoding, bool include_terminator) const
+	{
+		int char_length = GetEncodedLength(encoding) + (include_terminator ? 1 : 0);
+		int src_length = Length() + (include_terminator ? 1 : 0);
+		Array<uint8> * result = new Array<uint8>;
+		try {
+			result->SetLength(char_length);
+			ConvertEncoding(*result, text, src_length, SystemEncoding, encoding);
+		}
+		catch (...) { result->Release(); throw; }
+		return result;
+	}
+	Array<ImmutableString> ImmutableString::Split(widechar divider) const
+	{
+		Array<ImmutableString> result;
+		int pos = -1, len = Length();
+		while (pos < len) {
+			int div = GeneralizedFindFirst(pos + 1, &divider, 1);
+			pos++;
+			if (div == -1) {
+				result << Fragment(pos, len - pos);
+				pos = len;
+			} else {
+				result << Fragment(pos, div - pos);
+				pos = div;
+			}
+		}
+		return result;
+	}
 	bool operator==(const ImmutableString & a, const ImmutableString & b) { return ImmutableString::Compare(a, b) == 0; }
 	bool operator==(const widechar * a, const ImmutableString & b) { return StringCompare(a, b) == 0; }
 	bool operator==(const ImmutableString & a, const widechar * b) { return StringCompare(a, b) == 0; }

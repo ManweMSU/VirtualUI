@@ -207,4 +207,12 @@ namespace Engine
 			while (!Reader.EOF()) Writer.WriteChar(Reader.ReadChar());
 		}
 	}
+	int GetBytesPerChar(Encoding encoding)
+	{
+		if (encoding == Encoding::ANSI) return 1;
+		else if (encoding == Encoding::UTF8) return 1;
+		else if (encoding == Encoding::UTF16) return 2;
+		else if (encoding == Encoding::UTF32) return 4;
+		return 0;
+	}
 }

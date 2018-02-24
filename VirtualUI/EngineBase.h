@@ -8,6 +8,7 @@ namespace Engine
 {
 	class Object;
 	class ImmutableString;
+	template <class V> class Array;
 
 	class Object
 	{
@@ -54,14 +55,14 @@ namespace Engine
 		ImmutableString(uint64 src);
 		ImmutableString(uint value, const ImmutableString & digits);
 		ImmutableString(uint64 value, const ImmutableString & digits);
-		ImmutableString(const void * src);
 		ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding);
 		ImmutableString(float src, widechar separator);
 		ImmutableString(double src, widechar separator);
 		ImmutableString(bool src);
 		ImmutableString(widechar src);
-		ImmutableString(const Object * object);
-		~ImmutableString(void);
+		explicit ImmutableString(const Object * object);
+		explicit ImmutableString(const void * src);
+		~ImmutableString(void) override;
 
 		ImmutableString & operator = (const ImmutableString & src);
 		ImmutableString & operator = (const widechar * src);
@@ -79,8 +80,11 @@ namespace Engine
 		static int CompareIgnoreCase(const ImmutableString & a, const ImmutableString & b);
 
 		widechar operator [] (int index) const;
+		widechar CharAt(int index) const;
 
 		ImmutableString ToString(void) const override;
+
+		virtual void Concatenate(const ImmutableString & str);
 		
 		ImmutableString friend operator + (const ImmutableString & a, const ImmutableString & b);
 		ImmutableString friend operator + (const widechar * a, const ImmutableString & b);
@@ -100,7 +104,127 @@ namespace Engine
 
 		ImmutableString LowerCase(void) const;
 		ImmutableString UpperCase(void) const;
+
+		int GetEncodedLength(Encoding encoding) const;
+		void Encode(void * buffer, Encoding encoding, bool include_terminator) const;
+		Array<uint8> * EncodeSequence(Encoding encoding, bool include_terminator) const;
+		Array<ImmutableString> Split(widechar divider) const;
 	};
 
 	typedef ImmutableString string;
+
+	template <class V> void swap(V & a, V & b) { if (&a == &b) return; uint8 buffer[sizeof(V)]; MemoryCopy(buffer, &a, sizeof(V)); MemoryCopy(&a, &b, sizeof(V)); MemoryCopy(&b, buffer, sizeof(V)); }
+
+	template <class V> class Array : public Object
+	{
+		V * data;
+		int count;
+		int allocated;
+		int block;
+		int block_align(int element_count) { return ((int64(element_count) + block - 1) / block) * block; }
+		void require(int elements, bool nothrow = false)
+		{
+			int new_size = block_align(elements);
+			if (new_size != allocated) {
+				if (new_size > allocated) {
+					V * new_data = reinterpret_cast<V*>(realloc(data, sizeof(V) * new_size));
+					if (new_data) {
+						data = new_data;
+						allocated = new_size;
+					} else if (!nothrow) throw OutOfMemoryException();
+				} else {
+					V * new_data = reinterpret_cast<V*>(realloc(data, sizeof(V) * new_size));
+					if (new_data) {
+						data = new_data;
+						allocated = new_size;
+					}
+				}
+			}
+		}
+		void append(const V & v) { new (data + count) V(v); count++; }
+	public:
+		Array(void) : count(0), allocated(0), data(0), block(0x400) {}
+		Array(const Array & src) : count(src.count), allocated(0), data(0), block(src.block)
+		{
+			require(count); int i = 0;
+			try { for (i = 0; i < count; i++) new (data + i) V(src.data[i]); }
+			catch (...) {
+				for (int j = i - 1; j >= 0; j--) data[i].V::~V();
+				free(data); throw;
+			}
+		}
+		Array(Array && src) : count(src.count), allocated(src.allocated), data(src.data), block(src.block) { src.data = 0; src.allocated = 0; src.count = 0; }
+		explicit Array(int BlockSize) : count(0), allocated(0), data(0), block(BlockSize) {}
+		~Array(void) override { for (int i = 0; i < count; i++) data[i].V::~V(); free(data); }
+
+		Array & operator = (const Array & src)
+		{
+			if (this == &src) return *this;
+			Array Copy(src.block);
+			Copy.require(src.count);
+			for (int i = 0; i < src.count; i++) Copy.append(src.data[i]);
+			for (int i = 0; i < count; i++) data[i].V::~V();
+			free(data);
+			data = Copy.data; count = Copy.count; allocated = Copy.allocated; block = Copy.block;
+			Copy.data = 0; Copy.count = 0; Copy.allocated = 0;
+			return *this;
+		}
+
+		virtual void Append(const V & v) { require(count + 1); append(v); }
+		virtual void Append(const Array & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
+		virtual void Append(const V * v, int Count) { if (data == v) throw InvalidArgumentException(); require(count + Count); for (int i = 0; i < Count; i++) append(v[i]); }
+		virtual void SwapAt(int i, int j) { swap(data[i], data[j]); }
+		virtual void Insert(const V & v, int IndexAt)
+		{
+			require(count + 1);
+			for (int i = count - 1; i >= IndexAt; i--) swap(data[i], data[i + 1]);
+			try { new (data + IndexAt) V(v); count++; }
+			catch (...) { for (int i = IndexAt; i < count; i++) swap(data[i], data[i + 1]); throw; }
+		}
+		virtual V & ElementAt(int index) { return data[index]; }
+		virtual const V & ElementAt(int index) const { return data[index]; }
+		virtual V & FirstElement(void) { return data[0]; }
+		virtual const V & FirstElement(void) const { return data[0]; }
+		virtual V & LastElement(void) { return data[count - 1]; }
+		virtual const V & LastElement(void) const { return data[count - 1]; }
+		virtual void Remove(int index) { data[index].V::~V(); for (int i = index; i < count - 1; i++) swap(data[i], data[i + 1]); count--; require(count, true); }
+		virtual void RemoveFirst(void) { Remove(0); }
+		virtual void RemoveLast(void) { Remove(count - 1); }
+		virtual void Clear(void) { for (int i = 0; i < count; i++) data[i].V::~V(); free(data); data = 0; count = 0; allocated = 0; }
+		virtual void SetLength(int length)
+		{
+			if (length > count) {
+				require(length); int i;
+				try { for (i = count; i < length; i++) new (data + i) V(); }
+				catch (...) { for (int j = i - 1; j >= count; j--) data[i].V::~V(); throw; }
+				count = length;
+			} else if (length < count) {
+				if (length < 0) throw InvalidArgumentException();
+				for (int i = length; i < count; i++) data[i].V::~V(); count = length;
+				require(count, true);
+			}
+		}
+		int Length(void) const { return count; }
+		
+		string ToString(void) const override { return L"Array[" + string(count) + L"]"; }
+
+		operator V * (void) { return data; }
+		operator const V * (void) { return data; }
+		Array & operator << (const V & v) { Append(v); return *this; }
+		Array & operator << (const Array & src) { Append(src); return *this; }
+		V & operator [] (int index) { return data[index]; }
+		const V & operator [] (int index) const { return data[index]; }
+		bool friend operator == (const Array & a, const Array & b)
+		{
+			if (a.count != b.count) return false;
+			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return false;
+			return true;
+		}
+		bool friend operator != (const Array & a, const Array & b)
+		{
+			if (a.count != b.count) return true;
+			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return true;
+			return false;
+		}
+	};
 }

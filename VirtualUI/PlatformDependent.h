@@ -38,4 +38,5 @@ namespace Engine
 
 	int MeasureSequenceLength(const void * Source, int SourceLength, Encoding From, Encoding To);
 	void ConvertEncoding(void * Dest, const void * Source, int SourceLength, Encoding From, Encoding To);
+	int GetBytesPerChar(Encoding encoding);
 }
