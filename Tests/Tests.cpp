@@ -29,7 +29,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-	MessageBox(0, (L"abcabcabcab" + string(-1234)).Replace(L"bc", L"XYU"), L"", 0);
+	MessageBox(0, (L"abcabcabcab" + string(-1234)).Replace(L"bc", L"XYU").LowerCase(), L"", 0);
 
     // TODO: разместите код здесь.
 

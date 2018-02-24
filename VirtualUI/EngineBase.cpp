@@ -152,6 +152,14 @@ namespace Engine
 		delete[] conv;
 	}
 	ImmutableString::ImmutableString(const void * src) : ImmutableString(intptr(src), L"0123456789ABCDEF") {}
+	ImmutableString::ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding)
+	{
+		int len = MeasureSequenceLength(Sequence, Length, SequenceEncoding, SystemEncoding);
+		text = new (std::nothrow) widechar[len + 1];
+		if (!text) throw OutOfMemoryException();
+		ConvertEncoding(text, Sequence, Length, SequenceEncoding, SystemEncoding);
+		text[len] = 0;
+	}
 	ImmutableString::ImmutableString(float src, widechar separator)
 	{
 		throw Exception();
@@ -254,6 +262,8 @@ namespace Engine
 	ImmutableString ImmutableString::Replace(widechar Substring, const ImmutableString & with) const { return GeneralizedReplace(&Substring, 1, with, with.Length()); }
 	ImmutableString ImmutableString::Replace(const ImmutableString & Substring, widechar with) const { return GeneralizedReplace(Substring, Substring.Length(), &with, 1); }
 	ImmutableString ImmutableString::Replace(widechar Substring, widechar with) const { return GeneralizedReplace(&Substring, 1, &with, 1); }
+	ImmutableString ImmutableString::LowerCase(void) const { ImmutableString result = *this; StringLower(result.text, Length()); return result; }
+	ImmutableString ImmutableString::UpperCase(void) const { ImmutableString result = *this; StringUpper(result.text, Length()); return result; }
 	bool operator==(const ImmutableString & a, const ImmutableString & b) { return ImmutableString::Compare(a, b) == 0; }
 	bool operator!=(const ImmutableString & a, const ImmutableString & b) { return ImmutableString::Compare(a, b) != 0; }
 	ImmutableString operator+(const ImmutableString & a, const ImmutableString & b) { ImmutableString result = a; return result += b; }

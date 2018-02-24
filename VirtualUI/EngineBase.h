@@ -55,6 +55,7 @@ namespace Engine
 		ImmutableString(uint value, const ImmutableString & digits);
 		ImmutableString(uint64 value, const ImmutableString & digits);
 		ImmutableString(const void * src);
+		ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding);
 		ImmutableString(float src, widechar separator);
 		ImmutableString(double src, widechar separator);
 		ImmutableString(bool src);
@@ -90,6 +91,9 @@ namespace Engine
 		ImmutableString Replace(widechar Substring, const ImmutableString & with) const;
 		ImmutableString Replace(const ImmutableString & Substring, widechar with) const;
 		ImmutableString Replace(widechar Substring, widechar with) const;
+
+		ImmutableString LowerCase(void) const;
+		ImmutableString UpperCase(void) const;
 	};
 
 	typedef ImmutableString string;

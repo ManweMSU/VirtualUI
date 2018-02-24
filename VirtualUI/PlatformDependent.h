@@ -2,6 +2,7 @@
 
 namespace Engine
 {
+	enum class Encoding { ANSI = 0, UTF8 = 1, UTF16 = 2, UTF32 = 3 };
 	typedef unsigned int uint;
 	typedef signed long long int64;
 	typedef unsigned long long uint64;
@@ -9,7 +10,8 @@ namespace Engine
 	typedef unsigned short uint16;
 	typedef signed char int8;
 	typedef unsigned char uint8;
-#ifdef WIN32
+#ifdef WINDOWS
+	constexpr Encoding SystemEncoding = Encoding::UTF16;
 #ifdef _WIN64
 	typedef uint64 intptr;
 #else
@@ -30,4 +32,10 @@ namespace Engine
 	int StringCompareCaseInsensitive(const widechar * A, const widechar * B);
 	int StringLength(const widechar * str);
 	void StringAppend(widechar * str, widechar letter);
+
+	void StringLower(widechar * str, int length);
+	void StringUpper(widechar * str, int length);
+
+	int MeasureSequenceLength(const void * Source, int SourceLength, Encoding From, Encoding To);
+	void ConvertEncoding(void * Dest, const void * Source, int SourceLength, Encoding From, Encoding To);
 }
