@@ -152,12 +152,12 @@ namespace Engine
 		delete[] conv;
 	}
 	ImmutableString::ImmutableString(const void * src) : ImmutableString(intptr(src), L"0123456789ABCDEF") {}
-	ImmutableString::ImmutableString(float src)
+	ImmutableString::ImmutableString(float src, widechar separator)
 	{
 		throw Exception();
 #pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
 	}
-	ImmutableString::ImmutableString(double src)
+	ImmutableString::ImmutableString(double src, widechar separator)
 	{
 		throw Exception();
 #pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")

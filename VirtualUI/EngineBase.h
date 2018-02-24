@@ -55,8 +55,8 @@ namespace Engine
 		ImmutableString(uint value, const ImmutableString & digits);
 		ImmutableString(uint64 value, const ImmutableString & digits);
 		ImmutableString(const void * src);
-		ImmutableString(float src);
-		ImmutableString(double src);
+		ImmutableString(float src, widechar separator);
+		ImmutableString(double src, widechar separator);
 		ImmutableString(bool src);
 		ImmutableString(widechar src);
 		ImmutableString(const Object * object);
