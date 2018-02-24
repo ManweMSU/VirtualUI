@@ -1,8 +1,12 @@
 // Tests.cpp: определяет точку входа для приложения.
 //
 
+#include "..\\VirtualUI\\EngineBase.h"
+
 #include "stdafx.h"
 #include "Tests.h"
+
+using namespace Engine;
 
 #define MAX_LOADSTRING 100
 
@@ -24,6 +28,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+	MessageBox(0, (L"abcabcabcab" + string(-1234)).Replace(L"bc", L"XYU"), L"", 0);
 
     // TODO: разместите код здесь.
 
