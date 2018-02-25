@@ -22,11 +22,13 @@
     <ClInclude Include="ControlBase.h" />
     <ClInclude Include="EngineBase.h" />
     <ClInclude Include="PlatformDependent.h" />
+    <ClInclude Include="Reflection.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ControlBase.cpp" />
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="PlatformDependent.cpp" />
+    <ClCompile Include="Reflection.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1668D08D-3F3F-46C6-89B5-8308CA348929}</ProjectGuid>

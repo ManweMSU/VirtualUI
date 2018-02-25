@@ -441,7 +441,7 @@ if (new_size != allocated) {
 		}
 	};
 
-	template<class A> void SortArray(A & volume, bool ascending = true)
+	template <class A> void SortArray(A & volume, bool ascending = true)
 	{
 		int len = volume.Length();
 		for (int i = 0; i < len - 1; i++) {
@@ -458,4 +458,26 @@ if (new_size != allocated) {
 			}
 		}
 	}
+
+	template <class O> class SafePointer final : Object
+	{
+	private:
+		O * reference = 0;
+	public:
+		SafePointer(void) {}
+		explicit SafePointer(O * ref) : reference(ref) {}
+		SafePointer(const SafePointer & src) = delete;
+		SafePointer(SafePointer && src) : reference(src.reference) { src.reference = 0; }
+		~SafePointer(void) { if (reference) reference->Release(); reference = 0; }
+		SafePointer & operator = (const SafePointer & src) = delete;
+
+		O & operator * (void) const { return *reference; }
+		O * operator -> (void) const { return *reference; }
+		operator O * (void) const { return reference; }
+		O * Inner(void) const { return reference; }
+		O ** InnerRef(void) const { return &reference; }
+
+		bool friend operator == (const SafePointer & a, const SafePointer & b) { return a.reference == b.reference; }
+		bool friend operator != (const SafePointer & a, const SafePointer & b) { return a.reference != b.reference; }
+	};
 }

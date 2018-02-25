@@ -1,12 +1,13 @@
 // Tests.cpp: определяет точку входа для приложения.
 //
 
-#include "..\\VirtualUI\\EngineBase.h"
+#include "..\\VirtualUI\\Reflection.h"
 
 #include "stdafx.h"
 #include "Tests.h"
 
 using namespace Engine;
+using namespace Reflection;
 
 #define MAX_LOADSTRING 100
 
@@ -20,6 +21,12 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+class test : public Reflection::ReflectableObject
+{
+public:
+	DECLARE_PROPERTY(int, value);
+};
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -38,6 +45,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	safe.Append(new string(L"4epHblu Hurrep"));
 	safe.Append(new string(L"kornevgen pidor"));
 	safe.Append(new string(L"hui"));
+
+	test t;
+	auto p = t.GetProperty(L"value");
+	int v = 666;
+	p->Set(&v);
+	MessageBox(0, string(t.value), 0, 0);
+
+	SafePointer<string> r(new string(L"pidor"));
+	MessageBox(0, *r, L"", 0);
+	SafePointer<string> r2(new string(L"pidor"));
+	MessageBox(0, string(r == r2), L"", 0);
+
 	for (int i = 0; i < safe.Length(); i++) safe[i].Release();
 	SortArray(safe);
 	MessageBox(0, safe.ToString(), L"", 0);
