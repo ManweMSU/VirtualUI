@@ -33,9 +33,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SortArray(spl, true);
 	for (int i = 0; i < spl.Length(); i++) MessageBox(0, spl[i], L"", 0);
 
-	SafeArray<string> safe;
-	safe.Append(L"blablabla");
-	MessageBox(0, safe[0], L"", 0);
+	ObjectArray<string> safe;
+	safe << new string(L"blablabla");
+	safe.Append(new string(L"4epHblu Hurrep"));
+	safe.Append(new string(L"kornevgen pidor"));
+	safe.Append(new string(L"hui"));
+	for (int i = 0; i < safe.Length(); i++) safe[i].Release();
+	SortArray(safe);
+	MessageBox(0, safe.ToString(), L"", 0);
+	safe.Clear();
+	MessageBox(0, safe.ToString(), L"", 0);
 
     // TODO: разместите код здесь.
 

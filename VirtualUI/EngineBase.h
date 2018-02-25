@@ -10,6 +10,7 @@ namespace Engine
 	class ImmutableString;
 	template <class V> class Array;
 	template <class V> class SafeArray;
+	template <class V> class ObjectArray;
 
 	class Object
 	{
@@ -321,6 +322,7 @@ if (new_size != allocated) {
 				require(count, true);
 			}
 		}
+		int Length(void) const { return count; }
 
 		string ToString(void) const override { return L"SafeArray[" + string(count) + L"]"; }
 
@@ -342,24 +344,104 @@ if (new_size != allocated) {
 		}
 	};
 
-	template<class V> void SortArray(Array<V> & volume, bool ascending = false)
+	template <class V> class ObjectArray : public Object
 	{
-		int len = volume.Length();
-		for (int i = 0; i < len - 1; i++) {
-			for (int j = i + 1; j < len; j++) {
-				bool swap = false;
-				if (ascending) {
-					swap = volume[i] > volume[j];
+		V ** data;
+		int count;
+		int allocated;
+		int block;
+		int block_align(int element_count) { return ((int64(element_count) + block - 1) / block) * block; }
+		void require(int elements, bool nothrow = false)
+		{
+			int new_size = block_align(elements);
+			if (new_size != allocated) {
+				if (new_size > allocated) {
+					V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
+					if (new_data) {
+						data = new_data;
+						allocated = new_size;
+					} else if (!nothrow) throw OutOfMemoryException();
 				} else {
-					swap = volume[i] < volume[j];
-				}
-				if (swap) {
-					volume.SwapAt(i, j);
+					V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
+					if (new_data) {
+						data = new_data;
+						allocated = new_size;
+					}
 				}
 			}
 		}
-	}
-	template<class V> void SortArray(SafeArray<V> & volume, bool ascending = false)
+		void append(V * v) { data[count] = v; v->Retain(); count++; }
+	public:
+		ObjectArray(void) : count(0), allocated(0), data(0), block(0x400) {}
+		ObjectArray(const ObjectArray & src) : count(src.count), allocated(0), data(0), block(src.block)
+		{
+			require(count); int i = 0;
+			try { for (i = 0; i < count; i++) { data[i] = src.data[i]; src.data[i]->Retain(); } } catch (...) {
+				for (int j = i - 1; j >= 0; j--) data[i]->Release();
+				free(data); throw;
+			}
+		}
+		ObjectArray(ObjectArray && src) : count(src.count), allocated(src.allocated), data(src.data), block(src.block) { src.data = 0; src.allocated = 0; src.count = 0; }
+		explicit ObjectArray(int BlockSize) : count(0), allocated(0), data(0), block(BlockSize) {}
+		~ObjectArray(void) override { for (int i = 0; i < count; i++) data[i]->Release(); free(data); }
+
+		ObjectArray & operator = (const ObjectArray & src)
+		{
+			if (this == &src) return *this;
+			ObjectArray Copy(src.block);
+			Copy.require(src.count);
+			for (int i = 0; i < src.count; i++) Copy.append(src.data[i]);
+			for (int i = 0; i < count; i++) data[i]->Release();
+			free(data);
+			data = Copy.data; count = Copy.count; allocated = Copy.allocated; block = Copy.block;
+			Copy.data = 0; Copy.count = 0; Copy.allocated = 0;
+			return *this;
+		}
+
+		virtual void Append(V * v) { require(count + 1); append(v); }
+		virtual void Append(const ObjectArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
+		virtual void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
+		virtual void Insert(const V & v, int IndexAt)
+		{
+			require(count + 1);
+			for (int i = count - 1; i >= IndexAt; i--) safe_swap(data[i], data[i + 1]);
+			try { data[IndexAt] = new V(v); count++; } catch (...) { for (int i = IndexAt; i < count; i++) safe_swap(data[i], data[i + 1]); throw; }
+		}
+		virtual V * ElementAt(int index) const { return data[index]; }
+		virtual V * FirstElement(void) const { return data[0]; }
+		virtual V * LastElement(void) const { return data[count - 1]; }
+		virtual void Remove(int index) { data[index]->Release(); for (int i = index; i < count - 1; i++) safe_swap(data[i], data[i + 1]); count--; require(count, true); }
+		virtual void RemoveFirst(void) { Remove(0); }
+		virtual void RemoveLast(void) { Remove(count - 1); }
+		virtual void Clear(void) { for (int i = 0; i < count; i++) data[i]->Release(); free(data); data = 0; count = 0; allocated = 0; }
+		int Length(void) const { return count; }
+
+		string ToString(void) const override
+		{
+			string result = L"ObjectArray[";
+			if (count) for (int i = 0; i < count; i++) { result += data[i]->ToString() + ((i == count - 1) ? L"]" : L", "); }
+			else result += L"]";
+			return result;
+		}
+
+		ObjectArray & operator << (V * v) { Append(v); return *this; }
+		ObjectArray & operator << (const ObjectArray & src) { Append(src); return *this; }
+		V & operator [] (int index) const { return *data[index]; }
+		bool friend operator == (const ObjectArray & a, const ObjectArray & b)
+		{
+			if (a.count != b.count) return false;
+			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return false;
+			return true;
+		}
+		bool friend operator != (const ObjectArray & a, const ObjectArray & b)
+		{
+			if (a.count != b.count) return true;
+			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return true;
+			return false;
+		}
+	};
+
+	template<class A> void SortArray(A & volume, bool ascending = true)
 	{
 		int len = volume.Length();
 		for (int i = 0; i < len - 1; i++) {
