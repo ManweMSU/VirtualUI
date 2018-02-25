@@ -9,6 +9,7 @@ namespace Engine
 	class Object;
 	class ImmutableString;
 	template <class V> class Array;
+	template <class V> class SafeArray;
 
 	class Object
 	{
@@ -76,6 +77,11 @@ namespace Engine
 		bool friend operator != (const widechar * a, const ImmutableString & b);
 		bool friend operator != (const ImmutableString & a, const widechar * b);
 
+		bool friend operator <= (const ImmutableString & a, const ImmutableString & b);
+		bool friend operator >= (const ImmutableString & a, const ImmutableString & b);
+		bool friend operator < (const ImmutableString & a, const ImmutableString & b);
+		bool friend operator > (const ImmutableString & a, const ImmutableString & b);
+
 		static int Compare(const ImmutableString & a, const ImmutableString & b);
 		static int CompareIgnoreCase(const ImmutableString & a, const ImmutableString & b);
 
@@ -114,6 +120,7 @@ namespace Engine
 	typedef ImmutableString string;
 
 	template <class V> void swap(V & a, V & b) { if (&a == &b) return; uint8 buffer[sizeof(V)]; MemoryCopy(buffer, &a, sizeof(V)); MemoryCopy(&a, &b, sizeof(V)); MemoryCopy(&b, buffer, sizeof(V)); }
+	template <class V> void safe_swap(V & a, V & b) { V e = a; a = b; b = e; }
 
 	template <class V> class Array : public Object
 	{
@@ -227,4 +234,146 @@ namespace Engine
 			return false;
 		}
 	};
+
+	template <class V> class SafeArray : public Object
+	{
+		V ** data;
+		int count;
+		int allocated;
+		int block;
+		int block_align(int element_count) { return ((int64(element_count) + block - 1) / block) * block; }
+		void require(int elements, bool nothrow = false)
+		{
+int new_size = block_align(elements);
+if (new_size != allocated) {
+	if (new_size > allocated) {
+		V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
+		if (new_data) {
+			data = new_data;
+			allocated = new_size;
+		} else if (!nothrow) throw OutOfMemoryException();
+	} else {
+		V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
+		if (new_data) {
+			data = new_data;
+			allocated = new_size;
+		}
+	}
+}
+		}
+		void append(const V & v) { data[count] = new V(v); count++; }
+	public:
+		SafeArray(void) : count(0), allocated(0), data(0), block(0x400) {}
+		SafeArray(const SafeArray & src) : count(src.count), allocated(0), data(0), block(src.block)
+		{
+			require(count); int i = 0;
+			try { for (i = 0; i < count; i++) data[i] = new V(src.data[i]); } catch (...) {
+				for (int j = i - 1; j >= 0; j--) delete data[i];
+				free(data); throw;
+			}
+		}
+		SafeArray(SafeArray && src) : count(src.count), allocated(src.allocated), data(src.data), block(src.block) { src.data = 0; src.allocated = 0; src.count = 0; }
+		explicit SafeArray(int BlockSize) : count(0), allocated(0), data(0), block(BlockSize) {}
+		~SafeArray(void) override { for (int i = 0; i < count; i++) delete data[i]; free(data); }
+
+		SafeArray & operator = (const SafeArray & src)
+		{
+			if (this == &src) return *this;
+			SafeArray Copy(src.block);
+			Copy.require(src.count);
+			for (int i = 0; i < src.count; i++) Copy.append(src.data[i]);
+			for (int i = 0; i < count; i++) delete data[i];
+			free(data);
+			data = Copy.data; count = Copy.count; allocated = Copy.allocated; block = Copy.block;
+			Copy.data = 0; Copy.count = 0; Copy.allocated = 0;
+			return *this;
+		}
+
+		virtual void Append(const V & v) { require(count + 1); append(v); }
+		virtual void Append(const SafeArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(*src.data[i]); }
+		virtual void Append(const V * v, int Count) { require(count + Count); for (int i = 0; i < Count; i++) append(v[i]); }
+		virtual void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
+		virtual void Insert(const V & v, int IndexAt)
+		{
+			require(count + 1);
+			for (int i = count - 1; i >= IndexAt; i--) safe_swap(data[i], data[i + 1]);
+			try { data[IndexAt] = new V(v); count++; } catch (...) { for (int i = IndexAt; i < count; i++) safe_swap(data[i], data[i + 1]); throw; }
+		}
+		virtual V & ElementAt(int index) { return *data[index]; }
+		virtual const V & ElementAt(int index) const { return *data[index]; }
+		virtual V & FirstElement(void) { return *data[0]; }
+		virtual const V & FirstElement(void) const { return *data[0]; }
+		virtual V & LastElement(void) { return *data[count - 1]; }
+		virtual const V & LastElement(void) const { return *data[count - 1]; }
+		virtual void Remove(int index) { delete data[index]; for (int i = index; i < count - 1; i++) safe_swap(data[i], data[i + 1]); count--; require(count, true); }
+		virtual void RemoveFirst(void) { Remove(0); }
+		virtual void RemoveLast(void) { Remove(count - 1); }
+		virtual void Clear(void) { for (int i = 0; i < count; i++) delete data[i]; free(data); data = 0; count = 0; allocated = 0; }
+		virtual void SetLength(int length)
+		{
+			if (length > count) {
+				require(length); int i;
+				try { for (i = count; i < length; i++) data[i] = new V(); } catch (...) { for (int j = i - 1; j >= count; j--) delete data[i]; throw; }
+				count = length;
+			} else if (length < count) {
+				if (length < 0) throw InvalidArgumentException();
+				for (int i = length; i < count; i++) delete data[i]; count = length;
+				require(count, true);
+			}
+		}
+
+		string ToString(void) const override { return L"SafeArray[" + string(count) + L"]"; }
+
+		SafeArray & operator << (const V & v) { Append(v); return *this; }
+		SafeArray & operator << (const SafeArray & src) { Append(src); return *this; }
+		V & operator [] (int index) { return *data[index]; }
+		const V & operator [] (int index) const { return *data[index]; }
+		bool friend operator == (const SafeArray & a, const SafeArray & b)
+		{
+			if (a.count != b.count) return false;
+			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return false;
+			return true;
+		}
+		bool friend operator != (const SafeArray & a, const SafeArray & b)
+		{
+			if (a.count != b.count) return true;
+			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return true;
+			return false;
+		}
+	};
+
+	template<class V> void SortArray(Array<V> & volume, bool ascending = false)
+	{
+		int len = volume.Length();
+		for (int i = 0; i < len - 1; i++) {
+			for (int j = i + 1; j < len; j++) {
+				bool swap = false;
+				if (ascending) {
+					swap = volume[i] > volume[j];
+				} else {
+					swap = volume[i] < volume[j];
+				}
+				if (swap) {
+					volume.SwapAt(i, j);
+				}
+			}
+		}
+	}
+	template<class V> void SortArray(SafeArray<V> & volume, bool ascending = false)
+	{
+		int len = volume.Length();
+		for (int i = 0; i < len - 1; i++) {
+			for (int j = i + 1; j < len; j++) {
+				bool swap = false;
+				if (ascending) {
+					swap = volume[i] > volume[j];
+				} else {
+					swap = volume[i] < volume[j];
+				}
+				if (swap) {
+					volume.SwapAt(i, j);
+				}
+			}
+		}
+	}
 }

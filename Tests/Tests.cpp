@@ -30,7 +30,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
 	auto spl = (L"abcabcabcab" + string(-1234)).Replace(L"bc", L"XYU").LowerCase().Split(L'-');
+	SortArray(spl, true);
 	for (int i = 0; i < spl.Length(); i++) MessageBox(0, spl[i], L"", 0);
+
+	SafeArray<string> safe;
+	safe.Append(L"blablabla");
+	MessageBox(0, safe[0], L"", 0);
 
     // TODO: разместите код здесь.
 

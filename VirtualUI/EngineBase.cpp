@@ -302,6 +302,10 @@ namespace Engine
 	bool operator!=(const ImmutableString & a, const ImmutableString & b) { return ImmutableString::Compare(a, b) != 0; }
 	bool operator!=(const widechar * a, const ImmutableString & b) { return StringCompare(a, b) != 0; }
 	bool operator!=(const ImmutableString & a, const widechar * b) { return StringCompare(a, b) != 0; }
+	bool operator<=(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a, b) <= 0; }
+	bool operator>=(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a, b) >= 0; }
+	bool operator<(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a, b) < 0; }
+	bool operator>(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a, b) > 0; }
 	ImmutableString operator+(const ImmutableString & a, const ImmutableString & b) { ImmutableString result = a; return result += b; }
 	ImmutableString operator+(const widechar * a, const ImmutableString & b) { return ImmutableString(a) + b; }
 	ImmutableString operator+(const ImmutableString & a, const widechar * b) { return a + ImmutableString(b); }
