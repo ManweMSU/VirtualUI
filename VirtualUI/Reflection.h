@@ -64,6 +64,10 @@ namespace Engine
 			virtual const TypeReflection & Type(void) const override { return type; }
 			virtual void Get(void * var) const override { *reinterpret_cast<V*>(var) = inner; }
 			virtual void Set(const void * var) override { inner = *reinterpret_cast<const V*>(var); }
+
+			V & Get() { return inner; }
+			const V & Get() const { return inner; }
+			void Set(const V & v) { inner = v; }
 		};
 		template<class V, class N, class T> class ObjectProperty final : public PropertyBase
 		{
@@ -82,12 +86,15 @@ namespace Engine
 			virtual const TypeReflection & Type(void) const override { return type; }
 			virtual void Get(void * var) const override { *reinterpret_cast<V**>(var) = inner; if (inner) inner->Retain(); }
 			virtual void Set(const void * var) override { if (inner) inner->Release(); inner = *reinterpret_cast<V**>(var); if (inner) inner->Retain(); }
+
+			V & Get() const { return *inner; }
+			void Set(V * v) { if (inner) inner->Release(); inner = v; if (inner) inner->Retain(); }
 		};
 #define STRING_MACRO(S) #S
-#define __NAME_REFLECTION(N) template<int> class __##N##PropertyName final : public NameReflection { public: __##N##PropertyName(void) {} virtual string GetName(void) const override { return L"" ## STRING_MACRO(N) ## ""; } }
-#define __TYPE_REFLECTION(T) template<int> class __##T##Type final : public TypeReflection { public: __##T##Type(void) {} virtual string GetTypeName(void) const override { return L"" ## STRING_MACRO(T) ## ""; } };
-#define DECLARE_PROPERTY(T, N) __NAME_REFLECTION(N); Property<T, __##N##PropertyName<0>, __##T##Type<0>> N = this
-#define DECLARE_OBJECT_PROPERTY(T, N) __NAME_REFLECTION(N); ObjectProperty<T, __##N##PropertyName<0>, __##T##Type<0>> N = this
+#define __NAME_REFLECTION(N) template<int> class __##N##PropertyName final : public ::Engine::Reflection::NameReflection { public: __##N##PropertyName(void) {} virtual string GetName(void) const override { return L"" ## STRING_MACRO(N) ## ""; } }
+#define __TYPE_REFLECTION(T) template<int> class __##T##Type final : public ::Engine::Reflection::TypeReflection { public: __##T##Type(void) {} virtual string GetTypeName(void) const override { return L"" ## STRING_MACRO(T) ## ""; } };
+#define DECLARE_PROPERTY(T, N) __NAME_REFLECTION(N); ::Engine::Reflection::Property<T, __##N##PropertyName<0>, ::Engine::Reflection::__##T##Type<0>> N = this
+#define DECLARE_OBJECT_PROPERTY(T, N) __NAME_REFLECTION(N); ::Engine::Reflection::ObjectProperty<T, __##N##PropertyName<0>, ::Engine::Reflection::__##T##Type<0>> N = this
 
 		__TYPE_REFLECTION(int);
 		__TYPE_REFLECTION(uint);

@@ -1,7 +1,7 @@
 // Tests.cpp: определяет точку входа для приложения.
 //
 
-#include "..\\VirtualUI\\Reflection.h"
+#include "..\\VirtualUI\\ShapeBase.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -26,6 +26,7 @@ class test : public Reflection::ReflectableObject
 {
 public:
 	DECLARE_PROPERTY(int, value);
+	DECLARE_PROPERTY(Coordinate, coord);
 };
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
