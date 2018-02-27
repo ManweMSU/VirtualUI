@@ -21,14 +21,14 @@
   <ItemGroup>
     <ClInclude Include="ControlBase.h" />
     <ClInclude Include="EngineBase.h" />
-    <ClInclude Include="PlatformDependent.h" />
+    <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="Reflection.h" />
     <ClInclude Include="ShapeBase.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ControlBase.cpp" />
     <ClCompile Include="EngineBase.cpp" />
-    <ClCompile Include="PlatformDependent.cpp" />
+    <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="Reflection.cpp" />
     <ClCompile Include="ShapeBase.cpp" />
   </ItemGroup>

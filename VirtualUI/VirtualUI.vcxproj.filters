@@ -9,12 +9,12 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="PlatformDependent">
+      <UniqueIdentifier>{12dec525-6118-461a-adb1-f246e1014429}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlBase.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="EngineBase.h">
@@ -26,12 +26,12 @@
     <ClInclude Include="ShapeBase.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\Base.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ControlBase.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformDependent.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="EngineBase.cpp">
@@ -42,6 +42,9 @@
     </ClCompile>
     <ClCompile Include="ShapeBase.cpp">
       <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Base.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

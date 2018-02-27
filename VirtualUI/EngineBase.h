@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlatformDependent.h"
+#include "PlatformDependent/Base.h"
 
 #include <new>
 
@@ -51,12 +51,12 @@ namespace Engine
 		ImmutableString(ImmutableString && src);
 		ImmutableString(const widechar * src);
 		ImmutableString(const widechar * sequence, int length);
-		ImmutableString(int src);
-		ImmutableString(uint src);
+		ImmutableString(int32 src);
+		ImmutableString(uint32 src);
 		ImmutableString(int64 src);
 		ImmutableString(uint64 src);
-		ImmutableString(uint value, const ImmutableString & digits);
-		ImmutableString(uint64 value, const ImmutableString & digits);
+		ImmutableString(uint32 value, const ImmutableString & digits, int minimal_length = 0);
+		ImmutableString(uint64 value, const ImmutableString & digits, int minimal_length = 0);
 		ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding);
 		ImmutableString(float src, widechar separator);
 		ImmutableString(double src, widechar separator);
@@ -116,6 +116,20 @@ namespace Engine
 		void Encode(void * buffer, Encoding encoding, bool include_terminator) const;
 		Array<uint8> * EncodeSequence(Encoding encoding, bool include_terminator) const;
 		Array<ImmutableString> Split(widechar divider) const;
+
+		uint64 ToUInt64(void) const;
+		uint64 ToUInt64(const ImmutableString & digits, bool case_sensitive) const;
+		int64 ToInt64(void) const;
+		int64 ToInt64(const ImmutableString & digits, bool case_sensitive) const;
+		uint32 ToUInt32(void) const;
+		uint32 ToUInt32(const ImmutableString & digits, bool case_sensitive) const;
+		int32 ToInt32(void) const;
+		int32 ToInt32(const ImmutableString & digits, bool case_sensitive) const;
+		float ToFloat(void) const;
+		float ToFloat(const ImmutableString & separators) const;
+		double ToDouble(void) const;
+		double ToDouble(const ImmutableString & separators) const;
+		bool ToBoolean(void) const;
 	};
 
 	typedef ImmutableString string;

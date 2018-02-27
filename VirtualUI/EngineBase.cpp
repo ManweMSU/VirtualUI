@@ -27,7 +27,7 @@ namespace Engine
 	ImmutableString::ImmutableString(ImmutableString && src) { text = src.text; src.text = 0; }
 	ImmutableString::ImmutableString(const widechar * src) { text = new (std::nothrow) widechar[StringLength(src) + 1]; if (!text) throw OutOfMemoryException(); StringCopy(text, src); }
 	ImmutableString::ImmutableString(const widechar * sequence, int length) { text = new (std::nothrow) widechar[length + 1]; if (!text) throw OutOfMemoryException(); text[length] = 0; MemoryCopy(text, sequence, sizeof(widechar) * length); }
-	ImmutableString::ImmutableString(int src)
+	ImmutableString::ImmutableString(int32 src)
 	{
 		widechar * conv = new (std::nothrow) widechar[0x10];
 		if (!conv) throw OutOfMemoryException();
@@ -53,7 +53,7 @@ namespace Engine
 		text[len] = 0;
 		delete[] conv;
 	}
-	ImmutableString::ImmutableString(uint src)
+	ImmutableString::ImmutableString(uint32 src)
 	{
 		widechar * conv = new (std::nothrow) widechar[0x10];
 		if (!conv) throw OutOfMemoryException();
@@ -113,8 +113,9 @@ namespace Engine
 		text[len] = 0;
 		delete[] conv;
 	}
-	ImmutableString::ImmutableString(uint value, const ImmutableString & digits)
+	ImmutableString::ImmutableString(uint32 value, const ImmutableString & digits, int minimal_length)
 	{
+		if (minimal_length < 0 || minimal_length > 0x20) throw InvalidArgumentException();
 		widechar * conv = new (std::nothrow) widechar[0x40];
 		if (!conv) throw OutOfMemoryException();
 		conv[0] = 0;
@@ -125,6 +126,7 @@ namespace Engine
 			value /= radix;
 			StringAppend(conv, digits[r]);
 		} while (value);
+		while (StringLength(conv) < minimal_length) StringAppend(conv, digits[0]);
 		int len = StringLength(conv);
 		text = new (std::nothrow) widechar[len + 1];
 		if (!text) { delete[] conv; throw OutOfMemoryException(); }
@@ -132,8 +134,9 @@ namespace Engine
 		text[len] = 0;
 		delete[] conv;
 	}
-	ImmutableString::ImmutableString(uint64 value, const ImmutableString & digits)
+	ImmutableString::ImmutableString(uint64 value, const ImmutableString & digits, int minimal_length)
 	{
+		if (minimal_length < 0 || minimal_length > 0x40) throw InvalidArgumentException();
 		widechar * conv = new (std::nothrow) widechar[0x80];
 		if (!conv) throw OutOfMemoryException();
 		conv[0] = 0;
@@ -144,6 +147,7 @@ namespace Engine
 			value /= radix;
 			StringAppend(conv, digits[r]);
 		} while (value);
+		while (StringLength(conv) < minimal_length) StringAppend(conv, digits[0]);
 		int len = StringLength(conv);
 		text = new (std::nothrow) widechar[len + 1];
 		if (!text) { delete[] conv; throw OutOfMemoryException(); }
@@ -151,7 +155,7 @@ namespace Engine
 		text[len] = 0;
 		delete[] conv;
 	}
-	ImmutableString::ImmutableString(const void * src) : ImmutableString(intptr(src), L"0123456789ABCDEF") {}
+	ImmutableString::ImmutableString(const void * src) : ImmutableString(intptr(src), L"0123456789ABCDEF", sizeof(void*) * 2) {}
 	ImmutableString::ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding)
 	{
 		int len = MeasureSequenceLength(Sequence, Length, SequenceEncoding, SystemEncoding);
@@ -295,6 +299,71 @@ namespace Engine
 			}
 		}
 		return result;
+	}
+	uint64 ImmutableString::ToUInt64(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	uint64 ImmutableString::ToUInt64(const ImmutableString & digits, bool case_sensitive) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	int64 ImmutableString::ToInt64(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	int64 ImmutableString::ToInt64(const ImmutableString & digits, bool case_sensitive) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	uint32 ImmutableString::ToUInt32(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	uint32 ImmutableString::ToUInt32(const ImmutableString & digits, bool case_sensitive) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	int32 ImmutableString::ToInt32(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	int32 ImmutableString::ToInt32(const ImmutableString & digits, bool case_sensitive) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	float ImmutableString::ToFloat(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	float ImmutableString::ToFloat(const ImmutableString & separators) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	double ImmutableString::ToDouble(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	double ImmutableString::ToDouble(const ImmutableString & separators) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+	}
+	bool ImmutableString::ToBoolean(void) const
+	{
+		throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
 	}
 	bool operator==(const ImmutableString & a, const ImmutableString & b) { return ImmutableString::Compare(a, b) == 0; }
 	bool operator==(const widechar * a, const ImmutableString & b) { return StringCompare(a, b) == 0; }

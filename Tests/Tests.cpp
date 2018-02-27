@@ -46,6 +46,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	safe.Append(new string(L"4epHblu Hurrep"));
 	safe.Append(new string(L"kornevgen pidor"));
 	safe.Append(new string(L"hui"));
+	safe.Append(new string((void*) &safe));
 
 	test t;
 	auto p = t.GetProperty(L"value");

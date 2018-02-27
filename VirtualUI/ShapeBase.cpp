@@ -16,9 +16,9 @@ namespace Engine
 		Coordinate Coordinate::Bottom() { return Coordinate(0, 0.0, 1.0); }
 		Coordinate operator+(const Coordinate & a, const Coordinate & b) { return Coordinate(a.Absolute + b.Absolute, a.Zoom + b.Zoom, a.Anchor + b.Anchor); }
 		Coordinate operator-(const Coordinate & a, const Coordinate & b) { return Coordinate(a.Absolute - b.Absolute, a.Zoom - b.Zoom, a.Anchor - b.Anchor); }
-		Coordinate operator*(const Coordinate & a, double b) { return Coordinate(a.Absolute * b, a.Zoom * b, a.Anchor * b); }
-		Coordinate operator*(double b, const Coordinate & a) { return Coordinate(a.Absolute * b, a.Zoom * b, a.Anchor * b); }
-		Coordinate operator/(const Coordinate & a, double b) { return Coordinate(a.Absolute / b, a.Zoom / b, a.Anchor / b); }
+		Coordinate operator*(const Coordinate & a, double b) { return Coordinate(int(a.Absolute * b), a.Zoom * b, a.Anchor * b); }
+		Coordinate operator*(double b, const Coordinate & a) { return Coordinate(int(a.Absolute * b), a.Zoom * b, a.Anchor * b); }
+		Coordinate operator/(const Coordinate & a, double b) { return Coordinate(int(a.Absolute / b), a.Zoom / b, a.Anchor / b); }
 		bool operator==(const Coordinate & a, const Coordinate & b) { return a.Absolute == b.Absolute && a.Zoom == b.Zoom && a.Anchor == b.Anchor; }
 		bool operator!=(const Coordinate & a, const Coordinate & b) { return a.Absolute != b.Absolute || a.Zoom != b.Zoom || a.Anchor != b.Anchor; }
 		bool operator==(const Rectangle & a, const Rectangle & b) { return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom; }
