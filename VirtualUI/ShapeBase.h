@@ -7,6 +7,8 @@ namespace Engine
 {
 	namespace UI
 	{
+		extern double Zoom;
+
 		class Coordinate
 		{
 		public:
@@ -59,6 +61,7 @@ namespace Engine
 		};
 		class Box
 		{
+		public:
 			int Left, Top, Right, Bottom;
 
 			Box(void);
@@ -72,7 +75,92 @@ namespace Engine
 		};
 		class Color
 		{
+		public:
+			union {
+				struct { uint8 r, g, b, a; };
+				uint32 Value;
+			};
 
+			Color(void);
+			Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa = 0xFF);
+			Color(float sr, float sg, float sb, float sa = 1.0);
+			Color(double sr, double sg, double sb, double sa = 1.0);
+			Color(uint32 code);
+
+			bool friend operator == (const Color & a, const Color & b);
+			bool friend operator != (const Color & a, const Color & b);
+		};
+		class GradientPoint
+		{
+		public:
+			Color Color;
+			double Position;
+
+			GradientPoint(void);
+			GradientPoint(const UI::Color & color);
+			GradientPoint(const UI::Color & color, double position);
+
+			bool friend operator == (const GradientPoint & a, const GradientPoint & b);
+			bool friend operator != (const GradientPoint & a, const GradientPoint & b);
+		};
+
+		class FrameShape;
+		class BarShape;
+
+		class IBarRenderingInfo
+		{
+		public:
+#pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
+		};
+		class ITextureRenderingInfo
+		{
+		public:
+#pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
+		};
+		class ITextRenderingInfo
+		{
+		public:
+#pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
+		};
+		class IRenderingDevice
+		{
+		public:
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
+			//virtual ITextureRenderingInfo * CreateTextureRenderingInfo(/* неведомый */) = 0;
+			//virtual ITextRenderingInfo * CreateTextRenderingInfo(/* неведомый */) = 0;
+			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;
+
+			virtual void PushClip(const Box & Rect) = 0;
+			virtual void PopClip(void) = 0;
+#pragma message ("INTERFACE IS NOT COMPLETE!")
+		};
+
+		class Shape : public Object
+		{
+		public:
+			Rectangle Position;
+			// Clipping and layering???
+#pragma message ("INTERFACE IS NOT COMPLETE!")
+			virtual void Render(IRenderingDevice * Device, const Box & Outer) = 0;
+		};
+		class FrameShape : public Shape
+		{
+		public:
+			ObjectArray<Shape> Children;
+			FrameShape(const Rectangle position);
+			~FrameShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) override;
+		};
+		class BarShape : public Shape
+		{
+			IBarRenderingInfo * Info;
+			Array<GradientPoint> Gradient;
+			double GradientAngle;
+		public:
+			BarShape(const Rectangle position, const Color & color);
+			BarShape(const Rectangle position, const Array<GradientPoint> & gradient, double angle);
+			~BarShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) override;
 		};
 	}
 	namespace Reflection

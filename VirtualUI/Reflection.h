@@ -98,6 +98,8 @@ namespace Engine
 
 		__TYPE_REFLECTION(int);
 		__TYPE_REFLECTION(uint);
+		__TYPE_REFLECTION(int32);
+		__TYPE_REFLECTION(uint32);
 		__TYPE_REFLECTION(int64);
 		__TYPE_REFLECTION(uint64);
 		__TYPE_REFLECTION(int16);

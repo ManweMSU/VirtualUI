@@ -137,6 +137,11 @@ namespace Engine
 	template <class V> void swap(V & a, V & b) { if (&a == &b) return; uint8 buffer[sizeof(V)]; MemoryCopy(buffer, &a, sizeof(V)); MemoryCopy(&a, &b, sizeof(V)); MemoryCopy(&b, buffer, sizeof(V)); }
 	template <class V> void safe_swap(V & a, V & b) { V e = a; a = b; b = e; }
 
+	template <class V> V & min(V & a, V & b) { return (a < b) ? a : b; }
+	template <class V> V min(V a, V b) { return (a < b) ? a : b; }
+	template <class V> V & max(V & a, V & b) { return (a < b) ? b : a; }
+	template <class V> V max(V a, V b) { return (a < b) ? b : a; }
+
 	template <class V> class Array : public Object
 	{
 		V * data;
@@ -415,11 +420,11 @@ if (new_size != allocated) {
 		virtual void Append(V * v) { require(count + 1); append(v); }
 		virtual void Append(const ObjectArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
 		virtual void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
-		virtual void Insert(const V & v, int IndexAt)
+		virtual void Insert(V * v, int IndexAt)
 		{
 			require(count + 1);
 			for (int i = count - 1; i >= IndexAt; i--) safe_swap(data[i], data[i + 1]);
-			try { data[IndexAt] = new V(v); count++; } catch (...) { for (int i = IndexAt; i < count; i++) safe_swap(data[i], data[i + 1]); throw; }
+			try { data[IndexAt] = v; v->Retain(); count++; } catch (...) { for (int i = IndexAt; i < count; i++) safe_swap(data[i], data[i + 1]); throw; }
 		}
 		virtual V * ElementAt(int index) const { return data[index]; }
 		virtual V * FirstElement(void) const { return data[0]; }
@@ -490,6 +495,8 @@ if (new_size != allocated) {
 		operator O * (void) const { return reference; }
 		O * Inner(void) const { return reference; }
 		O ** InnerRef(void) const { return &reference; }
+
+		void SetReference(O * ref) { if (reference) reference->Release(); reference = ref; }
 
 		bool friend operator == (const SafePointer & a, const SafePointer & b) { return a.reference == b.reference; }
 		bool friend operator != (const SafePointer & a, const SafePointer & b) { return a.reference != b.reference; }
