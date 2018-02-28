@@ -3,6 +3,8 @@
 #include <d2d1_1helper.h>
 #include <dwrite.h>
 
+#include <math.h>
+
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
 
@@ -16,6 +18,7 @@ namespace Engine
 		{
 			ID2D1GradientStopCollection * Collection = 0;
 			ID2D1SolidColorBrush * Brush = 0;
+			double prop_h = 0.0, prop_w = 0.0;
 			~BarRenderingInfo(void) override { if (Collection) Collection->Release(); if (Brush) Brush->Release(); }
 		};
 
@@ -25,6 +28,7 @@ namespace Engine
 				if (D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &Factory) != S_OK) throw Exception();
 			}
 		}
+
 		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) : Target(target), Layers(0x10) { Target->AddRef(); }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
@@ -42,6 +46,7 @@ namespace Engine
 				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
 				if (!Info) { delete[] stop; Collection->Release(); throw OutOfMemoryException(); }
 				Info->Collection = Collection;
+				Info->prop_w = cos(angle), Info->prop_h = sin(angle);
 				return Info;
 			} else {
 				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
@@ -53,16 +58,62 @@ namespace Engine
 			}
 			
 		}
+		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power)
+		{
+			throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		}
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At)
 		{
 			auto info = reinterpret_cast<BarRenderingInfo *>(Info);
 			if (info->Brush) {
 				Target->FillRectangle(D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom)), info->Brush);
 			} else {
-				// xyu
-#pragma message ("SITUATION NOT IMPLEMENTED, IMPLEMENT IT!")
-				throw Exception();
+				int w = At.Right - At.Left, h = At.Bottom - At.Top;
+				if (!w || !h) return;
+				D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES bp;
+				if (fabs(info->prop_w) > fabs(info->prop_h)) {
+					double aspect = info->prop_h / info->prop_w;
+					if (fabs(aspect) > double(h) / double(w)) {
+						int dx = int(h / fabs(aspect) * sgn(info->prop_w));
+						bp.startPoint.x = float(At.Left + (w - dx) / 2);
+						bp.startPoint.y = float((info->prop_h > 0.0) ? At.Bottom : At.Top);
+						bp.endPoint.x = float(At.Left + (w + dx) / 2);
+						bp.endPoint.y = float((info->prop_h > 0.0) ? At.Top : At.Bottom);
+					} else {
+						int dy = int(w * fabs(aspect) * sgn(info->prop_h));
+						bp.startPoint.x = float((info->prop_w > 0.0) ? At.Left : At.Right);
+						bp.startPoint.y = float(At.Top + (h + dy) / 2);
+						bp.endPoint.x = float((info->prop_w > 0.0) ? At.Right : At.Left);
+						bp.endPoint.y = float(At.Top + (h - dy) / 2);
+					}
+				} else {
+					double aspect = info->prop_w / info->prop_h;
+					if (fabs(aspect) > double(w) / double(h)) {
+						int dy = int(w / fabs(aspect) * sgn(info->prop_h));
+						bp.startPoint.x = float((info->prop_w > 0.0) ? At.Left : At.Right);
+						bp.startPoint.y = float(At.Top + (h + dy) / 2);
+						bp.endPoint.x = float((info->prop_w > 0.0) ? At.Right : At.Left);
+						bp.endPoint.y = float(At.Top + (h - dy) / 2);
+					} else {
+						int dx = int(h * fabs(aspect) * sgn(info->prop_w));
+						bp.startPoint.x = float(At.Left + (w - dx) / 2);
+						bp.startPoint.y = float((info->prop_h > 0.0) ? At.Bottom : At.Top);
+						bp.endPoint.x = float(At.Left + (w + dx) / 2);
+						bp.endPoint.y = float((info->prop_h > 0.0) ? At.Top : At.Bottom);
+					}
+				}
+				ID2D1LinearGradientBrush * Brush;
+				if (Target->CreateLinearGradientBrush(bp, info->Collection, &Brush) == S_OK) {
+					Target->FillRectangle(D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom)), Brush);
+					Brush->Release();
+				}
 			}
+		}
+		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
+		{
+			throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
 		}
 		void D2DRenderDevice::PushClip(const Box & Rect) { Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED); }
 		void D2DRenderDevice::PopClip(void) { Target->PopAxisAlignedClip(); }

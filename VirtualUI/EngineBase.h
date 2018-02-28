@@ -45,6 +45,8 @@ namespace Engine
 		widechar * text;
 		int GeneralizedFindFirst(int from, const widechar * seq, int length) const;
 		ImmutableString GeneralizedReplace(const widechar * seq, int length, const widechar * with, int withlen) const;
+		uint64 GeneralizedToUInt64(int dfrom, int dto) const;
+		uint64 GeneralizedToUInt64(int dfrom, int dto, const ImmutableString & digits, bool case_sensitive) const;
 	public:
 		ImmutableString(void);
 		ImmutableString(const ImmutableString & src);
@@ -118,13 +120,13 @@ namespace Engine
 		Array<ImmutableString> Split(widechar divider) const;
 
 		uint64 ToUInt64(void) const;
-		uint64 ToUInt64(const ImmutableString & digits, bool case_sensitive) const;
+		uint64 ToUInt64(const ImmutableString & digits, bool case_sensitive = false) const;
 		int64 ToInt64(void) const;
-		int64 ToInt64(const ImmutableString & digits, bool case_sensitive) const;
+		int64 ToInt64(const ImmutableString & digits, bool case_sensitive = false) const;
 		uint32 ToUInt32(void) const;
-		uint32 ToUInt32(const ImmutableString & digits, bool case_sensitive) const;
+		uint32 ToUInt32(const ImmutableString & digits, bool case_sensitive = false) const;
 		int32 ToInt32(void) const;
-		int32 ToInt32(const ImmutableString & digits, bool case_sensitive) const;
+		int32 ToInt32(const ImmutableString & digits, bool case_sensitive = false) const;
 		float ToFloat(void) const;
 		float ToFloat(const ImmutableString & separators) const;
 		double ToDouble(void) const;
@@ -141,6 +143,9 @@ namespace Engine
 	template <class V> V min(V a, V b) { return (a < b) ? a : b; }
 	template <class V> V & max(V & a, V & b) { return (a < b) ? b : a; }
 	template <class V> V max(V a, V b) { return (a < b) ? b : a; }
+
+	double sgn(double x);
+	float sgn(float x);
 
 	template <class V> class Array : public Object
 	{

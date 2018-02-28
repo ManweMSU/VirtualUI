@@ -115,6 +115,11 @@ namespace Engine
 		public:
 			virtual ~IBarRenderingInfo(void);
 		};
+		class IBlurEffectRenderingInfo
+		{
+		public:
+			virtual ~IBlurEffectRenderingInfo(void);
+		};
 		class ITextureRenderingInfo
 		{
 		public:
@@ -129,9 +134,11 @@ namespace Engine
 		{
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
+			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
 			//virtual ITextureRenderingInfo * CreateTextureRenderingInfo(/* неведомый */) = 0;
 			//virtual ITextRenderingInfo * CreateTextRenderingInfo(/* неведомый */) = 0;
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;
+			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) = 0;
 
 			virtual void PushClip(const Box & Rect) = 0;
 			virtual void PopClip(void) = 0;
@@ -145,7 +152,8 @@ namespace Engine
 		{
 		public:
 			Rectangle Position;
-			virtual void Render(IRenderingDevice * Device, const Box & Outer) = 0;
+			virtual void Render(IRenderingDevice * Device, const Box & Outer) const = 0;
+			virtual void ClearCache(void) = 0;
 		};
 		class FrameShape : public Shape
 		{
@@ -154,21 +162,36 @@ namespace Engine
 			ObjectArray<Shape> Children;
 			FrameRenderMode RenderMode;
 			double Opacity;
-			FrameShape(const Rectangle position);
-			FrameShape(const Rectangle position, FrameRenderMode mode, double opacity = 1.0);
+			FrameShape(const Rectangle & position);
+			FrameShape(const Rectangle & position, FrameRenderMode mode, double opacity = 1.0);
 			~FrameShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
 		};
 		class BarShape : public Shape
 		{
-			IBarRenderingInfo * Info;
+			mutable IBarRenderingInfo * Info;
 			Array<GradientPoint> Gradient;
 			double GradientAngle;
 		public:
-			BarShape(const Rectangle position, const Color & color);
-			BarShape(const Rectangle position, const Array<GradientPoint> & gradient, double angle);
+			BarShape(const Rectangle & position, const Color & color);
+			BarShape(const Rectangle & position, const Array<GradientPoint> & gradient, double angle);
 			~BarShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
+		};
+		class BlurEffectShape : public Shape
+		{
+			mutable IBlurEffectRenderingInfo * Info;
+			double BlurPower;
+		public:
+			BlurEffectShape(const Rectangle & position, double power);
+			~BlurEffectShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
 		};
 	}
 	namespace Reflection

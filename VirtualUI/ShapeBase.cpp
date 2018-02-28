@@ -56,10 +56,10 @@ namespace Engine
 		Color::Color(float sr, float sg, float sb, float sa) : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 0), 0)), a(max(min(int(sa * 255.0f), 0), 0)) {}
 		Color::Color(double sr, double sg, double sb, double sa) : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 0), 0)), a(max(min(int(sa * 255.0), 0), 0)) {}
 		Color::Color(uint32 code) : Value(code) {}
-		FrameShape::FrameShape(const Rectangle position) : Children(0x10), RenderMode(FrameRenderMode::Normal), Opacity(1.0) { Position = position; }
-		FrameShape::FrameShape(const Rectangle position, FrameRenderMode mode, double opacity) : Children(0x10), RenderMode(mode), Opacity(opacity) { Position = position; }
+		FrameShape::FrameShape(const Rectangle & position) : Children(0x10), RenderMode(FrameRenderMode::Normal), Opacity(1.0) { Position = position; }
+		FrameShape::FrameShape(const Rectangle & position, FrameRenderMode mode, double opacity) : Children(0x10), RenderMode(mode), Opacity(opacity) { Position = position; }
 		FrameShape::~FrameShape(void) {}
-		void FrameShape::Render(IRenderingDevice * Device, const Box & Outer)
+		void FrameShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
 			Box my(Position, Outer);
 			if (RenderMode == FrameRenderMode::Normal) {
@@ -74,19 +74,34 @@ namespace Engine
 				Device->EndLayer();
 			}
 		}
+		void FrameShape::ClearCache(void) { for (int i = Children.Length() - 1; i >= 0; i--) Children[i].ClearCache(); }
+		string FrameShape::ToString(void) const { return L"FrameShape"; }
 		GradientPoint::GradientPoint(void) {}
 		GradientPoint::GradientPoint(const UI::Color & color) : Color(color), Position(0.0) {}
 		GradientPoint::GradientPoint(const UI::Color & color, double position) : Color(color), Position(position) {}
-		BarShape::BarShape(const Rectangle position, const Color & color) : Info(0), GradientAngle(0.0) { Position = position; Gradient << GradientPoint(color); }
-		BarShape::BarShape(const Rectangle position, const Array<GradientPoint>& gradient, double angle) : Info(0), Gradient(gradient), GradientAngle(angle) { Position = position; }
+		BarShape::BarShape(const Rectangle & position, const Color & color) : Info(0), GradientAngle(0.0) { Position = position; Gradient << GradientPoint(color); }
+		BarShape::BarShape(const Rectangle & position, const Array<GradientPoint>& gradient, double angle) : Info(0), Gradient(gradient), GradientAngle(angle) { Position = position; }
 		BarShape::~BarShape(void) { delete Info; }
-		void BarShape::Render(IRenderingDevice * Device, const Box & Outer)
+		void BarShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
 			if (!Info) Info = Device->CreateBarRenderingInfo(Gradient, GradientAngle);
 			Box my(Position, Outer);
 			Device->RenderBar(Info, my);
 		}
+		void BarShape::ClearCache(void) { delete Info; Info = 0; }
+		string BarShape::ToString(void) const { return L"BarShape"; }
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
+		IBlurEffectRenderingInfo::~IBlurEffectRenderingInfo(void) {}
+		BlurEffectShape::BlurEffectShape(const Rectangle & position, double power) : BlurPower(power) { Position = position; }
+		BlurEffectShape::~BlurEffectShape(void) { delete Info; }
+		void BlurEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		{
+			if (!Info) Info = Device->CreateBlurEffectRenderingInfo(BlurPower);
+			Box my(Position, Outer);
+			Device->ApplyBlur(Info, my);
+		}
+		void BlurEffectShape::ClearCache(void) { delete Info; Info = 0; }
+		string BlurEffectShape::ToString(void) const { return L"BlurEffectShape"; }
 	}
 }

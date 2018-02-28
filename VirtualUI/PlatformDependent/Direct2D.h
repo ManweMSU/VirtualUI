@@ -23,7 +23,11 @@ namespace Engine
 			ID2D1RenderTarget * GetRenderTarget(void) const;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) override;
+			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) override;
+
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) override;
+			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) override;
+
 			virtual void PushClip(const Box & Rect) override;
 			virtual void PopClip(void) override;
 			virtual void BeginLayer(const Box & Rect, double Opacity) override;

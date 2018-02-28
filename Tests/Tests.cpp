@@ -73,6 +73,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	safe.Clear();
 	MessageBox(0, safe.ToString(), L"", 0);*/
 
+	auto v = string(L";123456").ToDouble(L";");
+
+
 	Engine::Direct2D::InitializeFactory();
 	D2D1_RENDER_TARGET_PROPERTIES rtp;
 	rtp.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -85,11 +88,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	if (Engine::Direct2D::Factory->CreateDCRenderTarget(&rtp, &Target) != S_OK) MessageBox(0, L"XYU.", 0, MB_OK | MB_ICONSTOP);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 
-	::Shape = new FrameShape(UI::Rectangle(100, 100, 400, 400), FrameShape::FrameRenderMode::Layering, 0.5);
-	auto s2 = new BarShape(UI::Rectangle(100, 100, 300, 300), UI::Color(0, 255, 0));
+	Array<UI::GradientPoint> ps;
+	ps << UI::GradientPoint(UI::Color(0, 255, 0), 0.0);
+	ps << UI::GradientPoint(UI::Color(0, 0, 255), 1.0);
+	::Shape = new FrameShape(UI::Rectangle(100, 100, 600, 600), FrameShape::FrameRenderMode::Layering, 0.5);
+	auto s2 = new BarShape(UI::Rectangle(100, 100, 300, 300), ps, 3.141592 / 3.0);
 	::Shape->Children.Append(s2);
 	s2->Release();
-	s2 = new BarShape(UI::Rectangle(0, -50, 200, 200), UI::Color(255, 0, 255, 128));
+	
+	s2 = new BarShape(UI::Rectangle(0, -50, 200, 200), UI::Color(255, 0, 255));
 	::Shape->Children.Append(s2);
 	s2->Release();
 

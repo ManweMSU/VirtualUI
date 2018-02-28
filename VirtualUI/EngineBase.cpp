@@ -263,6 +263,43 @@ namespace Engine
 		}
 		return result;
 	}
+	uint64 ImmutableString::GeneralizedToUInt64(int dfrom, int dto) const
+	{
+		uint64 value = 0;
+		for (int i = dfrom; i < dto; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			uint64 digit = text[i] - L'0';
+			if (value >= 0x199999999999999A) throw InvalidFormatException();
+			value *= 10;
+			if (value > 0xFFFFFFFFFFFFFFFF - digit) throw InvalidFormatException();
+			value += digit;
+		}
+		return value;
+	}
+	uint64 ImmutableString::GeneralizedToUInt64(int dfrom, int dto, const ImmutableString & digits, bool case_sensitive) const
+	{
+		uint64 value = 0;
+		auto base = digits.Length();
+		if (base < 2) throw InvalidArgumentException();
+		widechar input[2], compare[2];
+		input[1] = compare[1] = 0;
+		uint64 max_prem = 0xFFFFFFFFFFFFFFFF / base + 1;
+		for (int i = dfrom; i < dto; i++) {
+			int dn = -1;
+			input[0] = text[i];
+			for (int j = 0; j < digits.Length(); j++) {
+				compare[0] = digits[j];
+				if ((case_sensitive && StringCompare(input, compare) == 0) || (!case_sensitive && StringCompareCaseInsensitive(input, compare) == 0)) { dn = j; break; }
+			}
+			if (dn == -1) throw InvalidFormatException();
+			uint64 digit = dn;
+			if (value >= max_prem) throw InvalidFormatException();
+			value *= base;
+			if (value > 0xFFFFFFFFFFFFFFFF - digit) throw InvalidFormatException();
+			value += digit;
+		}
+		return value;
+	}
 	ImmutableString ImmutableString::Replace(const ImmutableString & Substring, const ImmutableString & with) const { return GeneralizedReplace(Substring, Substring.Length(), with, with.Length()); }
 	ImmutableString ImmutableString::Replace(widechar Substring, const ImmutableString & with) const { return GeneralizedReplace(&Substring, 1, with, with.Length()); }
 	ImmutableString ImmutableString::Replace(const ImmutableString & Substring, widechar with) const { return GeneralizedReplace(Substring, Substring.Length(), &with, 1); }
@@ -300,70 +337,206 @@ namespace Engine
 		}
 		return result;
 	}
-	uint64 ImmutableString::ToUInt64(void) const
-	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
-	}
-	uint64 ImmutableString::ToUInt64(const ImmutableString & digits, bool case_sensitive) const
-	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
-	}
+	uint64 ImmutableString::ToUInt64(void) const { return GeneralizedToUInt64(0, Length()); }
+	uint64 ImmutableString::ToUInt64(const ImmutableString & digits, bool case_sensitive) const { return GeneralizedToUInt64(0, Length(), digits, case_sensitive); }
 	int64 ImmutableString::ToInt64(void) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0;
+		if (text[0] == L'-') { start = 1; negative = true; }
+		else if (text[0] == L'+') { start = 1; }
+		auto absolute = GeneralizedToUInt64(start, len);
+		if (negative) {
+			if (absolute > 0x8000000000000000) throw InvalidFormatException();
+			else return -int64(absolute);
+		} else {
+			if (absolute > 0x7FFFFFFFFFFFFFFF) throw InvalidFormatException();
+			return absolute;
+		}
 	}
 	int64 ImmutableString::ToInt64(const ImmutableString & digits, bool case_sensitive) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		auto absolute = GeneralizedToUInt64(start, len, digits, case_sensitive);
+		if (negative) {
+			if (absolute > 0x8000000000000000) throw InvalidFormatException();
+			else return -int64(absolute);
+		} else {
+			if (absolute > 0x7FFFFFFFFFFFFFFF) throw InvalidFormatException();
+			return absolute;
+		}
 	}
 	uint32 ImmutableString::ToUInt32(void) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		uint64 parsed = GeneralizedToUInt64(0, Length());
+		if (parsed > 0xFFFFFFFF) throw InvalidFormatException();
+		return uint32(parsed);
 	}
 	uint32 ImmutableString::ToUInt32(const ImmutableString & digits, bool case_sensitive) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		uint64 parsed = GeneralizedToUInt64(0, Length(), digits, case_sensitive);
+		if (parsed > 0xFFFFFFFF) throw InvalidFormatException();
+		return uint32(parsed);
 	}
 	int32 ImmutableString::ToInt32(void) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		auto absolute = GeneralizedToUInt64(start, len);
+		if (negative) {
+			if (absolute > 0x80000000) throw InvalidFormatException();
+			else return -int32(absolute);
+		} else {
+			if (absolute > 0x7FFFFFFF) throw InvalidFormatException();
+			return int32(absolute);
+		}
 	}
 	int32 ImmutableString::ToInt32(const ImmutableString & digits, bool case_sensitive) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		auto absolute = GeneralizedToUInt64(start, len, digits, case_sensitive);
+		if (negative) {
+			if (absolute > 0x80000000) throw InvalidFormatException();
+			else return -int32(absolute);
+		} else {
+			if (absolute > 0x7FFFFFFF) throw InvalidFormatException();
+			return int32(absolute);
+		}
 	}
 	float ImmutableString::ToFloat(void) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		float value = 0.0f;
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0.0f;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		int point = FindFirst(L',');
+		if (point == -1) point = FindFirst(L'.');
+		if (point == -1) point = len;
+		if (point != max(FindLast(L','), FindLast(L'.'))) throw InvalidFormatException();
+		for (int i = start; i < point; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			value *= 10.0f;
+			value += float(digit);
+		}
+		float exp = 1.0f;
+		for (int i = point + 1; i < len; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			exp /= 10.0f;
+			value += exp * float(digit);
+		}
+		return negative ? -value : value;
 	}
 	float ImmutableString::ToFloat(const ImmutableString & separators) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		float value = 0.0f;
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0.0f;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		int point = len;
+		for (int i = 0; i < separators.Length(); i++) {
+			int fp = FindFirst(separators[i]);
+			if (fp != -1 && fp < point) point = fp;
+		}
+		for (int i = 0; i < separators.Length(); i++) {
+			if (FindLast(separators[i]) > point) throw InvalidFormatException();
+		}
+		for (int i = start; i < point; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			value *= 10.0f;
+			value += float(digit);
+		}
+		float exp = 1.0f;
+		for (int i = point + 1; i < len; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			exp /= 10.0f;
+			value += exp * float(digit);
+		}
+		return negative ? -value : value;
 	}
 	double ImmutableString::ToDouble(void) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		double value = 0.0;
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0.0;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		int point = FindFirst(L',');
+		if (point == -1) point = FindFirst(L'.');
+		if (point == -1) point = len;
+		if (point != max(FindLast(L','), FindLast(L'.'))) throw InvalidFormatException();
+		for (int i = start; i < point; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			value *= 10.0;
+			value += double(digit);
+		}
+		double exp = 1.0;
+		for (int i = point + 1; i < len; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			exp /= 10.0;
+			value += exp * double(digit);
+		}
+		return negative ? -value : value;
 	}
 	double ImmutableString::ToDouble(const ImmutableString & separators) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		double value = 0.0;
+		bool negative = false;
+		int start = 0;
+		auto len = Length();
+		if (!len) return 0.0;
+		if (text[0] == L'-') { start = 1; negative = true; } else if (text[0] == L'+') { start = 1; }
+		int point = len;
+		for (int i = 0; i < separators.Length(); i++) {
+			int fp = FindFirst(separators[i]);
+			if (fp != -1 && fp < point) point = fp;
+		}
+		for (int i = 0; i < separators.Length(); i++) {
+			if (FindLast(separators[i]) > point) throw InvalidFormatException();
+		}
+		for (int i = start; i < point; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			value *= 10.0;
+			value += double(digit);
+		}
+		double exp = 1.0;
+		for (int i = point + 1; i < len; i++) {
+			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
+			int digit = text[i] - L'0';
+			exp /= 10.0;
+			value += exp * double(digit);
+		}
+		return negative ? -value : value;
 	}
 	bool ImmutableString::ToBoolean(void) const
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		if (CompareIgnoreCase(*this, L"true") == 0 || CompareIgnoreCase(*this, L"1") == 0) return true;
+		else if (CompareIgnoreCase(*this, L"false") == 0 || CompareIgnoreCase(*this, L"0") == 0 || Length() == 0) return false;
+		else throw InvalidFormatException();
 	}
 	bool operator==(const ImmutableString & a, const ImmutableString & b) { return ImmutableString::Compare(a, b) == 0; }
 	bool operator==(const widechar * a, const ImmutableString & b) { return StringCompare(a, b) == 0; }
@@ -378,4 +551,6 @@ namespace Engine
 	ImmutableString operator+(const ImmutableString & a, const ImmutableString & b) { ImmutableString result = a; return result += b; }
 	ImmutableString operator+(const widechar * a, const ImmutableString & b) { return ImmutableString(a) + b; }
 	ImmutableString operator+(const ImmutableString & a, const widechar * b) { return a + ImmutableString(b); }
+	double sgn(double x) { return (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0); }
+	float sgn(float x) { return (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f); }
 }
