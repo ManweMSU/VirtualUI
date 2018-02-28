@@ -22,6 +22,7 @@
     <ClInclude Include="ControlBase.h" />
     <ClInclude Include="EngineBase.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
+    <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="Reflection.h" />
     <ClInclude Include="ShapeBase.h" />
   </ItemGroup>
@@ -29,6 +30,7 @@
     <ClCompile Include="ControlBase.cpp" />
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
+    <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="Reflection.cpp" />
     <ClCompile Include="ShapeBase.cpp" />
   </ItemGroup>

@@ -31,6 +31,7 @@ namespace Engine
 #endif
 	typedef intptr eint;
 	typedef wchar_t widechar;
+	typedef void * handle;
 
 	// Atomic increment and decrement; memory initialization
 	uint InterlockedIncrement(uint & Value);

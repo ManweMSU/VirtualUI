@@ -155,13 +155,13 @@ namespace Engine
 			if (new_size != allocated) {
 				if (new_size > allocated) {
 					V * new_data = reinterpret_cast<V*>(realloc(data, sizeof(V) * new_size));
-					if (new_data) {
+					if (new_data || new_size == 0) {
 						data = new_data;
 						allocated = new_size;
 					} else if (!nothrow) throw OutOfMemoryException();
 				} else {
 					V * new_data = reinterpret_cast<V*>(realloc(data, sizeof(V) * new_size));
-					if (new_data) {
+					if (new_data || new_size == 0) {
 						data = new_data;
 						allocated = new_size;
 					}
@@ -264,22 +264,22 @@ namespace Engine
 		int block_align(int element_count) { return ((int64(element_count) + block - 1) / block) * block; }
 		void require(int elements, bool nothrow = false)
 		{
-int new_size = block_align(elements);
-if (new_size != allocated) {
-	if (new_size > allocated) {
-		V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
-		if (new_data) {
-			data = new_data;
-			allocated = new_size;
-		} else if (!nothrow) throw OutOfMemoryException();
-	} else {
-		V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
-		if (new_data) {
-			data = new_data;
-			allocated = new_size;
-		}
-	}
-}
+			int new_size = block_align(elements);
+			if (new_size != allocated) {
+				if (new_size > allocated) {
+					V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
+					if (new_data || new_size == 0) {
+						data = new_data;
+						allocated = new_size;
+					} else if (!nothrow) throw OutOfMemoryException();
+				} else {
+					V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
+					if (new_data || new_size == 0) {
+						data = new_data;
+						allocated = new_size;
+					}
+				}
+			}
 		}
 		void append(const V & v) { data[count] = new V(v); count++; }
 	public:
@@ -376,13 +376,13 @@ if (new_size != allocated) {
 			if (new_size != allocated) {
 				if (new_size > allocated) {
 					V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
-					if (new_data) {
+					if (new_data || new_size == 0) {
 						data = new_data;
 						allocated = new_size;
 					} else if (!nothrow) throw OutOfMemoryException();
 				} else {
 					V ** new_data = reinterpret_cast<V**>(realloc(data, sizeof(V*) * new_size));
-					if (new_data) {
+					if (new_data || new_size == 0) {
 						data = new_data;
 						allocated = new_size;
 					}

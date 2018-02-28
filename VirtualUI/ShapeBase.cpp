@@ -35,6 +35,7 @@ namespace Engine
 		bool operator!=(const GradientPoint & a, const GradientPoint & b) { return a.Color != b.Color || a.Position != b.Position; }
 		Rectangle::Rectangle(void) {}
 		Rectangle::Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) : Left(left), Top(top), Right(right), Bottom(bottom) {}
+		Rectangle Rectangle::Entire() { return Rectangle(0, 0, Coordinate::Right(), Coordinate::Bottom()); }
 		Point::Point(void) {}
 		Point::Point(int X, int Y) : x(X), y(Y) {}
 		Box::Box(void) {}
@@ -51,15 +52,27 @@ namespace Engine
 		bool Box::IsInside(const Point & p) const { return p.x >= Left && p.x < Right && p.y >= Top && p.y < Bottom; }
 		Color::Color(void) {}
 		Color::Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa) : r(sr), g(sg), b(sb), a(sa) {}
+		Color::Color(int sr, int sg, int sb, int sa) : r(sr), g(sg), b(sb), a(sa) {}
 		Color::Color(float sr, float sg, float sb, float sa) : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 0), 0)), a(max(min(int(sa * 255.0f), 0), 0)) {}
 		Color::Color(double sr, double sg, double sb, double sa) : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 0), 0)), a(max(min(int(sa * 255.0), 0), 0)) {}
 		Color::Color(uint32 code) : Value(code) {}
-		FrameShape::FrameShape(const Rectangle position) : Children(0x10) { Position = position; }
+		FrameShape::FrameShape(const Rectangle position) : Children(0x10), RenderMode(FrameRenderMode::Normal), Opacity(1.0) { Position = position; }
+		FrameShape::FrameShape(const Rectangle position, FrameRenderMode mode, double opacity) : Children(0x10), RenderMode(mode), Opacity(opacity) { Position = position; }
 		FrameShape::~FrameShape(void) {}
 		void FrameShape::Render(IRenderingDevice * Device, const Box & Outer)
 		{
 			Box my(Position, Outer);
-			for (int i = Children.Length() - 1; i >= 0; i--) Children[i].Render(Device, my);
+			if (RenderMode == FrameRenderMode::Normal) {
+				for (int i = Children.Length() - 1; i >= 0; i--) Children[i].Render(Device, my);
+			} else if (RenderMode == FrameRenderMode::Clipping) {
+				Device->PushClip(my);
+				for (int i = Children.Length() - 1; i >= 0; i--) Children[i].Render(Device, my);
+				Device->PopClip();
+			} else if (RenderMode == FrameRenderMode::Layering) {
+				Device->BeginLayer(my, Opacity);
+				for (int i = Children.Length() - 1; i >= 0; i--) Children[i].Render(Device, my);
+				Device->EndLayer();
+			}
 		}
 		GradientPoint::GradientPoint(void) {}
 		GradientPoint::GradientPoint(const UI::Color & color) : Color(color), Position(0.0) {}
@@ -73,5 +86,7 @@ namespace Engine
 			Box my(Position, Outer);
 			Device->RenderBar(Info, my);
 		}
+		IRenderingDevice::~IRenderingDevice(void) {}
+		IBarRenderingInfo::~IBarRenderingInfo(void) {}
 	}
 }

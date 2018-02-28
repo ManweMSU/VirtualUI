@@ -47,6 +47,8 @@ namespace Engine
 
 			bool friend operator == (const Rectangle & a, const Rectangle & b);
 			bool friend operator != (const Rectangle & a, const Rectangle & b);
+
+			static Rectangle Entire();
 		};
 		class Point
 		{
@@ -83,6 +85,7 @@ namespace Engine
 
 			Color(void);
 			Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa = 0xFF);
+			Color(int sr, int sg, int sb, int sa = 0xFF);
 			Color(float sr, float sg, float sb, float sa = 1.0);
 			Color(double sr, double sg, double sb, double sa = 1.0);
 			Color(uint32 code);
@@ -110,7 +113,7 @@ namespace Engine
 		class IBarRenderingInfo
 		{
 		public:
-#pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
+			virtual ~IBarRenderingInfo(void);
 		};
 		class ITextureRenderingInfo
 		{
@@ -132,6 +135,9 @@ namespace Engine
 
 			virtual void PushClip(const Box & Rect) = 0;
 			virtual void PopClip(void) = 0;
+			virtual void BeginLayer(const Box & Rect, double Opacity) = 0;
+			virtual void EndLayer(void) = 0;
+			virtual ~IRenderingDevice(void);
 #pragma message ("INTERFACE IS NOT COMPLETE!")
 		};
 
@@ -139,15 +145,17 @@ namespace Engine
 		{
 		public:
 			Rectangle Position;
-			// Clipping and layering???
-#pragma message ("INTERFACE IS NOT COMPLETE!")
 			virtual void Render(IRenderingDevice * Device, const Box & Outer) = 0;
 		};
 		class FrameShape : public Shape
 		{
 		public:
+			enum class FrameRenderMode { Normal = 0, Clipping = 1, Layering = 2 };
 			ObjectArray<Shape> Children;
+			FrameRenderMode RenderMode;
+			double Opacity;
 			FrameShape(const Rectangle position);
+			FrameShape(const Rectangle position, FrameRenderMode mode, double opacity = 1.0);
 			~FrameShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) override;
 		};
