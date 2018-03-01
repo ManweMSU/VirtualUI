@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../ShapeBase.h"
 
 #include <d2d1.h>

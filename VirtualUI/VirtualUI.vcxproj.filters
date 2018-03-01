@@ -32,6 +32,15 @@
     <ClInclude Include="PlatformDependent\Direct2D.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\FileApi.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="Streaming.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\ComStreamWrapper.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ControlBase.cpp">
@@ -50,6 +59,15 @@
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Direct2D.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\FileApi.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Streaming.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\ComStreamWrapper.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>

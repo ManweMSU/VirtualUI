@@ -56,7 +56,7 @@ namespace Engine
 		int Position, Length;
 		Encoding Coding;
 		
-		bool EOF(void) const { return Position < Length; }
+		bool EOF(void) const { return Position >= Length; }
 		uint ReadByte(void)
 		{
 			uint8 r = *(Source + Position);

@@ -47,6 +47,7 @@ namespace Engine
 				if (!Info) { delete[] stop; Collection->Release(); throw OutOfMemoryException(); }
 				Info->Collection = Collection;
 				Info->prop_w = cos(angle), Info->prop_h = sin(angle);
+				delete[] stop;
 				return Info;
 			} else {
 				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;

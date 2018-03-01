@@ -237,6 +237,8 @@ namespace Engine
 			}
 		}
 		int Length(void) const { return count; }
+		V * GetBuffer(void) { return data; }
+		const V * GetBuffer(void) const { return data; }
 		
 		string ToString(void) const override { return L"Array[" + string(count) + L"]"; }
 
@@ -488,8 +490,8 @@ namespace Engine
 	private:
 		O * reference = 0;
 	public:
-		SafePointer(void) {}
-		explicit SafePointer(O * ref) : reference(ref) {}
+		SafePointer(void) : reference(0) {}
+		SafePointer(O * ref) : reference(ref) {}
 		SafePointer(const SafePointer & src) = delete;
 		SafePointer(SafePointer && src) : reference(src.reference) { src.reference = 0; }
 		~SafePointer(void) { if (reference) reference->Release(); reference = 0; }

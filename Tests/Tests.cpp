@@ -2,6 +2,7 @@
 //
 
 #include "..\\VirtualUI\\ShapeBase.h"
+#include "..\\VirtualUI\\Streaming.h"
 #include "..\\VirtualUI\\PlatformDependent\\Direct2D.h"
 
 #include "stdafx.h"
@@ -75,6 +76,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	auto v = string(L";123456").ToDouble(L";");
 
+	{
+		AllocConsole();
+		SetConsoleTitleW(L"ui tests");
+		SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
+		SafePointer<Engine::Streaming::TextWriter> conout = new Engine::Streaming::TextWriter(constream);
+		conout.Inner()->WriteLine(string(L"xyu"));
+	}
 
 	Engine::Direct2D::InitializeFactory();
 	D2D1_RENDER_TARGET_PROPERTIES rtp;
