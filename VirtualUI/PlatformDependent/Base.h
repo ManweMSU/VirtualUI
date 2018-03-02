@@ -37,6 +37,7 @@ namespace Engine
 	uint InterlockedIncrement(uint & Value);
 	uint InterlockedDecrement(uint & Value);
 	void ZeroMemory(void * Memory, intptr Size);
+	uint32 GetTimerValue(void);
 
 	// Some C standart library and language dependent case insensitive comparation
 	void * MemoryCopy(void * Dest, const void * Source, intptr Length);

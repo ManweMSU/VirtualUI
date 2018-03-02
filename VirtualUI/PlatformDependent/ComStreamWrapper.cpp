@@ -32,7 +32,8 @@ namespace Engine
 				if (pcbRead) *pcbRead = cb;
 				return S_OK;
 			}
-			catch (...) { return S_FALSE; }
+			catch (IO::FileReadEndOfFileException & rf) { if (pcbRead) *pcbRead = rf.DataRead; return S_FALSE; }
+			catch (...) { if (pcbRead) *pcbRead = 0; return S_FALSE; }
 		}
 		HRESULT ComStream::Write(const void * pv, ULONG cb, ULONG * pcbWritten)
 		{

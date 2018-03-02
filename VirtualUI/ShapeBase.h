@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineBase.h"
+#include "Streaming.h"
 #include "Reflection.h"
 
 namespace Engine
@@ -107,6 +108,7 @@ namespace Engine
 			bool friend operator != (const GradientPoint & a, const GradientPoint & b);
 		};
 
+		class IRenderingDevice;
 		class FrameShape;
 		class BarShape;
 
@@ -123,27 +125,40 @@ namespace Engine
 		class ITextureRenderingInfo
 		{
 		public:
-#pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
+			virtual ~ITextureRenderingInfo(void);
 		};
 		class ITextRenderingInfo
 		{
 		public:
 #pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
 		};
+		class ITexture : public Object
+		{
+		public:
+			virtual int GetWidth(void) const = 0;
+			virtual int GetHeight(void) const = 0;
+			virtual bool IsDynamic(void) const = 0;
+			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) = 0;
+		};
 		class IRenderingDevice
 		{
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
-			//virtual ITextureRenderingInfo * CreateTextureRenderingInfo(/* неведомый */) = 0;
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;
 			//virtual ITextRenderingInfo * CreateTextRenderingInfo(/* неведомый */) = 0;
+
+			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
+
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;
+			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) = 0;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) = 0;
 
 			virtual void PushClip(const Box & Rect) = 0;
 			virtual void PopClip(void) = 0;
 			virtual void BeginLayer(const Box & Rect, double Opacity) = 0;
 			virtual void EndLayer(void) = 0;
+			virtual void SetTimerValue(uint32 time) = 0;
 			virtual ~IRenderingDevice(void);
 #pragma message ("INTERFACE IS NOT COMPLETE!")
 		};
@@ -189,6 +204,23 @@ namespace Engine
 		public:
 			BlurEffectShape(const Rectangle & position, double power);
 			~BlurEffectShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
+		};
+		class TextureShape : public Shape
+		{
+		public:
+			enum class TextureRenderMode { Stretch = 0, Fit = 1, FillPattern = 2, AsIs = 3 };
+		private:
+			mutable ITextureRenderingInfo * Info;
+			mutable Box FromBox;
+			ITexture * Texture;
+			TextureRenderMode Mode;
+			Rectangle From;
+		public:
+			TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode);
+			~TextureShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
 			string ToString(void) const override;

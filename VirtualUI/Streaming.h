@@ -59,6 +59,22 @@ namespace Engine
 			virtual ~MemoryStream(void) override;
 			virtual string ToString(void) const override;
 		};
+		class FragmentStream final : public Stream
+		{
+			Stream * inner;
+			uint64 begin, end;
+			int64 pointer;
+		public:
+			FragmentStream(Stream * Inner, uint64 From, uint64 Length);			
+			virtual void Read(void * buffer, uint32 length) override;
+			virtual void Write(const void * data, uint32 length) override;
+			virtual int64 Seek(int64 position, SeekOrigin origin) override;
+			virtual uint64 Length(void) override;
+			virtual void SetLength(uint64 length) override;
+			virtual void Flush(void) override;
+			virtual ~FragmentStream(void) override;
+			virtual string ToString(void) const override;
+		};
 
 		class TextWriter final : public Object
 		{

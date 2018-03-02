@@ -45,7 +45,12 @@ namespace Engine
 		MemoryStream::MemoryStream(int block) : data(block), pointer(0) {}
 		void MemoryStream::Read(void * buffer, uint32 length)
 		{
-			if (length > uint32(data.Length() - pointer)) throw FileAccessException();
+			if (length > uint32(data.Length() - pointer)) {
+				length = (pointer >= data.Length()) ? 0 : (uint32(data.Length()) - pointer);
+				MemoryCopy(buffer, data.GetBuffer() + pointer, length);
+				pointer += length;
+				throw FileReadEndOfFileException(length);
+			}
 			MemoryCopy(buffer, data.GetBuffer() + pointer, length);
 			pointer += length;
 		}
@@ -90,5 +95,42 @@ namespace Engine
 		string TextWriter::ToString(void) const { return L"TextWriter"; }
 		TextWriter & TextWriter::operator<<(const string & text) { Write(text); return *this; }
 		const TextWriter & TextWriter::operator<<(const string & text) const { Write(text); return *this; }
+		FragmentStream::FragmentStream(Stream * Inner, uint64 From, uint64 Length) : inner(Inner), begin(From), end(From + Length), pointer(From) { inner->Retain(); }
+		void FragmentStream::Read(void * buffer, uint32 length)
+		{
+			if (uint64(length) > end - begin - pointer) {
+				length = (uint64(pointer) >= end - begin) ? 0 : uint32(end - begin - pointer);
+				auto pos = inner->Seek(0, Current);
+				inner->Seek(begin + pointer, Begin);
+				try {
+					inner->Read(buffer, length);
+				}
+				catch (...) { inner->Seek(pos, Begin); throw; }
+				inner->Seek(pos, Begin);
+				pointer += length;
+				throw FileReadEndOfFileException(length);
+			}
+			auto pos = inner->Seek(0, Current);
+			inner->Seek(begin + pointer, Begin);
+			try {
+				inner->Read(buffer, length);
+			} catch (...) { inner->Seek(pos, Begin); throw; }
+			pointer += length;
+		}
+		void FragmentStream::Write(const void * data, uint32 length) { throw FileAccessException(); }
+		int64 FragmentStream::Seek(int64 position, SeekOrigin origin)
+		{
+			int64 newpos = position;
+			if (origin == Current) newpos += pointer;
+			else if (origin == End) newpos += end - begin;
+			if (newpos < 0 || uint64(newpos) > end - begin) throw InvalidArgumentException();
+			pointer = newpos;
+			return pointer;
+		}
+		uint64 FragmentStream::Length(void) { return end - begin; }
+		void FragmentStream::SetLength(uint64 length) { throw FileAccessException(); }
+		void FragmentStream::Flush(void) {}
+		FragmentStream::~FragmentStream(void) { inner->Release(); }
+		string FragmentStream::ToString(void) const { return L"FragmentStream"; }
 	}
 }

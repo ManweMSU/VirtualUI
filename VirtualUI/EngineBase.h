@@ -484,6 +484,16 @@ namespace Engine
 			}
 		}
 	}
+	template <class V> int BinarySearchLE(const Array<V> & volume, const V & value)
+	{
+		if (!volume.Length()) throw InvalidArgumentException();
+		int bl = 0, bh = volume.Length();
+		while (bh - bl > 1) {
+			int mid = (bl + bh) / 2;
+			if (volume[mid] > value) { bh = mid; } else { bl = mid; }
+		}
+		return bl;
+	}
 
 	template <class O> class SafePointer final : Object
 	{
@@ -498,7 +508,7 @@ namespace Engine
 		SafePointer & operator = (const SafePointer & src) = delete;
 
 		O & operator * (void) const { return *reference; }
-		O * operator -> (void) const { return *reference; }
+		O * operator -> (void) const { return reference; }
 		operator O * (void) const { return reference; }
 		O * Inner(void) const { return reference; }
 		O ** InnerRef(void) const { return &reference; }

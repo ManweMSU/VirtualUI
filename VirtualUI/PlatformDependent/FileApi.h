@@ -7,6 +7,8 @@ namespace Engine
 	namespace IO
 	{
 		class FileAccessException : public Exception { public: string ToString(void) const override; };
+		class FileReadEndOfFileException : public Exception { public: uint32 DataRead; FileReadEndOfFileException(uint32 data_read); string ToString(void) const override; };
+		class FileFormatException : public Exception { public: string ToString(void) const override; };
 
 		enum FileAccess { AccessRead, AccessWrite, AccessReadWrite };
 		enum FileCreationMode { CreateAlways, CreateNew, OpenAlways, OpenExisting, TruncateExisting };

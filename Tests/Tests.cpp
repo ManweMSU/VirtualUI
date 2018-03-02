@@ -30,6 +30,7 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 ID2D1DCRenderTarget * Target;
 Engine::Direct2D::D2DRenderDevice * Device;
 Engine::UI::FrameShape * Shape;
+Engine::UI::ITexture * Texture;
 
 class test : public Reflection::ReflectableObject
 {
@@ -45,6 +46,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
+	SetProcessDPIAware();
 
 	/*auto spl = (L"abcabcabcab" + string(-1234)).Replace(L"bc", L"XYU").LowerCase().Split(L'-');
 	SortArray(spl, true);
@@ -76,11 +80,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	auto v = string(L";123456").ToDouble(L";");
 
+	AllocConsole();
+	SetConsoleTitleW(L"ui tests");
+	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
+	SafePointer<Engine::Streaming::TextWriter> conout = new Engine::Streaming::TextWriter(constream);
 	{
-		AllocConsole();
-		SetConsoleTitleW(L"ui tests");
-		SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-		SafePointer<Engine::Streaming::TextWriter> conout = new Engine::Streaming::TextWriter(constream);
 		conout.Inner()->WriteLine(string(L"xyu"));
 	}
 
@@ -93,18 +97,34 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	rtp.dpiY = 0.0f;
 	rtp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 	rtp.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-	if (Engine::Direct2D::Factory->CreateDCRenderTarget(&rtp, &Target) != S_OK) MessageBox(0, L"XYU.", 0, MB_OK | MB_ICONSTOP);
+	if (Engine::Direct2D::D2DFactory->CreateDCRenderTarget(&rtp, &Target) != S_OK) MessageBox(0, L"XYU.", 0, MB_OK | MB_ICONSTOP);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 
 	Array<UI::GradientPoint> ps;
 	ps << UI::GradientPoint(UI::Color(0, 255, 0), 0.0);
 	ps << UI::GradientPoint(UI::Color(0, 0, 255), 1.0);
-	::Shape = new FrameShape(UI::Rectangle(100, 100, 600, 600), FrameShape::FrameRenderMode::Layering, 0.5);
-	auto s2 = new BarShape(UI::Rectangle(100, 100, 300, 300), ps, 3.141592 / 3.0);
+	::Shape = new FrameShape(UI::Rectangle(100, 100, Coordinate::Right(), 600), FrameShape::FrameRenderMode::Layering, 0.5);
+	auto s2 = new BarShape(UI::Rectangle(100, 100, Coordinate(-100, 0.0, 1.0), 300), ps, 3.141592 / 6.0);
 	::Shape->Children.Append(s2);
 	s2->Release();
-	
 	s2 = new BarShape(UI::Rectangle(0, -50, 200, 200), UI::Color(255, 0, 255));
+	::Shape->Children.Append(s2);
+	s2->Release();
+
+	auto General = new FrameShape(UI::Rectangle::Entire());
+	{
+		SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"bl.gif", Streaming::AccessRead, Streaming::OpenExisting);
+		Texture = Device->LoadTexture(Input);
+		(*(conout.Inner())) << Texture->GetWidth() << L"x" << Texture->GetHeight() << IO::NewLineChar;
+		auto ts = new TextureShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.75), UI::Coordinate(0, 0.0, 0.75)), Texture, UI::Rectangle::Entire(), TextureShape::TextureRenderMode::FillPattern);
+		Texture->Release();
+		General->Children.Append(ts);
+		ts->Release();
+	}
+	General->Children.Append(::Shape);
+	::Shape->Release();
+	::Shape = General;
+	s2 = new BarShape(UI::Rectangle::Entire(), Color(192, 192, 192));
 	::Shape->Children.Append(s2);
 	s2->Release();
 
@@ -230,12 +250,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			RECT Rect;
 			GetClientRect(hWnd, &Rect);
             HDC hdc = GetDC(hWnd);
-			FillRect(hdc, &Rect, (HBRUSH) GetStockObject(LTGRAY_BRUSH));
+			//FillRect(hdc, &Rect, (HBRUSH) GetStockObject(LTGRAY_BRUSH));
 
-			ValidateRect(hWnd, 0);
+			//ValidateRect(hWnd, 0);
 
 			Target->BindDC(hdc, &Rect);
 			Target->BeginDraw();
+			Device->SetTimerValue(GetTimerValue());
 			::Shape->Render(Device, Box(Rect.left, Rect.top, Rect.right, Rect.bottom));
 			Target->EndDraw();
 

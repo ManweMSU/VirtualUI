@@ -62,6 +62,7 @@ namespace Engine
 		void FrameShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
 			Box my(Position, Outer);
+			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			if (RenderMode == FrameRenderMode::Normal) {
 				for (int i = Children.Length() - 1; i >= 0; i--) Children[i].Render(Device, my);
 			} else if (RenderMode == FrameRenderMode::Clipping) {
@@ -86,6 +87,7 @@ namespace Engine
 		{
 			if (!Info) Info = Device->CreateBarRenderingInfo(Gradient, GradientAngle);
 			Box my(Position, Outer);
+			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->RenderBar(Info, my);
 		}
 		void BarShape::ClearCache(void) { delete Info; Info = 0; }
@@ -93,15 +95,57 @@ namespace Engine
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
 		IBlurEffectRenderingInfo::~IBlurEffectRenderingInfo(void) {}
-		BlurEffectShape::BlurEffectShape(const Rectangle & position, double power) : BlurPower(power) { Position = position; }
+		BlurEffectShape::BlurEffectShape(const Rectangle & position, double power) : Info(0), BlurPower(power) { Position = position; }
 		BlurEffectShape::~BlurEffectShape(void) { delete Info; }
 		void BlurEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
 			if (!Info) Info = Device->CreateBlurEffectRenderingInfo(BlurPower);
 			Box my(Position, Outer);
+			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->ApplyBlur(Info, my);
 		}
 		void BlurEffectShape::ClearCache(void) { delete Info; Info = 0; }
 		string BlurEffectShape::ToString(void) const { return L"BlurEffectShape"; }
+		ITextureRenderingInfo::~ITextureRenderingInfo(void) {}
+		TextureShape::TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode) : Info(0), Texture(texture), From(take_from), Mode(mode) { Position = position; if (Texture) Texture->Retain(); }
+		TextureShape::~TextureShape(void) { delete Info; if (Texture) Texture->Release(); }
+		void TextureShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		{
+			if (Texture) {
+				if (!Info) {
+					FromBox = Box(From, Box(0, 0, Texture->GetWidth(), Texture->GetHeight()));
+					Info = Device->CreateTextureRenderingInfo(Texture, FromBox, Mode == TextureRenderMode::FillPattern);
+				}
+				Box to(Position, Outer);
+				if (to.Right < to.Left || to.Bottom < to.Top) return;
+				if (Mode == TextureRenderMode::Fit) {
+					double ta = double(to.Right - to.Left) / double(to.Bottom - to.Top);
+					double fa = double(FromBox.Right - FromBox.Left) / double(FromBox.Bottom - FromBox.Top);
+					if (ta > fa) {
+						int adjx = int(double(to.Bottom - to.Top) * fa);
+						int xc = (to.Right + to.Left) >> 1;
+						to.Left = xc - (adjx >> 1);
+						to.Right = xc + (adjx >> 1);
+					} else if (fa > ta) {
+						int adjy = int(double(to.Right - to.Left) / fa);
+						int yc = (to.Bottom + to.Top) >> 1;
+						to.Top = yc - (adjy >> 1);
+						to.Bottom = yc + (adjy >> 1);
+					}
+				} else if (Mode == TextureRenderMode::AsIs) {
+					int sx = FromBox.Right - FromBox.Left;
+					int sy = FromBox.Bottom - FromBox.Top;
+					if (to.Right - to.Left < sx || to.Bottom - to.Top < sy) return;
+					to.Right = to.Left = (to.Right + to.Left) / 2;
+					to.Bottom = to.Top = (to.Bottom + to.Top) / 2;
+					int rx = sx / 2, ry = sy / 2;
+					to.Left -= rx; to.Top -= ry;
+					to.Right += sx - rx; to.Bottom += sy - ry;
+				}
+				Device->RenderTexture(Info, to);
+			}
+		}
+		void TextureShape::ClearCache(void) { delete Info; Info = 0; }
+		string TextureShape::ToString(void) const { return L"TextureShape"; }
 	}
 }

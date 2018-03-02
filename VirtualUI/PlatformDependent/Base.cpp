@@ -4,6 +4,7 @@
 #include <Shlwapi.h>
 
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "winmm.lib")
 
 #undef InterlockedIncrement
 #undef InterlockedDecrement
@@ -14,6 +15,7 @@ namespace Engine
 	uint InterlockedIncrement(uint & Value) { return _InterlockedIncrement(&Value); }
 	uint InterlockedDecrement(uint & Value) { return _InterlockedDecrement(&Value); }
 	void ZeroMemory(void * Memory, intptr Size) { memset(Memory, 0, Size); }
+	uint32 GetTimerValue(void) { return timeGetTime(); }
 	void * MemoryCopy(void * Dest, const void * Source, intptr Length) { return memcpy(Dest, Source, Length); }
 	widechar * StringCopy(widechar * Dest, const widechar * Source)
 	{
@@ -160,7 +162,7 @@ namespace Engine
 		}
 		void WriteChar(uint chr)
 		{
-			if (Coding == Encoding::ANSI) WriteByte(chr);
+			if (Coding == Encoding::ANSI) WriteByte((chr < 0x100) ? chr : '?');
 			else if (Coding == Encoding::UTF8) {
 				if (chr > 0xFFFF) {
 					WriteByte((chr & 0x07) | 0xF0);

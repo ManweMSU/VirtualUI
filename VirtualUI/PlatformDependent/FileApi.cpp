@@ -10,6 +10,9 @@ namespace Engine
 	namespace IO
 	{
 		string FileAccessException::ToString(void) const { return L"FileAccessException"; }
+		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
+		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
+		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
 		string NormalizePath(const string & path)
 		{
 			if (PathChar == L'\\') return path.Replace(L'/', L'\\');
@@ -90,7 +93,7 @@ namespace Engine
 		{
 			DWORD Read;
 			if (!::ReadFile(file, to, amount, &Read, 0)) throw FileAccessException();
-			if (Read != amount) throw FileAccessException();
+			if (Read != amount) throw FileReadEndOfFileException(Read);
 		}
 		void WriteFile(handle file, const void * data, uint32 amount)
 		{
