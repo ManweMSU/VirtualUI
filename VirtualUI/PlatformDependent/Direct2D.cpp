@@ -63,10 +63,13 @@ namespace Engine
 			Array<uint32> CharString;
 			Array<uint16> GlyphString;
 			Array<float> GlyphAdvances;
+			Array<uint8> UseAlternative;
 			ID2D1PathGeometry * Geometry;
 			ID2D1SolidColorBrush * TextBrush;
 			ID2D1SolidColorBrush * HighlightBrush;
 			ID2D1RenderTarget * RenderTarget;
+			uint16 NormalSpaceGlyph;
+			uint16 AlternativeSpaceGlyph;
 			int BaselineOffset;
 			int halign, valign;
 			int run_length;
@@ -76,12 +79,13 @@ namespace Engine
 			float StrikeoutHalfWidth;
 			int hls, hle;
 
-			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), hls(-1), hle(-1) {}
+			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), UseAlternative(0x40), hls(-1), hle(-1) {}
 
 			void FillAdvances(void);
 			void FillGlyphs(void);
 			void BuildGeometry(void);
 			float FontUnitsToDIP(int units);
+			float AltFontUnitsToDIP(int units);
 
 			virtual void GetExtent(int & width, int & height) override;
 			virtual void SetHighlightColor(const Color & color) override
@@ -120,6 +124,12 @@ namespace Engine
 				if (HighlightBrush) HighlightBrush->Release();
 			}
 		};
+		struct LineRenderingInfo : public ILineRenderingInfo
+		{
+			ID2D1SolidColorBrush * Brush;
+			ID2D1StrokeStyle * Stroke;
+			virtual ~LineRenderingInfo(void) override { if (Brush) Brush->Release(); if (Stroke) Stroke->Release(); }
+		};
 		class D2DTexture : public ITexture
 		{
 		public:
@@ -153,20 +163,24 @@ namespace Engine
 		{
 		public:
 			IDWriteFontFace * FontFace;
+			IDWriteFontFace * AlternativeFace;
 			string FontName;
 			int Height, Weight;
 			int ActualHeight;
 			bool Italic, Underline, Strikeout;
 			DWRITE_FONT_METRICS FontMetrics;
-			virtual ~D2DFont(void) override { if (FontFace) FontFace->Release(); }
+			DWRITE_FONT_METRICS AltMetrics;
+			virtual ~D2DFont(void) override { if (FontFace) FontFace->Release(); if (AlternativeFace) AlternativeFace->Release(); }
 			virtual void Reload(IRenderingDevice * Device) override
 			{
 				if (FontFace) FontFace->Release();
+				if (AlternativeFace) AlternativeFace->Release();
 				auto New = static_cast<D2DFont *>(Device->LoadFont(FontName, ActualHeight, Weight, Italic, Underline, Strikeout));
 				FontFace = New->FontFace;
 				FontMetrics = New->FontMetrics;
-				New->FontFace->Release();
+				AlternativeFace = New->AlternativeFace;
 				New->FontFace = 0;
+				New->AlternativeFace = 0;
 				New->Release();
 			}
 			virtual string ToString(void) const override { return L"D2DFont"; }
@@ -285,6 +299,20 @@ namespace Engine
 			}
 			return Info;
 		}
+		ILineRenderingInfo * D2DRenderDevice::CreateLineRenderingInfo(const Color & color, bool dotted)
+		{
+
+			LineRenderingInfo * Info = new (std::nothrow) LineRenderingInfo;
+			if (!Info) throw OutOfMemoryException();
+			Info->Brush = 0;
+			Info->Stroke = 0;
+			Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Info->Brush);
+			if (dotted) {
+				float len[] = { 1.0f, 1.0f };
+				D2DFactory->CreateStrokeStyle(D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_LINE_JOIN_MITER, 10.0f, D2D1_DASH_STYLE_CUSTOM, 0.5f), len, 2, &Info->Stroke);
+			}
+			return Info;
+		}
 		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source)
 		{
 			Streaming::ComStream * Stream = new Streaming::ComStream(Source);
@@ -379,6 +407,20 @@ namespace Engine
 				FontSource = 0;
 				FontFamily->Release();
 				FontFamily = 0;
+				if (Collection->FindFamilyName(L"Segoe UI Emoji", &Index, &Exists) == S_OK) {
+					if (Exists) {
+						if (Collection->GetFontFamily(Index, &FontFamily) == S_OK) {
+							if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(Weight), DWRITE_FONT_STRETCH_NORMAL, IsItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) == S_OK) {
+								FontSource->CreateFontFace(&Font->AlternativeFace);
+								if (Font->AlternativeFace) Font->AlternativeFace->GetGdiCompatibleMetrics(float(Height), 1.0f, 0, &Font->AltMetrics);
+								FontSource->Release();
+								FontSource = 0;
+							}
+							FontFamily->Release();
+							FontFamily = 0;
+						}
+					}
+				}
 				Collection->Release();
 				Collection = 0;
 			}
@@ -482,6 +524,15 @@ namespace Engine
 			Target->SetTransform(Transform);
 			if (Clip) PopClip();
 		}
+		void D2DRenderDevice::RenderLine(ILineRenderingInfo * Info, const Box & At)
+		{
+			auto info = reinterpret_cast<LineRenderingInfo *>(Info);
+			if (info->Brush) {
+				D2D1_POINT_2F Start = D2D1::Point2F(float(At.Left) + 0.5f, float(At.Top) + 0.5f);
+				D2D1_POINT_2F End = D2D1::Point2F(float(At.Right) + 0.5f, float(At.Bottom) + 0.5f);
+				Target->DrawLine(Start, End, info->Brush, 1.0f, info->Stroke);
+			}
+		}
 		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
 		{
 			throw Exception();
@@ -518,7 +569,12 @@ namespace Engine
 			Array<DWRITE_GLYPH_METRICS> Metrics(0x40);
 			Metrics.SetLength(GlyphString.Length());
 			if (Font->FontFace->GetGdiCompatibleGlyphMetrics(float(Font->Height), 1.0f, 0, TRUE, GlyphString, GlyphString.Length(), Metrics) != S_OK) throw Exception();
-			for (int i = 0; i < GlyphString.Length(); i++) GlyphAdvances[i] = FontUnitsToDIP(Metrics[i].advanceWidth);
+			if (Font->AlternativeFace) {
+				for (int i = 0; i < GlyphString.Length(); i++) if (UseAlternative[i]) {
+					Font->AlternativeFace->GetGdiCompatibleGlyphMetrics(float(Font->Height), 1.0f, 0, TRUE, GlyphString.GetBuffer() + i, 1, Metrics.GetBuffer() + i);
+				}
+			}
+			for (int i = 0; i < GlyphString.Length(); i++) GlyphAdvances[i] = (UseAlternative[i]) ? AltFontUnitsToDIP(Metrics[i].advanceWidth) : FontUnitsToDIP(Metrics[i].advanceWidth);
 			BaselineOffset = int(FontUnitsToDIP(Font->FontMetrics.ascent));
 			float rl = 0.0f;
 			for (int i = 0; i < GlyphString.Length(); i++) rl += GlyphAdvances[i];
@@ -526,8 +582,18 @@ namespace Engine
 		}
 		void TextRenderingInfo::FillGlyphs(void)
 		{
+			uint32 Space = 0x20;
+			Font->FontFace->GetGlyphIndicesW(&Space, 1, &NormalSpaceGlyph);
+			Font->AlternativeFace->GetGlyphIndicesW(&Space, 1, &AlternativeSpaceGlyph);
 			GlyphString.SetLength(CharString.Length());
 			if (Font->FontFace->GetGlyphIndicesW(CharString, CharString.Length(), GlyphString) != S_OK) throw Exception();
+			UseAlternative.SetLength(CharString.Length());
+			for (int i = 0; i < UseAlternative.Length(); i++) {
+				if (!GlyphString[i]) {
+					if (Font->AlternativeFace && Font->AlternativeFace->GetGlyphIndicesW(CharString.GetBuffer() + i, 1, GlyphString.GetBuffer() + i) == S_OK && GlyphString[i]) UseAlternative[i] = true;
+					else UseAlternative[i] = false;
+				} else UseAlternative[i] = false;
+			}
 		}
 		void TextRenderingInfo::BuildGeometry(void)
 		{
@@ -535,8 +601,14 @@ namespace Engine
 			ID2D1GeometrySink * Sink;
 			if (D2DFactory->CreatePathGeometry(&Geometry) != S_OK) throw Exception();
 			if (Geometry->Open(&Sink) != S_OK) { Geometry->Release(); Geometry = 0; throw Exception(); }
-			if (Font->FontFace->GetGlyphRunOutline(float(Font->Height), GlyphString, GlyphAdvances, 0, GlyphString.Length(), FALSE, FALSE, static_cast<ID2D1SimplifiedGeometrySink*>(Sink)) != S_OK)
+			Array<uint16> Glyph = GlyphString;
+			for (int i = 0; i < Glyph.Length(); i++) if (UseAlternative[i]) Glyph[i] = NormalSpaceGlyph;
+			if (Font->FontFace->GetGlyphRunOutline(float(Font->Height), Glyph, GlyphAdvances, 0, GlyphString.Length(), FALSE, FALSE, static_cast<ID2D1SimplifiedGeometrySink*>(Sink)) != S_OK)
 			{ Sink->Close(); Sink->Release(); Geometry->Release(); Geometry = 0; throw Exception(); }
+			if (Font->AlternativeFace) {
+				for (int i = 0; i < Glyph.Length(); i++) Glyph[i] = (UseAlternative[i]) ? GlyphString[i] : AlternativeSpaceGlyph;
+				Font->AlternativeFace->GetGlyphRunOutline(float(Font->Height), Glyph, GlyphAdvances, 0, GlyphString.Length(), FALSE, FALSE, static_cast<ID2D1SimplifiedGeometrySink*>(Sink));
+			}
 			Sink->Close();
 			Sink->Release();
 			UnderlineOffset = -FontUnitsToDIP(int16(Font->FontMetrics.underlinePosition));
@@ -545,6 +617,7 @@ namespace Engine
 			StrikeoutHalfWidth = FontUnitsToDIP(Font->FontMetrics.strikethroughThickness) / 2.0f;
 		}
 		float TextRenderingInfo::FontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->FontMetrics.designUnitsPerEm); }
+		float TextRenderingInfo::AltFontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->AltMetrics.designUnitsPerEm); }
 		void TextRenderingInfo::GetExtent(int & width, int & height) { width = run_length; height = Font->ActualHeight; }
 	}
 }

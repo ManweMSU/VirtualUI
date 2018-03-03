@@ -137,6 +137,11 @@ namespace Engine
 			virtual int EndOfChar(int Index) = 0;
 			virtual ~ITextRenderingInfo(void);
 		};
+		class ILineRenderingInfo
+		{
+		public:
+			virtual ~ILineRenderingInfo(void);
+		};
 
 		class ITexture : public Object
 		{
@@ -160,6 +165,7 @@ namespace Engine
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) = 0;
+			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) = 0;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
@@ -167,6 +173,7 @@ namespace Engine
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) = 0;
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) = 0;
+			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) = 0;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) = 0;
 
 			virtual void PushClip(const Box & Rect) = 0;
@@ -255,6 +262,19 @@ namespace Engine
 		public:
 			TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align);
 			~TextShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
+		};
+		class LineShape : public Shape
+		{
+		private:
+			mutable ILineRenderingInfo * Info;
+			Color LineColor;
+			bool Dotted;
+		public:
+			LineShape(const Rectangle & position, const Color & color, bool dotted);
+			~LineShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
 			string ToString(void) const override;

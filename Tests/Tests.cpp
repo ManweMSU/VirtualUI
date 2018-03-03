@@ -123,10 +123,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		General->Children.Append(ts);
 		ts->Release();
 
-		float v = 0.0f;
+		auto ls = new LineShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.0), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.3)), Color(255, 0, 255), true);
+		General->Children.Append(ls);
+		ls->Release();
 
-		UI::IFont * Font = Device->LoadFont(L"Segoe UI Emoji", 40, 100, false, true, false);
-		auto fs = new TextShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.5)), L"kornevgen pidor 🍄🍄🍄", Font, Color(128, 128, 255, 255),
+		float v = 0.0f;
+		UI::IFont * Font = Device->LoadFont(L"Segoe UI", 40, 400, false, true, false);
+		auto fs = new TextShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.5)), L"kornevgen pidor \xD83C\xDF44\xD83C\xDF44\xD83C\xDF44 корневген пидор " + string(5.0 / v), Font, Color(128, 128, 255, 255),
 			UI::TextShape::TextHorizontalAlign::Center, UI::TextShape::TextVerticalAlign::Center);
 		General->Children.Append(fs);
 		fs->Release();
@@ -173,13 +176,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-
-
-//
-//  ФУНКЦИЯ: MyRegisterClass()
-//
-//  НАЗНАЧЕНИЕ: регистрирует класс окна.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -201,16 +197,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
-//
-//   НАЗНАЧЕНИЕ: сохраняет обработку экземпляра и создает главное окно.
-//
-//   КОММЕНТАРИИ:
-//
-//        В данной функции дескриптор экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится на экран главное окно программы.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Сохранить дескриптор экземпляра в глобальной переменной
@@ -229,16 +215,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  НАЗНАЧЕНИЕ:  обрабатывает сообщения в главном окне.
-//
-//  WM_COMMAND — обработать меню приложения
-//  WM_PAINT — отрисовать главное окно
-//  WM_DESTROY — отправить сообщение о выходе и вернуться
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -249,9 +225,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Разобрать выбор в меню:
             switch (wmId)
             {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
@@ -270,6 +243,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			//ValidateRect(hWnd, 0);
 
 			Target->BindDC(hdc, &Rect);
+			Target->SetDpi(96.0f, 96.0f);
 			Target->BeginDraw();
 			Device->SetTimerValue(GetTimerValue());
 			::Shape->Render(Device, Box(Rect.left, Rect.top, Rect.right, Rect.bottom));
@@ -285,24 +259,4 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
-}
-
-// Обработчик сообщений для окна "О программе".
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
 }

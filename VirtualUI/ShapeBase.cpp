@@ -160,5 +160,16 @@ namespace Engine
 		}
 		void TextShape::ClearCache(void) { delete Info; Info = 0; }
 		string TextShape::ToString(void) const { return L"TextShape"; }
+		ILineRenderingInfo::~ILineRenderingInfo(void) {}
+		LineShape::LineShape(const Rectangle & position, const Color & color, bool dotted) : Info(0), LineColor(color), Dotted(dotted) { Position = position; }
+		LineShape::~LineShape(void) { delete Info; }
+		void LineShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		{
+			if (!Info) Info = Device->CreateLineRenderingInfo(LineColor, Dotted);
+			Box my(Position, Outer);
+			Device->RenderLine(Info, my);
+		}
+		void LineShape::ClearCache(void) { delete Info; Info = 0; }
+		string LineShape::ToString(void) const { return L"LineShape"; }
 	}
 }
