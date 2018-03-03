@@ -60,10 +60,11 @@ namespace Engine
 		ImmutableString(uint32 value, const ImmutableString & digits, int minimal_length = 0);
 		ImmutableString(uint64 value, const ImmutableString & digits, int minimal_length = 0);
 		ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding);
-		ImmutableString(float src, widechar separator);
-		ImmutableString(double src, widechar separator);
+		ImmutableString(float src, widechar separator = L'.');
+		ImmutableString(double src, widechar separator = L'.');
 		ImmutableString(bool src);
 		ImmutableString(widechar src);
+		ImmutableString(widechar src, int repeats);
 		explicit ImmutableString(const Object * object);
 		explicit ImmutableString(const void * src);
 		~ImmutableString(void) override;

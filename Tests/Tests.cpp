@@ -1,4 +1,4 @@
-// Tests.cpp: определяет точку входа для приложения.
+п»ї// Tests.cpp: РѕРїСЂРµРґРµР»СЏРµС‚ С‚РѕС‡РєСѓ РІС…РѕРґР° РґР»СЏ РїСЂРёР»РѕР¶РµРЅРёСЏ.
 //
 
 #include "..\\VirtualUI\\ShapeBase.h"
@@ -16,12 +16,12 @@ using namespace Reflection;
 
 #define MAX_LOADSTRING 100
 
-// Глобальные переменные:
-HINSTANCE hInst;                                // текущий экземпляр
-WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
-WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
+// Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ:
+HINSTANCE hInst;                                // С‚РµРєСѓС‰РёР№ СЌРєР·РµРјРїР»СЏСЂ
+WCHAR szTitle[MAX_LOADSTRING];                  // РўРµРєСЃС‚ СЃС‚СЂРѕРєРё Р·Р°РіРѕР»РѕРІРєР°
+WCHAR szWindowClass[MAX_LOADSTRING];            // РёРјСЏ РєР»Р°СЃСЃР° РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР°
 
-// Отправить объявления функций, включенных в этот модуль кода:
+// РћС‚РїСЂР°РІРёС‚СЊ РѕР±СЉСЏРІР»РµРЅРёСЏ С„СѓРЅРєС†РёР№, РІРєР»СЋС‡РµРЅРЅС‹С… РІ СЌС‚РѕС‚ РјРѕРґСѓР»СЊ РєРѕРґР°:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -35,8 +35,8 @@ Engine::UI::ITexture * Texture;
 class test : public Reflection::ReflectableObject
 {
 public:
-	DECLARE_PROPERTY(int, value);
-	DECLARE_PROPERTY(Coordinate, coord);
+	DECLARE_PROPERTY(int, value)
+	DECLARE_PROPERTY(Coordinate, coord)
 };
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -85,7 +85,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
 	SafePointer<Engine::Streaming::TextWriter> conout = new Engine::Streaming::TextWriter(constream);
 	{
-		conout.Inner()->WriteLine(string(L"xyu"));
+		conout->WriteLine(string(L"xyu"));
+
+		(*conout) << string(333.666555444333222111, L',') << IO::NewLineChar;
 	}
 
 	Engine::Direct2D::InitializeFactory();
@@ -120,6 +122,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		Texture->Release();
 		General->Children.Append(ts);
 		ts->Release();
+
+		float v = 0.0f;
+
+		UI::IFont * Font = Device->LoadFont(L"Segoe UI Emoji", 40, 100, false, true, false);
+		auto fs = new TextShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.5)), L"kornevgen pidor рџЌ„рџЌ„рџЌ„", Font, Color(128, 128, 255, 255),
+			UI::TextShape::TextHorizontalAlign::Center, UI::TextShape::TextVerticalAlign::Center);
+		General->Children.Append(fs);
+		fs->Release();
+		Font->Release();
+
+		auto bs = new BarShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.5)), Color(192, 255, 128));
+		General->Children.Append(bs);
+		bs->Release();
 	}
 	General->Children.Append(::Shape);
 	::Shape->Release();
@@ -128,14 +143,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	::Shape->Children.Append(s2);
 	s2->Release();
 
-    // TODO: разместите код здесь.
+    // TODO: СЂР°Р·РјРµСЃС‚РёС‚Рµ РєРѕРґ Р·РґРµСЃСЊ.
 
-    // Инициализация глобальных строк
+    // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РіР»РѕР±Р°Р»СЊРЅС‹С… СЃС‚СЂРѕРє
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_TESTS, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-    // Выполнить инициализацию приложения:
+    // Р’С‹РїРѕР»РЅРёС‚СЊ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЋ РїСЂРёР»РѕР¶РµРЅРёСЏ:
     if (!InitInstance (hInstance, nCmdShow))
     {
         return FALSE;
@@ -145,7 +160,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
-    // Цикл основного сообщения:
+    // Р¦РёРєР» РѕСЃРЅРѕРІРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -161,9 +176,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 
 //
-//  ФУНКЦИЯ: MyRegisterClass()
+//  Р¤РЈРќРљР¦РРЇ: MyRegisterClass()
 //
-//  НАЗНАЧЕНИЕ: регистрирует класс окна.
+//  РќРђР—РќРђР§Р•РќРР•: СЂРµРіРёСЃС‚СЂРёСЂСѓРµС‚ РєР»Р°СЃСЃ РѕРєРЅР°.
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -187,18 +202,18 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 }
 
 //
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
+//   Р¤РЈРќРљР¦РРЇ: InitInstance(HINSTANCE, int)
 //
-//   НАЗНАЧЕНИЕ: сохраняет обработку экземпляра и создает главное окно.
+//   РќРђР—РќРђР§Р•РќРР•: СЃРѕС…СЂР°РЅСЏРµС‚ РѕР±СЂР°Р±РѕС‚РєСѓ СЌРєР·РµРјРїР»СЏСЂР° Рё СЃРѕР·РґР°РµС‚ РіР»Р°РІРЅРѕРµ РѕРєРЅРѕ.
 //
-//   КОММЕНТАРИИ:
+//   РљРћРњРњР•РќРўРђР РР:
 //
-//        В данной функции дескриптор экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится на экран главное окно программы.
+//        Р’ РґР°РЅРЅРѕР№ С„СѓРЅРєС†РёРё РґРµСЃРєСЂРёРїС‚РѕСЂ СЌРєР·РµРјРїР»СЏСЂР° СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ РіР»РѕР±Р°Р»СЊРЅРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№, Р° С‚Р°РєР¶Рµ
+//        СЃРѕР·РґР°РµС‚СЃСЏ Рё РІС‹РІРѕРґРёС‚СЃСЏ РЅР° СЌРєСЂР°РЅ РіР»Р°РІРЅРѕРµ РѕРєРЅРѕ РїСЂРѕРіСЂР°РјРјС‹.
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // Сохранить дескриптор экземпляра в глобальной переменной
+   hInst = hInstance; // РЎРѕС…СЂР°РЅРёС‚СЊ РґРµСЃРєСЂРёРїС‚РѕСЂ СЌРєР·РµРјРїР»СЏСЂР° РІ РіР»РѕР±Р°Р»СЊРЅРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№
 
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
@@ -215,13 +230,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 }
 
 //
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
+//  Р¤РЈРќРљР¦РРЇ: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
-//  НАЗНАЧЕНИЕ:  обрабатывает сообщения в главном окне.
+//  РќРђР—РќРђР§Р•РќРР•:  РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РіР»Р°РІРЅРѕРј РѕРєРЅРµ.
 //
-//  WM_COMMAND — обработать меню приложения
-//  WM_PAINT — отрисовать главное окно
-//  WM_DESTROY — отправить сообщение о выходе и вернуться
+//  WM_COMMAND вЂ” РѕР±СЂР°Р±РѕС‚Р°С‚СЊ РјРµРЅСЋ РїСЂРёР»РѕР¶РµРЅРёСЏ
+//  WM_PAINT вЂ” РѕС‚СЂРёСЃРѕРІР°С‚СЊ РіР»Р°РІРЅРѕРµ РѕРєРЅРѕ
+//  WM_DESTROY вЂ” РѕС‚РїСЂР°РІРёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ Рѕ РІС‹С…РѕРґРµ Рё РІРµСЂРЅСѓС‚СЊСЃСЏ
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -231,7 +246,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
-            // Разобрать выбор в меню:
+            // Р Р°Р·РѕР±СЂР°С‚СЊ РІС‹Р±РѕСЂ РІ РјРµРЅСЋ:
             switch (wmId)
             {
             case IDM_ABOUT:
@@ -272,7 +287,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Обработчик сообщений для окна "О программе".
+// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ РѕРєРЅР° "Рћ РїСЂРѕРіСЂР°РјРјРµ".
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);

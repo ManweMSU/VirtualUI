@@ -102,9 +102,10 @@ namespace Engine
 				return code;
 			} else if (Coding == Encoding::UTF16) {
 				uint code = ReadWord();
-				if (code && 0xFC00 == 0xD800) {
+				if ((code & 0xFC00) == 0xD800) {
 					code &= 0x03FF;
-					code |= (ReadWord() & 0x3FF) << 10;
+					code <<= 10;
+					code |= (ReadWord() & 0x3FF);
 					code += 0x10000;
 				}
 				return code;
@@ -180,8 +181,8 @@ namespace Engine
 			} else if (Coding == Encoding::UTF16) {
 				if (chr > 0xFFFF) {
 					uint s = chr - 0x10000;
-					WriteWord((s & 0x3FF) | 0xD800);
-					WriteWord(((s >> 10) & 0x3FF) | 0xDC00);
+					WriteWord(((s >> 10) & 0x3FF) | 0xD800);
+					WriteWord((s & 0x3FF) | 0xDC00);
 				} else WriteWord(chr);
 			} else if (Coding == Encoding::UTF32) WriteDWord(chr);
 		}

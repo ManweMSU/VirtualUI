@@ -2,6 +2,136 @@
 
 namespace Engine
 {
+	namespace SymbolicMath
+	{
+		string Summ(const string & a, const string & b)
+		{
+			int dot1 = a.FindFirst(L'.');
+			int dot2 = b.FindFirst(L'.');
+			string a1 = (dot1 < dot2) ? string(L'0', dot2 - dot1) + a : a;
+			string b1 = (dot2 < dot1) ? string(L'0', dot1 - dot2) + b : b;
+			if (a1.Length() > b1.Length()) b1 += string(L'0', a1.Length() - b1.Length());
+			else a1 += string(L'0', b1.Length() - a1.Length());
+			widechar * s1 = new (std::nothrow) widechar[a1.Length() + 1];
+			if (!s1) throw OutOfMemoryException();
+			int carry = 0;
+			for (int i = a1.Length() - 1; i >= 0; i--) {
+				if (a1[i] == L'.') {
+					s1[i + 1] = L'.';
+				} else {
+					int summ = int(a1[i] - L'0') + int(b1[i] - L'0') + carry;
+					s1[i + 1] = (summ % 10) + L'0';
+					carry = summ / 10;
+				}
+			}
+			s1[0] = L'0' + carry;
+			try {
+				string s = (s1[0] == L'0') ? string(s1 + 1, a1.Length()) : string(s1, a1.Length() + 1);
+				delete[] s1; s1 = 0;
+				return s;
+			}
+			catch (...) { delete[] s1; throw; }
+		}
+		string DivideByTwo(const string & a)
+		{
+			widechar * s1 = new (std::nothrow) widechar[a.Length() + 1];
+			if (!s1) throw OutOfMemoryException();
+			int carry = 0;
+			for (int i = 0; i < a.Length(); i++) {
+				if (a[i] == L'.') {
+					s1[i] = L'.';
+				} else {
+					int value = carry * 10 + int(a[i] - L'0');
+					s1[i] = L'0' + (value / 2);
+					carry = value % 2;
+				}
+			}
+			if (carry) s1[a.Length()] = L'5';
+			try {
+				string s = (carry) ? string(s1, a.Length() + 1) : string(s1, a.Length());
+				delete[] s1; s1 = 0;
+				return s;
+			}
+			catch (...) { delete[] s1; throw; }
+		}
+		string TwoPower(int power)
+		{
+			if (power > 0) {
+				int len = power / 2 + 5;
+				widechar * s1 = new (std::nothrow) widechar[len];
+				if (!s1) throw OutOfMemoryException();
+				for (int i = 0; i < len - 3; i++) s1[i] = L'0';
+				s1[len - 3] = L'1'; s1[len - 2] = L'.'; s1[len - 1] = L'0';
+				int carry, nsig = len - 3;
+				for (int j = 0; j < power; j++) {
+					carry = 0;
+					for (int i = len - 3; i >= 0; i--) {
+						int value = int(s1[i] - L'0') * 2 + carry;
+						s1[i] = L'0' + (value % 10);
+						carry = value / 10;
+						if (!carry && i <= nsig) { nsig = i; break; }
+					}
+				}
+				try {
+					string s = string(s1, len);
+					delete[] s1; s1 = 0;
+					return s;
+				} catch (...) { delete[] s1; throw; }
+			} else if (power < 0) {
+				string base = L"1.0";
+				for (int i = 0; i < -power; i++) base = DivideByTwo(base);
+				return base;
+			} else return L"1.0";
+		}
+		string Round(const string & a, int signchars, widechar separator)
+		{
+			int fnz = 0;
+			while (a[fnz] == L'0' || a[fnz] == L'.') fnz++;
+			int truncf = fnz;
+			for (int i = 0; i < signchars; i++) {
+				truncf++;
+				if (truncf >= a.Length()) break;
+				if (a[truncf] == L'.') truncf++;
+			}
+			int len = truncf + 1;
+			int dot = a.FindFirst(L'.');
+			int ll;
+			if (truncf > dot) ll = len; else ll = len + (dot - truncf) + 1;
+			widechar * s1 = new (std::nothrow) widechar[ll];
+			if (!s1) throw OutOfMemoryException();
+			for (int i = len; i < ll; i++) s1[i] = L'0';
+			if (len != ll) s1[ll - 1] = L'.';
+			int carry = ((truncf < a.Length()) && (a[truncf] >= L'5')) ? 1 : 0;
+			if (carry) {
+				for (int i = len - 1; i >= 1; i--) {
+					if (a[i - 1] == L'.') {
+						s1[i] = L'.';
+					} else {
+						int value = int(a[i - 1] - L'0') + carry;
+						s1[i] = L'0' + (value % 10);
+						carry = value / 10;
+					}
+				}
+				s1[0] = L'0' + carry;
+			} else {
+				for (int i = 1; i < len; i++) s1[i] = a[i - 1];
+				s1[0] = L'0';
+			}
+			int begin = 0;
+			while (s1[begin] == L'0') begin++;
+			if (s1[begin] == L'.') begin--;
+			int len2 = ll - 1;
+			while (s1[len2] == L'0') len2--;
+			if (s1[len2] == L'.') len2--;
+			for (int i = 0; i < ll; i++) if (s1[i] == L'.') { s1[i] = separator; break; }
+			try {
+				string s = string(s1 + begin, len2 + 1 - begin);
+				delete[] s1; s1 = 0;
+				return s;
+			} catch (...) { delete[] s1; throw; }
+		}
+	}
+
 	Object::Object(void) : _refcount(1) {}
 	uint Object::Retain(void) { return InterlockedIncrement(_refcount); }
 	uint Object::Release(void)
@@ -164,18 +294,80 @@ namespace Engine
 		ConvertEncoding(text, Sequence, Length, SequenceEncoding, SystemEncoding);
 		text[len] = 0;
 	}
-	ImmutableString::ImmutableString(float src, widechar separator)
+	ImmutableString::ImmutableString(float src, widechar separator) : ImmutableString()
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		uint32 & value = reinterpret_cast<uint32&>(src);
+		bool negative = (value & 0x80000000) != 0;
+		int exp = (value & 0x7F800000) >> 23;
+		value &= 0x007FFFFF;
+		if (exp == 0) {
+			if (value == 0) *this = L"0";
+			else {
+				string power = SymbolicMath::TwoPower(-126);
+				string base = L"0.0";
+				for (int i = 22; i >= 0; i--) {
+					power = SymbolicMath::DivideByTwo(power);
+					if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
+				}
+				base = SymbolicMath::Round(base, 7, separator);
+				*this = (negative) ? (L"-" + base) : base;
+			}
+		} else if (exp == 0xFF) {
+			if (value == 0) *this = (negative) ? L"-\x221E" : L"+\x221E";
+			else *this = L"NaN";
+		} else {
+			exp -= 127;
+			string power = SymbolicMath::TwoPower(exp);
+			string base = power;
+			for (int i = 22; i >= 0; i--) {
+				power = SymbolicMath::DivideByTwo(power);
+				if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
+			}
+			base = SymbolicMath::Round(base, 7, separator);
+			*this = (negative) ? (L"-" + base) : base;
+		}
 	}
-	ImmutableString::ImmutableString(double src, widechar separator)
+	ImmutableString::ImmutableString(double src, widechar separator) : ImmutableString()
 	{
-		throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		uint64 & value = reinterpret_cast<uint64&>(src);
+		bool negative = (value & 0x8000000000000000) != 0;
+		int exp = (value & 0x7FF0000000000000) >> 52;
+		value &= 0x000FFFFFFFFFFFFF;
+		if (exp == 0) {
+			if (value == 0) *this = L"0";
+			else {
+				string power = SymbolicMath::TwoPower(-1022);
+				string base = L"0.0";
+				for (int i = 51; i >= 0; i--) {
+					power = SymbolicMath::DivideByTwo(power);
+					if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
+				}
+				base = SymbolicMath::Round(base, 16, separator);
+				*this = (negative) ? (L"-" + base) : base;
+			}
+		} else if (exp == 0x7FF) {
+			if (value == 0) *this = (negative) ? L"-\x221E" : L"+\x221E";
+			else *this = L"NaN";
+		} else {
+			exp -= 1023;
+			string power = SymbolicMath::TwoPower(exp);
+			string base = power;
+			for (int i = 51; i >= 0; i--) {
+				power = SymbolicMath::DivideByTwo(power);
+				if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
+			}
+			base = SymbolicMath::Round(base, 16, separator);
+			*this = (negative) ? (L"-" + base) : base;
+		}
 	}
 	ImmutableString::ImmutableString(bool src) : ImmutableString(src ? L"true" : L"false") {}
 	ImmutableString::ImmutableString(widechar src) { text = new (std::nothrow) widechar[2]; if (!text) throw OutOfMemoryException(); text[0] = src; text[1] = 0; }
+	ImmutableString::ImmutableString(widechar src, int repeats)
+	{
+		if (repeats < 0) throw InvalidArgumentException();
+		text = new (std::nothrow) widechar[repeats + 1]; if (!text) throw OutOfMemoryException();
+		for (int i = 0; i < repeats; i++) text[i] = src; text[repeats] = 0;
+	}
 	ImmutableString::ImmutableString(const Object * object) : ImmutableString(object->ToString()) {}
 	ImmutableString::~ImmutableString(void) { delete[] text; }
 	ImmutableString & ImmutableString::operator=(const ImmutableString & src)
@@ -314,7 +506,7 @@ namespace Engine
 		int src_length = Length() + (include_terminator ? 1 : 0);
 		Array<uint8> * result = new Array<uint8>;
 		try {
-			result->SetLength(char_length);
+			result->SetLength(char_length * GetBytesPerChar(encoding));
 			ConvertEncoding(*result, text, src_length, SystemEncoding, encoding);
 		}
 		catch (...) { result->Release(); throw; }

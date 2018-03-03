@@ -33,11 +33,15 @@ namespace Engine
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) override;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) override;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) override;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) override;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) override;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) override;
+			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) override;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) override;
+			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) override;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) override;
 
 			virtual void PushClip(const Box & Rect) override;

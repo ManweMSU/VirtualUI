@@ -130,8 +130,14 @@ namespace Engine
 		class ITextRenderingInfo
 		{
 		public:
-#pragma message ("INTERFACE NOT DEFINED, DEFINE IT!")
+			virtual void GetExtent(int & width, int & height) = 0;
+			virtual void SetHighlightColor(const Color & color) = 0;
+			virtual void HighlightText(int Start, int End) = 0;
+			virtual int TestPosition(int point) = 0;
+			virtual int EndOfChar(int Index) = 0;
+			virtual ~ITextRenderingInfo(void);
 		};
+
 		class ITexture : public Object
 		{
 		public:
@@ -140,18 +146,27 @@ namespace Engine
 			virtual bool IsDynamic(void) const = 0;
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) = 0;
 		};
+		class IFont : public Object
+		{
+		public:
+			virtual void Reload(IRenderingDevice * Device) = 0;
+		};
+
 		class IRenderingDevice
 		{
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;
-			//virtual ITextRenderingInfo * CreateTextRenderingInfo(/* неведомый */) = 0;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) = 0;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) = 0;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
+			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) = 0;
+			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) = 0;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) = 0;
 
 			virtual void PushClip(const Box & Rect) = 0;
@@ -225,12 +240,33 @@ namespace Engine
 			void ClearCache(void) override;
 			string ToString(void) const override;
 		};
+		class TextShape : public Shape
+		{
+		public:
+			enum class TextHorizontalAlign { Left = 0, Center = 1, Right = 2 };
+			enum class TextVerticalAlign { Top = 0, Center = 1, Bottom = 2 };
+		private:
+			mutable ITextRenderingInfo * Info;
+			IFont * Font;
+			string Text;
+			TextHorizontalAlign halign;
+			TextVerticalAlign valign;
+			Color TextColor;
+		public:
+			TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align);
+			~TextShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
+		};
 	}
 	namespace Reflection
 	{
 		using namespace ::Engine::UI;
-		__TYPE_REFLECTION(Coordinate);
-		__TYPE_REFLECTION(Rectangle);
-		__TYPE_REFLECTION(Color);
+		__TYPE_REFLECTION(Coordinate, coordinate)
+		__TYPE_REFLECTION(Rectangle, rectangle)
+		__TYPE_REFLECTION(Color, color)
+		__TYPE_REFLECTION(ITexture, texture)
+		__TYPE_REFLECTION(IFont, font)
 	}
 }

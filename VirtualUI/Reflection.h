@@ -91,24 +91,24 @@ namespace Engine
 			void Set(V * v) { if (inner) inner->Release(); inner = v; if (inner) inner->Retain(); }
 		};
 #define STRING_MACRO(S) #S
-#define __NAME_REFLECTION(N) template<int> class __##N##PropertyName final : public ::Engine::Reflection::NameReflection { public: __##N##PropertyName(void) {} virtual string GetName(void) const override { return L"" ## STRING_MACRO(N) ## ""; } }
-#define __TYPE_REFLECTION(T) template<int> class __##T##Type final : public ::Engine::Reflection::TypeReflection { public: __##T##Type(void) {} virtual string GetTypeName(void) const override { return L"" ## STRING_MACRO(T) ## ""; } };
-#define DECLARE_PROPERTY(T, N) __NAME_REFLECTION(N); ::Engine::Reflection::Property<T, __##N##PropertyName<0>, ::Engine::Reflection::__##T##Type<0>> N = this
-#define DECLARE_OBJECT_PROPERTY(T, N) __NAME_REFLECTION(N); ::Engine::Reflection::ObjectProperty<T, __##N##PropertyName<0>, ::Engine::Reflection::__##T##Type<0>> N = this
+#define __NAME_REFLECTION(N) template<int> class __##N##PropertyName final : public ::Engine::Reflection::NameReflection { public: __##N##PropertyName(void) {} virtual string GetName(void) const override { return L"" ## STRING_MACRO(N) ## ""; } };
+#define __TYPE_REFLECTION(T, I) template<int> class __##T##Type final : public ::Engine::Reflection::TypeReflection { public: __##T##Type(void) {} virtual string GetTypeName(void) const override { return L"" ## STRING_MACRO(I) ## ""; } };
+#define DECLARE_PROPERTY(T, N) __NAME_REFLECTION(N) ::Engine::Reflection::Property<T, __##N##PropertyName<0>, ::Engine::Reflection::__##T##Type<0>> N = this;
+#define DECLARE_OBJECT_PROPERTY(T, N) __NAME_REFLECTION(N) ::Engine::Reflection::ObjectProperty<T, __##N##PropertyName<0>, ::Engine::Reflection::__##T##Type<0>> N = this;
 
-		__TYPE_REFLECTION(int);
-		__TYPE_REFLECTION(uint);
-		__TYPE_REFLECTION(int32);
-		__TYPE_REFLECTION(uint32);
-		__TYPE_REFLECTION(int64);
-		__TYPE_REFLECTION(uint64);
-		__TYPE_REFLECTION(int16);
-		__TYPE_REFLECTION(uint16);
-		__TYPE_REFLECTION(int8);
-		__TYPE_REFLECTION(uint8);
-		__TYPE_REFLECTION(string);
-		__TYPE_REFLECTION(float);
-		__TYPE_REFLECTION(double);
-		__TYPE_REFLECTION(bool);
+		__TYPE_REFLECTION(int, int32)
+		__TYPE_REFLECTION(uint, uint32)
+		__TYPE_REFLECTION(int32, int32)
+		__TYPE_REFLECTION(uint32, uint32)
+		__TYPE_REFLECTION(int64, int64)
+		__TYPE_REFLECTION(uint64, uint64)
+		__TYPE_REFLECTION(int16, int16)
+		__TYPE_REFLECTION(uint16, uint16)
+		__TYPE_REFLECTION(int8, int8)
+		__TYPE_REFLECTION(uint8, uint8)
+		__TYPE_REFLECTION(string, string)
+		__TYPE_REFLECTION(float, float)
+		__TYPE_REFLECTION(double, double)
+		__TYPE_REFLECTION(bool, bool)
 	}
 }

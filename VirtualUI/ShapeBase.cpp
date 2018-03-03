@@ -4,7 +4,7 @@ namespace Engine
 {
 	namespace UI
 	{
-		double Zoom = 0;
+		double Zoom = 1.0;
 
 		Coordinate::Coordinate(void) {}
 		Coordinate::Coordinate(int shift) : Absolute(shift), Anchor(0.0), Zoom(0.0) {}
@@ -147,5 +147,18 @@ namespace Engine
 		}
 		void TextureShape::ClearCache(void) { delete Info; Info = 0; }
 		string TextureShape::ToString(void) const { return L"TextureShape"; }
+		ITextRenderingInfo::~ITextRenderingInfo(void) {}
+		TextShape::TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align) :
+			Info(0), Text(text), Font(font), TextColor(color), halign(horizontal_align), valign(vertical_align) { Position = position; Font->Retain(); }
+		TextShape::~TextShape(void) { Font->Release(); }
+		void TextShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		{
+			if (!Info) Info = Device->CreateTextRenderingInfo(Font, Text, int(halign), int(valign), TextColor);
+			Box my(Position, Outer);
+			if (my.Right < my.Left || my.Bottom < my.Top) return;
+			Device->RenderText(Info, my, true);
+		}
+		void TextShape::ClearCache(void) { delete Info; Info = 0; }
+		string TextShape::ToString(void) const { return L"TextShape"; }
 	}
 }

@@ -15,6 +15,8 @@ namespace Engine
 	namespace Direct2D
 	{
 		class D2DTexture;
+		class D2DFont;
+		class D2DRenderDevice;
 
 		ID2D1Factory * D2DFactory = 0;
 		IWICImagingFactory * WICFactory = 0;
@@ -50,9 +52,73 @@ namespace Engine
 		{
 			D2DTexture * Texture;
 			Box From;
-			ID2D1BitmapBrush * Brush;
+			Array<ID2D1BitmapBrush *> Brushes;
 			bool Fill;
-			virtual ~TextureRenderingInfo(void) { if (Brush) Brush->Release(); }
+			TextureRenderingInfo(void) : Brushes(0x20) {}
+			~TextureRenderingInfo(void) override { for (int i = 0; i < Brushes.Length(); i++) Brushes[i]->Release(); }
+		};
+		struct TextRenderingInfo : public ITextRenderingInfo
+		{
+			D2DFont * Font;
+			Array<uint32> CharString;
+			Array<uint16> GlyphString;
+			Array<float> GlyphAdvances;
+			ID2D1PathGeometry * Geometry;
+			ID2D1SolidColorBrush * TextBrush;
+			ID2D1SolidColorBrush * HighlightBrush;
+			ID2D1RenderTarget * RenderTarget;
+			int BaselineOffset;
+			int halign, valign;
+			int run_length;
+			float UnderlineOffset;
+			float UnderlineHalfWidth;
+			float StrikeoutOffset;
+			float StrikeoutHalfWidth;
+			int hls, hle;
+
+			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), hls(-1), hle(-1) {}
+
+			void FillAdvances(void);
+			void FillGlyphs(void);
+			void BuildGeometry(void);
+			float FontUnitsToDIP(int units);
+
+			virtual void GetExtent(int & width, int & height) override;
+			virtual void SetHighlightColor(const Color & color) override
+			{
+				if (HighlightBrush) { HighlightBrush->Release(); HighlightBrush = 0; }
+				RenderTarget->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &HighlightBrush);
+			}
+			virtual void HighlightText(int Start, int End) override { hls = Start; hle = End; }
+			virtual int TestPosition(int point) override
+			{
+				if (point < 0) return 0;
+				if (point > run_length) return CharString.Length();
+				float p = float(point);
+				float s = 0.0f;
+				for (int i = 0; i < GlyphAdvances.Length(); i++) {
+					if (p >= s) {
+						if (p < s + GlyphAdvances[i] / 2.0f) return i;
+						else return i + 1;
+						break;
+					}
+					s += GlyphAdvances[i];
+				}
+				return CharString.Length();
+			}
+			virtual int EndOfChar(int Index) override
+			{
+				if (Index < 0) return 0;
+				float summ = 0;
+				for (int i = 0; i <= Index; i++) summ += GlyphAdvances[i];
+				return int(summ);
+			}
+			virtual ~TextRenderingInfo(void) override
+			{
+				if (Geometry) Geometry->Release();
+				if (TextBrush) TextBrush->Release();
+				if (HighlightBrush) HighlightBrush->Release();
+			}
 		};
 		class D2DTexture : public ITexture
 		{
@@ -61,13 +127,14 @@ namespace Engine
 			Array<uint32> FrameDuration;
 			uint32 TotalDuration;
 			int w, h;
+			D2DTexture(void) : Frames(0x20) {}
 			virtual ~D2DTexture(void)
 			{
 				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
 			}
 			virtual int GetWidth(void) const override { return w; }
 			virtual int GetHeight(void) const override { return h; }
-			virtual bool IsDynamic(void) const override { return Frames.Length() > 1; }
+			virtual bool IsDynamic(void) const override { return false; }
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override
 			{
 				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
@@ -81,6 +148,28 @@ namespace Engine
 				New->Release();
 			}
 			virtual string ToString(void) const override { return L"D2DTexture"; }
+		};
+		class D2DFont : public IFont
+		{
+		public:
+			IDWriteFontFace * FontFace;
+			string FontName;
+			int Height, Weight;
+			int ActualHeight;
+			bool Italic, Underline, Strikeout;
+			DWRITE_FONT_METRICS FontMetrics;
+			virtual ~D2DFont(void) override { if (FontFace) FontFace->Release(); }
+			virtual void Reload(IRenderingDevice * Device) override
+			{
+				if (FontFace) FontFace->Release();
+				auto New = static_cast<D2DFont *>(Device->LoadFont(FontName, ActualHeight, Weight, Italic, Underline, Strikeout));
+				FontFace = New->FontFace;
+				FontMetrics = New->FontMetrics;
+				New->FontFace->Release();
+				New->FontFace = 0;
+				New->Release();
+			}
+			virtual string ToString(void) const override { return L"D2DFont"; }
 		};
 
 		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) : Target(target), Layers(0x10) { Target->AddRef(); }
@@ -124,21 +213,75 @@ namespace Engine
 			Info->Texture = static_cast<D2DTexture *>(texture);
 			Info->From = take_area;
 			Info->Fill = fill_pattern;
-			Info->Brush = 0;
 			if (fill_pattern && !texture->IsDynamic()) {
-				ID2D1Bitmap * Fragment;
-				if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
-					Fragment = Info->Texture->Frames[0];
-					Fragment->AddRef();
-				} else {
-					if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
-						D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) != S_OK) { delete Info; throw Exception(); }
-					if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->Frames[0], &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
-					{ Fragment->Release(); delete Info; throw Exception(); }
+				for (int i = 0; i < Info->Texture->Frames.Length(); i++) {
+					ID2D1Bitmap * Fragment;
+					if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
+						Fragment = Info->Texture->Frames[i];
+						Fragment->AddRef();
+					} else {
+						if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
+							D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) != S_OK) {
+							delete Info; throw Exception();
+						}
+						if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->Frames[i], &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
+						{
+							Fragment->Release(); delete Info; throw Exception();
+						}
+					}
+					ID2D1BitmapBrush * Brush;
+					if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
+					{
+						Fragment->Release(); delete Info; throw Exception();
+					}
+					Fragment->Release();
+					try { Info->Brushes << Brush; }
+					catch (...) { Brush->Release(); delete Info; throw; }
 				}
-				if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Info->Brush) != S_OK)
-				{ Fragment->Release(); delete Info; throw Exception(); }
-				Fragment->Release();
+			}
+			return Info;
+		}
+		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color)
+		{
+			auto Info = new TextRenderingInfo;
+			try {
+				Info->halign = horizontal_align;
+				Info->valign = vertical_align;
+				Info->Font = static_cast<D2DFont *>(font);
+				Info->RenderTarget = Target;
+				Info->HighlightBrush = 0;
+				Info->TextBrush = 0;
+				Info->Geometry = 0;
+				if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Info->TextBrush) != S_OK) throw Exception();
+				Info->CharString.SetLength(text.GetEncodedLength(Encoding::UTF32));
+				text.Encode(Info->CharString, Encoding::UTF32, false);
+				Info->FillGlyphs();
+				Info->FillAdvances();
+				Info->BuildGeometry();
+			}
+			catch (...) {
+				delete Info;
+			}
+			return Info;
+		}
+		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const Array<uint32>& text, int horizontal_align, int vertical_align, const Color & color)
+		{
+			auto Info = new TextRenderingInfo;
+			try {
+				Info->halign = horizontal_align;
+				Info->valign = vertical_align;
+				Info->Font = static_cast<D2DFont *>(font);
+				Info->RenderTarget = Target;
+				Info->HighlightBrush = 0;
+				Info->TextBrush = 0;
+				Info->Geometry = 0;
+				if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Info->TextBrush) != S_OK) throw Exception();
+				Info->CharString = text;
+				Info->FillGlyphs();
+				Info->FillAdvances();
+				Info->BuildGeometry();
+			} catch (...) {
+				delete Info;
 			}
 			return Info;
 		}
@@ -208,6 +351,46 @@ namespace Engine
 			}
 			return Texture;
 		}
+		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
+		{
+			D2DFont * Font = new D2DFont;
+			Font->FontFace = 0;
+			Font->FontName = FaceName;
+			Font->ActualHeight = Height;
+			Font->Height = int(float(Height) * 72.0f / 96.0f);
+			Font->Weight = Weight;
+			Font->Italic = IsItalic;
+			Font->Underline = IsUnderline;
+			Font->Strikeout = IsStrikeout;
+			IDWriteFontCollection * Collection = 0;
+			IDWriteFontFamily * FontFamily = 0;
+			IDWriteFont * FontSource = 0;
+			try {
+				if (DWriteFactory->GetSystemFontCollection(&Collection) != S_OK) throw Exception();
+				uint32 Index;
+				BOOL Exists;
+				if (Collection->FindFamilyName(FaceName, &Index, &Exists) != S_OK) throw Exception();
+				if (!Exists) throw Exception();
+				if (Collection->GetFontFamily(Index, &FontFamily) != S_OK) throw Exception();
+				if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(Weight), DWRITE_FONT_STRETCH_NORMAL, IsItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) != S_OK) throw Exception();
+				if (FontSource->CreateFontFace(&Font->FontFace) != S_OK) throw Exception();
+				if (Font->FontFace->GetGdiCompatibleMetrics(float(Height), 1.0f, 0, &Font->FontMetrics) != S_OK) throw Exception();
+				FontSource->Release();
+				FontSource = 0;
+				FontFamily->Release();
+				FontFamily = 0;
+				Collection->Release();
+				Collection = 0;
+			}
+			catch (...) {
+				Font->Release();
+				if (Collection) Collection->Release();
+				if (FontFamily) FontFamily->Release();
+				if (FontSource) FontSource->Release();
+				throw;
+			}
+			return Font;
+		}
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At)
 		{
 			auto info = reinterpret_cast<BarRenderingInfo *>(Info);
@@ -262,36 +445,42 @@ namespace Engine
 			if (info->Texture->Frames.Length() > 1) frame = BinarySearchLE(info->Texture->FrameDuration, AnimationTimer % info->Texture->TotalDuration);
 			D2D1_RECT_F To = D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom));
 			if (info->Fill) {
-				if (info->Brush) {
-					Target->FillRectangle(To, info->Brush);
-				} else {
-					ID2D1Bitmap * Fragment = 0;
-					if (info->From.Left == 0 && info->From.Top == 0 && info->From.Right == info->Texture->w && info->From.Bottom == info->Texture->h) {
-						Fragment = info->Texture->Frames[frame];
-						Fragment->AddRef();
-					} else {
-						if (Target->CreateBitmap(D2D1::SizeU(uint(info->From.Right - info->From.Left), uint(info->From.Bottom - info->From.Top)),
-							D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) == S_OK) {
-							if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), info->Texture->Frames[frame], &D2D1::RectU(info->From.Left, info->From.Top, info->From.Right, info->From.Bottom)) != S_OK)
-							{
-								Fragment->Release(); Fragment = 0;
-							}
-						}
-					}
-					if (Fragment) {
-						ID2D1BitmapBrush * Brush;
-						if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) == S_OK)
-						{
-							Target->FillRectangle(To, Brush);
-							Brush->Release();
-						}
-						Fragment->Release();
-					}
-				}
+				Target->FillRectangle(To, info->Brushes[frame]);
 			} else {
 				D2D1_RECT_F From = D2D1::RectF(float(info->From.Left), float(info->From.Top), float(info->From.Right), float(info->From.Bottom));
 				Target->DrawBitmap(info->Texture->Frames[frame], To, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, From);
 			}
+		}
+		void D2DRenderDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip)
+		{
+			auto info = static_cast<TextRenderingInfo *>(Info);
+			if (Clip) PushClip(At);
+			int width, height;
+			Info->GetExtent(width, height);
+			D2D1_MATRIX_3X2_F Transform;
+			Target->GetTransform(&Transform);
+			int shift_x = At.Left;
+			int shift_y = At.Top + info->BaselineOffset;
+			if (info->halign == 1) shift_x += (At.Right - At.Left - width) / 2;
+			else if (info->halign == 2) shift_x += (At.Right - At.Left - width);
+			if (info->valign == 1) shift_y += (At.Bottom - At.Top - height) / 2;
+			else if (info->valign == 2) shift_y += (At.Bottom - At.Top - height);
+			if (info->hls != -1 && info->HighlightBrush) {
+				int start = info->EndOfChar(info->hls - 1);
+				int end = info->EndOfChar(info->hle - 1);
+				D2D1_RECT_F Rect = D2D1::RectF(float(shift_x + start), float(At.Top), float(shift_x + end), float(At.Bottom));
+				Target->FillRectangle(Rect, info->HighlightBrush);
+			}
+			Target->SetTransform(D2D1::Matrix3x2F::Translation(D2D1::SizeF(float(shift_x), float(shift_y))));
+			Target->FillGeometry(info->Geometry, info->TextBrush, 0);
+			if (info->Font->Underline) {
+				Target->FillRectangle(D2D1::RectF(0.0f, info->UnderlineOffset - info->UnderlineHalfWidth, float(info->run_length), info->UnderlineOffset + info->UnderlineHalfWidth), info->TextBrush);
+			}
+			if (info->Font->Strikeout) {
+				Target->FillRectangle(D2D1::RectF(0.0f, info->StrikeoutOffset - info->StrikeoutHalfWidth, float(info->run_length), info->StrikeoutOffset + info->StrikeoutHalfWidth), info->TextBrush);
+			}
+			Target->SetTransform(Transform);
+			if (Clip) PopClip();
 		}
 		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
 		{
@@ -322,6 +511,41 @@ namespace Engine
 			Layers.RemoveLast();
 		}
 		void D2DRenderDevice::SetTimerValue(uint32 time) { AnimationTimer = time; }
+
+		void TextRenderingInfo::FillAdvances(void)
+		{
+			GlyphAdvances.SetLength(GlyphString.Length());
+			Array<DWRITE_GLYPH_METRICS> Metrics(0x40);
+			Metrics.SetLength(GlyphString.Length());
+			if (Font->FontFace->GetGdiCompatibleGlyphMetrics(float(Font->Height), 1.0f, 0, TRUE, GlyphString, GlyphString.Length(), Metrics) != S_OK) throw Exception();
+			for (int i = 0; i < GlyphString.Length(); i++) GlyphAdvances[i] = FontUnitsToDIP(Metrics[i].advanceWidth);
+			BaselineOffset = int(FontUnitsToDIP(Font->FontMetrics.ascent));
+			float rl = 0.0f;
+			for (int i = 0; i < GlyphString.Length(); i++) rl += GlyphAdvances[i];
+			run_length = int(rl);
+		}
+		void TextRenderingInfo::FillGlyphs(void)
+		{
+			GlyphString.SetLength(CharString.Length());
+			if (Font->FontFace->GetGlyphIndicesW(CharString, CharString.Length(), GlyphString) != S_OK) throw Exception();
+		}
+		void TextRenderingInfo::BuildGeometry(void)
+		{
+			if (Geometry) { Geometry->Release(); Geometry = 0; }
+			ID2D1GeometrySink * Sink;
+			if (D2DFactory->CreatePathGeometry(&Geometry) != S_OK) throw Exception();
+			if (Geometry->Open(&Sink) != S_OK) { Geometry->Release(); Geometry = 0; throw Exception(); }
+			if (Font->FontFace->GetGlyphRunOutline(float(Font->Height), GlyphString, GlyphAdvances, 0, GlyphString.Length(), FALSE, FALSE, static_cast<ID2D1SimplifiedGeometrySink*>(Sink)) != S_OK)
+			{ Sink->Close(); Sink->Release(); Geometry->Release(); Geometry = 0; throw Exception(); }
+			Sink->Close();
+			Sink->Release();
+			UnderlineOffset = -FontUnitsToDIP(int16(Font->FontMetrics.underlinePosition));
+			UnderlineHalfWidth = FontUnitsToDIP(Font->FontMetrics.underlineThickness) / 2.0f;
+			StrikeoutOffset = -FontUnitsToDIP(int16(Font->FontMetrics.strikethroughPosition));
+			StrikeoutHalfWidth = FontUnitsToDIP(Font->FontMetrics.strikethroughThickness) / 2.0f;
+		}
+		float TextRenderingInfo::FontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->FontMetrics.designUnitsPerEm); }
+		void TextRenderingInfo::GetExtent(int & width, int & height) { width = run_length; height = Font->ActualHeight; }
 	}
 }
 
