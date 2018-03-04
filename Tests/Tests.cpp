@@ -29,7 +29,6 @@ HWND Window;
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 Engine::Direct2D::D2DRenderDevice * Device;
 Engine::UI::FrameShape * Shape;
@@ -41,6 +40,8 @@ IDXGIDevice1 * DXGIDevice;
 ID2D1Device * D2DDevice;
 ID2D1DeviceContext * Target = 0;
 IDXGISwapChain1 * SwapChain = 0;
+
+UI::IInversionEffectRenderingInfo * Inversion = 0;
 
 class test : public Reflection::ReflectableObject
 {
@@ -180,6 +181,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		//if (Engine::Direct2D::D2DFactory->CreateDCRenderTarget(&rtp, &Target) != S_OK) MessageBox(0, L"XYU.", 0, MB_OK | MB_ICONSTOP);
 	}
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
+	Inversion = Device->CreateInversionEffectRenderingInfo();
 	{
 		Array<UI::GradientPoint> ps;
 		ps << UI::GradientPoint(UI::Color(0, 255, 0), 0.0);
@@ -194,6 +196,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		auto General = new FrameShape(UI::Rectangle::Entire());
 		{
+			auto bls = new BlurEffectShape(UI::Rectangle(100, 100, 600, 600), 15.0f);
+			General->Children.Append(bls);
+			bls->Release();
+			auto invs = new InversionEffectShape(UI::Rectangle(UI::Coordinate(-500, 0.0, 1.0), UI::Coordinate(-500, 0.0, 1.0), UI::Coordinate(-100, 0.0, 1.0), UI::Coordinate(-100, 0.0, 1.0)));
+			General->Children.Append(invs);
+			invs->Release();
+
 			SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"bl.gif", Streaming::AccessRead, Streaming::OpenExisting);
 			Texture = Device->LoadTexture(Input);
 			(*(conout.Inner())) << Texture->GetWidth() << L"x" << Texture->GetHeight() << IO::NewLineChar;
@@ -311,6 +320,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				Target->BeginDraw();
 				Device->SetTimerValue(GetTimerValue());
 				::Shape->Render(Device, Box(Rect.left, Rect.top, Rect.right, Rect.bottom));
+
+				Device->ApplyInversion(Inversion, UI::Box(10, 10, 20, 110), true);
+
 				Target->EndDraw();
 				SwapChain->Present(1, 0);
 			}

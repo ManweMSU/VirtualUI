@@ -25,6 +25,7 @@ namespace Engine
 			Array<ID2D1Layer *> Layers;
 			uint32 AnimationTimer;
 			uint32 BlinkPeriod;
+			uint32 HalfBlinkPeriod;
 		public:
 			D2DRenderDevice(ID2D1DeviceContext * target);
 			~D2DRenderDevice(void) override;

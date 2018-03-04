@@ -9,6 +9,7 @@
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "dxguid.lib")
 
 namespace Engine
 {
@@ -130,6 +131,16 @@ namespace Engine
 			ID2D1StrokeStyle * Stroke;
 			virtual ~LineRenderingInfo(void) override { if (Brush) Brush->Release(); if (Stroke) Stroke->Release(); }
 		};
+		struct BlurEffectRenderingInfo : public IBlurEffectRenderingInfo
+		{
+			SafePointer<ID2D1Effect> Effect;
+			virtual ~BlurEffectRenderingInfo(void) override {}
+		};
+		struct InversionEffectRenderingInfo : public IInversionEffectRenderingInfo
+		{
+			SafePointer<ID2D1Effect> Effect;
+			virtual ~InversionEffectRenderingInfo(void) override {}
+		};
 		class D2DTexture : public ITexture
 		{
 		public:
@@ -186,7 +197,7 @@ namespace Engine
 			virtual string ToString(void) const override { return L"D2DFont"; }
 		};
 
-		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) : Target(target), Layers(0x10) { Target->AddRef(); BlinkPeriod = GetCaretBlinkTime(); }
+		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) : Target(target), Layers(0x10) { Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
 		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle)
@@ -218,13 +229,27 @@ namespace Engine
 		}
 		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power)
 		{
-			throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+			auto Info = new (std::nothrow) BlurEffectRenderingInfo;
+			if (!Info) throw OutOfMemoryException();
+			if (Target->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { delete Info; throw Exception(); }
+			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, power);
+			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
+			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+			return Info;
 		}
 		IInversionEffectRenderingInfo * D2DRenderDevice::CreateInversionEffectRenderingInfo(void)
 		{
-			throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+			auto Info = new (std::nothrow) InversionEffectRenderingInfo;
+			if (!Info) throw OutOfMemoryException();
+			if (Target->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { delete Info; throw Exception(); }
+			Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
+				-1.0f,	0.0f,	0.0f,	0.0f,
+				0.0f,	-1.0f,	0.0f,	0.0f,
+				0.0f,	0.0f,	-1.0f,	0.0f,
+				0.0f,	0.0f,	0.0f,	1.0f,
+				1.0f,	1.0f,	1.0f,	0.0f
+			));
+			return Info;
 		}
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern)
 		{
@@ -540,13 +565,31 @@ namespace Engine
 		}
 		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
 		{
-			throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+			auto info = static_cast<BlurEffectRenderingInfo *>(Info);
+			SafePointer<ID2D1Bitmap> Fragment;
+			Box Corrected = At;
+			if (Corrected.Left < 0) Corrected.Left = 0;
+			if (Corrected.Top < 0) Corrected.Top = 0;
+			if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+				Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
+				info->Effect->SetInput(0, Fragment);
+				Target->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
+			}
 		}
 		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink)
 		{
-			throw Exception();
-#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+			if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
+				auto info = static_cast<InversionEffectRenderingInfo *>(Info);
+				SafePointer<ID2D1Bitmap> Fragment;
+				Box Corrected = At;
+				if (Corrected.Left < 0) Corrected.Left = 0;
+				if (Corrected.Top < 0) Corrected.Top = 0;
+				if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+					Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
+					info->Effect->SetInput(0, Fragment);
+					Target->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
+				}
+			}
 		}
 		void D2DRenderDevice::PushClip(const Box & Rect) { Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED); }
 		void D2DRenderDevice::PopClip(void) { Target->PopAxisAlignedClip(); }
