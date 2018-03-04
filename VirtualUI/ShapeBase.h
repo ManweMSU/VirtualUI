@@ -122,6 +122,11 @@ namespace Engine
 		public:
 			virtual ~IBlurEffectRenderingInfo(void);
 		};
+		class IInversionEffectRenderingInfo
+		{
+		public:
+			virtual ~IInversionEffectRenderingInfo(void);
+		};
 		class ITextureRenderingInfo
 		{
 		public:
@@ -162,6 +167,7 @@ namespace Engine
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
+			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) = 0;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) = 0;
@@ -175,6 +181,7 @@ namespace Engine
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) = 0;
 			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) = 0;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) = 0;
+			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) = 0;
 
 			virtual void PushClip(const Box & Rect) = 0;
 			virtual void PopClip(void) = 0;
@@ -182,7 +189,6 @@ namespace Engine
 			virtual void EndLayer(void) = 0;
 			virtual void SetTimerValue(uint32 time) = 0;
 			virtual ~IRenderingDevice(void);
-#pragma message ("INTERFACE IS NOT COMPLETE!")
 		};
 
 		class Shape : public Object
@@ -226,6 +232,16 @@ namespace Engine
 		public:
 			BlurEffectShape(const Rectangle & position, double power);
 			~BlurEffectShape(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const override;
+			void ClearCache(void) override;
+			string ToString(void) const override;
+		};
+		class InversionEffectShape : public Shape
+		{
+			mutable IInversionEffectRenderingInfo * Info;
+		public:
+			InversionEffectShape(const Rectangle & position);
+			~InversionEffectShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
 			string ToString(void) const override;

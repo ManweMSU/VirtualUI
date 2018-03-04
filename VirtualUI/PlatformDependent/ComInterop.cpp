@@ -1,4 +1,4 @@
-#include "ComStreamWrapper.h"
+#include "ComInterop.h"
 
 #undef min
 #undef ZeroMemory

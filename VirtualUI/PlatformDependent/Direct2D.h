@@ -2,7 +2,7 @@
 
 #include "../ShapeBase.h"
 
-#include <d2d1.h>
+#include <d2d1_1.h>
 #include <dwrite.h>
 #include <wincodec.h>
 
@@ -12,7 +12,7 @@ namespace Engine
 	{
 		using namespace ::Engine::UI;
 
-		extern ID2D1Factory * D2DFactory;
+		extern ID2D1Factory1 * D2DFactory;
 		extern IWICImagingFactory * WICFactory;
 		extern IDWriteFactory * DWriteFactory;
 
@@ -21,17 +21,19 @@ namespace Engine
 
 		class D2DRenderDevice : public IRenderingDevice
 		{
-			ID2D1RenderTarget * Target;
+			ID2D1DeviceContext * Target;
 			Array<ID2D1Layer *> Layers;
 			uint32 AnimationTimer;
+			uint32 BlinkPeriod;
 		public:
-			D2DRenderDevice(ID2D1RenderTarget * target);
+			D2DRenderDevice(ID2D1DeviceContext * target);
 			~D2DRenderDevice(void) override;
 
 			ID2D1RenderTarget * GetRenderTarget(void) const;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) override;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) override;
+			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) override;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) override;
@@ -45,6 +47,7 @@ namespace Engine
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) override;
 			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) override;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) override;
+			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) override;
 
 			virtual void PushClip(const Box & Rect) override;
 			virtual void PopClip(void) override;

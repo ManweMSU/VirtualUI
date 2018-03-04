@@ -22,7 +22,7 @@
     <ClInclude Include="ControlBase.h" />
     <ClInclude Include="EngineBase.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
-    <ClInclude Include="PlatformDependent\ComStreamWrapper.h" />
+    <ClInclude Include="PlatformDependent\ComInterop.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\FileApi.h" />
     <ClInclude Include="Reflection.h" />
@@ -33,7 +33,7 @@
     <ClCompile Include="ControlBase.cpp" />
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
-    <ClCompile Include="PlatformDependent\ComStreamWrapper.cpp" />
+    <ClCompile Include="PlatformDependent\ComInterop.cpp" />
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\FileApi.cpp" />
     <ClCompile Include="Reflection.cpp" />

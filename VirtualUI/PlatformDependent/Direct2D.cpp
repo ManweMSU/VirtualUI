@@ -5,7 +5,7 @@
 
 #include <math.h>
 
-#include "ComStreamWrapper.h"
+#include "ComInterop.h"
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -18,7 +18,7 @@ namespace Engine
 		class D2DFont;
 		class D2DRenderDevice;
 
-		ID2D1Factory * D2DFactory = 0;
+		ID2D1Factory1 * D2DFactory = 0;
 		IWICImagingFactory * WICFactory = 0;
 		IDWriteFactory * DWriteFactory = 0;
 
@@ -186,7 +186,7 @@ namespace Engine
 			virtual string ToString(void) const override { return L"D2DFont"; }
 		};
 
-		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) : Target(target), Layers(0x10) { Target->AddRef(); }
+		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) : Target(target), Layers(0x10) { Target->AddRef(); BlinkPeriod = GetCaretBlinkTime(); }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
 		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle)
@@ -217,6 +217,11 @@ namespace Engine
 			
 		}
 		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power)
+		{
+			throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		}
+		IInversionEffectRenderingInfo * D2DRenderDevice::CreateInversionEffectRenderingInfo(void)
 		{
 			throw Exception();
 #pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
@@ -534,6 +539,11 @@ namespace Engine
 			}
 		}
 		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
+		{
+			throw Exception();
+#pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")
+		}
+		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink)
 		{
 			throw Exception();
 #pragma message ("METHOD NOT IMPLEMENTED, IMPLEMENT IT!")

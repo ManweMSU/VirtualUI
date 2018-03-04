@@ -171,5 +171,17 @@ namespace Engine
 		}
 		void LineShape::ClearCache(void) { delete Info; Info = 0; }
 		string LineShape::ToString(void) const { return L"LineShape"; }
+		IInversionEffectRenderingInfo::~IInversionEffectRenderingInfo(void) {}
+		InversionEffectShape::InversionEffectShape(const Rectangle & position) : Info(0) { Position = position; }
+		InversionEffectShape::~InversionEffectShape(void) { delete Info; }
+		void InversionEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		{
+			if (!Info) Info = Device->CreateInversionEffectRenderingInfo();
+			Box my(Position, Outer);
+			if (my.Right < my.Left || my.Bottom < my.Top) return;
+			Device->ApplyInversion(Info, my, false);
+		}
+		void InversionEffectShape::ClearCache(void) { delete Info; Info = 0; }
+		string InversionEffectShape::ToString(void) const { return L"InversionEffectShape"; }
 	}
 }

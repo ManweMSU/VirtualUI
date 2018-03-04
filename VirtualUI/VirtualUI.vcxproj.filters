@@ -38,7 +38,7 @@
     <ClInclude Include="Streaming.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\ComStreamWrapper.h">
+    <ClInclude Include="PlatformDependent\ComInterop.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
   </ItemGroup>
@@ -67,7 +67,7 @@
     <ClCompile Include="Streaming.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
-    <ClCompile Include="PlatformDependent\ComStreamWrapper.cpp">
+    <ClCompile Include="PlatformDependent\ComInterop.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>

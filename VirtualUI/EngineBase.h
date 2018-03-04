@@ -512,7 +512,7 @@ namespace Engine
 		O * operator -> (void) const { return reference; }
 		operator O * (void) const { return reference; }
 		O * Inner(void) const { return reference; }
-		O ** InnerRef(void) const { return &reference; }
+		O ** InnerRef(void) { return &reference; }
 
 		void SetReference(O * ref) { if (reference) reference->Release(); reference = ref; }
 
