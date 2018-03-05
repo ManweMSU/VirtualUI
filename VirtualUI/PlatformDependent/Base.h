@@ -37,6 +37,8 @@ namespace Engine
 	uint InterlockedIncrement(uint & Value);
 	uint InterlockedDecrement(uint & Value);
 	void ZeroMemory(void * Memory, intptr Size);
+
+	// System timer's value in milliseconds. The beginning of this time axis is not important
 	uint32 GetTimerValue(void);
 
 	// Some C standart library and language dependent case insensitive comparation

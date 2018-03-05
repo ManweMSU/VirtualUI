@@ -4,6 +4,7 @@
 #include "..\\VirtualUI\\ShapeBase.h"
 #include "..\\VirtualUI\\Streaming.h"
 #include "..\\VirtualUI\\PlatformDependent\\Direct2D.h"
+#include "../VirtualUI/Miscellaneous/Dictionary.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -89,12 +90,41 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	safe.Clear();
 	MessageBox(0, safe.ToString(), L"", 0);*/
 
+	Dictionary::ObjectCache<int, string> dict(4, Dictionary::ExcludePolicy::ExcludeLeastRefrenced);
+	SafePointer<string> ss;
+	{
+		SafePointer<string> s1 = new string(L"1 - kornevgen");
+		SafePointer<string> s2 = new string(L"2 - pidor");
+		SafePointer<string> s3 = new string(L"3 - xyu");
+		SafePointer<string> s4 = new string(L"4 - hui");
+		SafePointer<string> s5 = new string(L"5 - black nigger");
+
+		ss.SetReference(s2);
+		s2->Retain();
+
+		dict.Append(7, s1);
+		dict.Append(3, s2);
+		dict.Append(10, s3);
+		dict.Append(9, s4);
+		dict.Append(4, s5);
+	}
+
+
 	auto v = string(L";123456").ToDouble(L";");
 
 	AllocConsole();
 	SetConsoleTitleW(L"ui tests");
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
 	SafePointer<Engine::Streaming::TextWriter> conout = new Engine::Streaming::TextWriter(constream);
+
+	{
+		string result = dict.ToString() + L"[";
+		if (dict.Length()) for (int i = 0; i < dict.Length(); i++) { result += string(dict[i].key) + L": " + dict[i].object->ToString() + ((i == dict.Length() - 1) ? L"]" : L", "); } else result += L"]";
+
+		(*conout) << result << IO::NewLineChar;
+		ss.SetReference(0);
+	}
+
 	{
 		conout->WriteLine(string(L"xyu"));
 

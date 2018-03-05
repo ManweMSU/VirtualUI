@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ShapeBase.h"
+#include "../Miscellaneous/Dictionary.h"
 
 #include <d2d1_1.h>
 #include <dwrite.h>
@@ -26,6 +27,9 @@ namespace Engine
 			uint32 AnimationTimer;
 			uint32 BlinkPeriod;
 			uint32 HalfBlinkPeriod;
+			Dictionary::ObjectCache<Color, IBarRenderingInfo> BrushCache;
+			Dictionary::ObjectCache<double, IBlurEffectRenderingInfo> BlurCache;
+			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
 		public:
 			D2DRenderDevice(ID2D1DeviceContext * target);
 			~D2DRenderDevice(void) override;
@@ -56,6 +60,7 @@ namespace Engine
 			virtual void EndLayer(void) override;
 
 			virtual void SetTimerValue(uint32 time) override;
+			virtual void ClearCache(void) override;
 		};
 	}
 }

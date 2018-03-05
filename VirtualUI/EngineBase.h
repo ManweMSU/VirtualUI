@@ -24,6 +24,7 @@ namespace Engine
 		virtual uint Release(void);
 		virtual ~Object(void);
 		virtual ImmutableString ToString(void) const;
+		uint GetReferenceCount(void) const;
 	};
 
 	class Exception : public Object
@@ -492,6 +493,9 @@ namespace Engine
 		while (bh - bl > 1) {
 			int mid = (bl + bh) / 2;
 			if (volume[mid] > value) { bh = mid; } else { bl = mid; }
+		}
+		if (bl == 0) {
+			if (value < volume[0]) bl = -1;
 		}
 		return bl;
 	}

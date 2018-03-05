@@ -91,6 +91,8 @@ namespace Engine
 			Color(double sr, double sg, double sb, double sa = 1.0);
 			Color(uint32 code);
 
+			operator uint32 (void) const;
+
 			bool friend operator == (const Color & a, const Color & b);
 			bool friend operator != (const Color & a, const Color & b);
 		};
@@ -112,27 +114,27 @@ namespace Engine
 		class FrameShape;
 		class BarShape;
 
-		class IBarRenderingInfo
+		class IBarRenderingInfo : public Object
 		{
 		public:
 			virtual ~IBarRenderingInfo(void);
 		};
-		class IBlurEffectRenderingInfo
+		class IBlurEffectRenderingInfo : public Object
 		{
 		public:
 			virtual ~IBlurEffectRenderingInfo(void);
 		};
-		class IInversionEffectRenderingInfo
+		class IInversionEffectRenderingInfo : public Object
 		{
 		public:
 			virtual ~IInversionEffectRenderingInfo(void);
 		};
-		class ITextureRenderingInfo
+		class ITextureRenderingInfo : public Object
 		{
 		public:
 			virtual ~ITextureRenderingInfo(void);
 		};
-		class ITextRenderingInfo
+		class ITextRenderingInfo : public Object
 		{
 		public:
 			virtual void GetExtent(int & width, int & height) = 0;
@@ -142,7 +144,7 @@ namespace Engine
 			virtual int EndOfChar(int Index) = 0;
 			virtual ~ITextRenderingInfo(void);
 		};
-		class ILineRenderingInfo
+		class ILineRenderingInfo : public Object
 		{
 		public:
 			virtual ~ILineRenderingInfo(void);
@@ -188,6 +190,7 @@ namespace Engine
 			virtual void BeginLayer(const Box & Rect, double Opacity) = 0;
 			virtual void EndLayer(void) = 0;
 			virtual void SetTimerValue(uint32 time) = 0;
+			virtual void ClearCache(void) = 0;
 			virtual ~IRenderingDevice(void);
 		};
 
@@ -214,7 +217,7 @@ namespace Engine
 		};
 		class BarShape : public Shape
 		{
-			mutable IBarRenderingInfo * Info;
+			mutable SafePointer<IBarRenderingInfo> Info;
 			Array<GradientPoint> Gradient;
 			double GradientAngle;
 		public:
@@ -227,7 +230,7 @@ namespace Engine
 		};
 		class BlurEffectShape : public Shape
 		{
-			mutable IBlurEffectRenderingInfo * Info;
+			mutable SafePointer<IBlurEffectRenderingInfo> Info;
 			double BlurPower;
 		public:
 			BlurEffectShape(const Rectangle & position, double power);
@@ -238,7 +241,7 @@ namespace Engine
 		};
 		class InversionEffectShape : public Shape
 		{
-			mutable IInversionEffectRenderingInfo * Info;
+			mutable SafePointer<IInversionEffectRenderingInfo> Info;
 		public:
 			InversionEffectShape(const Rectangle & position);
 			~InversionEffectShape(void) override;
@@ -251,7 +254,7 @@ namespace Engine
 		public:
 			enum class TextureRenderMode { Stretch = 0, Fit = 1, FillPattern = 2, AsIs = 3 };
 		private:
-			mutable ITextureRenderingInfo * Info;
+			mutable SafePointer<ITextureRenderingInfo> Info;
 			mutable Box FromBox;
 			ITexture * Texture;
 			TextureRenderMode Mode;
@@ -269,7 +272,7 @@ namespace Engine
 			enum class TextHorizontalAlign { Left = 0, Center = 1, Right = 2 };
 			enum class TextVerticalAlign { Top = 0, Center = 1, Bottom = 2 };
 		private:
-			mutable ITextRenderingInfo * Info;
+			mutable SafePointer<ITextRenderingInfo> Info;
 			IFont * Font;
 			string Text;
 			TextHorizontalAlign halign;
@@ -285,7 +288,7 @@ namespace Engine
 		class LineShape : public Shape
 		{
 		private:
-			mutable ILineRenderingInfo * Info;
+			mutable SafePointer<ILineRenderingInfo> Info;
 			Color LineColor;
 			bool Dotted;
 		public:

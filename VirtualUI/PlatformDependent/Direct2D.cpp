@@ -11,6 +11,8 @@
 #pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "dxguid.lib")
 
+#undef max
+
 namespace Engine
 {
 	namespace Direct2D
@@ -79,6 +81,8 @@ namespace Engine
 			float StrikeoutOffset;
 			float StrikeoutHalfWidth;
 			int hls, hle;
+			SafePointer<BarRenderingInfo> MainBrushInfo;
+			SafePointer<BarRenderingInfo> BackBrushInfo;
 
 			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), UseAlternative(0x40), hls(-1), hle(-1) {}
 
@@ -129,6 +133,7 @@ namespace Engine
 		{
 			ID2D1SolidColorBrush * Brush;
 			ID2D1StrokeStyle * Stroke;
+			SafePointer<BarRenderingInfo> BrushInfo;
 			virtual ~LineRenderingInfo(void) override { if (Brush) Brush->Release(); if (Stroke) Stroke->Release(); }
 		};
 		struct BlurEffectRenderingInfo : public IBlurEffectRenderingInfo
@@ -197,7 +202,9 @@ namespace Engine
 			virtual string ToString(void) const override { return L"D2DFont"; }
 		};
 
-		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) : Target(target), Layers(0x10) { Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
+		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
+			Target(target), Layers(0x10), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
 		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle)
@@ -218,42 +225,58 @@ namespace Engine
 				delete[] stop;
 				return Info;
 			} else {
+				auto CachedInfo = BrushCache.ElementByKey(gradient[0].Color);
+				if (CachedInfo) {
+					CachedInfo->Retain();
+					return CachedInfo;
+				}
 				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
 				if (!Info) { throw OutOfMemoryException(); }
 				ID2D1SolidColorBrush * Brush;
-				if (Target->CreateSolidColorBrush(D2D1::ColorF(gradient[0].Color.r / 255.0f, gradient[0].Color.g / 255.0f, gradient[0].Color.b / 255.0f, gradient[0].Color.a / 255.0f), &Brush) != S_OK) { delete Info; throw Exception(); }
+				if (Target->CreateSolidColorBrush(D2D1::ColorF(gradient[0].Color.r / 255.0f, gradient[0].Color.g / 255.0f, gradient[0].Color.b / 255.0f, gradient[0].Color.a / 255.0f), &Brush) != S_OK) { Info->Release(); throw Exception(); }
 				Info->Brush = Brush;
+				BrushCache.Append(gradient[0].Color, Info);
 				return Info;
 			}
 			
 		}
 		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power)
 		{
+			auto CachedInfo = BlurCache.ElementByKey(power);
+			if (CachedInfo) {
+				CachedInfo->Retain();
+				return CachedInfo;
+			}
 			auto Info = new (std::nothrow) BlurEffectRenderingInfo;
 			if (!Info) throw OutOfMemoryException();
-			if (Target->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { delete Info; throw Exception(); }
-			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, power);
+			if (Target->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
+			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
 			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
 			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+			BlurCache.Append(power, Info);
 			return Info;
 		}
 		IInversionEffectRenderingInfo * D2DRenderDevice::CreateInversionEffectRenderingInfo(void)
 		{
-			auto Info = new (std::nothrow) InversionEffectRenderingInfo;
-			if (!Info) throw OutOfMemoryException();
-			if (Target->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { delete Info; throw Exception(); }
-			Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
-				-1.0f,	0.0f,	0.0f,	0.0f,
-				0.0f,	-1.0f,	0.0f,	0.0f,
-				0.0f,	0.0f,	-1.0f,	0.0f,
-				0.0f,	0.0f,	0.0f,	1.0f,
-				1.0f,	1.0f,	1.0f,	0.0f
-			));
-			return Info;
+			if (!InversionInfo.Inner()) {
+				auto Info = new (std::nothrow) InversionEffectRenderingInfo;
+				if (!Info) throw OutOfMemoryException();
+				if (Target->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
+				Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
+					-1.0f, 0.0f, 0.0f, 0.0f,
+					0.0f, -1.0f, 0.0f, 0.0f,
+					0.0f, 0.0f, -1.0f, 0.0f,
+					0.0f, 0.0f, 0.0f, 1.0f,
+					1.0f, 1.0f, 1.0f, 0.0f
+				));
+				InversionInfo.SetReference(Info);
+			}
+			InversionInfo->Retain();
+			return InversionInfo;
 		}
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern)
 		{
-			TextureRenderingInfo * Info = new (std::nothrow) TextureRenderingInfo;
+			auto * Info = new (std::nothrow) TextureRenderingInfo;
 			Info->Texture = static_cast<D2DTexture *>(texture);
 			Info->From = take_area;
 			Info->Fill = fill_pattern;
@@ -266,21 +289,21 @@ namespace Engine
 					} else {
 						if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
 							D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) != S_OK) {
-							delete Info; throw Exception();
+							Info->Release(); throw Exception();
 						}
 						if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->Frames[i], &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
 						{
-							Fragment->Release(); delete Info; throw Exception();
+							Fragment->Release(); Info->Release(); throw Exception();
 						}
 					}
 					ID2D1BitmapBrush * Brush;
 					if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
 					{
-						Fragment->Release(); delete Info; throw Exception();
+						Fragment->Release(); Info->Release(); throw Exception();
 					}
 					Fragment->Release();
 					try { Info->Brushes << Brush; }
-					catch (...) { Brush->Release(); delete Info; throw; }
+					catch (...) { Brush->Release(); Info->Release(); throw; }
 				}
 			}
 			return Info;
@@ -289,6 +312,8 @@ namespace Engine
 		{
 			auto Info = new TextRenderingInfo;
 			try {
+				Array<GradientPoint> array(1);
+				array << GradientPoint(color, 0.0);
 				Info->halign = horizontal_align;
 				Info->valign = vertical_align;
 				Info->Font = static_cast<D2DFont *>(font);
@@ -296,7 +321,10 @@ namespace Engine
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
 				Info->Geometry = 0;
-				if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Info->TextBrush) != S_OK) throw Exception();
+				Info->MainBrushInfo.SetReference(static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0)));
+				Info->MainBrushInfo->Retain();
+				Info->TextBrush = Info->MainBrushInfo->Brush;
+				Info->TextBrush->AddRef();
 				Info->CharString.SetLength(text.GetEncodedLength(Encoding::UTF32));
 				text.Encode(Info->CharString, Encoding::UTF32, false);
 				Info->FillGlyphs();
@@ -304,7 +332,7 @@ namespace Engine
 				Info->BuildGeometry();
 			}
 			catch (...) {
-				delete Info;
+				Info->Release();
 			}
 			return Info;
 		}
@@ -312,6 +340,8 @@ namespace Engine
 		{
 			auto Info = new TextRenderingInfo;
 			try {
+				Array<GradientPoint> array(1);
+				array << GradientPoint(color, 0.0);
 				Info->halign = horizontal_align;
 				Info->valign = vertical_align;
 				Info->Font = static_cast<D2DFont *>(font);
@@ -319,24 +349,31 @@ namespace Engine
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
 				Info->Geometry = 0;
-				if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Info->TextBrush) != S_OK) throw Exception();
+				Info->MainBrushInfo.SetReference(static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0)));
+				Info->MainBrushInfo->Retain();
+				Info->TextBrush = Info->MainBrushInfo->Brush;
+				Info->TextBrush->AddRef();
 				Info->CharString = text;
 				Info->FillGlyphs();
 				Info->FillAdvances();
 				Info->BuildGeometry();
 			} catch (...) {
-				delete Info;
+				Info->Release();
 			}
 			return Info;
 		}
 		ILineRenderingInfo * D2DRenderDevice::CreateLineRenderingInfo(const Color & color, bool dotted)
 		{
-
+			Array<GradientPoint> array(1);
+			array << GradientPoint(color, 0.0f);
+			SafePointer<BarRenderingInfo> BarInfo = static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0));
 			LineRenderingInfo * Info = new (std::nothrow) LineRenderingInfo;
 			if (!Info) throw OutOfMemoryException();
-			Info->Brush = 0;
 			Info->Stroke = 0;
-			Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Info->Brush);
+			Info->BrushInfo.SetReference(BarInfo);
+			Info->BrushInfo->Retain();
+			Info->Brush = Info->BrushInfo->Brush;
+			Info->Brush->AddRef();
 			if (dotted) {
 				float len[] = { 1.0f, 1.0f };
 				D2DFactory->CreateStrokeStyle(D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_LINE_JOIN_MITER, 10.0f, D2D1_DASH_STYLE_CUSTOM, 0.5f), len, 2, &Info->Stroke);
@@ -514,7 +551,7 @@ namespace Engine
 		{
 			auto info = static_cast<TextureRenderingInfo *>(Info);
 			int frame = 0;
-			if (info->Texture->Frames.Length() > 1) frame = BinarySearchLE(info->Texture->FrameDuration, AnimationTimer % info->Texture->TotalDuration);
+			if (info->Texture->Frames.Length() > 1) frame = max(BinarySearchLE(info->Texture->FrameDuration, AnimationTimer % info->Texture->TotalDuration), 0);
 			D2D1_RECT_F To = D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom));
 			if (info->Fill) {
 				Target->FillRectangle(To, info->Brushes[frame]);
@@ -615,6 +652,7 @@ namespace Engine
 			Layers.RemoveLast();
 		}
 		void D2DRenderDevice::SetTimerValue(uint32 time) { AnimationTimer = time; }
+		void D2DRenderDevice::ClearCache(void) { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
 
 		void TextRenderingInfo::FillAdvances(void)
 		{

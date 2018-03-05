@@ -12,6 +12,9 @@
     <Filter Include="PlatformDependent">
       <UniqueIdentifier>{12dec525-6118-461a-adb1-f246e1014429}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Miscellaneous">
+      <UniqueIdentifier>{142da641-b7d1-438f-8cf4-3cf7eb538bd2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlBase.h">
@@ -41,6 +44,12 @@
     <ClInclude Include="PlatformDependent\ComInterop.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="Miscellaneous\Dictionary.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\DynamicString.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ControlBase.cpp">
@@ -69,6 +78,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\ComInterop.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\DynamicString.cpp">
+      <Filter>Miscellaneous</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

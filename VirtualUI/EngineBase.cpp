@@ -142,6 +142,7 @@ namespace Engine
 	}
 	Object::~Object(void) {}
 	ImmutableString Object::ToString(void) const { return ImmutableString(L"Object"); }
+	uint Object::GetReferenceCount(void) const { return _refcount; }
 
 	Exception::Exception(void) {}
 	Exception::Exception(const Exception & e) {}

@@ -56,6 +56,7 @@ namespace Engine
 		Color::Color(float sr, float sg, float sb, float sa) : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 0), 0)), a(max(min(int(sa * 255.0f), 0), 0)) {}
 		Color::Color(double sr, double sg, double sb, double sa) : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 0), 0)), a(max(min(int(sa * 255.0), 0), 0)) {}
 		Color::Color(uint32 code) : Value(code) {}
+		Color::operator uint32(void) const { return Value; }
 		FrameShape::FrameShape(const Rectangle & position) : Children(0x10), RenderMode(FrameRenderMode::Normal), Opacity(1.0) { Position = position; }
 		FrameShape::FrameShape(const Rectangle & position, FrameRenderMode mode, double opacity) : Children(0x10), RenderMode(mode), Opacity(opacity) { Position = position; }
 		FrameShape::~FrameShape(void) {}
@@ -80,41 +81,41 @@ namespace Engine
 		GradientPoint::GradientPoint(void) {}
 		GradientPoint::GradientPoint(const UI::Color & color) : Color(color), Position(0.0) {}
 		GradientPoint::GradientPoint(const UI::Color & color, double position) : Color(color), Position(position) {}
-		BarShape::BarShape(const Rectangle & position, const Color & color) : Info(0), GradientAngle(0.0) { Position = position; Gradient << GradientPoint(color); }
-		BarShape::BarShape(const Rectangle & position, const Array<GradientPoint>& gradient, double angle) : Info(0), Gradient(gradient), GradientAngle(angle) { Position = position; }
-		BarShape::~BarShape(void) { delete Info; }
+		BarShape::BarShape(const Rectangle & position, const Color & color) : GradientAngle(0.0) { Position = position; Gradient << GradientPoint(color); }
+		BarShape::BarShape(const Rectangle & position, const Array<GradientPoint>& gradient, double angle) : Gradient(gradient), GradientAngle(angle) { Position = position; }
+		BarShape::~BarShape(void) {}
 		void BarShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
-			if (!Info) Info = Device->CreateBarRenderingInfo(Gradient, GradientAngle);
+			if (!Info) Info.SetReference(Device->CreateBarRenderingInfo(Gradient, GradientAngle));
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->RenderBar(Info, my);
 		}
-		void BarShape::ClearCache(void) { delete Info; Info = 0; }
+		void BarShape::ClearCache(void) { Info.SetReference(0); }
 		string BarShape::ToString(void) const { return L"BarShape"; }
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
 		IBlurEffectRenderingInfo::~IBlurEffectRenderingInfo(void) {}
-		BlurEffectShape::BlurEffectShape(const Rectangle & position, double power) : Info(0), BlurPower(power) { Position = position; }
-		BlurEffectShape::~BlurEffectShape(void) { delete Info; }
+		BlurEffectShape::BlurEffectShape(const Rectangle & position, double power) : BlurPower(power) { Position = position; }
+		BlurEffectShape::~BlurEffectShape(void) {}
 		void BlurEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
-			if (!Info) Info = Device->CreateBlurEffectRenderingInfo(BlurPower);
+			if (!Info) Info.SetReference(Device->CreateBlurEffectRenderingInfo(BlurPower));
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->ApplyBlur(Info, my);
 		}
-		void BlurEffectShape::ClearCache(void) { delete Info; Info = 0; }
+		void BlurEffectShape::ClearCache(void) { Info.SetReference(0); }
 		string BlurEffectShape::ToString(void) const { return L"BlurEffectShape"; }
 		ITextureRenderingInfo::~ITextureRenderingInfo(void) {}
-		TextureShape::TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode) : Info(0), Texture(texture), From(take_from), Mode(mode) { Position = position; if (Texture) Texture->Retain(); }
-		TextureShape::~TextureShape(void) { delete Info; if (Texture) Texture->Release(); }
+		TextureShape::TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode) : Texture(texture), From(take_from), Mode(mode) { Position = position; if (Texture) Texture->Retain(); }
+		TextureShape::~TextureShape(void) { if (Texture) Texture->Release(); }
 		void TextureShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
 			if (Texture) {
 				if (!Info) {
 					FromBox = Box(From, Box(0, 0, Texture->GetWidth(), Texture->GetHeight()));
-					Info = Device->CreateTextureRenderingInfo(Texture, FromBox, Mode == TextureRenderMode::FillPattern);
+					Info.SetReference(Device->CreateTextureRenderingInfo(Texture, FromBox, Mode == TextureRenderMode::FillPattern));
 				}
 				Box to(Position, Outer);
 				if (to.Right < to.Left || to.Bottom < to.Top) return;
@@ -145,43 +146,43 @@ namespace Engine
 				Device->RenderTexture(Info, to);
 			}
 		}
-		void TextureShape::ClearCache(void) { delete Info; Info = 0; }
+		void TextureShape::ClearCache(void) { Info.SetReference(0); }
 		string TextureShape::ToString(void) const { return L"TextureShape"; }
 		ITextRenderingInfo::~ITextRenderingInfo(void) {}
 		TextShape::TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align) :
-			Info(0), Text(text), Font(font), TextColor(color), halign(horizontal_align), valign(vertical_align) { Position = position; Font->Retain(); }
-		TextShape::~TextShape(void) { Font->Release(); }
+			Text(text), Font(font), TextColor(color), halign(horizontal_align), valign(vertical_align) { Position = position; Font->Retain(); }
+		TextShape::~TextShape(void) { if (Font) Font->Release(); }
 		void TextShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
-			if (!Info) Info = Device->CreateTextRenderingInfo(Font, Text, int(halign), int(valign), TextColor);
+			if (!Info) Info.SetReference(Device->CreateTextRenderingInfo(Font, Text, int(halign), int(valign), TextColor));
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->RenderText(Info, my, true);
 		}
-		void TextShape::ClearCache(void) { delete Info; Info = 0; }
+		void TextShape::ClearCache(void) { Info.SetReference(0); }
 		string TextShape::ToString(void) const { return L"TextShape"; }
 		ILineRenderingInfo::~ILineRenderingInfo(void) {}
-		LineShape::LineShape(const Rectangle & position, const Color & color, bool dotted) : Info(0), LineColor(color), Dotted(dotted) { Position = position; }
-		LineShape::~LineShape(void) { delete Info; }
+		LineShape::LineShape(const Rectangle & position, const Color & color, bool dotted) : LineColor(color), Dotted(dotted) { Position = position; }
+		LineShape::~LineShape(void) {}
 		void LineShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
-			if (!Info) Info = Device->CreateLineRenderingInfo(LineColor, Dotted);
+			if (!Info) Info.SetReference(Device->CreateLineRenderingInfo(LineColor, Dotted));
 			Box my(Position, Outer);
 			Device->RenderLine(Info, my);
 		}
-		void LineShape::ClearCache(void) { delete Info; Info = 0; }
+		void LineShape::ClearCache(void) { Info.SetReference(0); }
 		string LineShape::ToString(void) const { return L"LineShape"; }
 		IInversionEffectRenderingInfo::~IInversionEffectRenderingInfo(void) {}
-		InversionEffectShape::InversionEffectShape(const Rectangle & position) : Info(0) { Position = position; }
-		InversionEffectShape::~InversionEffectShape(void) { delete Info; }
+		InversionEffectShape::InversionEffectShape(const Rectangle & position) { Position = position; }
+		InversionEffectShape::~InversionEffectShape(void) {}
 		void InversionEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{
-			if (!Info) Info = Device->CreateInversionEffectRenderingInfo();
+			if (!Info) Info.SetReference(Device->CreateInversionEffectRenderingInfo());
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->ApplyInversion(Info, my, false);
 		}
-		void InversionEffectShape::ClearCache(void) { delete Info; Info = 0; }
+		void InversionEffectShape::ClearCache(void) { Info.SetReference(0); }
 		string InversionEffectShape::ToString(void) const { return L"InversionEffectShape"; }
 	}
 }
