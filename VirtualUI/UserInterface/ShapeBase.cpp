@@ -1,4 +1,5 @@
 #include "ShapeBase.h"
+#include "Templates.h"
 
 namespace Engine
 {
@@ -150,7 +151,7 @@ namespace Engine
 		string TextureShape::ToString(void) const { return L"TextureShape"; }
 		ITextRenderingInfo::~ITextRenderingInfo(void) {}
 		TextShape::TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align) :
-			Text(text), Font(font), TextColor(color), halign(horizontal_align), valign(vertical_align) { Position = position; Font->Retain(); }
+			Text(text), Font(font), TextColor(color), halign(horizontal_align), valign(vertical_align) { Position = position; if (Font) Font->Retain(); }
 		TextShape::~TextShape(void) { if (Font) Font->Release(); }
 		void TextShape::Render(IRenderingDevice * Device, const Box & Outer) const
 		{

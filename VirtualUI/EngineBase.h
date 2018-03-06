@@ -519,6 +519,7 @@ namespace Engine
 		O ** InnerRef(void) { return &reference; }
 
 		void SetReference(O * ref) { if (reference) reference->Release(); reference = ref; }
+		void SetRetain(O * ref) { if (reference) reference->Release(); reference = ref; if (reference) reference->Retain(); }
 
 		bool friend operator == (const SafePointer & a, const SafePointer & b) { return a.reference == b.reference; }
 		bool friend operator != (const SafePointer & a, const SafePointer & b) { return a.reference != b.reference; }

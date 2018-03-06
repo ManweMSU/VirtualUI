@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ControlBase.h" />
     <ClInclude Include="EngineBase.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
@@ -28,11 +27,12 @@
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\FileApi.h" />
     <ClInclude Include="Reflection.h" />
-    <ClInclude Include="ShapeBase.h" />
     <ClInclude Include="Streaming.h" />
+    <ClInclude Include="UserInterface\ControlBase.h" />
+    <ClInclude Include="UserInterface\ShapeBase.h" />
+    <ClInclude Include="UserInterface\Templates.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ControlBase.cpp" />
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
@@ -40,8 +40,10 @@
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\FileApi.cpp" />
     <ClCompile Include="Reflection.cpp" />
-    <ClCompile Include="ShapeBase.cpp" />
     <ClCompile Include="Streaming.cpp" />
+    <ClCompile Include="UserInterface\ControlBase.cpp" />
+    <ClCompile Include="UserInterface\ShapeBase.cpp" />
+    <ClCompile Include="UserInterface\Templates.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1668D08D-3F3F-46C6-89B5-8308CA348929}</ProjectGuid>

@@ -1,7 +1,7 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
-#include "..\\VirtualUI\\ShapeBase.h"
+#include "../VirtualUI/UserInterface/ShapeBase.h"
 #include "..\\VirtualUI\\Streaming.h"
 #include "..\\VirtualUI\\PlatformDependent\\Direct2D.h"
 #include "../VirtualUI/Miscellaneous/Dictionary.h"

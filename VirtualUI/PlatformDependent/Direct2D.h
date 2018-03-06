@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ShapeBase.h"
+#include "../UserInterface/ShapeBase.h"
 #include "../Miscellaneous/Dictionary.h"
 
 #include <d2d1_1.h>

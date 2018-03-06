@@ -1,8 +1,8 @@
 #pragma once
 
-#include "EngineBase.h"
-#include "Streaming.h"
-#include "Reflection.h"
+#include "../EngineBase.h"
+#include "../Streaming.h"
+#include "../Reflection.h"
 
 namespace Engine
 {
