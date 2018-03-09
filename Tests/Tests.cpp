@@ -2,9 +2,11 @@
 //
 
 #include "../VirtualUI/UserInterface/ShapeBase.h"
-#include "..\\VirtualUI\\Streaming.h"
-#include "..\\VirtualUI\\PlatformDependent\\Direct2D.h"
+#include "../VirtualUI/UserInterface/Templates.h"
+#include "../VirtualUI/Streaming.h"
+#include "../VirtualUI/PlatformDependent/Direct2D.h"
 #include "../VirtualUI/Miscellaneous/Dictionary.h"
+#include "../VirtualUI/UserInterface/ControlClasses.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -16,7 +18,7 @@
 #pragma comment(lib, "d3d11.lib")
 
 using namespace Engine;
-using namespace Reflection;
+using namespace Engine::UI;
 
 #define MAX_LOADSTRING 100
 
@@ -42,14 +44,9 @@ ID2D1Device * D2DDevice;
 ID2D1DeviceContext * Target = 0;
 IDXGISwapChain1 * SwapChain = 0;
 
-UI::IInversionEffectRenderingInfo * Inversion = 0;
+SafePointer<Engine::Streaming::TextWriter> conout;
 
-class test : public Reflection::ReflectableObject
-{
-public:
-	DECLARE_PROPERTY(int, value)
-	DECLARE_PROPERTY(Coordinate, coord)
-};
+UI::IInversionEffectRenderingInfo * Inversion = 0;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -115,7 +112,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	AllocConsole();
 	SetConsoleTitleW(L"ui tests");
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-	SafePointer<Engine::Streaming::TextWriter> conout = new Engine::Streaming::TextWriter(constream);
+	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
 	{
 		string result = dict.ToString() + L"[";
@@ -123,6 +120,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		(*conout) << result << IO::NewLineChar;
 		ss.SetReference(0);
+
+		Engine::UI::Template::Controls::DialogFrame control;
+		control.Title = L"Window Test Title";
+		(*conout) << control.GetTemplateClass() << IO::NewLineChar;
+		(*conout) << control.GetProperty(L"Title").Get<string>() << IO::NewLineChar;
 	}
 
 	{
@@ -232,6 +234,66 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			auto invs = new InversionEffectShape(UI::Rectangle(UI::Coordinate(-500, 0.0, 1.0), UI::Coordinate(-500, 0.0, 1.0), UI::Coordinate(-100, 0.0, 1.0), UI::Coordinate(-100, 0.0, 1.0)));
 			General->Children.Append(invs);
 			invs->Release();
+
+			class ap : public IArgumentProvider
+			{
+			public:
+				virtual void GetArgument(const string & name, int * value)
+				{
+					(*conout) << L"Required: " + name << IO::NewLineChar;
+					*value = -200;
+				}
+				virtual void GetArgument(const string & name, double * value)
+				{
+					(*conout) << L"Required: " + name << IO::NewLineChar;
+					*value = 0.5;
+				}
+				virtual void GetArgument(const string & name, Color * value)
+				{
+					(*conout) << L"Required: " + name << IO::NewLineChar;
+					*value = 0xFF88FF00;
+				}
+				virtual void GetArgument(const string & name, string * value)
+				{
+					(*conout) << L"Required: " + name << IO::NewLineChar;
+					*value = L"kornevgen pidor";
+				}
+				virtual void GetArgument(const string & name, ITexture ** value)
+				{
+					(*conout) << L"Required: " + name << IO::NewLineChar;
+					*value = 0;
+				}
+				virtual void GetArgument(const string & name, UI::IFont ** value)
+				{
+					(*conout) << L"Required: " + name << IO::NewLineChar;
+					*value = Device->LoadFont(L"Tahoma", 38, 400, false, false, false);
+				}
+			} xyu;
+
+			Template::BarShape bar;
+			bar.Position = Template::Rectangle(Coordinate(50, 0.0, 0.0), Coordinate(250, 0.0, 0.0), Coordinate(150, 0.0, 0.0), Template::Coordinate(Template::IntegerTemplate::Undefined(L"Shift"), 0.0, Template::DoubleTemplate::Undefined(L"Anchor")));
+			bar.Gradient << Template::GradientPoint(Template::ColorTemplate::Undefined(L"Color"), 0.0);
+			Template::TextShape text;
+			text.Position = bar.Position;
+			text.VerticalAlign = TextShape::TextVerticalAlign::Center;
+			text.HorizontalAlign = TextShape::TextHorizontalAlign::Center;
+			text.TextColor = Color(0xFF000000);
+			text.Text = Template::StringTemplate::Undefined(L"Text");
+			text.Font = Template::FontTemplate::Undefined(L"Font");
+			Template::TextureShape texture;
+			texture.Position = Template::Rectangle(Coordinate(50), text.Position.Bottom, Coordinate(450), Coordinate(0, 0.0, 1.0));
+			texture.RenderMode = TextureShape::TextureRenderMode::Fit;
+			texture.Texture = Template::TextureTemplate::Undefined(L"Texture");
+			
+			auto ttq = text.Initialize(&xyu);
+			General->Children.Append(ttq);
+			ttq->Release();
+			auto tbq = bar.Initialize(&xyu);
+			General->Children.Append(tbq);
+			tbq->Release();
+			auto txq = texture.Initialize(&xyu);
+			General->Children.Append(txq);
+			txq->Release();
 
 			SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"bl.gif", Streaming::AccessRead, Streaming::OpenExisting);
 			Texture = Device->LoadTexture(Input);

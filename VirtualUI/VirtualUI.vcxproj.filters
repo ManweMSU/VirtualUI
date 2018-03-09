@@ -23,9 +23,6 @@
     <ClInclude Include="EngineBase.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="Reflection.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
     <ClInclude Include="PlatformDependent\Base.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
@@ -56,12 +53,15 @@
     <ClInclude Include="UserInterface\Templates.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="Miscellaneous\Reflection.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\ControlClasses.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="Reflection.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -90,6 +90,9 @@
     </ClCompile>
     <ClCompile Include="UserInterface\Templates.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\Reflection.cpp">
+      <Filter>Miscellaneous</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -22,24 +22,25 @@
     <ClInclude Include="EngineBase.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
+    <ClInclude Include="Miscellaneous\Reflection.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\FileApi.h" />
-    <ClInclude Include="Reflection.h" />
     <ClInclude Include="Streaming.h" />
     <ClInclude Include="UserInterface\ControlBase.h" />
+    <ClInclude Include="UserInterface\ControlClasses.h" />
     <ClInclude Include="UserInterface\ShapeBase.h" />
     <ClInclude Include="UserInterface\Templates.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
+    <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="PlatformDependent\ComInterop.cpp" />
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\FileApi.cpp" />
-    <ClCompile Include="Reflection.cpp" />
     <ClCompile Include="Streaming.cpp" />
     <ClCompile Include="UserInterface\ControlBase.cpp" />
     <ClCompile Include="UserInterface\ShapeBase.cpp" />

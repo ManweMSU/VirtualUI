@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ShapeBase.h"
+#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Reflection.h"
 
 namespace Engine
 {
@@ -71,6 +73,13 @@ namespace Engine
 					}
 				}
 			};
+
+			typedef BasicTemplate<int> IntegerTemplate;
+			typedef BasicTemplate<double> DoubleTemplate;
+			typedef BasicTemplate<Color> ColorTemplate;
+			typedef BasicTemplate<string> StringTemplate;
+			typedef ObjectTemplate<ITexture> TextureTemplate;
+			typedef ObjectTemplate<IFont> FontTemplate;
 
 			class Coordinate
 			{
@@ -204,6 +213,37 @@ namespace Engine
 				virtual bool IsDefined(void) const override;
 				virtual Engine::UI::Shape * Initialize(IArgumentProvider * provider) const override;
 			};
+
+			class ControlReflectedBase : public Reflection::Reflected
+			{
+			public:
+				UI::Rectangle ControlPosition;
+				virtual string GetTemplateClass(void) const = 0;
+				virtual ~ControlReflectedBase(void);
+			};
+			class ControlTemplate : public Object
+			{
+			public:
+				ObjectArray<ControlTemplate> Children;
+				ControlReflectedBase * Properties;
+
+				ControlTemplate(ControlReflectedBase * properties);
+				virtual ~ControlTemplate(void) override;
+				virtual string ToString(void) const override;
+			};
 		}
+
+		class InterfaceTemplate : public Object
+		{
+		public:
+			Dictionary::Dictionary<string, ITexture> Texture;
+			Dictionary::Dictionary<string, IFont> Font;
+			Dictionary::Dictionary<string, Template::Shape> Application;
+			Dictionary::Dictionary<string, Template::ControlTemplate> Dialog;
+
+			InterfaceTemplate(void);
+			virtual ~InterfaceTemplate(void) override;
+			virtual string ToString(void) const override;
+		};
 	}
 }

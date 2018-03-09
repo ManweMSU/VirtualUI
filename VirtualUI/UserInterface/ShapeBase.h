@@ -2,7 +2,6 @@
 
 #include "../EngineBase.h"
 #include "../Streaming.h"
-#include "../Reflection.h"
 
 namespace Engine
 {
@@ -298,14 +297,5 @@ namespace Engine
 			void ClearCache(void) override;
 			string ToString(void) const override;
 		};
-	}
-	namespace Reflection
-	{
-		using namespace ::Engine::UI;
-		__TYPE_REFLECTION(Coordinate, coordinate)
-		__TYPE_REFLECTION(Rectangle, rectangle)
-		__TYPE_REFLECTION(Color, color)
-		__TYPE_REFLECTION(ITexture, texture)
-		__TYPE_REFLECTION(IFont, font)
 	}
 }
