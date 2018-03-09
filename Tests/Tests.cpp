@@ -48,6 +48,14 @@ SafePointer<Engine::Streaming::TextWriter> conout;
 
 UI::IInversionEffectRenderingInfo * Inversion = 0;
 
+ENGINE_PACKED_STRUCTURE struct TestPacked
+{
+	uint8 foo;
+	uint32 bar;
+	uint16 foobar;
+};
+ENGINE_END_PACKED_STRUCTURE
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -119,12 +127,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (dict.Length()) for (int i = 0; i < dict.Length(); i++) { result += string(dict[i].key) + L": " + dict[i].object->ToString() + ((i == dict.Length() - 1) ? L"]" : L", "); } else result += L"]";
 
 		(*conout) << result << IO::NewLineChar;
+		(*conout) << L"Packed size = " << sizeof(TestPacked) << IO::NewLineChar;
 		ss.SetReference(0);
 
 		Engine::UI::Template::Controls::DialogFrame control;
+		Engine::UI::Template::Controls::ListView view;
+		view.Border = 666;
 		control.Title = L"Window Test Title";
 		(*conout) << control.GetTemplateClass() << IO::NewLineChar;
 		(*conout) << control.GetProperty(L"Title").Get<string>() << IO::NewLineChar;
+		(*conout) << view.GetProperty(L"Border").Get<int>() << IO::NewLineChar;
 	}
 
 	{

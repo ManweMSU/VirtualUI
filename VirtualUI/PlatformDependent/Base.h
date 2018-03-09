@@ -13,22 +13,22 @@ namespace Engine
 	typedef signed char int8;
 	typedef unsigned char uint8;
 
-	// OS macros may be changed - WINDOWS and _WIN64 are not standart
-#ifdef WINDOWS
+#define ENGINE_PACKED_STRUCTURE __pragma(pack(push, 1))
+#define ENGINE_END_PACKED_STRUCTURE __pragma(pack(pop))
+
+#ifdef ENGINE_WINDOWS
 	constexpr Encoding SystemEncoding = Encoding::UTF16;
+#endif
+#ifdef ENGINE_UNIX
+	constexpr Encoding SystemEncoding = Encoding::UTF32;
+#endif
 
-	// First macro MUST turn off any field alignment in structures, second one should restore defaults
-#define DATA_ALIGN_UNALIGNED \
-#pragma pack(push)\
-#pragma pack(1)
-#define DATA_ALIGN_RESTORE #pragma pack(pop)
-
-#ifdef _WIN64
+#ifdef ENGINE_X64
 	typedef uint64 intptr;
 #else
 	typedef uint32 intptr;
 #endif
-#endif
+
 	typedef intptr eint;
 	typedef wchar_t widechar;
 	typedef void * handle;

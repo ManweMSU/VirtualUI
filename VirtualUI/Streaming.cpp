@@ -91,6 +91,13 @@ namespace Engine
 			data->Release();
 		}
 		void TextWriter::WriteLine(const string & text) const { Write(text + NewLineChar); }
+		void TextWriter::WriteEncodingSignature(void) const
+		{
+			if (coding == Encoding::ANSI) {}
+			else if (coding == Encoding::UTF8) { dest->Write("\xEF\xBB\xBF", 3); }
+			else if (coding == Encoding::UTF16) { dest->Write("\xFF\xFE", 2); }
+			else if (coding == Encoding::UTF32) { dest->Write("\xFF\xFE\x00\x00", 4); }
+		}
 		TextWriter::~TextWriter(void) { dest->Release(); }
 		string TextWriter::ToString(void) const { return L"TextWriter"; }
 		TextWriter & TextWriter::operator<<(const string & text) { Write(text); return *this; }

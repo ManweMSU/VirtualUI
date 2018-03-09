@@ -14,10 +14,15 @@ namespace Engine
 		enum FileCreationMode { CreateAlways, CreateNew, OpenAlways, OpenExisting, TruncateExisting };
 		enum SeekOrigin { Begin, Current, End };
 
-#ifdef WINDOWS
+#ifdef ENGINE_WINDOWS
 		constexpr widechar PathChar = L'\\';
 		constexpr wchar_t * NewLineChar = L"\r\n";
 		constexpr Encoding TextFileEncoding = Encoding::ANSI;
+#endif
+#ifdef ENGINE_UNIX
+		constexpr widechar PathChar = L'/';
+		constexpr wchar_t * NewLineChar = L"\n";
+		constexpr Encoding TextFileEncoding = Encoding::UTF8;
 #endif
 
 		string NormalizePath(const string & path);

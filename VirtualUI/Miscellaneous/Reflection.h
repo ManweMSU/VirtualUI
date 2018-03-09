@@ -36,12 +36,13 @@ namespace Engine
 		class Reflected
 		{
 		public:
+			virtual void EnumerateProperties(IPropertyEnumerator & enumerator);
 			virtual PropertyInfo GetProperty(const string & name) = 0;
 		};
 
 #define ENGINE_REFLECTED_CLASS(class_name, parent_class) class class_name : public parent_class { \
 private: template<uint __index> void _mirror_property(::Engine::Reflection::IPropertyEnumerator & enumerator) {} \
-public: void EnumerateProperties(::Engine::Reflection::IPropertyEnumerator & enumerator) { _mirror_property<__COUNTER__ + 1>(enumerator); } \
+public: virtual void EnumerateProperties(::Engine::Reflection::IPropertyEnumerator & enumerator) override { parent_class::EnumerateProperties(enumerator); _mirror_property<__COUNTER__ + 1>(enumerator); } \
 public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const string & name) override { ::Engine::Reflection::GetPropertyEnumerator enumerator(name); EnumerateProperties(enumerator); return enumerator.Result; } \
 
 #define ENGINE_END_REFLECTED_CLASS };
@@ -50,20 +51,20 @@ public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const string & na
 private: template<> void _mirror_property<__COUNTER__>(::Engine::Reflection::IPropertyEnumerator & enumerator) {\
 enumerator.EnumerateProperty(ENGINE_STRING(property_name), &property_name, ENGINE_REFLECTED_TYPE_##reflected_type);\
 _mirror_property<__COUNTER__ + 1>(enumerator); } \
-public: ENGINE_CLANG_TYPE_##reflected_type property_name;
+public: ENGINE_CXX_TYPE_##reflected_type property_name;
 
 #define ENGINE_STRING(macro) L#macro
 
-#define ENGINE_CLANG_TYPE_INTEGER		int
-#define ENGINE_CLANG_TYPE_DOUBLE		double
-#define ENGINE_CLANG_TYPE_BOOLEAN		bool
-#define ENGINE_CLANG_TYPE_COLOR			::Engine::UI::Color
-#define ENGINE_CLANG_TYPE_STRING		::Engine::ImmutableString
-#define ENGINE_CLANG_TYPE_TEXTURE		::Engine::SafePointer<::Engine::UI::ITexture>
-#define ENGINE_CLANG_TYPE_FONT			::Engine::SafePointer<::Engine::UI::IFont>
-#define ENGINE_CLANG_TYPE_APPLICATION	::Engine::SafePointer<::Engine::UI::Template::Shape>
-#define ENGINE_CLANG_TYPE_DIALOG		::Engine::SafePointer<::Engine::UI::Template::ControlTemplate>
-#define ENGINE_CLANG_TYPE_RECTANGLE		::Engine::UI::Rectangle
+#define ENGINE_CXX_TYPE_INTEGER				int
+#define ENGINE_CXX_TYPE_DOUBLE				double
+#define ENGINE_CXX_TYPE_BOOLEAN				bool
+#define ENGINE_CXX_TYPE_COLOR				::Engine::UI::Color
+#define ENGINE_CXX_TYPE_STRING				::Engine::ImmutableString
+#define ENGINE_CXX_TYPE_TEXTURE				::Engine::SafePointer<::Engine::UI::ITexture>
+#define ENGINE_CXX_TYPE_FONT				::Engine::SafePointer<::Engine::UI::IFont>
+#define ENGINE_CXX_TYPE_APPLICATION			::Engine::SafePointer<::Engine::UI::Template::Shape>
+#define ENGINE_CXX_TYPE_DIALOG				::Engine::SafePointer<::Engine::UI::Template::ControlTemplate>
+#define ENGINE_CXX_TYPE_RECTANGLE			::Engine::UI::Rectangle
 #define ENGINE_REFLECTED_TYPE_INTEGER		::Engine::Reflection::PropertyType::Integer
 #define ENGINE_REFLECTED_TYPE_DOUBLE		::Engine::Reflection::PropertyType::Double
 #define ENGINE_REFLECTED_TYPE_BOOLEAN		::Engine::Reflection::PropertyType::Boolean

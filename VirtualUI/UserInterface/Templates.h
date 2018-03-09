@@ -233,6 +233,22 @@ namespace Engine
 			};
 		}
 
+		class IResourceLoader
+		{
+		public:
+			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
+			virtual ITexture * LoadTexture(const string & Name) = 0;
+			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
+		};
+		class IResourceResolver
+		{
+		public:
+			virtual ITexture * GetTexture(const string & Name) = 0;
+			virtual IFont * GetFont(const string & Name) = 0;
+			virtual Template::Shape * GetApplication(const string & Name) = 0;
+			virtual Template::ControlTemplate * GetDialog(const string & Name) = 0;
+		};
+
 		class InterfaceTemplate : public Object
 		{
 		public:

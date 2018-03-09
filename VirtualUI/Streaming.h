@@ -85,6 +85,7 @@ namespace Engine
 			TextWriter(Stream * Dest, Encoding encoding);
 			void Write(const string & text) const;
 			void WriteLine(const string & text) const;
+			void WriteEncodingSignature(void) const;
 			virtual ~TextWriter(void) override;
 			virtual string ToString(void) const override;
 
