@@ -521,6 +521,8 @@ namespace Engine
 					ENGINE_DEFINE_REFLECTED_PROPERTY(BOOLEAN, Invisible)
 					ENGINE_DEFINE_REFLECTED_PROPERTY(BOOLEAN, Disabled)
 				ENGINE_END_REFLECTED_CLASS
+
+				ControlReflectedBase * CreateControlByClass(const string & class_name);
 			}
 		}
 	}

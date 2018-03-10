@@ -7,6 +7,7 @@
 #include "../VirtualUI/PlatformDependent/Direct2D.h"
 #include "../VirtualUI/Miscellaneous/Dictionary.h"
 #include "../VirtualUI/UserInterface/ControlClasses.h"
+#include "../VirtualUI/UserInterface/BinaryLoader.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -45,6 +46,7 @@ ID2D1DeviceContext * Target = 0;
 IDXGISwapChain1 * SwapChain = 0;
 
 SafePointer<Engine::Streaming::TextWriter> conout;
+SafePointer<Engine::UI::InterfaceTemplate> Template;
 
 UI::IInversionEffectRenderingInfo * Inversion = 0;
 
@@ -240,6 +242,54 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		auto General = new FrameShape(UI::Rectangle::Entire());
 		{
+			UI::Zoom = 2.0;
+			::Template.SetReference(new Engine::UI::InterfaceTemplate());
+			{
+				SafePointer<Streaming::Stream> Source = new Streaming::FileStream(L"Test.eui", Streaming::AccessRead, Streaming::OpenExisting);
+				struct _loader : public IResourceLoader
+				{
+					virtual ITexture * LoadTexture(Streaming::Stream * Source) override
+					{
+						return Device->LoadTexture(Source);
+					}
+					virtual ITexture * LoadTexture(const string & Name) override
+					{
+						SafePointer<Streaming::Stream> Source = new Streaming::FileStream(Name, Streaming::AccessRead, Streaming::OpenExisting);
+						return Device->LoadTexture(Source);
+					}
+					virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
+					{
+						return Device->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
+					}
+					virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) override
+					{
+						Texture->Reload(Device, Source);
+					}
+					virtual void ReloadTexture(ITexture * Texture, const string & Name) override
+					{
+						SafePointer<Streaming::Stream> Source = new Streaming::FileStream(Name, Streaming::AccessRead, Streaming::OpenExisting);
+						Texture->Reload(Device, Source);
+					}
+					virtual void ReloadFont(UI::IFont * Font) override
+					{
+						Font->Reload(Device);
+					}
+				} loader;
+				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, &loader, 0);
+			}
+			auto & console = *conout;
+
+			console << L"== Interface Template Contents  ==" << IO::NewLineChar;
+			console << L"Textures:" << IO::NewLineChar;
+			for (int i = 0; i < ::Template->Texture.Length(); i++) console << ::Template->Texture[i].key << IO::NewLineChar;
+			console << L"Fonts:" << IO::NewLineChar;
+			for (int i = 0; i < ::Template->Font.Length(); i++) console << ::Template->Font[i].key << IO::NewLineChar;
+			console << L"Applications:" << IO::NewLineChar;
+			for (int i = 0; i < ::Template->Application.Length(); i++) console << ::Template->Application[i].key << IO::NewLineChar;
+			console << L"Dialogs:" << IO::NewLineChar;
+			for (int i = 0; i < ::Template->Dialog.Length(); i++) console << ::Template->Dialog[i].key << IO::NewLineChar;
+			console << L"== That's all ==" << IO::NewLineChar;
+
 			auto bls = new BlurEffectShape(UI::Rectangle(100, 100, 600, 600), 15.0f);
 			General->Children.Append(bls);
 			bls->Release();
@@ -281,6 +331,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					*value = Device->LoadFont(L"Tahoma", 38, 400, false, false, false);
 				}
 			} xyu;
+
+			{
+				SafePointer<UI::Shape> button_shape = ::Template->Application[L"SimpleButtonNormal"]->Initialize(&xyu);
+				SafePointer<UI::FrameShape> container = new UI::FrameShape(UI::Rectangle(Coordinate(0, 100.0, 0.0), Coordinate(0, -30.0, 1.0), Coordinate(0, 250.0, 0.0), Coordinate(0, -2.0, 1.0)));
+				container->Children.Append(button_shape);
+				General->Children.Append(container);
+			}
 
 			Template::BarShape bar;
 			bar.Position = Template::Rectangle(Coordinate(50, 0.0, 0.0), Coordinate(250, 0.0, 0.0), Coordinate(150, 0.0, 0.0), Template::Coordinate(Template::IntegerTemplate::Undefined(L"Shift"), 0.0, Template::DoubleTemplate::Undefined(L"Anchor")));

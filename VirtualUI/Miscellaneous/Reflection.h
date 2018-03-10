@@ -3,8 +3,6 @@
 #include "../EngineBase.h"
 #include "../UserInterface/ShapeBase.h"
 
-extern Engine::SafePointer<Engine::Streaming::TextWriter> conout;
-
 namespace Engine
 {
 	namespace Reflection
@@ -18,6 +16,7 @@ namespace Engine
 
 			template <class V> void Set(const V & value) { *reinterpret_cast<V *>(Address) = value; }
 			template <class V> const V & Get(void) const { return *reinterpret_cast<const V *>(Address); }
+			template <class V> V & Get(void) { return *reinterpret_cast<V *>(Address); }
 		};
 		class IPropertyEnumerator
 		{

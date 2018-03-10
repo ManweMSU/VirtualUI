@@ -39,6 +39,7 @@ namespace Engine
 		if (A[i] < B[i]) return -1;
 		return 1;
 	}
+	int MemoryCompare(const void * A, const void * B, intptr Length) { return memcmp(A, B, Length); }
 	int StringCompareCaseInsensitive(const widechar * A, const widechar * B) { return StrCmpIW(A, B); }
 	int StringLength(const widechar * str) { int l = 0; while (str[l]) l++; return l; }
 	void StringAppend(widechar * str, widechar letter) { auto len = StringLength(str); str[len + 1] = 0; str[len] = letter; }
@@ -189,7 +190,7 @@ namespace Engine
 	};
 	int MeasureSequenceLength(const void * Source, int SourceLength, Encoding From, Encoding To)
 	{
-		if (From == To) return SourceLength;
+		if (From == To && SourceLength != -1) return SourceLength;
 		int len = 0;
 		CharReader Reader;
 		Reader.Source = reinterpret_cast<const uint8 *>(Source); Reader.Position = 0; Reader.Length = SourceLength; Reader.Coding = From;

@@ -15,6 +15,7 @@ namespace Engine
 
 #define ENGINE_PACKED_STRUCTURE __pragma(pack(push, 1))
 #define ENGINE_END_PACKED_STRUCTURE __pragma(pack(pop))
+#define ENGINE_PI 3.14159265358979323846
 
 #ifdef ENGINE_WINDOWS
 	constexpr Encoding SystemEncoding = Encoding::UTF16;
@@ -46,6 +47,7 @@ namespace Engine
 	widechar * StringCopy(widechar * Dest, const widechar * Source);
 	int StringCompare(const widechar * A, const widechar * B);
 	int SequenceCompare(const widechar * A, const widechar * B, int Length);
+	int MemoryCompare(const void * A, const void * B, intptr Length);
 	int StringCompareCaseInsensitive(const widechar * A, const widechar * B);
 	int StringLength(const widechar * str);
 	void StringAppend(widechar * str, widechar letter);

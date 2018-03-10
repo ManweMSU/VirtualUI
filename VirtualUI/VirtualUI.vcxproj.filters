@@ -59,6 +59,9 @@
     <ClInclude Include="UserInterface\ControlClasses.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\BinaryLoader.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp">
@@ -93,6 +96,12 @@
     </ClCompile>
     <ClCompile Include="Miscellaneous\Reflection.cpp">
       <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\BinaryLoader.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\ControlClasses.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -12,6 +12,20 @@ namespace Engine
 	template <class V> class SafeArray;
 	template <class V> class ObjectArray;
 
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//                    Retain/Release Policy
+	// Function must call Retain() on object pointer if:
+	//  - this object is an input argument and function wants
+	//    to store it's reference,
+	//  - object reference is the result value of this function,
+	//    function assumes object's creation, but object was
+	//    taken from another place (for example, from cache)
+	//  Function mush call Release() on object pointer if is is
+	//  not required anymore and object's reference was taken as
+	//  a result value of "Create" function or was retained
+	//  explicitly.
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	class Object
 	{
 	private:
@@ -507,10 +521,21 @@ namespace Engine
 	public:
 		SafePointer(void) : reference(0) {}
 		SafePointer(O * ref) : reference(ref) {}
-		SafePointer(const SafePointer & src) = delete;
+		SafePointer(const SafePointer & src)
+		{
+			reference = src.reference;
+			if (reference) reference->Retain();
+		}
 		SafePointer(SafePointer && src) : reference(src.reference) { src.reference = 0; }
 		~SafePointer(void) { if (reference) reference->Release(); reference = 0; }
-		SafePointer & operator = (const SafePointer & src) = delete;
+		SafePointer & operator = (const SafePointer & src)
+		{
+			if (this == &src) return *this;
+			if (reference) reference->Release();
+			reference = src.reference;
+			if (reference) reference->Retain();
+			return *this;
+		}
 
 		O & operator * (void) const { return *reference; }
 		O * operator -> (void) const { return reference; }

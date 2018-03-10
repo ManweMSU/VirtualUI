@@ -49,7 +49,7 @@ namespace Engine
 				ObjectTemplate(void) {}
 				ObjectTemplate(const ObjectTemplate & src) : argument(src.argument) { value.SetRetain(src.value); }
 				ObjectTemplate(ObjectTemplate && src) : argument(src.argument) { value.SetRetain(src.value); src.value.SetReference(0); }
-				ObjectTemplate(O * object) : value(object) {}
+				ObjectTemplate(O * object) { value.SetRetain(object); }
 				ObjectTemplate & operator = (const ObjectTemplate & src)
 				{
 					if (this == &src) return *this;
@@ -239,6 +239,9 @@ namespace Engine
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
 			virtual ITexture * LoadTexture(const string & Name) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
+			virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) = 0;
+			virtual void ReloadTexture(ITexture * Texture, const string & Name) = 0;
+			virtual void ReloadFont(IFont * Font) = 0;
 		};
 		class IResourceResolver
 		{
