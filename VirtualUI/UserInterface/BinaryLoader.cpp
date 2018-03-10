@@ -2,8 +2,6 @@
 
 using namespace Engine::Streaming;
 
-extern Engine::SafePointer<Engine::Streaming::TextWriter> conout;
-
 namespace Engine
 {
 	namespace UI

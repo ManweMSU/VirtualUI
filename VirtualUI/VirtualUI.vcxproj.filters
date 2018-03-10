@@ -62,6 +62,15 @@
     <ClInclude Include="UserInterface\BinaryLoader.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\StaticControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\WindowStation.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\ButtonControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp">
@@ -101,6 +110,15 @@
       <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\ControlClasses.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\StaticControls.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\WindowStation.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\ButtonControls.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>

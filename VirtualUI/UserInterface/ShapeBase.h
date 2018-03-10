@@ -163,7 +163,7 @@ namespace Engine
 			virtual void Reload(IRenderingDevice * Device) = 0;
 		};
 
-		class IRenderingDevice
+		class IRenderingDevice : public Object
 		{
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;

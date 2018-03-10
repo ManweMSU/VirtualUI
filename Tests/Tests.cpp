@@ -3,11 +3,14 @@
 
 #include "../VirtualUI/UserInterface/ShapeBase.h"
 #include "../VirtualUI/UserInterface/Templates.h"
+#include "../VirtualUI/UserInterface/ControlBase.h"
 #include "../VirtualUI/Streaming.h"
 #include "../VirtualUI/PlatformDependent/Direct2D.h"
 #include "../VirtualUI/Miscellaneous/Dictionary.h"
 #include "../VirtualUI/UserInterface/ControlClasses.h"
 #include "../VirtualUI/UserInterface/BinaryLoader.h"
+#include "../VirtualUI/UserInterface/StaticControls.h"
+#include "../VirtualUI/UserInterface/ButtonControls.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -17,6 +20,10 @@
 
 #include <d3d11_1.h>
 #pragma comment(lib, "d3d11.lib")
+
+#include "../VirtualUI/PlatformDependent/WindowStation.h"
+
+#undef CreateWindow
 
 using namespace Engine;
 using namespace Engine::UI;
@@ -37,6 +44,8 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 Engine::Direct2D::D2DRenderDevice * Device;
 Engine::UI::FrameShape * Shape;
 Engine::UI::ITexture * Texture;
+
+Engine::UI::HandleWindowStation * station = 0;
 
 ID3D11Device * D3DDevice;
 ID3D11DeviceContext * D3DDeviceContext;
@@ -69,83 +78,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	SetProcessDPIAware();
 
-	/*auto spl = (L"abcabcabcab" + string(-1234)).Replace(L"bc", L"XYU").LowerCase().Split(L'-');
-	SortArray(spl, true);
-	for (int i = 0; i < spl.Length(); i++) MessageBox(0, spl[i], L"", 0);
-
-	ObjectArray<string> safe;
-	safe << new string(L"blablabla");
-	safe.Append(new string(L"4epHblu Hurrep"));
-	safe.Append(new string(L"kornevgen pidor"));
-	safe.Append(new string(L"hui"));
-	safe.Append(new string((void*) &safe));
-
-	test t;
-	auto p = t.GetProperty(L"value");
-	int v = 666;
-	p->Set(&v);
-	MessageBox(0, string(t.value), 0, 0);
-
-	SafePointer<string> r(new string(L"pidor"));
-	MessageBox(0, *r, L"", 0);
-	SafePointer<string> r2(new string(L"pidor"));
-	MessageBox(0, string(r == r2), L"", 0);
-
-	for (int i = 0; i < safe.Length(); i++) safe[i].Release();
-	SortArray(safe);
-	MessageBox(0, safe.ToString(), L"", 0);
-	safe.Clear();
-	MessageBox(0, safe.ToString(), L"", 0);*/
-
-	Dictionary::ObjectCache<int, string> dict(4, Dictionary::ExcludePolicy::ExcludeLeastRefrenced);
-	SafePointer<string> ss;
-	{
-		SafePointer<string> s1 = new string(L"1 - kornevgen");
-		SafePointer<string> s2 = new string(L"2 - pidor");
-		SafePointer<string> s3 = new string(L"3 - xyu");
-		SafePointer<string> s4 = new string(L"4 - hui");
-		SafePointer<string> s5 = new string(L"5 - black nigger");
-
-		ss.SetReference(s2);
-		s2->Retain();
-
-		dict.Append(7, s1);
-		dict.Append(3, s2);
-		dict.Append(10, s3);
-		dict.Append(9, s4);
-		dict.Append(4, s5);
-	}
-
-
-	auto v = string(L";123456").ToDouble(L";");
-
 	AllocConsole();
 	SetConsoleTitleW(L"ui tests");
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
-
-	{
-		string result = dict.ToString() + L"[";
-		if (dict.Length()) for (int i = 0; i < dict.Length(); i++) { result += string(dict[i].key) + L": " + dict[i].object->ToString() + ((i == dict.Length() - 1) ? L"]" : L", "); } else result += L"]";
-
-		(*conout) << result << IO::NewLineChar;
-		(*conout) << L"Packed size = " << sizeof(TestPacked) << IO::NewLineChar;
-		ss.SetReference(0);
-
-		Engine::UI::Template::Controls::DialogFrame control;
-		Engine::UI::Template::Controls::ListView view;
-		view.Border = 666;
-		control.Title = L"Window Test Title";
-		(*conout) << control.GetTemplateClass() << IO::NewLineChar;
-		(*conout) << control.GetProperty(L"Title").Get<string>() << IO::NewLineChar;
-		(*conout) << view.GetProperty(L"Border").Get<int>() << IO::NewLineChar;
-	}
-
-	{
-		conout->WriteLine(string(L"xyu"));
-
-		(*conout) << string(333.666555444333222111, L',') << IO::NewLineChar;
-	}
 
 	Engine::Direct2D::InitializeFactory();
 
@@ -204,27 +140,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		DXGIDevice->GetAdapter(Adapter.InnerRef());
 		SafePointer<IDXGIFactory2> Factory;
 		Adapter->GetParent(IID_PPV_ARGS(Factory.InnerRef()));
-		HRESULT r = Factory->CreateSwapChainForHwnd(D3DDevice, Window, &scd, 0, 0, &SwapChain);
+		HRESULT r = Factory->CreateSwapChainForHwnd(D3DDevice, ::Window, &scd, 0, 0, &SwapChain);
 		DXGIDevice->SetMaximumFrameLatency(1);
 
-		/*ID3D11Texture2D * BackBuffer;
-		SwapChain->GetBuffer(0, IID_PPV_ARGS(&BackBuffer));*/
 		D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f);
 		SafePointer<IDXGISurface> Surface;
 		SwapChain->GetBuffer(0, IID_PPV_ARGS(Surface.InnerRef()));
 		SafePointer<ID2D1Bitmap1> Bitmap;
 		Target->CreateBitmapFromDxgiSurface(Surface, props, Bitmap.InnerRef());
 		Target->SetTarget(Bitmap);
-
-		//D2D1_RENDER_TARGET_PROPERTIES rtp;
-		//rtp.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-		//rtp.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		//rtp.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-		//rtp.dpiX = 0.0f;
-		//rtp.dpiY = 0.0f;
-		//rtp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
-		//rtp.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-		//if (Engine::Direct2D::D2DFactory->CreateDCRenderTarget(&rtp, &Target) != S_OK) MessageBox(0, L"XYU.", 0, MB_OK | MB_ICONSTOP);
 	}
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 	Inversion = Device->CreateInversionEffectRenderingInfo();
@@ -240,7 +164,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		::Shape->Children.Append(s2);
 		s2->Release();
 
-		auto General = new FrameShape(UI::Rectangle::Entire());
 		{
 			UI::Zoom = 2.0;
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
@@ -277,123 +200,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				} loader;
 				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, &loader, 0);
 			}
-			auto & console = *conout;
+			station = new HandleWindowStation(::Window);
+			station->SetRenderingDevice(Device);
+			SendMessageW(::Window, WM_SIZE, 0, 0);
+			auto Main = station->CreateTopLevel<UI::TopLevelWindow>();
+			SafePointer<Template::TextureShape> Back = new Template::TextureShape;
+			Back->From = Rectangle::Entire();
+			Back->RenderMode = TextureShape::TextureRenderMode::Fit;
+			Back->Position = Rectangle::Entire();
+			Back->Texture = ::Template->Texture[L"Wallpaper"];
+			Main->Background.SetRetain(Back);
 
-			console << L"== Interface Template Contents  ==" << IO::NewLineChar;
-			console << L"Textures:" << IO::NewLineChar;
-			for (int i = 0; i < ::Template->Texture.Length(); i++) console << ::Template->Texture[i].key << IO::NewLineChar;
-			console << L"Fonts:" << IO::NewLineChar;
-			for (int i = 0; i < ::Template->Font.Length(); i++) console << ::Template->Font[i].key << IO::NewLineChar;
-			console << L"Applications:" << IO::NewLineChar;
-			for (int i = 0; i < ::Template->Application.Length(); i++) console << ::Template->Application[i].key << IO::NewLineChar;
-			console << L"Dialogs:" << IO::NewLineChar;
-			for (int i = 0; i < ::Template->Dialog.Length(); i++) console << ::Template->Dialog[i].key << IO::NewLineChar;
-			console << L"== That's all ==" << IO::NewLineChar;
-
-			auto bls = new BlurEffectShape(UI::Rectangle(100, 100, 600, 600), 15.0f);
-			General->Children.Append(bls);
-			bls->Release();
-			auto invs = new InversionEffectShape(UI::Rectangle(UI::Coordinate(-500, 0.0, 1.0), UI::Coordinate(-500, 0.0, 1.0), UI::Coordinate(-100, 0.0, 1.0), UI::Coordinate(-100, 0.0, 1.0)));
-			General->Children.Append(invs);
-			invs->Release();
-
-			class ap : public IArgumentProvider
-			{
-			public:
-				virtual void GetArgument(const string & name, int * value)
-				{
-					(*conout) << L"Required: " + name << IO::NewLineChar;
-					*value = -200;
-				}
-				virtual void GetArgument(const string & name, double * value)
-				{
-					(*conout) << L"Required: " + name << IO::NewLineChar;
-					*value = 0.5;
-				}
-				virtual void GetArgument(const string & name, Color * value)
-				{
-					(*conout) << L"Required: " + name << IO::NewLineChar;
-					*value = 0xFF88FF00;
-				}
-				virtual void GetArgument(const string & name, string * value)
-				{
-					(*conout) << L"Required: " + name << IO::NewLineChar;
-					*value = L"kornevgen pidor";
-				}
-				virtual void GetArgument(const string & name, ITexture ** value)
-				{
-					(*conout) << L"Required: " + name << IO::NewLineChar;
-					*value = 0;
-				}
-				virtual void GetArgument(const string & name, UI::IFont ** value)
-				{
-					(*conout) << L"Required: " + name << IO::NewLineChar;
-					*value = Device->LoadFont(L"Tahoma", 38, 400, false, false, false);
-				}
-			} xyu;
-
-			{
-				SafePointer<UI::Shape> button_shape = ::Template->Application[L"SimpleButtonNormal"]->Initialize(&xyu);
-				SafePointer<UI::FrameShape> container = new UI::FrameShape(UI::Rectangle(Coordinate(0, 100.0, 0.0), Coordinate(0, -30.0, 1.0), Coordinate(0, 250.0, 0.0), Coordinate(0, -2.0, 1.0)));
-				container->Children.Append(button_shape);
-				General->Children.Append(container);
-			}
-
-			Template::BarShape bar;
-			bar.Position = Template::Rectangle(Coordinate(50, 0.0, 0.0), Coordinate(250, 0.0, 0.0), Coordinate(150, 0.0, 0.0), Template::Coordinate(Template::IntegerTemplate::Undefined(L"Shift"), 0.0, Template::DoubleTemplate::Undefined(L"Anchor")));
-			bar.Gradient << Template::GradientPoint(Template::ColorTemplate::Undefined(L"Color"), 0.0);
-			Template::TextShape text;
-			text.Position = bar.Position;
-			text.VerticalAlign = TextShape::TextVerticalAlign::Center;
-			text.HorizontalAlign = TextShape::TextHorizontalAlign::Center;
-			text.TextColor = Color(0xFF000000);
-			text.Text = Template::StringTemplate::Undefined(L"Text");
-			text.Font = Template::FontTemplate::Undefined(L"Font");
-			Template::TextureShape texture;
-			texture.Position = Template::Rectangle(Coordinate(50), text.Position.Bottom, Coordinate(450), Coordinate(0, 0.0, 1.0));
-			texture.RenderMode = TextureShape::TextureRenderMode::Fit;
-			texture.Texture = Template::TextureTemplate::Undefined(L"Texture");
-			
-			auto ttq = text.Initialize(&xyu);
-			General->Children.Append(ttq);
-			ttq->Release();
-			auto tbq = bar.Initialize(&xyu);
-			General->Children.Append(tbq);
-			tbq->Release();
-			auto txq = texture.Initialize(&xyu);
-			General->Children.Append(txq);
-			txq->Release();
-
-			SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"bl.gif", Streaming::AccessRead, Streaming::OpenExisting);
-			Texture = Device->LoadTexture(Input);
-			(*(conout.Inner())) << Texture->GetWidth() << L"x" << Texture->GetHeight() << IO::NewLineChar;
-			auto ts = new TextureShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.75), UI::Coordinate(0, 0.0, 0.75)), Texture, UI::Rectangle::Entire(), TextureShape::TextureRenderMode::FillPattern);
-			Texture->Release();
-			General->Children.Append(ts);
-			ts->Release();
-
-			auto ls = new LineShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.0), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.3)), Color(255, 0, 255), true);
-			General->Children.Append(ls);
-			ls->Release();
-
-			float v = 0.0f;
-			UI::IFont * Font = Device->LoadFont(L"Segoe UI", 40, 400, false, true, false);
-			auto fs = new TextShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.5)), L"kornevgen pidor \xD83C\xDF44\xD83C\xDF44\xD83C\xDF44 корневген пидор " + string(5.0 / v), Font, Color(128, 128, 255, 255),
-				UI::TextShape::TextHorizontalAlign::Center, UI::TextShape::TextVerticalAlign::Center);
-			General->Children.Append(fs);
-			fs->Release();
-			Font->Release();
-
-			auto bs = new BarShape(UI::Rectangle(UI::Coordinate(0, 0.0, 0.5), UI::Coordinate(0, 0.0, 0.3), UI::Coordinate::Right(), UI::Coordinate(0, 0.0, 0.5)), Color(192, 255, 128));
-			General->Children.Append(bs);
-			bs->Release();
+			auto New = station->CreateWindow<UI::Controls::Button>(Main, &::Template->Dialog[L"Test"]->Children[2]);
+			New->SetPosition(Box(100, 30, 300, 85));
+			New->ID = 101;
 		}
-		General->Children.Append(::Shape);
-		::Shape->Release();
-		::Shape = General;
-		s2 = new BarShape(UI::Rectangle::Entire(), Color(192, 192, 192));
-		::Shape->Children.Append(s2);
-		s2->Release();
 	}
 
     // Цикл основного сообщения:
@@ -437,7 +258,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
-   Window = hWnd;
+   ::Window = hWnd;
 
    if (!hWnd)
    {
@@ -480,10 +301,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				Target->SetDpi(96.0f, 96.0f);
 				Target->BeginDraw();
 				Device->SetTimerValue(GetTimerValue());
-				::Shape->Render(Device, Box(Rect.left, Rect.top, Rect.right, Rect.bottom));
-
-				Device->ApplyInversion(Inversion, UI::Box(10, 10, 20, 110), true);
-
+				if (station) station->Render();
 				Target->EndDraw();
 				SwapChain->Present(1, 0);
 			}
@@ -493,6 +311,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 	{
+		RECT Rect;
+		GetClientRect(hWnd, &Rect);
 		if (SwapChain) {
 			Target->SetTarget(0);
 			HRESULT r = SwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
@@ -503,12 +323,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			Target->CreateBitmapFromDxgiSurface(Surface, props, Bitmap.InnerRef());
 			Target->SetTarget(Bitmap);
 		}
+		if (station) station->ProcessWindowEvents(message, wParam, lParam);
 	}
 		break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
     default:
+		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
