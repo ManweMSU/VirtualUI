@@ -8,7 +8,7 @@ namespace Engine
 		HandleWindowStation::~HandleWindowStation(void) {}
 		void HandleWindowStation::SetFocus(Window * window) { if (::SetFocus(_window)) WindowStation::SetFocus(window); }
 		Window * HandleWindowStation::GetFocus(void) { if (::GetFocus() == _window) return WindowStation::GetFocus(); else return 0; }
-		void HandleWindowStation::SetCapture(Window * window) { if (window) ::SetCapture(_window); else ReleaseCapture(); WindowStation::SetCapture(window); }
+		void HandleWindowStation::SetCapture(Window * window) { if (window) ::SetCapture(_window); else ::ReleaseCapture(); WindowStation::SetCapture(window); }
 		Window * HandleWindowStation::GetCapture(void) { if (::GetCapture() == _window) return WindowStation::GetCapture(); else return 0; }
 		void HandleWindowStation::ReleaseCapture(void) { ::ReleaseCapture(); WindowStation::SetCapture(0); }
 		Point HandleWindowStation::GetCursorPos(void)
@@ -64,7 +64,7 @@ namespace Engine
 			} else if (Msg == WM_KILLFOCUS) {
 				FocusChanged(false);
 			} else if (Msg == WM_CAPTURECHANGED) {
-				if (reinterpret_cast<HWND>(WParam) != _window) CaptureChanged(false);
+				if (reinterpret_cast<HWND>(LParam) != _window) CaptureChanged(false);
 				else CaptureChanged(true);
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);

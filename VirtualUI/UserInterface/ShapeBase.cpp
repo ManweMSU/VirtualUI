@@ -36,7 +36,9 @@ namespace Engine
 		bool operator!=(const GradientPoint & a, const GradientPoint & b) { return a.Color != b.Color || a.Position != b.Position; }
 		Rectangle::Rectangle(void) {}
 		Rectangle::Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) : Left(left), Top(top), Right(right), Bottom(bottom) {}
+		bool Rectangle::IsValid(void) const { return Left.Anchor == Left.Anchor; }
 		Rectangle Rectangle::Entire() { return Rectangle(0, 0, Coordinate::Right(), Coordinate::Bottom()); }
+		Rectangle Rectangle::Invalid() { double z = 0.0, nan = z / z; return Rectangle(Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan)); }
 		Point::Point(void) {}
 		Point::Point(int X, int Y) : x(X), y(Y) {}
 		Box::Box(void) {}

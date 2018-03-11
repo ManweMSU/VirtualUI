@@ -41,7 +41,7 @@ namespace Engine
 				};
 			}
 
-			Button::Button(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) {}
+			Button::Button(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			Button::Button(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
 			{
 				if (Template->Properties->GetTemplateClass() != L"Button") throw InvalidArgumentException();
@@ -89,6 +89,7 @@ namespace Engine
 			bool Button::IsEnabled(void) { return !Disabled; }
 			void Button::Show(bool visible) { Invisible = !visible; }
 			bool Button::IsVisible(void) { return !Invisible; }
+			bool Button::IsTabStop(void) { return true; }
 			void Button::SetID(int _ID) { ID = _ID; }
 			int Button::GetID(void) { return ID; }
 			Window * Button::FindChild(int _ID)
@@ -104,7 +105,7 @@ namespace Engine
 			ITexture * Button::GetNormalImage(void) { return ImageNormal; }
 			void Button::SetGrayedImage(ITexture * Image) { ImageGrayed.SetRetain(Image); ResetCache(); }
 			ITexture * Button::GetGrayedImage(void) { return ImageGrayed; }
-			void Button::FocusChanged(bool got_focus) {}
+			void Button::FocusChanged(bool got_focus) { if (!got_focus && _state == 0x12) _state = 0; }
 			void Button::CaptureChanged(bool got_capture)
 			{
 				if (!got_capture) _state = 0;
@@ -121,7 +122,7 @@ namespace Engine
 				if (_state == 2) {
 					ReleaseCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
-						GetParent()->RaiseEvent(ID, Event::Command);
+						GetParent()->RaiseEvent(ID, Event::Command, this);
 					}
 				} else ReleaseCapture();
 			}
@@ -131,6 +132,7 @@ namespace Engine
 					_state = 1;
 					SetCapture();
 				} else if (_state == 1) {
+					SetCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
 						ReleaseCapture();
@@ -150,7 +152,7 @@ namespace Engine
 				if (key_code == L' ') {
 					if (_state == 0x12) {
 						_state = 0x0;
-						GetParent()->RaiseEvent(ID, Event::Command);
+						GetParent()->RaiseEvent(ID, Event::Command, this);
 					}
 				}
 			}

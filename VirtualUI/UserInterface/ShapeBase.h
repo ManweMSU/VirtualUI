@@ -48,7 +48,10 @@ namespace Engine
 			bool friend operator == (const Rectangle & a, const Rectangle & b);
 			bool friend operator != (const Rectangle & a, const Rectangle & b);
 
+			bool IsValid(void) const;
+
 			static Rectangle Entire();
+			static Rectangle Invalid();
 		};
 		class Point
 		{

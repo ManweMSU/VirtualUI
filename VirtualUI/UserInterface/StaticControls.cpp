@@ -74,7 +74,7 @@ namespace Engine
 				};
 			}
 
-			Static::Static(Window * Parent, WindowStation * Station) : Window(Parent, Station) {}
+			Static::Static(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			Static::Static(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
 			{
 				if (Template->Properties->GetTemplateClass() != L"Static") throw InvalidArgumentException();
@@ -113,7 +113,7 @@ namespace Engine
 			void Static::SetImage(ITexture * image) { Image.SetRetain(image); ResetCache(); }
 			ITexture * Static::GetImage(void) { return Image; }
 
-			ProgressBar::ProgressBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) {}
+			ProgressBar::ProgressBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			ProgressBar::ProgressBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ProgressBar") throw InvalidArgumentException();
@@ -150,7 +150,7 @@ namespace Engine
 			void ProgressBar::SetValue(double progress) { Progress = progress; ResetCache(); }
 			double ProgressBar::GetValue(void) { return Progress; }
 
-			ColorView::ColorView(Window * Parent, WindowStation * Station) : Window(Parent, Station) {}
+			ColorView::ColorView(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			ColorView::ColorView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ColorView") throw InvalidArgumentException();

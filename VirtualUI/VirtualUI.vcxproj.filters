@@ -71,6 +71,12 @@
     <ClInclude Include="UserInterface\ButtonControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\StringConvert.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\GroupControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp">
@@ -119,6 +125,12 @@
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\ButtonControls.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\StringConvert.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\GroupControls.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>

@@ -32,6 +32,11 @@ namespace Engine
 			GetPropertyEnumerator & operator = (const GetPropertyEnumerator & src) = delete;
 			virtual void EnumerateProperty(const string & name, void * address, PropertyType type) override;
 		};
+		class PropertyZeroInitializer : public IPropertyEnumerator
+		{
+		public:
+			virtual void EnumerateProperty(const string & name, void * address, PropertyType type) override;
+		};
 		class Reflected
 		{
 		public:

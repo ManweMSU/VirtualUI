@@ -10,6 +10,7 @@ namespace Engine
 	{
 		class WindowStation;
 		class Window;
+		class TopLevelWindow;
 
 		class Window : public Object
 		{
@@ -34,6 +35,8 @@ namespace Engine
 			virtual bool IsEnabled(void);
 			virtual void Show(bool visible);
 			virtual bool IsVisible(void);
+			virtual bool IsTabStop(void);
+			virtual bool IsOverlapped(void);
 			virtual void SetID(int ID);
 			virtual int GetID(void);
 			virtual Window * FindChild(int ID);
@@ -43,7 +46,7 @@ namespace Engine
 			virtual Box GetPosition(void);
 			virtual void SetText(const string & text);
 			virtual string GetText(void);		
-			virtual void RaiseEvent(int ID, Event event);
+			virtual void RaiseEvent(int ID, Event event, Window * sender);
 			virtual void FocusChanged(bool got_focus);
 			virtual void CaptureChanged(bool got_capture);
 			virtual void LeftButtonDown(Point at);
@@ -76,7 +79,7 @@ namespace Engine
 		{
 		private:
 			SafePointer<IRenderingDevice> RenderingDevice;
-			SafePointer<Window> TopLevelWindow;
+			SafePointer<Engine::UI::TopLevelWindow> TopLevelWindow;
 			SafePointer<Window> CaptureWindow;
 			SafePointer<Window> FocusedWindow;
 			Box Position;
@@ -86,21 +89,16 @@ namespace Engine
 			~WindowStation(void) override;
 			template <class W> W * CreateWindow(Window * Parent, Template::ControlTemplate * Template)
 			{
+				if (!Parent) Parent = TopLevelWindow;
 				SafePointer<W> New = new W(Parent, this, Template);
-				Parent->Children.Insert(New, 0);
+				Parent->Children.Append(New);
 				return New;
 			}
 			template <class W> W * CreateWindow(Window * Parent)
 			{
+				if (!Parent) Parent = TopLevelWindow;
 				SafePointer<W> New = new W(Parent, this);
-				Parent->Children.Insert(New, 0);
-				return New;
-			}
-			template <class W> W * CreateTopLevel(void)
-			{
-				SafePointer<W> New = new W(0, this);
-				if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow);
-				TopLevelWindow.SetRetain(New);
+				Parent->Children.Append(New);
 				return New;
 			}
 			void DestroyWindow(Window * window);
@@ -108,6 +106,7 @@ namespace Engine
 			Box GetBox(void);
 			void Render(void);
 			void ResetCache(void);
+			Engine::UI::TopLevelWindow * GetDesktop(void);
 			Window * HitTest(Point at);
 			Window * EnabledHitTest(Point at);
 			void SetRenderingDevice(IRenderingDevice * Device);
@@ -141,8 +140,10 @@ namespace Engine
 		{
 		public:
 			ParentWindow(Window * parent, WindowStation * station);
+			virtual Window * FindChild(int ID) override;
 			virtual void Render(const Box & at) override;
 			virtual void ArrangeChildren(void) override;
+			virtual void SetPosition(const Box & box) override;
 			virtual Window * HitTest(Point at) override;
 		};
 		class TopLevelWindow : public ParentWindow
@@ -157,9 +158,10 @@ namespace Engine
 			virtual void ResetCache(void) override;
 			virtual Rectangle GetRectangle(void) override;
 			virtual Box GetPosition(void) override;
+			virtual bool IsOverlapped(void) override;
 
 #pragma message("REMOVE!")
-			virtual void RaiseEvent(int ID, Event event) override;
+			virtual void RaiseEvent(int ID, Event event, Window * sender) override;
 		};
 		class ZeroArgumentProvider : public IArgumentProvider
 		{

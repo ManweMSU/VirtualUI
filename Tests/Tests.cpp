@@ -11,6 +11,7 @@
 #include "../VirtualUI/UserInterface/BinaryLoader.h"
 #include "../VirtualUI/UserInterface/StaticControls.h"
 #include "../VirtualUI/UserInterface/ButtonControls.h"
+#include "../VirtualUI/UserInterface/GroupControls.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -202,8 +203,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 			station = new HandleWindowStation(::Window);
 			station->SetRenderingDevice(Device);
+			auto Main = station->GetDesktop();
 			SendMessageW(::Window, WM_SIZE, 0, 0);
-			auto Main = station->CreateTopLevel<UI::TopLevelWindow>();
 			SafePointer<Template::TextureShape> Back = new Template::TextureShape;
 			Back->From = Rectangle::Entire();
 			Back->RenderMode = TextureShape::TextureRenderMode::Fit;
@@ -211,9 +212,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			Back->Texture = ::Template->Texture[L"Wallpaper"];
 			Main->Background.SetRetain(Back);
 
-			auto New = station->CreateWindow<UI::Controls::Button>(Main, &::Template->Dialog[L"Test"]->Children[2]);
-			New->SetPosition(Box(100, 30, 300, 85));
+			auto Group = station->CreateWindow<UI::Controls::ControlGroup>(0);
+			Group->Background = ::Template->Application[L"Waffle"];
+			Group->SetRectangle(UI::Rectangle(0, 0, Coordinate(0, 150.0, 0.0), Coordinate::Bottom()));
+
+			auto New = station->CreateWindow<UI::Controls::Button>(Group, &::Template->Dialog[L"Test"]->Children[2]);
+			New->SetRectangle(UI::Rectangle(10, 50, Coordinate(-10, 0.0, 1.0), Coordinate(0, 28.0, 0.0) + 50));
 			New->ID = 101;
+			auto New2 = station->CreateWindow<UI::Controls::Button>(Group, &::Template->Dialog[L"Test"]->Children[2]);
+			New2->SetRectangle(UI::Rectangle(10, Coordinate(0, 28.0, 0.0) + 60, Coordinate(-10, 0.0, 1.0), Coordinate(0, 56.0, 0.0) + 60));
+			New2->SetText(L"xyu");
+			New2->ID = 102;
+			auto New3 = station->CreateWindow<UI::Controls::Button>(Group, &::Template->Dialog[L"Test"]->Children[2]);
+			New3->SetRectangle(UI::Rectangle(30, 10, 80, 200));
+			New3->SetText(L"3");
+			New3->ID = 103;
+			New3->SetOrder(Window::DepthOrder::MoveDown);
 		}
 	}
 

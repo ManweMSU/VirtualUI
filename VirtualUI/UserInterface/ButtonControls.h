@@ -28,6 +28,7 @@ namespace Engine
 				virtual bool IsEnabled(void) override;
 				virtual void Show(bool visible) override;
 				virtual bool IsVisible(void) override;
+				virtual bool IsTabStop(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
 				virtual Window * FindChild(int ID) override;

@@ -15,16 +15,18 @@ namespace Engine
 		bool Window::IsEnabled(void) { return true; }
 		void Window::Show(bool visible) {}
 		bool Window::IsVisible(void) { return true; }
+		bool Window::IsTabStop(void) { return false; }
+		bool Window::IsOverlapped(void) { return false; }
 		void Window::SetID(int ID) {}
 		int Window::GetID(void) { return 0; }
 		Window * Window::FindChild(int ID) { return 0; }
 		void Window::SetRectangle(const Rectangle & rect) {}
-		Rectangle Window::GetRectangle(void) { return Rectangle(0, 0, 0, 0); }
+		Rectangle Window::GetRectangle(void) { return Rectangle::Invalid(); }
 		void Window::SetPosition(const Box & box) { WindowPosition = box; }
 		Box Window::GetPosition(void) { return WindowPosition; }
 		void Window::SetText(const string & text) {}
 		string Window::GetText(void) { return L""; }
-		void Window::RaiseEvent(int ID, Event event) { if (Parent.Inner()) Parent->RaiseEvent(ID, event); }
+		void Window::RaiseEvent(int ID, Event event, Window * sender) { if (Parent) Parent->RaiseEvent(ID, event, sender); }
 		void Window::FocusChanged(bool got_focus) {}
 		void Window::CaptureChanged(bool got_capture) {}
 		void Window::LeftButtonDown(Point at) {}
@@ -44,14 +46,18 @@ namespace Engine
 		WindowStation * Window::GetStation(void) { return Station; }
 		void Window::SetOrder(DepthOrder order)
 		{
+			if (!Parent) return;
+			int index = -1;
+			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == this) { index = i; break; }
+			if (index == -1) return;
 			if (order == DepthOrder::SetFirst) {
-
+				for (int i = index + 1; i < Parent->Children.Length(); i++) Parent->Children.SwapAt(i - 1, i);
 			} else if (order == DepthOrder::SetLast) {
-
+				for (int i = index - 1; i >= 0; i--) Parent->Children.SwapAt(i + 1, i);
 			} else if (order == DepthOrder::MoveUp) {
-
+				if (index < Parent->Children.Length() - 1) Parent->Children.SwapAt(index, index + 1);
 			} else if (order == DepthOrder::MoveDown) {
-
+				if (index > 0) Parent->Children.SwapAt(index, index - 1);
 			}
 		}
 		int Window::ChildrenCount(void) { return Children.Length(); }
@@ -75,7 +81,7 @@ namespace Engine
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
 		}
-		WindowStation::WindowStation(void) : Position(0, 0, 0, 0) {}
+		WindowStation::WindowStation(void) : Position(0, 0, 0, 0) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); }
 		WindowStation::~WindowStation(void) { if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow); }
 		void WindowStation::DestroyWindow(Window * window)
 		{
@@ -86,10 +92,11 @@ namespace Engine
 				break;
 			}
 		}
-		void WindowStation::SetBox(const Box & box) { Position = box; }
+		void WindowStation::SetBox(const Box & box) { Position = box; if (TopLevelWindow) { TopLevelWindow->WindowPosition = box; TopLevelWindow->ArrangeChildren(); } }
 		Box WindowStation::GetBox(void) { return Position; }
 		void WindowStation::Render(void) { if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position); }
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
+		Engine::UI::TopLevelWindow * WindowStation::GetDesktop(void) { return TopLevelWindow; }
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner()) return TopLevelWindow->HitTest(at); else return 0; }
 		Window * WindowStation::EnabledHitTest(Point at)
 		{
@@ -144,8 +151,8 @@ namespace Engine
 			CaptureWindow.SetRetain(window);
 			if (CaptureWindow.Inner()) {
 				CaptureWindow->CaptureChanged(true);
-				if (CaptureWindow->IsEnabled()) CaptureWindow->MouseMove(CalculateLocalPoint(CaptureWindow, GetCursorPos()));
 			}
+			MouseMove(GetCursorPos());
 		}
 		Window * WindowStation::GetCapture(void) { return CaptureWindow; }
 		void WindowStation::ReleaseCapture(void) { SetCapture(0); }
@@ -249,6 +256,16 @@ namespace Engine
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
+		Window * ParentWindow::FindChild(int ID)
+		{
+			if (!ID) return 0;
+			if (ID == GetID()) return this;
+			for (int i = 0; i < Children.Length(); i++) {
+				auto result = Children[i].FindChild(ID);
+				if (result) return result;
+			}
+			return 0;
+		}
 		void ParentWindow::Render(const Box & at)
 		{
 			auto Device = Station->GetRenderingDevice();
@@ -264,10 +281,14 @@ namespace Engine
 		void ParentWindow::ArrangeChildren(void)
 		{
 			for (int i = 0; i < Children.Length(); i++) {
+				Box inner = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
 				auto rect = Children[i].GetRectangle();
-				Children[i].SetPosition(Box(rect, WindowPosition));
+				if (rect.IsValid()) {
+					Children[i].SetPosition(Box(rect, inner));
+				}
 			}
 		}
+		void ParentWindow::SetPosition(const Box & box) { Window::SetPosition(box); ArrangeChildren(); }
 		Window * ParentWindow::HitTest(Point at)
 		{
 			for (int i = Children.Length() - 1; i >= 0; i--) {
@@ -296,9 +317,11 @@ namespace Engine
 		Rectangle TopLevelWindow::GetRectangle(void) { return Rectangle::Entire(); }
 		Box TopLevelWindow::GetPosition(void) { return GetStation()->GetBox(); }
 
-		void TopLevelWindow::RaiseEvent(int ID, Event event)
+		bool TopLevelWindow::IsOverlapped(void) { return true; }
+
+		void TopLevelWindow::RaiseEvent(int ID, Event event, Window * sender)
 		{
-			(*conout) << L"DEBUG: Event with ID=" << ID << IO::NewLineChar;
+			(*conout) << L"DEBUG: Event with ID = " << ID << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
 		}
 
 		ZeroArgumentProvider::ZeroArgumentProvider(void) {}

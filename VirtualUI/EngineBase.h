@@ -540,6 +540,7 @@ namespace Engine
 		O & operator * (void) const { return *reference; }
 		O * operator -> (void) const { return reference; }
 		operator O * (void) const { return reference; }
+		operator bool (void) const { return reference != 0; }
 		O * Inner(void) const { return reference; }
 		O ** InnerRef(void) { return &reference; }
 

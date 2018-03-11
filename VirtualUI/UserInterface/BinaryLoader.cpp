@@ -322,30 +322,11 @@ namespace Engine
 					}
 				}
 
-				class PropertyZeroInitializer : public Reflection::IPropertyEnumerator
-				{
-				public:
-					virtual void EnumerateProperty(const string & name, void * address, Reflection::PropertyType type) override
-					{
-						Reflection::PropertyInfo Info = { address, type, name };
-						if (type == Reflection::PropertyType::Integer) {
-							Info.Set<int>(0);
-						} else if (type == Reflection::PropertyType::Double) {
-							Info.Set<double>(0.0);
-						} else if (type == Reflection::PropertyType::Boolean) {
-							Info.Set<bool>(false);
-						} else if (type == Reflection::PropertyType::Color) {
-							Info.Set<UI::Color>(0);
-						} else if (type == Reflection::PropertyType::Rectangle) {
-							Info.Set<UI::Rectangle>(UI::Rectangle(0, 0, 0, 0));
-						}
-					}
-				};
 				Template::ControlTemplate * LoadControl(ControlBase * Source, uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
 				{
 					string ClassName = string(Data + Source->ClassName, -1, Encoding::UTF16);
 					auto ControlPropertyBase = Template::Controls::CreateControlByClass(ClassName);
-					PropertyZeroInitializer Initializer;
+					Reflection::PropertyZeroInitializer Initializer;
 					ControlPropertyBase->EnumerateProperties(Initializer);
 					if (ControlPropertyBase) {
 						SafePointer<Template::ControlTemplate> Template = new Template::ControlTemplate(ControlPropertyBase);

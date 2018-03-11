@@ -1,8 +1,9 @@
 #pragma once
 
+#include "StringConvert.h"
+
 namespace Engine
 {
-	enum class Encoding { ANSI = 0, UTF8 = 1, UTF16 = 2, UTF32 = 3 };
 	typedef unsigned int uint;
 	typedef signed int int32;
 	typedef unsigned int uint32;
@@ -55,9 +56,4 @@ namespace Engine
 	// Case converters for fixed-length strings - should work with any language chars
 	void StringLower(widechar * str, int length);
 	void StringUpper(widechar * str, int length);
-
-	// Encoding converters - OS and language independent - why are they there? I don't know.
-	int MeasureSequenceLength(const void * Source, int SourceLength, Encoding From, Encoding To);
-	void ConvertEncoding(void * Dest, const void * Source, int SourceLength, Encoding From, Encoding To);
-	int GetBytesPerChar(Encoding encoding);
 }
