@@ -14,6 +14,8 @@ namespace Engine
 		explicit DynamicString(const ImmutableString & src, int BlockSize);
 
 		operator ImmutableString (void) const;
+		operator widechar * (void);
+		operator const widechar * (void) const;
 		ImmutableString ToString(void) const override;
 		int Length(void) const;
 
@@ -33,5 +35,6 @@ namespace Engine
 		void RemoveRange(int start, int amount);
 		void Clear(void);
 		void ReserveLength(int length);
+		int ReservedLength(void) const;
 	};
 }

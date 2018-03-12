@@ -7,6 +7,8 @@ namespace Engine
 	DynamicString::DynamicString(int BlockSize) : data(BlockSize) { data << L'\0'; }
 	DynamicString::DynamicString(const ImmutableString & src, int BlockSize) : data(BlockSize) { data.Append(static_cast<const widechar *>(src), src.Length() + 1); }
 	DynamicString::operator ImmutableString(void) const { return ToString(); }
+	DynamicString::operator widechar*(void) { return data.GetBuffer(); }
+	DynamicString::operator const widechar*(void) const { return data.GetBuffer(); }
 	ImmutableString DynamicString::ToString(void) const { return ImmutableString(data.GetBuffer(), data.Length()); }
 	int DynamicString::Length(void) const { return StringLength(data.GetBuffer()); }
 	widechar DynamicString::CharAt(int index) const { return data[index]; }
@@ -35,4 +37,5 @@ namespace Engine
 	}
 	void DynamicString::Clear(void) { data.Clear(); data << L'\0'; }
 	void DynamicString::ReserveLength(int length) { data.SetLength(length + 1); }
+	int DynamicString::ReservedLength(void) const { return data.Length(); }
 }

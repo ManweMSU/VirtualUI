@@ -1,9 +1,12 @@
 #include "FileApi.h"
+#include "../Miscellaneous/DynamicString.h"
 
 #include <Windows.h>
 
 #undef CreateFile
 #undef MoveFile
+#undef SetCurrentDirectory
+#undef GetCurrentDirectory
 
 namespace Engine
 {
@@ -18,6 +21,19 @@ namespace Engine
 			if (PathChar == L'\\') return path.Replace(L'/', L'\\');
 			else if (PathChar == L'/') return path.Replace(L'\\', L'/');
 			return L"";
+		}
+		string ExpandPath(const string & path)
+		{
+			string Path = NormalizePath(path);
+			DynamicString exp(0x100);
+			exp.ReserveLength(0x1000);
+			do {
+				auto result = GetFullPathNameW(Path, exp.ReservedLength(), exp, 0);
+				if (!result) throw Exception();
+				if (result > uint(exp.ReservedLength())) exp.ReserveLength(result);
+				else break;
+			} while (true);
+			return exp;
 		}
 		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode)
 		{
@@ -120,6 +136,26 @@ namespace Engine
 			if (!SetFilePointerEx(file, len, 0, FILE_BEGIN)) throw FileAccessException();
 			if (!SetEndOfFile(file)) { SetFilePointerEx(file, pos, 0, FILE_BEGIN); throw FileAccessException(); }
 			SetFilePointerEx(file, pos, 0, FILE_BEGIN);
+		}
+		void RemoveFile(const string & path)
+		{
+			if (!DeleteFileW(NormalizePath(path))) throw FileAccessException();
+		}
+		void SetCurrentDirectory(const string & path)
+		{
+			if (!SetCurrentDirectoryW(ExpandPath(path))) throw FileAccessException();
+		}
+		string GetCurrentDirectory(void)
+		{
+			DynamicString exp(0x100);
+			exp.ReserveLength(0x1000);
+			do {
+				auto result = GetCurrentDirectoryW(exp.ReservedLength(), exp);
+				if (!result) throw Exception();
+				if (result > uint(exp.ReservedLength())) exp.ReserveLength(result);
+				else break;
+			} while (true);
+			return exp;
 		}
 	}
 }

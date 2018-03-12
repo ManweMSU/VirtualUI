@@ -25,6 +25,7 @@
 #include "../VirtualUI/PlatformDependent/WindowStation.h"
 
 #undef CreateWindow
+#undef GetCurrentDirectory
 
 using namespace Engine;
 using namespace Engine::UI;
@@ -83,6 +84,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SetConsoleTitleW(L"ui tests");
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
+
+	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
 
 	Engine::Direct2D::InitializeFactory();
 
