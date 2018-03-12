@@ -8,13 +8,14 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <limits.h>
+#include <errno.h>
 
 namespace Engine
 {
 	namespace IO
 	{
         namespace PosixHelper {
-            Dictionary::Dictionary<int, Array<uint8>> delete_on_close(0x10);
+            Dictionary::Dictionary<int, Array<uint8> > delete_on_close(0x10);
         }
 
         string FileAccessException::ToString(void) const { return L"FileAccessException"; }
@@ -27,9 +28,17 @@ namespace Engine
 			else if (PathChar == L'/') return path.Replace(L'\\', L'/');
 			return L"";
 		}
+        string ExpandPath(const string & path)
+        {
+            SafePointer<Array<uint8> > FullPath = new Array<uint8>(PATH_MAX);
+			FullPath->SetLength(PATH_MAX);
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
+            return string(FullPath->GetBuffer(), -1, Encoding::UTF8);
+        }
 		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode)
 		{
-            SafePointer<Array<uint8>> Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
             int flags = 0;
             if (access == AccessRead) flags = O_RDONLY;
             else if (access == AccessWrite) flags = O_WRONLY;
@@ -45,9 +54,10 @@ namespace Engine
 		}
 		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
 		{
-			SafePointer<Array<uint8>> FullPath = new Array<uint8>(PATH_MAX);
+            if (delete_on_close && mode != CreateNew) throw InvalidArgumentException();
+			SafePointer<Array<uint8> > FullPath = new Array<uint8>(PATH_MAX);
 			FullPath->SetLength(PATH_MAX);
-            SafePointer<Array<uint8>> Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
 			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
 			FullPath->SetLength(MeasureSequenceLength(FullPath->GetBuffer(), -1, Encoding::UTF8, Encoding::UTF8) + 1);
             int flags = 0;
@@ -74,9 +84,9 @@ namespace Engine
 		handle GetStandartOutput(void) { return handle(1); }
 		handle GetStandartInput(void) { return handle(0); }
 		handle GetStandartError(void) { return handle(2); }
-		void SetStandartOutput(handle file) { dup2(reinterpret_cast<intptr>(file), 1); }
-		void SetStandartInput(handle file) { dup2(reinterpret_cast<intptr>(file), 0); }
-		void SetStandartError(handle file) { dup2(reinterpret_cast<intptr>(file), 2); }
+		void SetStandartOutput(handle file) { close(1); dup2(reinterpret_cast<intptr>(file), 1); }
+		void SetStandartInput(handle file) { close(0); dup2(reinterpret_cast<intptr>(file), 0); }
+		void SetStandartError(handle file) { close(2); dup2(reinterpret_cast<intptr>(file), 2); }
 		void CloseFile(handle file) {
 			close(reinterpret_cast<intptr>(file));
 			auto Path = PosixHelper::delete_on_close.ElementByKey(reinterpret_cast<intptr>(file));
@@ -131,5 +141,31 @@ namespace Engine
 		{
             if (ftruncate(reinterpret_cast<intptr>(file), size) == -1) throw FileAccessException();
 		}
+        void RemoveFile(const string & path)
+        {
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            if (unlink(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException();
+        }
+        void SetCurrentDirectory(const string & path)
+        {
+            SafePointer<Array<uint8> > FullPath = new Array<uint8>(PATH_MAX);
+			FullPath->SetLength(PATH_MAX);
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
+            if (chdir(reinterpret_cast<char *>(FullPath->GetBuffer())) != 0) throw Exception();
+        }
+		string GetCurrentDirectory(void)
+        {
+            SafePointer< Array<uint8> > Path = new Array<uint8>(PATH_MAX);
+            Path->SetLength(PATH_MAX);
+            do {
+                if (getcwd(reinterpret_cast<char *>(Path->GetBuffer()), Path->Length())) break;
+                if (errno == ENOENT) throw Exception();
+                else if (errno == ENOMEM) throw OutOfMemoryException();
+                else if (errno != ERANGE) throw Exception();
+                Path->SetLength(Path->Length() * 2);
+            } while(true);
+            return string(Path->GetBuffer(), -1, Encoding::UTF8);
+        }
     }
 }

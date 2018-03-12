@@ -44,6 +44,7 @@ namespace Engine
 		}
 		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
 		{
+			if (delete_on_close && mode != CreateNew) throw InvalidArgumentException();
 			DWORD Access = 0;
 			DWORD Share = 0;
 			if (access == FileAccess::AccessRead) {

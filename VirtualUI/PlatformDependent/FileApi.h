@@ -26,6 +26,7 @@ namespace Engine
 #endif
 
 		string NormalizePath(const string & path);
+		string ExpandPath(const string & path);
 		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode);
 		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close);
 		void CreatePipe(handle * pipe_in, handle * pipe_out);
@@ -44,5 +45,8 @@ namespace Engine
 		void WriteFile(handle file, const void * data, uint32 amount);
 		int64 Seek(handle file, int64 position, SeekOrigin origin);
 		void SetFileSize(handle file, uint64 size);
+		void RemoveFile(const string & path);
+		void SetCurrentDirectory(const string & path);
+		string GetCurrentDirectory(void);
 	}
 }

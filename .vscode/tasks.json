@@ -14,7 +14,7 @@
                 //"-Wall",
                 "\"${workspaceFolder}/Unix Tests/test.cpp\"",
                 "\"${workspaceFolder}/Unix Tests/MacOSX/Base.mm\"",
-                "\"${workspaceFolder}/Unix Tests/MacOSX/FileApi.mm\"",
+                "\"${workspaceFolder}/Unix Tests/MacOSX/FileApi.cpp\"",
 
                 "\"${workspaceFolder}/VirtualUI/PlatformDependent/StringConvert.cpp\"",
                 "\"${workspaceFolder}/VirtualUI/EngineBase.cpp\"",
