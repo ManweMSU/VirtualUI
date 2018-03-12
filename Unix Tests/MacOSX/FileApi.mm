@@ -1,0 +1,135 @@
+#include "../../VirtualUI/PlatformDependent/FileApi.h"
+#include "../../VirtualUI/Miscellaneous/Dictionary.h"
+
+#define _DARWIN_FEATURE_ONLY_64_BIT_INODE
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <limits.h>
+
+namespace Engine
+{
+	namespace IO
+	{
+        namespace PosixHelper {
+            Dictionary::Dictionary<int, Array<uint8>> delete_on_close(0x10);
+        }
+
+        string FileAccessException::ToString(void) const { return L"FileAccessException"; }
+		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
+		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
+		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
+		string NormalizePath(const string & path)
+		{
+			if (PathChar == L'\\') return path.Replace(L'/', L'\\');
+			else if (PathChar == L'/') return path.Replace(L'\\', L'/');
+			return L"";
+		}
+		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode)
+		{
+            SafePointer<Array<uint8>> Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            int flags = 0;
+            if (access == AccessRead) flags = O_RDONLY;
+            else if (access == AccessWrite) flags = O_WRONLY;
+            else if (access == AccessReadWrite) flags = O_RDWR;
+            int result = -1;
+            if (mode == CreateNew) flags |= O_CREAT | O_EXCL;
+            else if (mode == CreateAlways) flags |= O_CREAT | O_TRUNC;
+            else if (mode == OpenAlways) flags |= O_CREAT;
+            else if (mode == TruncateExisting) flags |= O_TRUNC;
+            result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
+            if (result == -1) throw FileAccessException();
+            return handle(result);
+		}
+		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
+		{
+			SafePointer<Array<uint8>> FullPath = new Array<uint8>(PATH_MAX);
+			FullPath->SetLength(PATH_MAX);
+            SafePointer<Array<uint8>> Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
+			FullPath->SetLength(MeasureSequenceLength(FullPath->GetBuffer(), -1, Encoding::UTF8, Encoding::UTF8) + 1);
+            int flags = 0;
+            if (access == AccessRead) flags = O_RDONLY;
+            else if (access == AccessWrite) flags = O_WRONLY;
+            else if (access == AccessReadWrite) flags = O_RDWR;
+            int result = -1;
+            if (mode == CreateNew) flags |= O_CREAT | O_EXCL;
+            else if (mode == CreateAlways) flags |= O_CREAT | O_TRUNC;
+            else if (mode == OpenAlways) flags |= O_CREAT;
+            else if (mode == TruncateExisting) flags |= O_TRUNC;
+            result = open(reinterpret_cast<char *>(FullPath->GetBuffer()), flags, 0777);
+            if (result == -1) throw FileAccessException();
+			if (delete_on_close) PosixHelper::delete_on_close.Append(result, FullPath);
+            return handle(result);
+		}
+		void CreatePipe(handle * pipe_in, handle * pipe_out)
+        {
+            int result[2];
+            if (pipe(result) == -1) throw Exception();
+            *pipe_in = reinterpret_cast<handle>(result[1]);
+            *pipe_out = reinterpret_cast<handle>(result[0]);
+        }
+		handle GetStandartOutput(void) { return handle(1); }
+		handle GetStandartInput(void) { return handle(0); }
+		handle GetStandartError(void) { return handle(2); }
+		void SetStandartOutput(handle file) { dup2(reinterpret_cast<intptr>(file), 1); }
+		void SetStandartInput(handle file) { dup2(reinterpret_cast<intptr>(file), 0); }
+		void SetStandartError(handle file) { dup2(reinterpret_cast<intptr>(file), 2); }
+		void CloseFile(handle file) {
+			close(reinterpret_cast<intptr>(file));
+			auto Path = PosixHelper::delete_on_close.ElementByKey(reinterpret_cast<intptr>(file));
+			if (Path) {
+				unlink(reinterpret_cast<char *>(Path->GetBuffer()));
+				PosixHelper::delete_on_close.RemoveByKey(reinterpret_cast<intptr>(file));
+			}
+		}
+		void Flush(handle file) { if (fsync(reinterpret_cast<intptr>(file)) == -1) throw FileAccessException(); }
+		uint64 GetFileSize(handle file)
+		{
+            struct stat64 info;
+            if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            return info.st_size;
+		}
+		void MoveFile(const string & from, const string & to)
+        {
+            SafePointer<Array<uint8>> From = NormalizePath(from).EncodeSequence(Encoding::UTF8, true);
+            SafePointer<Array<uint8>> To = NormalizePath(to).EncodeSequence(Encoding::UTF8, true);
+            if (rename(reinterpret_cast<char *>(From->GetBuffer()), reinterpret_cast<char *>(To->GetBuffer())) == -1) throw FileAccessException();
+        }
+		bool FileExists(const string & path)
+		{
+            SafePointer<Array<uint8>> Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            int file = open(reinterpret_cast<char *>(Path->GetBuffer()), O_RDONLY);
+            if (file >= 0) {
+                close(file);
+                return true;
+            } else return false;
+		}
+		void ReadFile(handle file, void * to, uint32 amount)
+		{
+            auto Read = read(reinterpret_cast<intptr>(file), to, amount);
+            if (Read == -1) throw FileAccessException();
+            if (Read < amount) throw FileReadEndOfFileException(Read);
+		}
+		void WriteFile(handle file, const void * data, uint32 amount)
+		{
+            auto Written = write(reinterpret_cast<intptr>(file), data, amount);
+            if (Written == -1 || Written != amount) throw FileAccessException();
+		}
+		int64 Seek(handle file, int64 position, SeekOrigin origin)
+		{
+            int org = SEEK_SET;
+            if (origin == Current) org = SEEK_CUR;
+            else if (origin == End) org = SEEK_END;
+            auto result = lseek(reinterpret_cast<intptr>(file), position, org);
+            if (result == -1) throw FileAccessException();
+			return result;
+		}
+		void SetFileSize(handle file, uint64 size)
+		{
+            if (ftruncate(reinterpret_cast<intptr>(file), size) == -1) throw FileAccessException();
+		}
+    }
+}

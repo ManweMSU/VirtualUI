@@ -26,7 +26,7 @@ namespace Engine
 		};
 		template <class K, class O> class Dictionary : public Object
 		{
-			Array<DictionaryKeyPair<K, O>> data;
+			Array<DictionaryKeyPair<K, O> > data;
 		public:
 			Dictionary(void) : data(0x400) {}
 			explicit Dictionary(int BlockSize) : data(BlockSize) {}
@@ -96,18 +96,18 @@ namespace Engine
 			explicit ObjectCache(int capacity, ExcludePolicy exclude_policy) : max_capacity(capacity), Dictionary<K, O>(0x20), policy(exclude_policy) {}
 			virtual bool Append(const K & key, O * object) override
 			{
-				if (Length() == max_capacity) {
+				if (Dictionary<K, O>::Length() == max_capacity) {
 					if (policy == ExcludePolicy::DoNotExclude) return false;
 					else if (policy == ExcludePolicy::ExcludeLeastRefrenced) {
-						uint least = ElementByIndex(0).object->GetReferenceCount();
+						uint least = Dictionary<K, O>::ElementByIndex(0).object->GetReferenceCount();
 						int least_index = 0;
-						for (int i = 1; i < Length(); i++) {
+						for (int i = 1; i < Dictionary<K, O>::Length(); i++) {
 							uint l;
-							if ((l = ElementByIndex(i).object->GetReferenceCount()) < least) {
+							if ((l = Dictionary<K, O>::ElementByIndex(i).object->GetReferenceCount()) < least) {
 								least = l; least_index = i;
 							}
 						}
-						RemoveAt(least_index);
+						Dictionary<K, O>::RemoveAt(least_index);
 						return Dictionary<K, O>::Append(key, object);
 					} else return false;
 				} else return Dictionary<K, O>::Append(key, object);

@@ -1,0 +1,54 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceRoot}"
+    },
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "clang++",
+            "args": [
+                //"-Wall",
+                "\"${workspaceFolder}/Unix Tests/test.cpp\"",
+                "\"${workspaceFolder}/Unix Tests/MacOSX/Base.mm\"",
+                "\"${workspaceFolder}/Unix Tests/MacOSX/FileApi.mm\"",
+
+                "\"${workspaceFolder}/VirtualUI/PlatformDependent/StringConvert.cpp\"",
+                "\"${workspaceFolder}/VirtualUI/EngineBase.cpp\"",
+                "\"${workspaceFolder}/VirtualUI/Streaming.cpp\"",
+                "-std=c++14",
+                "-v",
+                "-o",
+                "\"${workspaceFolder}/Unix Tests/test.exe\"",
+                "-DENGINE_UNIX=1",
+                "-DENGINE_X64=1",
+                "-fmodules",
+                "-fcxx-modules"
+            ],
+            "group": "build",
+            "presentation": {
+                // Reveal the output only if unrecognized errors occur.
+                //"reveal": "silent"
+            },
+            // Use the standard MS compiler pattern to detect errors, warnings and infos
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceRoot}"
+                ],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        }
+    ]
+}

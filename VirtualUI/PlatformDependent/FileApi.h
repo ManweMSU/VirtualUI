@@ -16,12 +16,12 @@ namespace Engine
 
 #ifdef ENGINE_WINDOWS
 		constexpr widechar PathChar = L'\\';
-		constexpr wchar_t * NewLineChar = L"\r\n";
+		constexpr widechar * NewLineChar = L"\r\n";
 		constexpr Encoding TextFileEncoding = Encoding::ANSI;
 #endif
 #ifdef ENGINE_UNIX
 		constexpr widechar PathChar = L'/';
-		constexpr wchar_t * NewLineChar = L"\n";
+		constexpr widechar * NewLineChar = L"\n";
 		constexpr Encoding TextFileEncoding = Encoding::UTF8;
 #endif
 

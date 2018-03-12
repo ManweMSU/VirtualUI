@@ -39,16 +39,21 @@ namespace Engine
 					if (code & 0x20) {
 						code &= 0x1F;
 						if (code & 0x10) {
-							code &= 0x0F;
-							code |= (ReadByte() & 0x3F) << 3;
-							code |= (ReadByte() & 0x3F) << 9;
-							code |= (ReadByte() & 0x3F) << 15;
+							code &= 0x07;
+							code <<= 18;
+							code |= (ReadByte() & 0x3F) << 12;
+							code |= (ReadByte() & 0x3F) << 6;
+							code |= (ReadByte() & 0x3F);
 						} else {
-							code |= (ReadByte() & 0x3F) << 4;
-							code |= (ReadByte() & 0x3F) << 10;
+							code &= 0x0F;
+							code <<= 12;
+							code |= (ReadByte() & 0x3F) << 6;
+							code |= (ReadByte() & 0x3F);
 						}
 					} else {
-						code |= (ReadByte() & 0x3F) << 5;
+						code &= 0x1F;
+						code <<= 6;
+						code |= (ReadByte() & 0x3F);
 					}
 				}
 				return code;
@@ -118,17 +123,17 @@ namespace Engine
 			if (Coding == Encoding::ANSI) WriteByte((chr < 0x100) ? chr : '?');
 			else if (Coding == Encoding::UTF8) {
 				if (chr > 0xFFFF) {
-					WriteByte((chr & 0x07) | 0xF0);
-					WriteByte(((chr >> 3) & 0x3F) | 0x80);
-					WriteByte(((chr >> 9) & 0x3F) | 0x80);
-					WriteByte(((chr >> 15) & 0x3F) | 0x80);
+					WriteByte(((chr >> 18) & 0x07) | 0xF0);
+					WriteByte(((chr >> 12) & 0x3F) | 0x80);
+					WriteByte(((chr >> 6) & 0x3F) | 0x80);
+					WriteByte(((chr) & 0x3F) | 0x80);
 				} else if (chr > 0x7FF) {
-					WriteByte((chr & 0x0F) | 0xE0);
-					WriteByte(((chr >> 4) & 0x3F) | 0x80);
-					WriteByte(((chr >> 10) & 0x3F) | 0x80);
+					WriteByte(((chr >> 12) & 0x0F) | 0xE0);
+					WriteByte(((chr >> 6) & 0x3F) | 0x80);
+					WriteByte(((chr) & 0x3F) | 0x80);
 				} else if (chr > 0x7F) {
-					WriteByte((chr & 0x1F) | 0xC0);
-					WriteByte(((chr >> 5) & 0x3F) | 0x80);
+					WriteByte(((chr >> 6) & 0x1F) | 0xC0);
+					WriteByte(((chr) & 0x3F) | 0x80);
 				} else WriteByte(chr);
 			} else if (Coding == Encoding::UTF16) {
 				if (chr > 0xFFFF) {
