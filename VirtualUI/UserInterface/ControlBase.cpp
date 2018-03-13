@@ -1,6 +1,8 @@
 #include "ControlBase.h"
 
+#include "Menues.h"
 extern Engine::SafePointer<Engine::Streaming::TextWriter> conout;
+extern Engine::SafePointer<Engine::UI::Menues::Menu> menu;
 
 namespace Engine
 {
@@ -29,6 +31,7 @@ namespace Engine
 		void Window::RaiseEvent(int ID, Event event, Window * sender) { if (Parent) Parent->RaiseEvent(ID, event, sender); }
 		void Window::FocusChanged(bool got_focus) {}
 		void Window::CaptureChanged(bool got_capture) {}
+		void Window::LostExclusiveMode(void) {}
 		void Window::LeftButtonDown(Point at) {}
 		void Window::LeftButtonUp(Point at) {}
 		void Window::LeftButtonDoubleClick(Point at) {}
@@ -41,6 +44,7 @@ namespace Engine
 		void Window::KeyDown(int key_code) {}
 		void Window::KeyUp(int key_code) {}
 		void Window::CharDown(uint32 ucs_code) {}
+		void Window::PopupMenuCancelled(void) {}
 		Window * Window::HitTest(Point at) { return this; }
 		Window * Window::GetParent(void) { return Parent; }
 		WindowStation * Window::GetStation(void) { return Station; }
@@ -72,6 +76,38 @@ namespace Engine
 		Window * Window::GetCapture(void) { return Station->GetCapture(); }
 		void Window::ReleaseCapture(void) { Station->ReleaseCapture(); }
 		void Window::Destroy(void) { Station->DestroyWindow(this); }
+		Box Window::GetAbsolutePosition(void)
+		{
+			Box result = WindowPosition;
+			Window * current = Parent;
+			do {
+				result.Left += current->WindowPosition.Left;
+				result.Top += current->WindowPosition.Top;
+				result.Right += current->WindowPosition.Left;
+				result.Bottom += current->WindowPosition.Top;
+				current = current->Parent;
+			} while (current);
+			return result;
+		}
+		bool Window::IsGeneralizedParent(Window * window)
+		{
+			if (this == window) return true;
+			Window * current = this;
+			while (current->Parent) {
+				current = current->Parent;
+				if (current == window) return true;
+			}
+			return false;
+		}
+		Window * Window::GetOverlappedParent(void)
+		{
+			Window * current = this;
+			do {
+				if (current->IsOverlapped()) return current;
+				current = current->Parent;
+			} while (true);
+			return 0;
+		}
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
@@ -81,14 +117,16 @@ namespace Engine
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
 		}
-		WindowStation::WindowStation(void) : Position(0, 0, 0, 0) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); }
+		WindowStation::WindowStation(void) : Position(0, 0, 0, 0) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); ActiveWindow.SetRetain(TopLevelWindow); }
 		WindowStation::~WindowStation(void) { if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow); }
 		void WindowStation::DestroyWindow(Window * window)
 		{
-			if (!window->Parent.Inner()) return;
+			if (!window->Parent) return;
+			SafePointer<Window> Parent = window->Parent;
+			Parent->Retain();
 			DeconstructChain(window);
-			for (int i = 0; i < window->Parent->Children.Length(); i++) if (window->Parent->Children.ElementAt(i) == window) {
-				window->Parent->Children.Remove(i);
+			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == window) {
+				Parent->Children.Remove(i);
 				break;
 			}
 		}
@@ -100,7 +138,7 @@ namespace Engine
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner()) return TopLevelWindow->HitTest(at); else return 0; }
 		Window * WindowStation::EnabledHitTest(Point at)
 		{
-			Window * target = (TopLevelWindow.Inner()) ? TopLevelWindow->HitTest(at) : 0;
+			Window * target = TopLevelWindow->HitTest(at);
 			while (target && !target->IsEnabled()) target = target->Parent;
 			return target;
 		}
@@ -131,8 +169,11 @@ namespace Engine
 		void WindowStation::GetMouseTarget(Point global, Window ** target, Point * local)
 		{
 			Window * Target = EnabledHitTest(global);
+			if (ExclusiveWindow) if (!Target->IsGeneralizedParent(ExclusiveWindow)) Target = 0;
 			*target = Target; *local = CalculateLocalPoint(Target, global);
 		}
+		void WindowStation::SetActiveWindow(Window * window) { if (ActiveWindow.Inner() != window) ActiveWindow.SetRetain(window); }
+		Window * WindowStation::GetActiveWindow(void) { return ActiveWindow; }
 		void WindowStation::SetFocus(Window * window)
 		{
 			if (window == FocusedWindow.Inner()) return;
@@ -156,6 +197,8 @@ namespace Engine
 		}
 		Window * WindowStation::GetCapture(void) { return CaptureWindow; }
 		void WindowStation::ReleaseCapture(void) { SetCapture(0); }
+		void WindowStation::SetExclusiveWindow(Window * window) { if (ExclusiveWindow) ExclusiveWindow->LostExclusiveMode(); ExclusiveWindow.SetRetain(window); MouseMove(GetCursorPos()); }
+		Window * WindowStation::GetExclusiveWindow(void) { return ExclusiveWindow; }
 		void WindowStation::FocusChanged(bool got_focus)
 		{
 			if (!got_focus) {
@@ -166,8 +209,14 @@ namespace Engine
 		void WindowStation::CaptureChanged(bool got_capture)
 		{
 			if (!got_capture) {
-				if (CaptureWindow.Inner()) CaptureWindow->CaptureChanged(false);
-				CaptureWindow.SetReference(0);
+				if (CaptureWindow.Inner()) {
+					CaptureWindow->CaptureChanged(false);
+					CaptureWindow.SetReference(0);
+				}
+				if (ExclusiveWindow.Inner()) {
+					ExclusiveWindow->LostExclusiveMode();
+					ExclusiveWindow.SetReference(0);
+				}
 			}
 		}
 		void WindowStation::LeftButtonDown(Point at)
@@ -176,7 +225,16 @@ namespace Engine
 			else {
 				Window * Target; Point At;
 				GetMouseTarget(at, &Target, &At);
-				if (Target) Target->LeftButtonDown(At);
+				if (Target) {
+					if (!ExclusiveWindow) {
+						Window * Parent = Target->GetOverlappedParent();
+						if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+							SetActiveWindow(Parent);
+							SetFocus(0);
+						}
+					}
+					Target->LeftButtonDown(At);
+				} else if (ExclusiveWindow) SetExclusiveWindow(0);
 			}
 		}
 		void WindowStation::LeftButtonUp(Point at)
@@ -203,7 +261,16 @@ namespace Engine
 			else {
 				Window * Target; Point At;
 				GetMouseTarget(at, &Target, &At);
-				if (Target) Target->RightButtonDown(At);
+				if (Target) {
+					if (!ExclusiveWindow) {
+						Window * Parent = Target->GetOverlappedParent();
+						if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+							SetActiveWindow(Parent);
+							SetFocus(0);
+						}
+					}
+					Target->RightButtonDown(At);
+				} else if (ExclusiveWindow) SetExclusiveWindow(0);
 			}
 		}
 		void WindowStation::RightButtonUp(Point at)
@@ -249,11 +316,16 @@ namespace Engine
 				if (Target) Target->ScrollHorizontally(delta);
 			}
 		}
-
 		void WindowStation::KeyDown(int key_code) { if (FocusedWindow) FocusedWindow->KeyDown(key_code); }
 		void WindowStation::KeyUp(int key_code) { if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
+		void WindowStation::SetMenuBackground(Shape * shape) { MenuBackground.SetRetain(shape); }
+		Shape * WindowStation::GetMenuBackground(void) { return MenuBackground; }
+		void WindowStation::SetMenuArrow(Shape * shape) { MenuArrow.SetRetain(shape); }
+		Shape * WindowStation::GetMenuArrow(void) { return MenuArrow; }
+		void WindowStation::SetMenuBorder(int width) { MenuBorder = width; }
+		int WindowStation::GetMenuBorder(void) { return MenuBorder; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
 		Window * ParentWindow::FindChild(int ID)
@@ -322,6 +394,12 @@ namespace Engine
 		void TopLevelWindow::RaiseEvent(int ID, Event event, Window * sender)
 		{
 			(*conout) << L"DEBUG: Event with ID = " << ID << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
+			if (ID == 103) GetStation()->SetExclusiveWindow(sender);
+			else if (ID == 101) menu->RunPopup(this, GetStation()->GetCursorPos());
+		}
+		void TopLevelWindow::PopupMenuCancelled(void)
+		{
+			(*conout) << L"DEBUG: Popup menu cancelled." << IO::NewLineChar;
 		}
 
 		ZeroArgumentProvider::ZeroArgumentProvider(void) {}

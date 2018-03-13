@@ -77,6 +77,12 @@
     <ClInclude Include="UserInterface\GroupControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\KeyCodes.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\Menues.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp">
@@ -133,5 +139,14 @@
     <ClCompile Include="UserInterface\GroupControls.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
+    <ClCompile Include="PlatformDependent\KeyCodes.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\Menues.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="EngineRuntime.natvis" />
   </ItemGroup>
 </Project>

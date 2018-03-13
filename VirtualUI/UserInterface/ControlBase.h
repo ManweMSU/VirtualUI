@@ -18,7 +18,7 @@ namespace Engine
 			friend class ParentWindow;
 		public:
 			enum class DepthOrder { SetFirst = 0, SetLast = 1, MoveUp = 2, MoveDown = 3 };
-			enum class Event { Command = 0, DoubleClick = 1, ContextClick = 2, ValueChange = 3 };
+			enum class Event { Command = 0, MenuCommand = 1, DoubleClick = 2, ContextClick = 3, ValueChange = 4 };
 		private:
 			ObjectArray<Window> Children;
 			SafePointer<Window> Parent;
@@ -49,6 +49,7 @@ namespace Engine
 			virtual void RaiseEvent(int ID, Event event, Window * sender);
 			virtual void FocusChanged(bool got_focus);
 			virtual void CaptureChanged(bool got_capture);
+			virtual void LostExclusiveMode(void);
 			virtual void LeftButtonDown(Point at);
 			virtual void LeftButtonUp(Point at);
 			virtual void LeftButtonDoubleClick(Point at);
@@ -61,6 +62,7 @@ namespace Engine
 			virtual void KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
 			virtual void CharDown(uint32 ucs_code);
+			virtual void PopupMenuCancelled(void);
 			virtual Window * HitTest(Point at);
 
 			Window * GetParent(void);
@@ -74,6 +76,9 @@ namespace Engine
 			Window * GetCapture(void);
 			void ReleaseCapture(void);
 			void Destroy(void);
+			Box GetAbsolutePosition(void);
+			bool IsGeneralizedParent(Window * window);
+			Window * GetOverlappedParent(void);
 		};
 		class WindowStation : public Object
 		{
@@ -82,8 +87,13 @@ namespace Engine
 			SafePointer<Engine::UI::TopLevelWindow> TopLevelWindow;
 			SafePointer<Window> CaptureWindow;
 			SafePointer<Window> FocusedWindow;
+			SafePointer<Window> ActiveWindow;
+			SafePointer<Window> ExclusiveWindow;
 			Box Position;
 			void DeconstructChain(Window * window);
+			SafePointer<Shape> MenuBackground;
+			SafePointer<Shape> MenuArrow;
+			int MenuBorder;
 		public:
 			WindowStation(void);
 			~WindowStation(void) override;
@@ -114,12 +124,16 @@ namespace Engine
 			Point CalculateLocalPoint(Window * window, Point global);
 			Point CalculateGlobalPoint(Window * window, Point local);
 			void GetMouseTarget(Point global, Window ** target, Point * local);
+			void SetActiveWindow(Window * window);
+			Window * GetActiveWindow(void);
 
 			virtual void SetFocus(Window * window);
 			virtual Window * GetFocus(void);
 			virtual void SetCapture(Window * window);
 			virtual Window * GetCapture(void);
 			virtual void ReleaseCapture(void);
+			virtual void SetExclusiveWindow(Window * window);
+			virtual Window * GetExclusiveWindow(void);
 			virtual void FocusChanged(bool got_focus);
 			virtual void CaptureChanged(bool got_capture);
 			virtual void LeftButtonDown(Point at);
@@ -135,6 +149,13 @@ namespace Engine
 			virtual void KeyUp(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual Point GetCursorPos(void);
+
+			void SetMenuBackground(Shape * shape);
+			Shape * GetMenuBackground(void);
+			void SetMenuArrow(Shape * shape);
+			Shape * GetMenuArrow(void);
+			void SetMenuBorder(int width);
+			int GetMenuBorder(void);
 		};
 		class ParentWindow : public Window
 		{
@@ -162,6 +183,7 @@ namespace Engine
 
 #pragma message("REMOVE!")
 			virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+			virtual void PopupMenuCancelled(void) override;
 		};
 		class ZeroArgumentProvider : public IArgumentProvider
 		{

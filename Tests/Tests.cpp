@@ -1,6 +1,7 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
+#include "../VirtualUI/Miscellaneous/DynamicString.h"
 #include "../VirtualUI/UserInterface/ShapeBase.h"
 #include "../VirtualUI/UserInterface/Templates.h"
 #include "../VirtualUI/UserInterface/ControlBase.h"
@@ -12,6 +13,7 @@
 #include "../VirtualUI/UserInterface/StaticControls.h"
 #include "../VirtualUI/UserInterface/ButtonControls.h"
 #include "../VirtualUI/UserInterface/GroupControls.h"
+#include "../VirtualUI/UserInterface/Menues.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -60,6 +62,8 @@ SafePointer<Engine::Streaming::TextWriter> conout;
 SafePointer<Engine::UI::InterfaceTemplate> Template;
 
 UI::IInversionEffectRenderingInfo * Inversion = 0;
+
+SafePointer<Menues::Menu> menu;
 
 ENGINE_PACKED_STRUCTURE struct TestPacked
 {
@@ -208,12 +212,41 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			station->SetRenderingDevice(Device);
 			auto Main = station->GetDesktop();
 			SendMessageW(::Window, WM_SIZE, 0, 0);
-			SafePointer<Template::TextureShape> Back = new Template::TextureShape;
-			Back->From = Rectangle::Entire();
-			Back->RenderMode = TextureShape::TextureRenderMode::Fit;
-			Back->Position = Rectangle::Entire();
-			Back->Texture = ::Template->Texture[L"Wallpaper"];
-			Main->Background.SetRetain(Back);
+			SafePointer<Template::FrameShape> back = new Template::FrameShape;
+			{
+				SafePointer<Template::TextureShape> Back = new Template::TextureShape;
+				Back->From = Rectangle::Entire();
+				Back->RenderMode = TextureShape::TextureRenderMode::Fit;
+				Back->Position = Rectangle::Entire();
+				Back->Texture = ::Template->Texture[L"Wallpaper"];
+				SafePointer<Template::BarShape> Fill = new Template::BarShape;
+				Fill->Gradient << GradientPoint(0xFF303050);
+				back->Children.Append(Back);
+				back->Children.Append(Fill);
+			}
+			Main->Background.SetRetain(back);
+
+			SafePointer<UI::Shape> Arrow = ::Template->Application[L"a"]->Initialize(&ZeroArgumentProvider());
+			station->SetMenuArrow(Arrow);
+			SafePointer<UI::FrameShape> MenuBack = new UI::FrameShape(UI::Rectangle::Entire());
+			{
+				SafePointer<BlurEffectShape> Blur = new BlurEffectShape(UI::Rectangle::Entire(), 20.0);
+				SafePointer<BarShape> Bk = new BarShape(UI::Rectangle::Entire(), Color(64, 64, 64, 128));
+				SafePointer<BarShape> Left = new BarShape(UI::Rectangle(0, 0, UI::Coordinate(0, 1.0, 0.0), UI::Coordinate::Bottom()), Color(255, 255, 255, 255));
+				SafePointer<BarShape> Top = new BarShape(UI::Rectangle(0, 0, UI::Coordinate::Right(), UI::Coordinate(0, 1.0, 0.0)), Color(255, 255, 255, 255));
+				SafePointer<BarShape> Right = new BarShape(UI::Rectangle(UI::Coordinate::Right() - UI::Coordinate(0, 1.0, 0.0), 0, UI::Coordinate::Right(), UI::Coordinate::Bottom()), Color(255, 255, 255, 255));
+				SafePointer<BarShape> Bottom = new BarShape(UI::Rectangle(0, UI::Coordinate::Bottom() - UI::Coordinate(0, 1.0, 0.0), UI::Coordinate::Right(), UI::Coordinate::Bottom()), Color(255, 255, 255, 255));
+				MenuBack->Children.Append(Left);
+				MenuBack->Children.Append(Top);
+				MenuBack->Children.Append(Right);
+				MenuBack->Children.Append(Bottom);
+				MenuBack->Children.Append(Bk);
+				MenuBack->Children.Append(Blur);
+			}
+			station->SetMenuBackground(MenuBack);
+			station->SetMenuBorder(int(UI::Zoom * 4.0));
+
+			menu = new Menues::Menu(::Template->Dialog[L"Menu"]);
 
 			auto Group = station->CreateWindow<UI::Controls::ControlGroup>(0);
 			Group->Background = ::Template->Application[L"Waffle"];

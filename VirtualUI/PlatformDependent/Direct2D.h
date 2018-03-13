@@ -24,6 +24,7 @@ namespace Engine
 		{
 			ID2D1DeviceContext * Target;
 			Array<ID2D1Layer *> Layers;
+			Array<Box> Clipping;
 			uint32 AnimationTimer;
 			uint32 BlinkPeriod;
 			uint32 HalfBlinkPeriod;

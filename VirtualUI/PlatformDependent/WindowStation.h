@@ -21,6 +21,8 @@ namespace Engine
 			virtual void SetCapture(Window * window) override;
 			virtual Window * GetCapture(void) override;
 			virtual void ReleaseCapture(void) override;
+			virtual void SetExclusiveWindow(Window * window) override;
+			virtual Window * GetExclusiveWindow(void) override;
 			virtual Point GetCursorPos(void) override;
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);

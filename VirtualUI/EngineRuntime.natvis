@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Engine::ImmutableString">
+    <DisplayString>{text, su}</DisplayString>
+    <StringView>text, su</StringView>
+    <Expand>
+      <Item Name="[Текст]">text, su</Item>
+      <Item Name="[Длина]">wcslen(text)</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::DynamicString">
+    <DisplayString>{data.data, su}</DisplayString>
+    <StringView>data.data, su</StringView>
+    <Expand>
+      <Item Name="[Текст]">data.data, su</Item>
+      <Item Name="[Длина]">wcslen(data.data)</Item>
+      <Item Name="[Зарезервировано]">data.count</Item>
+      <Item Name="[Размер блока]">data.block</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Array&lt;*&gt;">
+    <DisplayString>{{ Длина = {count} }}</DisplayString>
+    <Expand>
+      <Item Name="[Длина]">count</Item>
+      <Item Name="[Размер блока]">block</Item>
+      <Item Name="[Выделено]">allocated</Item>
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Engine::SafeArray&lt;*&gt;">
+    <DisplayString>{{ Длина = {count} }}</DisplayString>
+    <Expand>
+      <Item Name="[Длина]">count</Item>
+      <Item Name="[Размер блока]">block</Item>
+      <Item Name="[Выделено]">allocated</Item>
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Engine::ObjectArray&lt;*&gt;">
+    <DisplayString>{{ Длина = {count} }}</DisplayString>
+    <Expand>
+      <Item Name="[Длина]">count</Item>
+      <Item Name="[Размер блока]">block</Item>
+      <Item Name="[Выделено]">allocated</Item>
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="Engine::SafePointer&lt;*&gt;">
+    <DisplayString Condition="reference != 0">{{ {*reference} }}</DisplayString>
+    <DisplayString Condition="reference == 0">null</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="reference != 0">reference</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Dictionary::DictionaryKeyPair&lt;*, *&gt;">
+    <DisplayString>{{ {key} : {object} }}</DisplayString>
+    <Expand>
+      <Item Name="Ключ">key</Item>
+      <Item Name="Данные">object</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Dictionary::Dictionary&lt;*, *&gt;">
+    <DisplayString>{{ Длина = {data.count} }}</DisplayString>
+    <Expand>
+      <ExpandedItem>data</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Dictionary::ObjectCache&lt;*, *&gt;">
+    <DisplayString>{{ Длина = {data.count} }}</DisplayString>
+    <Expand>
+      <Item Name="[Максимальная вместимость]">max_capacity</Item>
+      <Item Name="[Режим переполнения]">policy</Item>
+      <ExpandedItem>data</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Streaming::FileStream">
+    <DisplayString>Поток файлового дескриптора</DisplayString>
+    <Expand>
+      <Item Name="[Дескриптор]">file</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Streaming::MemoryStream">
+    <DisplayString>Поток данных в памяти</DisplayString>
+    <Expand>
+      <Item Name="[Данные]">data</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Streaming::FragmentStream">
+    <DisplayString>Поток фрагмента</DisplayString>
+    <Expand>
+      <Item Name="[Источник]">inner</Item>
+      <Item Name="[Нижняя граница]">begin</Item>
+      <Item Name="[Верхняя граница]">end</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Streaming::TextWriter">
+    <DisplayString>Поток вывода текста</DisplayString>
+    <Expand>
+      <Item Name="[Целевой поток]">dest</Item>
+      <Item Name="[Кодировка]">coding</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::Coordinate">
+    <DisplayString>{Absolute} + {Zoom} z + {Anchor} w</DisplayString>
+    <Expand>
+      <Item Name="[Абсолютный сдвиг]">Absolute</Item>
+      <Item Name="[Масштабируемый сдвиг]">Zoom</Item>
+      <Item Name="[Якорный сдвиг]">Anchor</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::Rectangle">
+    <DisplayString>{{ Лево = {Left}, Верх = {Top}, Право = {Right}, Низ = {Bottom} }}</DisplayString>
+    <Expand>
+      <Item Name="[Лево]">Left</Item>
+      <Item Name="[Верх]">Top</Item>
+      <Item Name="[Право]">Right</Item>
+      <Item Name="[Низ]">Bottom</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Engine::UI::Point">
+    <DisplayString>{{ {x}, {y} }}</DisplayString>
+    <Expand> </Expand>
+  </Type>
+  <Type Name="Engine::UI::Box">
+    <DisplayString>{{ Лево = {Left}, Верх = {Top}, Право = {Right}, Низ = {Bottom} }}</DisplayString>
+    <Expand>
+      <Item Name="[Лево]">Left</Item>
+      <Item Name="[Верх]">Top</Item>
+      <Item Name="[Право]">Right</Item>
+      <Item Name="[Низ]">Bottom</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::Color">
+    <DisplayString>{Value}</DisplayString>
+    <Expand>
+      <Item Name="[Красный]">r</Item>
+      <Item Name="[Зелёный]">g</Item>
+      <Item Name="[Синий]">b</Item>
+      <Item Name="[Прозрачность]">(255 - a) / 255.0f</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::GradientPoint">
+    <DisplayString>{{ {Color} : {Position} }}</DisplayString>
+    <Expand>
+      <Item Name="[Цвет]">Color</Item>
+      <Item Name="[Положение]">Position</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::FrameShape">
+    <DisplayString>Примитив - контейнер</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+      <Item Name="[Режим отрисовки]">RenderMode</Item>
+      <Item Name="[Прозрачность]">1.0 - Opacity</Item>
+      <Item Name="[Вложенные элементы]">Children</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::BarShape">
+    <DisplayString>Примитив - прямоугольник</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+      <Item Name="[Точки градиента]" Condition="Gradient.count >= 2">Gradient</Item>
+      <Item Name="[Угол градиента]" Condition="Gradient.count >= 2">GradientAngle</Item>
+      <Item Name="[Цвет]" Condition="Gradient.count == 1">Gradient.data[0].Color</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::BlurEffectShape">
+    <DisplayString>Примитив - эффект размытия</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+      <Item Name="[Сила]">BlurPower</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::InversionEffectShape">
+    <DisplayString>Примитив - эффект инверсии</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::TextureShape">
+    <DisplayString>Примитив - текстура</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+      <Item Name="[Положение в источнике]">From</Item>
+      <Item Name="[Текстура]">Texture</Item>
+      <Item Name="[Режим отрисовки]">Mode</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::TextShape">
+    <DisplayString>Примитив - надпись</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+      <Item Name="[Надпись]">Text</Item>
+      <Item Name="[Шрифт]">Font</Item>
+      <Item Name="[Цвет]">TextColor</Item>
+      <Item Name="[Положение по горизонтали]">halign</Item>
+      <Item Name="[Положение по вертикали]">valign</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::LineShape">
+    <DisplayString>Примитив - линия</DisplayString>
+    <Expand>
+      <Item Name="[Положение]">Position</Item>
+      <Item Name="[Цвет]">LineColor</Item>
+      <Item Name="[Пунктир]">Dotted</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::UI::InterfaceTemplate">
+    <DisplayString>Шаблон интерфейса пользователя</DisplayString>
+    <Expand>
+      <Item Name="[Текстуры]">Texture</Item>
+      <Item Name="[Шрифты]">Font</Item>
+      <Item Name="[Аппликации]">Application</Item>
+      <Item Name="[Диалоги]">Dialog</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>

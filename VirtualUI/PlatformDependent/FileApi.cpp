@@ -87,9 +87,27 @@ namespace Engine
 		handle GetStandartOutput(void) { return GetStdHandle(STD_OUTPUT_HANDLE); }
 		handle GetStandartInput(void) { return GetStdHandle(STD_INPUT_HANDLE); }
 		handle GetStandartError(void) { return GetStdHandle(STD_ERROR_HANDLE); }
-		void SetStandartOutput(handle file) { SetStdHandle(STD_OUTPUT_HANDLE, file); }
-		void SetStandartInput(handle file) { SetStdHandle(STD_INPUT_HANDLE, file); }
-		void SetStandartError(handle file) { SetStdHandle(STD_ERROR_HANDLE, file); }
+		void SetStandartOutput(handle file)
+		{
+			handle dup;
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
+			SetStdHandle(STD_OUTPUT_HANDLE, dup);
+		}
+		void SetStandartInput(handle file)
+		{
+			handle dup;
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			CloseHandle(GetStdHandle(STD_INPUT_HANDLE));
+			SetStdHandle(STD_INPUT_HANDLE, dup);
+		}
+		void SetStandartError(handle file)
+		{
+			handle dup;
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			CloseHandle(GetStdHandle(STD_ERROR_HANDLE));
+			SetStdHandle(STD_ERROR_HANDLE, dup);
+		}
 		void CloseFile(handle file) { CloseHandle(file); }
 		void Flush(handle file) { if (!FlushFileBuffers(file)) throw FileAccessException(); }
 		uint64 GetFileSize(handle file)

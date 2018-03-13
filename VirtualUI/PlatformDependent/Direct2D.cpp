@@ -203,7 +203,7 @@ namespace Engine
 		};
 
 		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
-			Target(target), Layers(0x10), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+			Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
@@ -321,15 +321,18 @@ namespace Engine
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
 				Info->Geometry = 0;
+				Info->run_length = 0;
 				Info->MainBrushInfo.SetReference(static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0)));
 				Info->MainBrushInfo->Retain();
 				Info->TextBrush = Info->MainBrushInfo->Brush;
 				Info->TextBrush->AddRef();
-				Info->CharString.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(Info->CharString, Encoding::UTF32, false);
-				Info->FillGlyphs();
-				Info->FillAdvances();
-				Info->BuildGeometry();
+				if (text.Length()) {
+					Info->CharString.SetLength(text.GetEncodedLength(Encoding::UTF32));
+					text.Encode(Info->CharString, Encoding::UTF32, false);
+					Info->FillGlyphs();
+					Info->FillAdvances();
+					Info->BuildGeometry();
+				}
 			}
 			catch (...) {
 				Info->Release();
@@ -349,14 +352,17 @@ namespace Engine
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
 				Info->Geometry = 0;
+				Info->run_length = 0;
 				Info->MainBrushInfo.SetReference(static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0)));
 				Info->MainBrushInfo->Retain();
 				Info->TextBrush = Info->MainBrushInfo->Brush;
 				Info->TextBrush->AddRef();
-				Info->CharString = text;
-				Info->FillGlyphs();
-				Info->FillAdvances();
-				Info->BuildGeometry();
+				if (text.Length()) {
+					Info->CharString = text;
+					Info->FillGlyphs();
+					Info->FillAdvances();
+					Info->BuildGeometry();
+				}
 			} catch (...) {
 				Info->Release();
 			}
@@ -563,6 +569,7 @@ namespace Engine
 		void D2DRenderDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip)
 		{
 			auto info = static_cast<TextRenderingInfo *>(Info);
+			if (!info->GlyphAdvances.Length()) return;
 			if (Clip) PushClip(At);
 			int width, height;
 			Info->GetExtent(width, height);
@@ -602,19 +609,23 @@ namespace Engine
 		}
 		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
 		{
+			if (Layers.Length()) return;
 			auto info = static_cast<BlurEffectRenderingInfo *>(Info);
 			SafePointer<ID2D1Bitmap> Fragment;
 			Box Corrected = At;
 			if (Corrected.Left < 0) Corrected.Left = 0;
 			if (Corrected.Top < 0) Corrected.Top = 0;
 			if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+				for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
 				Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
+				for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
 				info->Effect->SetInput(0, Fragment);
 				Target->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
 			}
 		}
 		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink)
 		{
+			if (Layers.Length()) return;
 			if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
 				auto info = static_cast<InversionEffectRenderingInfo *>(Info);
 				SafePointer<ID2D1Bitmap> Fragment;
@@ -622,14 +633,24 @@ namespace Engine
 				if (Corrected.Left < 0) Corrected.Left = 0;
 				if (Corrected.Top < 0) Corrected.Top = 0;
 				if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+					for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
 					Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
+					for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
 					info->Effect->SetInput(0, Fragment);
 					Target->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
 				}
 			}
 		}
-		void D2DRenderDevice::PushClip(const Box & Rect) { Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED); }
-		void D2DRenderDevice::PopClip(void) { Target->PopAxisAlignedClip(); }
+		void D2DRenderDevice::PushClip(const Box & Rect)
+		{
+			Clipping << Rect;
+			Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
+		}
+		void D2DRenderDevice::PopClip(void)
+		{
+			Clipping.RemoveLast();
+			Target->PopAxisAlignedClip();
+		}
 		void D2DRenderDevice::BeginLayer(const Box & Rect, double Opacity)
 		{
 			ID2D1Layer * Layer;
