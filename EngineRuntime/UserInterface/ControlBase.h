@@ -64,6 +64,7 @@ namespace Engine
 			virtual void CharDown(uint32 ucs_code);
 			virtual void PopupMenuCancelled(void);
 			virtual Window * HitTest(Point at);
+			virtual void SetCursor(Point at);
 
 			Window * GetParent(void);
 			WindowStation * GetStation(void);
@@ -80,8 +81,33 @@ namespace Engine
 			bool IsGeneralizedParent(Window * window);
 			Window * GetOverlappedParent(void);
 		};
+		class ICursor : public Object {};
+		enum class SystemCursor { Null = 0, Arrow = 1, Beam = 2, Link = 3, SizeLeftRight = 4, SizeUpDown = 5, SizeLeftUpRightDown = 6, SizeLeftDownRightUp = 7, SizeAll = 8 };
 		class WindowStation : public Object
 		{
+		public:
+			struct VisualStyles
+			{
+				SafePointer<Template::Shape> WindowActiveView; // Argumented with Text, Border and Caption
+				SafePointer<Template::Shape> WindowInactiveView;
+				SafePointer<Template::Shape> WindowDefaultBackground;
+				int WindowFixedBorder = 0;
+				int WindowSizableBorder = 0;
+				int WindowCaptionHeight = 0;
+				int WindowSmallCaptionHeight = 0;
+				SafePointer<Template::ControlTemplate> WindowCloseButton; // ToolButtonPart template
+				SafePointer<Template::ControlTemplate> WindowMaximizeButton;
+				SafePointer<Template::ControlTemplate> WindowMinimizeButton;
+				SafePointer<Template::ControlTemplate> WindowHelpButton;
+				SafePointer<Template::ControlTemplate> WindowSmallCloseButton;
+				SafePointer<Template::ControlTemplate> WindowSmallMaximizeButton;
+				SafePointer<Template::ControlTemplate> WindowSmallMinimizeButton;
+				SafePointer<Template::ControlTemplate> WindowSmallHelpButton;
+
+				SafePointer<Template::Shape> MenuBackground;
+				SafePointer<Template::Shape> MenuArrow;
+				int MenuBorder = 0;
+			};
 		private:
 			SafePointer<IRenderingDevice> RenderingDevice;
 			SafePointer<Engine::UI::TopLevelWindow> TopLevelWindow;
@@ -90,10 +116,8 @@ namespace Engine
 			SafePointer<Window> ActiveWindow;
 			SafePointer<Window> ExclusiveWindow;
 			Box Position;
+			VisualStyles Styles;
 			void DeconstructChain(Window * window);
-			SafePointer<Shape> MenuBackground;
-			SafePointer<Shape> MenuArrow;
-			int MenuBorder;
 		public:
 			WindowStation(void);
 			~WindowStation(void) override;
@@ -149,13 +173,12 @@ namespace Engine
 			virtual void KeyUp(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual Point GetCursorPos(void);
+			virtual ICursor * LoadCursor(Streaming::Stream * Source);
+			virtual ICursor * GetSystemCursor(SystemCursor cursor);
+			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor);
+			virtual void SetCursor(ICursor * cursor);
 
-			void SetMenuBackground(Shape * shape);
-			Shape * GetMenuBackground(void);
-			void SetMenuArrow(Shape * shape);
-			Shape * GetMenuArrow(void);
-			void SetMenuBorder(int width);
-			int GetMenuBorder(void);
+			VisualStyles & GetVisualStyles(void);
 		};
 		class ParentWindow : public Window
 		{

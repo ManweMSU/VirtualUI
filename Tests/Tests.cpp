@@ -1,19 +1,19 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
-#include "../VirtualUI/Miscellaneous/DynamicString.h"
-#include "../VirtualUI/UserInterface/ShapeBase.h"
-#include "../VirtualUI/UserInterface/Templates.h"
-#include "../VirtualUI/UserInterface/ControlBase.h"
-#include "../VirtualUI/Streaming.h"
-#include "../VirtualUI/PlatformDependent/Direct2D.h"
-#include "../VirtualUI/Miscellaneous/Dictionary.h"
-#include "../VirtualUI/UserInterface/ControlClasses.h"
-#include "../VirtualUI/UserInterface/BinaryLoader.h"
-#include "../VirtualUI/UserInterface/StaticControls.h"
-#include "../VirtualUI/UserInterface/ButtonControls.h"
-#include "../VirtualUI/UserInterface/GroupControls.h"
-#include "../VirtualUI/UserInterface/Menues.h"
+#include <Miscellaneous/DynamicString.h>
+#include "UserInterface/ShapeBase.h"
+#include "UserInterface/Templates.h"
+#include "UserInterface/ControlBase.h"
+#include "Streaming.h"
+#include "PlatformDependent/Direct2D.h"
+#include "Miscellaneous/Dictionary.h"
+#include "UserInterface/ControlClasses.h"
+#include "UserInterface/BinaryLoader.h"
+#include "UserInterface/StaticControls.h"
+#include "UserInterface/ButtonControls.h"
+#include "UserInterface/GroupControls.h"
+#include "UserInterface/Menues.h"
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -24,7 +24,7 @@
 #include <d3d11_1.h>
 #pragma comment(lib, "d3d11.lib")
 
-#include "../VirtualUI/PlatformDependent/WindowStation.h"
+#include "PlatformDependent/WindowStation.h"
 
 #undef CreateWindow
 #undef GetCurrentDirectory
@@ -226,16 +226,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 			Main->Background.SetRetain(back);
 
-			SafePointer<UI::Shape> Arrow = ::Template->Application[L"a"]->Initialize(&ZeroArgumentProvider());
-			station->SetMenuArrow(Arrow);
-			SafePointer<UI::FrameShape> MenuBack = new UI::FrameShape(UI::Rectangle::Entire());
+			station->GetVisualStyles().MenuArrow.SetReference(::Template->Application[L"a"]);
+			SafePointer<Template::FrameShape> MenuBack = new Template::FrameShape;
+			MenuBack->Position = UI::Rectangle::Entire();
 			{
-				SafePointer<BlurEffectShape> Blur = new BlurEffectShape(UI::Rectangle::Entire(), 20.0);
-				SafePointer<BarShape> Bk = new BarShape(UI::Rectangle::Entire(), Color(64, 64, 64, 128));
-				SafePointer<BarShape> Left = new BarShape(UI::Rectangle(0, 0, UI::Coordinate(0, 1.0, 0.0), UI::Coordinate::Bottom()), Color(255, 255, 255, 255));
-				SafePointer<BarShape> Top = new BarShape(UI::Rectangle(0, 0, UI::Coordinate::Right(), UI::Coordinate(0, 1.0, 0.0)), Color(255, 255, 255, 255));
-				SafePointer<BarShape> Right = new BarShape(UI::Rectangle(UI::Coordinate::Right() - UI::Coordinate(0, 1.0, 0.0), 0, UI::Coordinate::Right(), UI::Coordinate::Bottom()), Color(255, 255, 255, 255));
-				SafePointer<BarShape> Bottom = new BarShape(UI::Rectangle(0, UI::Coordinate::Bottom() - UI::Coordinate(0, 1.0, 0.0), UI::Coordinate::Right(), UI::Coordinate::Bottom()), Color(255, 255, 255, 255));
+				SafePointer<Template::BlurEffectShape> Blur = new Template::BlurEffectShape;
+				Blur->Position = UI::Rectangle::Entire();
+				Blur->BlurPower = 20.0;
+				SafePointer<Template::BarShape> Bk = new Template::BarShape;
+				Bk->Position = UI::Rectangle::Entire();
+				Bk->Gradient << GradientPoint(Color(64, 64, 64, 128));
+				SafePointer<Template::BarShape> Left = new Template::BarShape;
+				Left->Position = UI::Rectangle(0, 0, UI::Coordinate(0, 1.0, 0.0), UI::Coordinate::Bottom());
+				Left->Gradient << GradientPoint(Color(255, 255, 255, 255));
+				SafePointer<Template::BarShape> Top = new Template::BarShape;
+				Top->Position = UI::Rectangle(0, 0, UI::Coordinate::Right(), UI::Coordinate(0, 1.0, 0.0));
+				Top->Gradient << GradientPoint(Color(255, 255, 255, 255));
+				SafePointer<Template::BarShape> Right = new Template::BarShape;
+				Right->Position = UI::Rectangle(UI::Coordinate::Right() - UI::Coordinate(0, 1.0, 0.0), 0, UI::Coordinate::Right(), UI::Coordinate::Bottom());
+				Right->Gradient << GradientPoint(Color(255, 255, 255, 255));
+				SafePointer<Template::BarShape> Bottom = new Template::BarShape;
+				Bottom->Position = UI::Rectangle(0, UI::Coordinate::Bottom() - UI::Coordinate(0, 1.0, 0.0), UI::Coordinate::Right(), UI::Coordinate::Bottom());
+				Bottom->Gradient << GradientPoint(Color(255, 255, 255, 255));
 				MenuBack->Children.Append(Left);
 				MenuBack->Children.Append(Top);
 				MenuBack->Children.Append(Right);
@@ -243,8 +255,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				MenuBack->Children.Append(Bk);
 				MenuBack->Children.Append(Blur);
 			}
-			station->SetMenuBackground(MenuBack);
-			station->SetMenuBorder(int(UI::Zoom * 4.0));
+			station->GetVisualStyles().MenuBackground.SetRetain(MenuBack);
+			station->GetVisualStyles().MenuBorder = int(UI::Zoom * 4.0);
 
 			menu = new Menues::Menu(::Template->Dialog[L"Menu"]);
 
@@ -292,7 +304,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TESTS));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hCursor        = 0;
     wcex.hbrBackground  = 0;
     wcex.lpszMenuName   = 0;
     wcex.lpszClassName  = szWindowClass;

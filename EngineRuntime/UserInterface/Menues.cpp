@@ -51,6 +51,9 @@ namespace Engine
 			{
 				class MenuList : public Window
 				{
+				private:
+					SafePointer<Shape> _background;
+					SafePointer<Shape> _arrow;
 				public:
 					ObjectArray<MenuElement> * Elements;
 					Array<int> Height;
@@ -58,8 +61,6 @@ namespace Engine
 					int Current;
 					int Mode;
 					int Border;
-					SafePointer<Shape> Background;
-					SafePointer<Shape> Arrow;
 					MenuList * Submenu;
 					int SubmenuIndex;
 
@@ -75,11 +76,9 @@ namespace Engine
 							TotalHeight += height;
 						}
 						Current = -1;
-						Border = GetStation()->GetMenuBorder();
+						Border = GetStation()->GetVisualStyles().MenuBorder;
 						TotalHeight += 2 * Border;
 						TotalWidth += 2 * Border;
-						Background.SetRetain(GetStation()->GetMenuBackground());
-						Arrow.SetRetain(GetStation()->GetMenuArrow());
 					}
 					void ShowSubmenu()
 					{
@@ -115,7 +114,10 @@ namespace Engine
 					virtual void Render(const Box & at) override
 					{
 						auto Device = GetStation()->GetRenderingDevice();
-						if (Background) Background->Render(Device, at);
+						if (!_background && GetStation()->GetVisualStyles().MenuBackground) {
+							_background.SetReference(GetStation()->GetVisualStyles().MenuBackground->Initialize(&ZeroArgumentProvider()));
+						}
+						if (_background) _background->Render(Device, at);
 						int y = 0;
 						for (int i = 0; i < Elements->Length(); i++) {
 							Box item = Box(at.Left + Border, at.Top + Border + y, at.Right - Border, at.Top + Border + y + Height[i]);
@@ -123,11 +125,20 @@ namespace Engine
 							auto element = Elements->ElementAt(i);
 							element->Render(item, Current == i || SubmenuIndex == i);
 							if (!element->IsSeparator()) {
-								if (static_cast<MenuItem *>(element)->Children.Length()) Arrow->Render(Device, item);
+								if (static_cast<MenuItem *>(element)->Children.Length()) {
+									if (!_arrow && GetStation()->GetVisualStyles().MenuArrow) {
+										_arrow.SetReference(GetStation()->GetVisualStyles().MenuArrow->Initialize(&ZeroArgumentProvider()));
+									}
+									if (_arrow) _arrow->Render(Device, item);
+								}
 							}
 						}
 					}
-					virtual void ResetCache(void) override {}
+					virtual void ResetCache(void) override
+					{
+						_background.SetReference(0);
+						_arrow.SetReference(0);
+					}
 					virtual void CaptureChanged(bool got_capture) override
 					{
 						if (!got_capture && Mode == 0) Current = -1;
@@ -168,9 +179,11 @@ namespace Engine
 								}
 								if (SubmenuIndex != Current) {
 									CloseSubmenu();
-									auto item = static_cast<MenuItem *>(Elements->ElementAt(Current));
-									if (item->Children.Length() && !item->Disabled) {
-										ShowSubmenu();
+									if (!Elements->ElementAt(Current)->IsSeparator()) {
+										auto item = static_cast<MenuItem *>(Elements->ElementAt(Current));
+										if (item->Children.Length() && !item->Disabled) {
+											ShowSubmenu();
+										}
 									}
 								}
 							}
@@ -188,10 +201,20 @@ namespace Engine
 					MenuHolder(Window * parent, WindowStation * station) : ParentWindow(parent, station) {}
 					~MenuHolder(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].Shutdown(); }
 
+					virtual void Render(const Box & at) override
+					{
+						auto Device = GetStation()->GetRenderingDevice();
+						for (int i = 0; i < ChildrenCount(); i++) {
+							auto & child = *Child(i);
+							Box pos = child.GetPosition();
+							Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
+							child.Render(rect);
+						}
+					}
 					virtual void LostExclusiveMode(void) override { if (!Final) { Destroy(); Owner->PopupMenuCancelled(); } }
 					virtual void LeftButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void RightButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
-					virtual void ResetCache(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].WakeUp(GetStation()->GetRenderingDevice()); }
+					virtual void ResetCache(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].WakeUp(GetStation()->GetRenderingDevice()); Window::ResetCache(); }
 					virtual void RaiseEvent(int ID, Event event, Window * sender) override
 					{
 						Window * owner = Owner;
@@ -218,7 +241,6 @@ namespace Engine
 				}
 			}
 			MenuItem::~MenuItem(void) {}
-
 			int MenuItem::GetHeight(void) const { return Height; }
 			int MenuItem::GetWidth(void) const
 			{
@@ -340,6 +362,7 @@ namespace Engine
 			}
 			bool MenuSeparator::IsSeparator(void) const { return true; }
 			MenuItem * MenuSeparator::FindChild(int ID) { return 0; }
+
 			Menu::Menu(void) : Children(0x10) {}
 			Menu::Menu(Template::ControlTemplate * MenuTemplate) : Children(0x10)
 			{

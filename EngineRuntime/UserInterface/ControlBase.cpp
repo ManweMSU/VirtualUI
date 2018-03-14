@@ -46,6 +46,7 @@ namespace Engine
 		void Window::CharDown(uint32 ucs_code) {}
 		void Window::PopupMenuCancelled(void) {}
 		Window * Window::HitTest(Point at) { return this; }
+		void Window::SetCursor(Point at) { Station->SetCursor(Station->GetSystemCursor(SystemCursor::Arrow)); }
 		Window * Window::GetParent(void) { return Parent; }
 		WindowStation * Window::GetStation(void) { return Station; }
 		void Window::SetOrder(DepthOrder order)
@@ -172,7 +173,7 @@ namespace Engine
 			if (ExclusiveWindow) if (!Target->IsGeneralizedParent(ExclusiveWindow)) Target = 0;
 			*target = Target; *local = CalculateLocalPoint(Target, global);
 		}
-		void WindowStation::SetActiveWindow(Window * window) { if (ActiveWindow.Inner() != window) ActiveWindow.SetRetain(window); }
+		void WindowStation::SetActiveWindow(Window * window) { if (ActiveWindow.Inner() != window) ActiveWindow.SetRetain(window); if (ActiveWindow) ActiveWindow->SetOrder(Window::DepthOrder::SetFirst); }
 		Window * WindowStation::GetActiveWindow(void) { return ActiveWindow; }
 		void WindowStation::SetFocus(Window * window)
 		{
@@ -293,11 +294,16 @@ namespace Engine
 		}
 		void WindowStation::MouseMove(Point at)
 		{
-			if (CaptureWindow) CaptureWindow->MouseMove(CalculateLocalPoint(CaptureWindow, at));
-			else {
-				Window * Target; Point At;
+			Window * Target; Point At;
+			if (CaptureWindow) {
+				Target = CaptureWindow;
+				At = CalculateLocalPoint(CaptureWindow, at);
+			} else {
 				GetMouseTarget(at, &Target, &At);
-				if (Target) Target->MouseMove(At);
+			}
+			if (Target) {
+				Target->SetCursor(At);
+				Target->MouseMove(At);
 			}
 		}
 		void WindowStation::ScrollVertically(int delta)
@@ -320,12 +326,11 @@ namespace Engine
 		void WindowStation::KeyUp(int key_code) { if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
-		void WindowStation::SetMenuBackground(Shape * shape) { MenuBackground.SetRetain(shape); }
-		Shape * WindowStation::GetMenuBackground(void) { return MenuBackground; }
-		void WindowStation::SetMenuArrow(Shape * shape) { MenuArrow.SetRetain(shape); }
-		Shape * WindowStation::GetMenuArrow(void) { return MenuArrow; }
-		void WindowStation::SetMenuBorder(int width) { MenuBorder = width; }
-		int WindowStation::GetMenuBorder(void) { return MenuBorder; }
+		ICursor * WindowStation::LoadCursor(Streaming::Stream * Source) { return 0; }
+		ICursor * WindowStation::GetSystemCursor(SystemCursor cursor) { return 0; }
+		void WindowStation::SetSystemCursor(SystemCursor entity, ICursor * cursor) {}
+		void WindowStation::SetCursor(ICursor * cursor) {}
+		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
 		Window * ParentWindow::FindChild(int ID)
@@ -363,6 +368,7 @@ namespace Engine
 		void ParentWindow::SetPosition(const Box & box) { Window::SetPosition(box); ArrangeChildren(); }
 		Window * ParentWindow::HitTest(Point at)
 		{
+			if (!IsEnabled()) return this;
 			for (int i = Children.Length() - 1; i >= 0; i--) {
 				if (!Children[i].IsVisible()) continue;
 				auto & box = Children[i].WindowPosition;

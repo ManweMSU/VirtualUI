@@ -4,6 +4,8 @@
 
 #include <Windows.h>
 
+#undef LoadCursor
+
 namespace Engine
 {
 	namespace UI
@@ -12,6 +14,15 @@ namespace Engine
 		{
 		private:
 			HWND _window;
+			SafePointer<ICursor> _null;
+			SafePointer<ICursor> _arrow;
+			SafePointer<ICursor> _beam;
+			SafePointer<ICursor> _link;
+			SafePointer<ICursor> _size_left_right;
+			SafePointer<ICursor> _size_up_down;
+			SafePointer<ICursor> _size_left_up_right_down;
+			SafePointer<ICursor> _size_left_down_right_up;
+			SafePointer<ICursor> _size_all;
 		public:
 			HandleWindowStation(HWND window);
 			~HandleWindowStation(void) override;
@@ -24,6 +35,10 @@ namespace Engine
 			virtual void SetExclusiveWindow(Window * window) override;
 			virtual Window * GetExclusiveWindow(void) override;
 			virtual Point GetCursorPos(void) override;
+			virtual ICursor * LoadCursor(Streaming::Stream * Source) override;
+			virtual ICursor * GetSystemCursor(SystemCursor cursor) override;
+			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor) override;
+			virtual void SetCursor(ICursor * cursor) override;
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};

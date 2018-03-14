@@ -46,10 +46,10 @@ namespace Engine
 
 	void StringLower(widechar * str, int length)
 	{
-		for (int i = 0; i < length; i++) str[i] = reinterpret_cast<intptr>(CharLowerW(reinterpret_cast<LPWSTR>(str[i])));
+		for (int i = 0; i < length; i++) str[i] = widechar(reinterpret_cast<intptr>(CharLowerW(reinterpret_cast<LPWSTR>(str[i]))));
 	}
 	void StringUpper(widechar * str, int length)
 	{
-		for (int i = 0; i < length; i++) str[i] = reinterpret_cast<intptr>(CharUpperW(reinterpret_cast<LPWSTR>(str[i])));
+		for (int i = 0; i < length; i++) str[i] = widechar(reinterpret_cast<intptr>(CharUpperW(reinterpret_cast<LPWSTR>(str[i]))));
 	}
 }

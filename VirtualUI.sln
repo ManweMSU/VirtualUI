@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{ECCF8DEC-52ED-410B-95FF-A62B5083CE81}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VirtualUI", "VirtualUI\VirtualUI.vcxproj", "{1668D08D-3F3F-46C6-89B5-8308CA348929}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EngineRuntime", "EngineRuntime\EngineRuntime.vcxproj", "{1668D08D-3F3F-46C6-89B5-8308CA348929}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
