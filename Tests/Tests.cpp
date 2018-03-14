@@ -260,9 +260,56 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			}
 			station->GetVisualStyles().MenuBackground.SetRetain(MenuBack);
 			station->GetVisualStyles().MenuBorder = int(UI::Zoom * 4.0);
+			station->GetVisualStyles().WindowCloseButton.SetRetain(::Template->Dialog[L"Header"]->Children[0].Children.ElementAt(0));
+			station->GetVisualStyles().WindowMaximizeButton.SetRetain(::Template->Dialog[L"Header"]->Children[0].Children.ElementAt(1));
+			station->GetVisualStyles().WindowMinimizeButton.SetRetain(::Template->Dialog[L"Header"]->Children[0].Children.ElementAt(2));
+			station->GetVisualStyles().WindowHelpButton.SetRetain(::Template->Dialog[L"Header"]->Children[0].Children.ElementAt(3));
+			station->GetVisualStyles().WindowFixedBorder = 10;
+			station->GetVisualStyles().WindowSizableBorder = 15;
+			station->GetVisualStyles().WindowCaptionHeight = 60;
+			station->GetVisualStyles().WindowSmallCaptionHeight = 40;
+			{
+				SafePointer<Template::BlurEffectShape> Blur = new Template::BlurEffectShape;
+				Blur->Position = UI::Rectangle::Entire();
+				Blur->BlurPower = 20.0;
+				SafePointer<Template::BarShape> BkActive = new Template::BarShape;
+				BkActive->Position = UI::Rectangle::Entire();
+				BkActive->Gradient << GradientPoint(Color(96, 96, 96, 128));
+				SafePointer<Template::BarShape> BkInactive = new Template::BarShape;
+				BkInactive->Position = UI::Rectangle::Entire();
+				BkInactive->Gradient << GradientPoint(Color(16, 16, 16, 128));
+				SafePointer<Template::FrameShape> Decor = new Template::FrameShape;
+				Decor->Position = UI::Rectangle::Entire();
+				SafePointer<Template::TextShape> Title = new Template::TextShape;
+				Title->Position = Template::Rectangle(
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Border"), 20.0, 0.0),
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Border"), 0.0, 0.0),
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"NegBorder"), 0.0, 1.0),
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Caption"), 0.0, 0.0)
+				);
+				Title->Font = ::Template->Font[L"NormalFont"];
+				Title->Text = Template::StringTemplate::Undefined(L"Text");
+				Title->TextColor = UI::Color(0xFFFFFFFF);
+				Title->HorizontalAlign = TextShape::TextHorizontalAlign::Left;
+				Title->VerticalAlign = TextShape::TextVerticalAlign::Center;
+				Decor->Children.Append(Title);
+
+				SafePointer<Template::FrameShape> Active = new Template::FrameShape;
+				Active->Position = Rectangle::Entire();
+				Active->Children.Append(Decor);
+				Active->Children.Append(BkActive);
+				Active->Children.Append(Blur);
+				SafePointer<Template::FrameShape> Inactive = new Template::FrameShape;
+				Inactive->Position = Rectangle::Entire();
+				Inactive->Children.Append(Decor);
+				Inactive->Children.Append(BkInactive);
+				Inactive->Children.Append(Blur);
+				station->GetVisualStyles().WindowActiveView.SetRetain(Active);
+				station->GetVisualStyles().WindowInactiveView.SetRetain(Inactive);
+			}
 			SafePointer<Template::FrameShape> wb = new Template::FrameShape;
 			wb->Children.Append(::Template->Application[L"Waffle"]);
-			wb->Opacity = 0.75;
+			wb->Opacity = 0.5;
 			wb->RenderMode = FrameShape::FrameRenderMode::Layering;
 			station->GetVisualStyles().WindowDefaultBackground.SetRetain(wb);
 
@@ -283,9 +330,16 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (ID == 2) {
 						auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
 						bar->SetValue(min(max(bar->GetValue() + 0.05, 0.0), 1.0));
+						window->FindChild(1)->Enable(true);
+						if (bar->GetValue() == 1.0) sender->Enable(false);
 					} else if (ID == 1) {
 						auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
 						bar->SetValue(min(max(bar->GetValue() - 0.05, 0.0), 1.0));
+						window->FindChild(2)->Enable(true);
+						if (bar->GetValue() == 0.0) sender->Enable(false);
+					} else if (ID == 202) {
+						static_cast<Controls::ToolButtonPart *>(window->FindChild(202))->Checked ^= true;
+						static_cast<Controls::ToolButtonPart *>(window->FindChild(201))->Disabled ^= true;
 					}
 				}
 				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
@@ -302,7 +356,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			};
 			auto Callback = new _cb;
 
-			auto w = Windows::CreateFramelessDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle::Invalid(), station);
+			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle::Invalid(), station);
+			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.5), Coordinate(0, 0.0, 0.4)), station);
+			static_cast<Controls::ColorView *>(w2->FindChild(7777))->SetColor(0xDDFF8040);
+			w2->SetText(L"window");
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}
@@ -327,7 +384,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
+    wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;

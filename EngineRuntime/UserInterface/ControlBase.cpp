@@ -218,21 +218,23 @@ namespace Engine
 		}
 		void WindowStation::LeftButtonDown(Point at)
 		{
-			if (CaptureWindow) CaptureWindow->LeftButtonDown(CalculateLocalPoint(CaptureWindow, at));
-			else {
-				Window * Target; Point At;
+			Window * Target; Point At;
+			if (CaptureWindow) {
+				Target = CaptureWindow;
+				At = CalculateLocalPoint(CaptureWindow, at);
+			} else {
 				GetMouseTarget(at, &Target, &At);
-				if (Target) {
-					if (!ExclusiveWindow) {
-						Window * Parent = Target->GetOverlappedParent();
-						if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
-							SetActiveWindow(Parent);
-							SetFocus(0);
-						}
-					}
-					Target->LeftButtonDown(At);
-				} else if (ExclusiveWindow) SetExclusiveWindow(0);
 			}
+			if (Target) {
+				if (!ExclusiveWindow) {
+					Window * Parent = Target->GetOverlappedParent();
+					if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+						SetActiveWindow(Parent);
+						SetFocus(0);
+					}
+				}
+				Target->LeftButtonDown(At);
+			} else if (ExclusiveWindow) SetExclusiveWindow(0);
 		}
 		void WindowStation::LeftButtonUp(Point at)
 		{
@@ -254,21 +256,23 @@ namespace Engine
 		}
 		void WindowStation::RightButtonDown(Point at)
 		{
-			if (CaptureWindow) CaptureWindow->RightButtonDown(CalculateLocalPoint(CaptureWindow, at));
-			else {
-				Window * Target; Point At;
+			Window * Target; Point At;
+			if (CaptureWindow) {
+				Target = CaptureWindow;
+				At = CalculateLocalPoint(CaptureWindow, at);
+			} else {
 				GetMouseTarget(at, &Target, &At);
-				if (Target) {
-					if (!ExclusiveWindow) {
-						Window * Parent = Target->GetOverlappedParent();
-						if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
-							SetActiveWindow(Parent);
-							SetFocus(0);
-						}
-					}
-					Target->RightButtonDown(At);
-				} else if (ExclusiveWindow) SetExclusiveWindow(0);
 			}
+			if (Target) {
+				if (!ExclusiveWindow) {
+					Window * Parent = Target->GetOverlappedParent();
+					if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+						SetActiveWindow(Parent);
+						SetFocus(0);
+					}
+				}
+				Target->RightButtonDown(At);
+			} else if (ExclusiveWindow) SetExclusiveWindow(0);
 		}
 		void WindowStation::RightButtonUp(Point at)
 		{

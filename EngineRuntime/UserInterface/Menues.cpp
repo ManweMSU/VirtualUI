@@ -195,6 +195,7 @@ namespace Engine
 				public:
 					SafePointer<Menu> Source;
 					SafePointer<Window> Owner;
+					SafePointer<Window> Focus;
 					MenuList * List;
 					bool Final = false;
 
@@ -211,12 +212,13 @@ namespace Engine
 							child.Render(rect);
 						}
 					}
-					virtual void LostExclusiveMode(void) override { if (!Final) { Destroy(); Owner->PopupMenuCancelled(); } }
+					virtual void LostExclusiveMode(void) override { if (!Final) { GetStation()->SetFocus(Focus); Destroy(); Owner->PopupMenuCancelled(); } }
 					virtual void LeftButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void RightButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void ResetCache(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].WakeUp(GetStation()->GetRenderingDevice()); Window::ResetCache(); }
 					virtual void RaiseEvent(int ID, Event event, Window * sender) override
 					{
+						GetStation()->SetFocus(Focus);
 						Window * owner = Owner;
 						Final = true;
 						GetStation()->SetExclusiveWindow(0);
@@ -401,6 +403,8 @@ namespace Engine
 				holder->Source.SetRetain(this);
 				for (int i = 0; i < Children.Length(); i++) Children[i].WakeUp(owner->GetStation()->GetRenderingDevice());
 				station->SetExclusiveWindow(holder);
+				holder->Focus.SetRetain(station->GetFocus());
+				station->SetFocus(holder);
 				auto menu = station->CreateWindow<MenuService::MenuList>(holder);
 				menu->Elements = &Children;
 				menu->CalculateDimensions();

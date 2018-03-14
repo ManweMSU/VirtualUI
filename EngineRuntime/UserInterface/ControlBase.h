@@ -88,8 +88,10 @@ namespace Engine
 		public:
 			struct VisualStyles
 			{
-				SafePointer<Template::Shape> WindowActiveView; // Argumented with Text, Border and Caption
+				SafePointer<Template::Shape> WindowActiveView; // Argumented with Text, Border, NegBorder, ButtonsWidth, NegButtonsWidth, Caption and NegCaption
 				SafePointer<Template::Shape> WindowInactiveView;
+				SafePointer<Template::Shape> WindowSmallActiveView;
+				SafePointer<Template::Shape> WindowSmallInactiveView;
 				SafePointer<Template::Shape> WindowDefaultBackground;
 				int WindowFixedBorder = 0;
 				int WindowSizableBorder = 0;
