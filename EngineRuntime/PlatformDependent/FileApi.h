@@ -8,6 +8,7 @@ namespace Engine
 	{
 		class FileAccessException : public Exception { public: string ToString(void) const override; };
 		class FileReadEndOfFileException : public Exception { public: uint32 DataRead; FileReadEndOfFileException(uint32 data_read); string ToString(void) const override; };
+		class DirectoryAlreadyExistsException : public Exception { public: string ToString(void) const override; };
 		class FileFormatException : public Exception { public: string ToString(void) const override; };
 
 		enum FileAccess { AccessRead, AccessWrite, AccessReadWrite };
@@ -48,5 +49,15 @@ namespace Engine
 		void RemoveFile(const string & path);
 		void SetCurrentDirectory(const string & path);
 		string GetCurrentDirectory(void);
+		void CreateDirectory(const string & path);
+		void RemoveDirectory(const string & path);
+		string GetExecutablePath(void);
+		namespace Path
+		{
+			string GetExtension(const string & path);
+			string GetFileName(const string & path);
+			string GetDirectory(const string & path);
+			string GetFileNameWithoutExtension(const string & path);
+		}
 	}
 }

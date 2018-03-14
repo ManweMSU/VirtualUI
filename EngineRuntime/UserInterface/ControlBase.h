@@ -203,10 +203,6 @@ namespace Engine
 			virtual Rectangle GetRectangle(void) override;
 			virtual Box GetPosition(void) override;
 			virtual bool IsOverlapped(void) override;
-
-#pragma message("REMOVE!")
-			virtual void RaiseEvent(int ID, Event event, Window * sender) override;
-			virtual void PopupMenuCancelled(void) override;
 		};
 		class ZeroArgumentProvider : public IArgumentProvider
 		{

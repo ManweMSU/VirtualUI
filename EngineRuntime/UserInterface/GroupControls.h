@@ -2,6 +2,7 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
+#include "OverlappedWindows.h"
 
 namespace Engine
 {

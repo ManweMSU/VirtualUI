@@ -2,18 +2,19 @@
 //
 
 #include <Miscellaneous/DynamicString.h>
-#include "UserInterface/ShapeBase.h"
-#include "UserInterface/Templates.h"
-#include "UserInterface/ControlBase.h"
-#include "Streaming.h"
-#include "PlatformDependent/Direct2D.h"
-#include "Miscellaneous/Dictionary.h"
-#include "UserInterface/ControlClasses.h"
-#include "UserInterface/BinaryLoader.h"
-#include "UserInterface/StaticControls.h"
-#include "UserInterface/ButtonControls.h"
-#include "UserInterface/GroupControls.h"
-#include "UserInterface/Menues.h"
+#include <UserInterface/ShapeBase.h>
+#include <UserInterface/Templates.h>
+#include <UserInterface/ControlBase.h>
+#include <Streaming.h>
+#include <PlatformDependent/Direct2D.h>
+#include <Miscellaneous/Dictionary.h>
+#include <UserInterface/ControlClasses.h>
+#include <UserInterface/BinaryLoader.h>
+#include <UserInterface/StaticControls.h>
+#include <UserInterface/ButtonControls.h>
+#include <UserInterface/GroupControls.h>
+#include <UserInterface/Menues.h>
+#include <UserInterface/OverlappedWindows.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -24,7 +25,7 @@
 #include <d3d11_1.h>
 #pragma comment(lib, "d3d11.lib")
 
-#include "PlatformDependent/WindowStation.h"
+#include <PlatformDependent/WindowStation.h>
 
 #undef CreateWindow
 #undef GetCurrentDirectory
@@ -73,10 +74,7 @@ ENGINE_PACKED_STRUCTURE struct TestPacked
 };
 ENGINE_END_PACKED_STRUCTURE
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -90,6 +88,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
 	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
+	(*conout) << L"Full path      : " << IO::GetExecutablePath() << IO::NewLineChar;
+	(*conout) << L"Directory      : " << IO::Path::GetDirectory(IO::GetExecutablePath()) << IO::NewLineChar;
+	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
+	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
+	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 
 	Engine::Direct2D::InitializeFactory();
 
@@ -257,25 +260,51 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 			station->GetVisualStyles().MenuBackground.SetRetain(MenuBack);
 			station->GetVisualStyles().MenuBorder = int(UI::Zoom * 4.0);
+			SafePointer<Template::FrameShape> wb = new Template::FrameShape;
+			wb->Children.Append(::Template->Application[L"Waffle"]);
+			wb->Opacity = 0.75;
+			wb->RenderMode = FrameShape::FrameRenderMode::Layering;
+			station->GetVisualStyles().WindowDefaultBackground.SetRetain(wb);
 
 			menu = new Menues::Menu(::Template->Dialog[L"Menu"]);
 
-			auto Group = station->CreateWindow<UI::Controls::ControlGroup>(0);
-			Group->Background = ::Template->Application[L"Waffle"];
-			Group->SetRectangle(UI::Rectangle(0, 0, Coordinate(0, 150.0, 0.0), Coordinate::Bottom()));
+			class _cb : public Windows::IWindowEventCallback
+			{
+			public:
+				virtual void OnInitialized(UI::Window * window) override
+				{
+					(*conout) << L"Callback: Initialized, window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
+				}
+				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
+				{
+					(*conout) << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
+					if (ID == 876) {
+						menu->RunPopup(sender, station->GetCursorPos());
+					} else if (ID == 2) {
+						auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
+						bar->SetValue(min(max(bar->GetValue() + 0.05, 0.0), 1.0));
+					} else if (ID == 1) {
+						auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
+						bar->SetValue(min(max(bar->GetValue() - 0.05, 0.0), 1.0));
+					}
+				}
+				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
+				{
+					(*conout) << L"Callback: ";
+					if (event == Windows::FrameEvent::Move) (*conout) << L"Move";
+					else if (event == Windows::FrameEvent::Close) (*conout) << L"Close";
+					else if (event == Windows::FrameEvent::Minimize) (*conout) << L"Minimize";
+					else if (event == Windows::FrameEvent::Maximize) (*conout) << L"Maximize";
+					else if (event == Windows::FrameEvent::Help) (*conout) << L"Help";
+					else if (event == Windows::FrameEvent::PopupMenuCancelled) (*conout) << L"Popup menu cancelled";
+					(*conout) << L", window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
+				}
+			};
+			auto Callback = new _cb;
 
-			auto New = station->CreateWindow<UI::Controls::Button>(Group, &::Template->Dialog[L"Test"]->Children[2]);
-			New->SetRectangle(UI::Rectangle(10, 50, Coordinate(-10, 0.0, 1.0), Coordinate(0, 28.0, 0.0) + 50));
-			New->ID = 101;
-			auto New2 = station->CreateWindow<UI::Controls::Button>(Group, &::Template->Dialog[L"Test"]->Children[2]);
-			New2->SetRectangle(UI::Rectangle(10, Coordinate(0, 28.0, 0.0) + 60, Coordinate(-10, 0.0, 1.0), Coordinate(0, 56.0, 0.0) + 60));
-			New2->SetText(L"xyu");
-			New2->ID = 102;
-			auto New3 = station->CreateWindow<UI::Controls::Button>(Group, &::Template->Dialog[L"Test"]->Children[2]);
-			New3->SetRectangle(UI::Rectangle(30, 10, 80, 200));
-			New3->SetText(L"3");
-			New3->ID = 103;
-			New3->SetOrder(Window::DepthOrder::MoveDown);
+			auto w = Windows::CreateFramelessDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle::Invalid(), station);
+
+			(*conout) << L"Done!" << IO::NewLineChar;
 		}
 	}
 

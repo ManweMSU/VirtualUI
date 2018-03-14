@@ -1,14 +1,10 @@
 #include "ControlBase.h"
 
-#include "Menues.h"
-extern Engine::SafePointer<Engine::Streaming::TextWriter> conout;
-extern Engine::SafePointer<Engine::UI::Menues::Menu> menu;
-
 namespace Engine
 {
 	namespace UI
 	{
-		Window::Window(Window * parent, WindowStation * station) { Parent.SetRetain(parent); Station.SetRetain(station); WindowPosition = Box(0, 0, 0, 0); }
+		Window::Window(Window * parent, WindowStation * station) : Children(0x10) { Parent.SetRetain(parent); Station.SetRetain(station); WindowPosition = Box(0, 0, 0, 0); }
 		Window::~Window(void) {}
 		void Window::Render(const Box & at) {}
 		void Window::ResetCache(void) { for (int i = 0; i < Children.Length(); i++) Children[i].ResetCache(); }
@@ -357,8 +353,8 @@ namespace Engine
 		}
 		void ParentWindow::ArrangeChildren(void)
 		{
-			for (int i = 0; i < Children.Length(); i++) {
-				Box inner = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+			Box inner = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+			for (int i = 0; i < Children.Length(); i++) {	
 				auto rect = Children[i].GetRectangle();
 				if (rect.IsValid()) {
 					Children[i].SetPosition(Box(rect, inner));
@@ -394,19 +390,7 @@ namespace Engine
 		void TopLevelWindow::ResetCache(void) { BackgroundShape.SetReference(0); }
 		Rectangle TopLevelWindow::GetRectangle(void) { return Rectangle::Entire(); }
 		Box TopLevelWindow::GetPosition(void) { return GetStation()->GetBox(); }
-
 		bool TopLevelWindow::IsOverlapped(void) { return true; }
-
-		void TopLevelWindow::RaiseEvent(int ID, Event event, Window * sender)
-		{
-			(*conout) << L"DEBUG: Event with ID = " << ID << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
-			if (ID == 103) GetStation()->SetExclusiveWindow(sender);
-			else if (ID == 101) menu->RunPopup(this, GetStation()->GetCursorPos());
-		}
-		void TopLevelWindow::PopupMenuCancelled(void)
-		{
-			(*conout) << L"DEBUG: Popup menu cancelled." << IO::NewLineChar;
-		}
 
 		ZeroArgumentProvider::ZeroArgumentProvider(void) {}
 		void ZeroArgumentProvider::GetArgument(const string & name, int * value) { *value = 0; }

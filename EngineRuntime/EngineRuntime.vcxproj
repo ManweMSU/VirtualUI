@@ -37,6 +37,7 @@
     <ClInclude Include="UserInterface\ControlClasses.h" />
     <ClInclude Include="UserInterface\GroupControls.h" />
     <ClInclude Include="UserInterface\Menues.h" />
+    <ClInclude Include="UserInterface\OverlappedWindows.h" />
     <ClInclude Include="UserInterface\ShapeBase.h" />
     <ClInclude Include="UserInterface\StaticControls.h" />
     <ClInclude Include="UserInterface\Templates.h" />
@@ -59,6 +60,7 @@
     <ClCompile Include="UserInterface\ControlClasses.cpp" />
     <ClCompile Include="UserInterface\GroupControls.cpp" />
     <ClCompile Include="UserInterface\Menues.cpp" />
+    <ClCompile Include="UserInterface\OverlappedWindows.cpp" />
     <ClCompile Include="UserInterface\ShapeBase.cpp" />
     <ClCompile Include="UserInterface\StaticControls.cpp" />
     <ClCompile Include="UserInterface\Templates.cpp" />

@@ -83,6 +83,9 @@
     <ClInclude Include="UserInterface\Menues.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\OverlappedWindows.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp">
@@ -143,6 +146,9 @@
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\Menues.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\OverlappedWindows.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>

@@ -11,6 +11,7 @@ namespace Engine
 			{
 				if (Template->Properties->GetTemplateClass() != L"ControlGroup") throw InvalidArgumentException();
 				static_cast<Template::Controls::ControlGroup &>(*this) = static_cast<Template::Controls::ControlGroup &>(*Template->Properties);
+				Constructor::ConstructChildren(this, Template);
 			}
 			ControlGroup::~ControlGroup(void) {}
 			void ControlGroup::Render(const Box & at)

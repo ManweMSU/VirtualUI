@@ -7,6 +7,8 @@
 #undef MoveFile
 #undef SetCurrentDirectory
 #undef GetCurrentDirectory
+#undef CreateDirectory
+#undef RemoveDirectory
 
 namespace Engine
 {
@@ -15,6 +17,7 @@ namespace Engine
 		string FileAccessException::ToString(void) const { return L"FileAccessException"; }
 		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
 		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
+		string DirectoryAlreadyExistsException::ToString(void) const { return L"DirectoryAlreadyExistsException"; }
 		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
 		string NormalizePath(const string & path)
 		{
@@ -174,6 +177,71 @@ namespace Engine
 				else break;
 			} while (true);
 			return exp;
+		}
+		void CreateDirectory(const string & path)
+		{
+			if (!CreateDirectoryW(NormalizePath(path), 0)) {
+				if (GetLastError() == ERROR_ALREADY_EXISTS) throw DirectoryAlreadyExistsException();
+				throw FileAccessException();
+			}
+		}
+		void RemoveDirectory(const string & path)
+		{
+			if (!RemoveDirectoryW(NormalizePath(path))) throw FileAccessException();
+		}
+		string GetExecutablePath(void)
+		{
+			DynamicString path;
+			path.ReserveLength(0x1000);
+			do {
+				SetLastError(ERROR_SUCCESS);
+				if (!GetModuleFileNameW(0, path, path.ReservedLength())) throw Exception();
+				if (GetLastError() == ERROR_SUCCESS) return path;
+				else if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) throw Exception();
+				path.ReserveLength(path.ReservedLength() * 2);
+			} while (true);
+			return path;
+		}
+		namespace Path
+		{
+			string GetExtension(const string & path)
+			{
+				int s = path.Length() - 1;
+				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
+				for (int i = s; i >= 0; i--) {
+					if (path[i] == L'.') {
+						if (i != 0 && path[i - 1] != L'\\' && path[i - 1] != L'/') return path.Fragment(i + 1, s - i);
+					}
+					if (path[i] == L'/' || path[i] == L'\\') return L"";
+				}
+				return L"";
+			}
+			string GetFileName(const string & path)
+			{
+				int s = path.Length() - 1;
+				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
+				for (int i = s; i >= 0; i--) {
+					if (path[i] == L'\\' || path[i] == L'/') return path.Fragment(i + 1, s - i);
+				}
+				return path.Fragment(0, s + 1);
+			}
+			string GetDirectory(const string & path)
+			{
+				int s = path.Length() - 1;
+				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
+				for (int i = s; i >= 0; i--) {
+					if (path[i] == L'\\' || path[i] == L'/') return path.Fragment(0, i);
+				}
+				return L"";
+			}
+			string GetFileNameWithoutExtension(const string & path)
+			{
+				string name = GetFileName(path);
+				for (int i = name.Length() - 1; i > 0; i--) {
+					if (name[i] == L'.') return name.Fragment(0, i);
+				}
+				return name;
+			}
 		}
 	}
 }
