@@ -1,5 +1,7 @@
 #include "ButtonControls.h"
 
+#include "GroupControls.h"
+
 namespace Engine
 {
 	namespace UI
@@ -31,6 +33,50 @@ namespace Engine
 							(*value)->Retain();
 						} else *value = 0;
 					}
+					virtual void GetArgument(const string & name, IFont ** value) override
+					{
+						if (name == L"Font" && Owner->Font) {
+							*value = Owner->Font;
+							(*value)->Retain();
+						} else *value = 0;
+					}
+				};
+				class CheckBoxArgumentProvider : public IArgumentProvider
+				{
+				public:
+					CheckBox * Owner;
+					CheckBoxArgumentProvider(CheckBox * owner) : Owner(owner) {}
+					virtual void GetArgument(const string & name, int * value) override { *value = 0; }
+					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
+					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
+					virtual void GetArgument(const string & name, string * value) override
+					{
+						if (name == L"Text") *value = Owner->Text;
+						else *value = L"";
+					}
+					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, IFont ** value) override
+					{
+						if (name == L"Font" && Owner->Font) {
+							*value = Owner->Font;
+							(*value)->Retain();
+						} else *value = 0;
+					}
+				};
+				class RadioButtonArgumentProvider : public IArgumentProvider
+				{
+				public:
+					RadioButton * Owner;
+					RadioButtonArgumentProvider(RadioButton * owner) : Owner(owner) {}
+					virtual void GetArgument(const string & name, int * value) override { *value = 0; }
+					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
+					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
+					virtual void GetArgument(const string & name, string * value) override
+					{
+						if (name == L"Text") *value = Owner->Text;
+						else *value = L"";
+					}
+					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
 					virtual void GetArgument(const string & name, IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
@@ -137,10 +183,7 @@ namespace Engine
 			void Button::SetGrayedImage(ITexture * Image) { ImageGrayed.SetRetain(Image); ResetCache(); }
 			ITexture * Button::GetGrayedImage(void) { return ImageGrayed; }
 			void Button::FocusChanged(bool got_focus) { if (!got_focus && _state == 0x12) _state = 0; }
-			void Button::CaptureChanged(bool got_capture)
-			{
-				if (!got_capture) _state = 0;
-			}
+			void Button::CaptureChanged(bool got_capture) { if (!got_capture) _state = 0; }
 			void Button::LeftButtonDown(Point at)
 			{
 				SetFocus();
@@ -184,6 +227,288 @@ namespace Engine
 					if (_state == 0x12) {
 						_state = 0x0;
 						GetParent()->RaiseEvent(ID, Event::Command, this);
+					}
+				}
+			}
+
+			CheckBox::CheckBox(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			CheckBox::CheckBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
+			{
+				if (Template->Properties->GetTemplateClass() != L"CheckBox") throw InvalidArgumentException();
+				static_cast<Template::Controls::CheckBox &>(*this) = static_cast<Template::Controls::CheckBox &>(*Template->Properties);
+			}
+			CheckBox::~CheckBox(void) {}
+			void CheckBox::Render(const Box & at)
+			{
+				Shape ** shape = 0;
+				Template::Shape * temp = 0;
+				if (IsEnabled()) {
+					if ((_state & 0xF) == 2) {
+						if (Checked) {
+							shape = _pressed_checked.InnerRef();
+							temp = ViewPressedChecked.Inner();
+						} else {
+							shape = _pressed.InnerRef();
+							temp = ViewPressed.Inner();
+						}
+					} else if ((_state & 0xF) == 1) {
+						if (Checked) {
+							shape = _hot_checked.InnerRef();
+							temp = ViewHotChecked.Inner();
+						} else {
+							shape = _hot.InnerRef();
+							temp = ViewHot.Inner();
+						}
+					} else {
+						if (GetFocus() == this) {
+							if (Checked) {
+								shape = _focused_checked.InnerRef();
+								temp = ViewFocusedChecked.Inner();
+							} else {
+								shape = _focused.InnerRef();
+								temp = ViewFocused.Inner();
+							}
+						} else {
+							if (Checked) {
+								shape = _normal_checked.InnerRef();
+								temp = ViewNormalChecked.Inner();
+							} else {
+								shape = _normal.InnerRef();
+								temp = ViewNormal.Inner();
+							}
+						}
+					}
+				} else {
+					if (Checked) {
+						shape = _disabled_checked.InnerRef();
+						temp = ViewDisabledChecked.Inner();
+					} else {
+						shape = _disabled.InnerRef();
+						temp = ViewDisabled.Inner();
+					}
+				}
+				if (!(*shape) && temp) {
+					*shape = temp->Initialize(&ArgumentService::CheckBoxArgumentProvider(this));
+				}
+				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
+			}
+			void CheckBox::ResetCache(void)
+			{
+				_normal.SetReference(0);
+				_disabled.SetReference(0);
+				_focused.SetReference(0);
+				_hot.SetReference(0);
+				_pressed.SetReference(0);
+				_normal_checked.SetReference(0);
+				_disabled_checked.SetReference(0);
+				_focused_checked.SetReference(0);
+				_hot_checked.SetReference(0);
+				_pressed_checked.SetReference(0);
+			}
+			void CheckBox::Enable(bool enable) { Disabled = !enable; if (Disabled) _state = 0; }
+			bool CheckBox::IsEnabled(void) { return !Disabled; }
+			void CheckBox::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			bool CheckBox::IsVisible(void) { return !Invisible; }
+			bool CheckBox::IsTabStop(void) { return true; }
+			void CheckBox::SetID(int _ID) { ID = _ID; }
+			int CheckBox::GetID(void) { return ID; }
+			Window * CheckBox::FindChild(int _ID)
+			{
+				if (ID == _ID && ID != 0) return this;
+				else return 0;
+			}
+			void CheckBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle CheckBox::GetRectangle(void) { return ControlPosition; }
+			void CheckBox::SetText(const string & text) { Text = text; ResetCache(); }
+			string CheckBox::GetText(void) { return Text; }
+			void CheckBox::FocusChanged(bool got_focus) { if (!got_focus && _state == 0x12) _state = 0; }
+			void CheckBox::CaptureChanged(bool got_capture) { if (!got_capture) _state = 0; }
+			void CheckBox::LeftButtonDown(Point at)
+			{
+				SetFocus();
+				if (_state == 1 || (_state & 0x10)) {
+					_state = 2;
+				}
+			}
+			void CheckBox::LeftButtonUp(Point at)
+			{
+				if (_state == 2) {
+					ReleaseCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						Checked ^= true;
+						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					}
+				} else ReleaseCapture();
+			}
+			void CheckBox::MouseMove(Point at)
+			{
+				if (_state == 0) {
+					_state = 1;
+					SetCapture();
+				} else if (_state == 1) {
+					SetCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
+						_state = 0;
+						ReleaseCapture();
+					}
+				}
+			}
+			void CheckBox::KeyDown(int key_code)
+			{
+				if (key_code == L' ') {
+					if (_state != 0x2 && _state != 0x12) {
+						_state = 0x12;
+					}
+				}
+			}
+			void CheckBox::KeyUp(int key_code)
+			{
+				if (key_code == L' ') {
+					if (_state == 0x12) {
+						_state = 0x0;
+						Checked ^= true;
+						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					}
+				}
+			}
+
+			RadioButton::RadioButton(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			RadioButton::RadioButton(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
+			{
+				if (Template->Properties->GetTemplateClass() != L"RadioButton") throw InvalidArgumentException();
+				static_cast<Template::Controls::RadioButton &>(*this) = static_cast<Template::Controls::RadioButton &>(*Template->Properties);
+			}
+			RadioButton::~RadioButton(void) {}
+			void RadioButton::Render(const Box & at)
+			{
+				Shape ** shape = 0;
+				Template::Shape * temp = 0;
+				if (IsEnabled()) {
+					if ((_state & 0xF) == 2) {
+						if (Checked) {
+							shape = _pressed_checked.InnerRef();
+							temp = ViewPressedChecked.Inner();
+						} else {
+							shape = _pressed.InnerRef();
+							temp = ViewPressed.Inner();
+						}
+					} else if ((_state & 0xF) == 1) {
+						if (Checked) {
+							shape = _hot_checked.InnerRef();
+							temp = ViewHotChecked.Inner();
+						} else {
+							shape = _hot.InnerRef();
+							temp = ViewHot.Inner();
+						}
+					} else {
+						if (GetFocus() == this) {
+							if (Checked) {
+								shape = _focused_checked.InnerRef();
+								temp = ViewFocusedChecked.Inner();
+							} else {
+								shape = _focused.InnerRef();
+								temp = ViewFocused.Inner();
+							}
+						} else {
+							if (Checked) {
+								shape = _normal_checked.InnerRef();
+								temp = ViewNormalChecked.Inner();
+							} else {
+								shape = _normal.InnerRef();
+								temp = ViewNormal.Inner();
+							}
+						}
+					}
+				} else {
+					if (Checked) {
+						shape = _disabled_checked.InnerRef();
+						temp = ViewDisabledChecked.Inner();
+					} else {
+						shape = _disabled.InnerRef();
+						temp = ViewDisabled.Inner();
+					}
+				}
+				if (!(*shape) && temp) {
+					*shape = temp->Initialize(&ArgumentService::RadioButtonArgumentProvider(this));
+				}
+				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
+			}
+			void RadioButton::ResetCache(void)
+			{
+				_normal.SetReference(0);
+				_disabled.SetReference(0);
+				_focused.SetReference(0);
+				_hot.SetReference(0);
+				_pressed.SetReference(0);
+				_normal_checked.SetReference(0);
+				_disabled_checked.SetReference(0);
+				_focused_checked.SetReference(0);
+				_hot_checked.SetReference(0);
+				_pressed_checked.SetReference(0);
+			}
+			void RadioButton::Enable(bool enable) { Disabled = !enable; if (Disabled) _state = 0; }
+			bool RadioButton::IsEnabled(void) { return !Disabled; }
+			void RadioButton::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			bool RadioButton::IsVisible(void) { return !Invisible; }
+			bool RadioButton::IsTabStop(void) { return true; }
+			void RadioButton::SetID(int _ID) { ID = _ID; }
+			int RadioButton::GetID(void) { return ID; }
+			Window * RadioButton::FindChild(int _ID)
+			{
+				if (ID == _ID && ID != 0) return this;
+				else return 0;
+			}
+			void RadioButton::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle RadioButton::GetRectangle(void) { return ControlPosition; }
+			void RadioButton::SetText(const string & text) { Text = text; ResetCache(); }
+			string RadioButton::GetText(void) { return Text; }
+			void RadioButton::FocusChanged(bool got_focus) { if (!got_focus && _state == 0x12) _state = 0; }
+			void RadioButton::CaptureChanged(bool got_capture) { if (!got_capture) _state = 0; }
+			void RadioButton::LeftButtonDown(Point at)
+			{
+				SetFocus();
+				if (_state == 1 || (_state & 0x10)) {
+					_state = 2;
+				}
+			}
+			void RadioButton::LeftButtonUp(Point at)
+			{
+				if (_state == 2) {
+					ReleaseCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						static_cast<RadioButtonGroup *>(GetParent())->CheckRadioButton(this);
+						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					}
+				} else ReleaseCapture();
+			}
+			void RadioButton::MouseMove(Point at)
+			{
+				if (_state == 0) {
+					_state = 1;
+					SetCapture();
+				} else if (_state == 1) {
+					SetCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
+						_state = 0;
+						ReleaseCapture();
+					}
+				}
+			}
+			void RadioButton::KeyDown(int key_code)
+			{
+				if (key_code == L' ') {
+					if (_state != 0x2 && _state != 0x12) {
+						_state = 0x12;
+					}
+				}
+			}
+			void RadioButton::KeyUp(int key_code)
+			{
+				if (key_code == L' ') {
+					if (_state == 0x12) {
+						_state = 0x0;
+						static_cast<RadioButtonGroup *>(GetParent())->CheckRadioButton(this);
+						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 					}
 				}
 			}

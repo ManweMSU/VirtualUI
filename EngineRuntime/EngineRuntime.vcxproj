@@ -31,6 +31,9 @@
     <ClInclude Include="PlatformDependent\StringConvert.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
     <ClInclude Include="Streaming.h" />
+    <ClInclude Include="Syntax\Grammar.h" />
+    <ClInclude Include="Syntax\Regular.h" />
+    <ClInclude Include="Syntax\Tokenization.h" />
     <ClInclude Include="UserInterface\BinaryLoader.h" />
     <ClInclude Include="UserInterface\ButtonControls.h" />
     <ClInclude Include="UserInterface\ControlBase.h" />
@@ -54,6 +57,8 @@
     <ClCompile Include="PlatformDependent\StringConvert.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
     <ClCompile Include="Streaming.cpp" />
+    <ClCompile Include="Syntax\Regular.cpp" />
+    <ClCompile Include="Syntax\Tokenization.cpp" />
     <ClCompile Include="UserInterface\BinaryLoader.cpp" />
     <ClCompile Include="UserInterface\ButtonControls.cpp" />
     <ClCompile Include="UserInterface\ControlBase.cpp" />

@@ -96,6 +96,15 @@ namespace Engine
 			}
 			return false;
 		}
+		bool Window::IsAvailable(void)
+		{
+			Window * current = this;
+			do {
+				if (!current->IsEnabled() || !current->IsVisible()) return false;
+				current = current->Parent;
+			} while (current->Parent);
+			return true;
+		}
 		Window * Window::GetOverlappedParent(void)
 		{
 			Window * current = this;
@@ -218,6 +227,7 @@ namespace Engine
 		}
 		void WindowStation::LeftButtonDown(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			Window * Target; Point At;
 			if (CaptureWindow) {
 				Target = CaptureWindow;
@@ -238,6 +248,7 @@ namespace Engine
 		}
 		void WindowStation::LeftButtonUp(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->LeftButtonUp(CalculateLocalPoint(CaptureWindow, at));
 			else {
 				Window * Target; Point At;
@@ -247,6 +258,7 @@ namespace Engine
 		}
 		void WindowStation::LeftButtonDoubleClick(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->LeftButtonDoubleClick(CalculateLocalPoint(CaptureWindow, at));
 			else {
 				Window * Target; Point At;
@@ -256,6 +268,7 @@ namespace Engine
 		}
 		void WindowStation::RightButtonDown(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			Window * Target; Point At;
 			if (CaptureWindow) {
 				Target = CaptureWindow;
@@ -276,6 +289,7 @@ namespace Engine
 		}
 		void WindowStation::RightButtonUp(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->RightButtonUp(CalculateLocalPoint(CaptureWindow, at));
 			else {
 				Window * Target; Point At;
@@ -285,6 +299,7 @@ namespace Engine
 		}
 		void WindowStation::RightButtonDoubleClick(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->RightButtonDoubleClick(CalculateLocalPoint(CaptureWindow, at));
 			else {
 				Window * Target; Point At;
@@ -294,6 +309,7 @@ namespace Engine
 		}
 		void WindowStation::MouseMove(Point at)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			Window * Target; Point At;
 			if (CaptureWindow) {
 				Target = CaptureWindow;
@@ -308,6 +324,7 @@ namespace Engine
 		}
 		void WindowStation::ScrollVertically(int delta)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->ScrollVertically(delta);
 			else {
 				Window * Target = EnabledHitTest(GetCursorPos());
@@ -316,15 +333,16 @@ namespace Engine
 		}
 		void WindowStation::ScrollHorizontally(int delta)
 		{
+			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->ScrollHorizontally(delta);
 			else {
 				Window * Target = EnabledHitTest(GetCursorPos());
 				if (Target) Target->ScrollHorizontally(delta);
 			}
 		}
-		void WindowStation::KeyDown(int key_code) { if (FocusedWindow) FocusedWindow->KeyDown(key_code); }
-		void WindowStation::KeyUp(int key_code) { if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
-		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
+		void WindowStation::KeyDown(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyDown(key_code); }
+		void WindowStation::KeyUp(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
+		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
 		ICursor * WindowStation::LoadCursor(Streaming::Stream * Source) { return 0; }
 		ICursor * WindowStation::GetSystemCursor(SystemCursor cursor) { return 0; }

@@ -248,8 +248,10 @@ namespace Engine
 					for (int i = 0; i < source->Children.Length(); i++) {
 						// Group controls
 						if (source->Children[i].Properties->GetTemplateClass() == L"ControlGroup") on->GetStation()->CreateWindow<ControlGroup>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"RadioButtonGroup") on->GetStation()->CreateWindow<RadioButtonGroup>(on, &source->Children[i]);
 						// Button controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Button") on->GetStation()->CreateWindow<Button>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"CheckBox") on->GetStation()->CreateWindow<CheckBox>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ToolButton") on->GetStation()->CreateWindow<ToolButton>(on, &source->Children[i]);
 						// Static controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Static") on->GetStation()->CreateWindow<Static>(on, &source->Children[i]);

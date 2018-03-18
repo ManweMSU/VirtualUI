@@ -79,6 +79,7 @@ namespace Engine
 			void Destroy(void);
 			Box GetAbsolutePosition(void);
 			bool IsGeneralizedParent(Window * window);
+			bool IsAvailable(void);
 			Window * GetOverlappedParent(void);
 		};
 		class ICursor : public Object {};
@@ -194,11 +195,12 @@ namespace Engine
 		};
 		class TopLevelWindow : public ParentWindow
 		{
+			friend class WindowStation;
 		private:
 			SafePointer<Shape> BackgroundShape;
+			TopLevelWindow(Window * parent, WindowStation * station);
 		public:
 			SafePointer<Template::Shape> Background;
-			TopLevelWindow(Window * parent, WindowStation * station);
 			virtual ~TopLevelWindow(void) override;
 			virtual void Render(const Box & at) override;
 			virtual void ResetCache(void) override;
