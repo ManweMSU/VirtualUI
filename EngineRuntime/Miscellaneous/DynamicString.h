@@ -19,6 +19,9 @@ namespace Engine
 		ImmutableString ToString(void) const override;
 		int Length(void) const;
 
+		widechar * GetBuffer(void);
+		const widechar * GetBuffer(void) const;
+
 		widechar CharAt(int index) const;
 		widechar & CharAt(int index);
 		widechar operator [] (int index) const;

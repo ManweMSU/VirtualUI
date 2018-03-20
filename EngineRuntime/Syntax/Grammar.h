@@ -82,6 +82,9 @@ namespace Engine
 			void EnumerateFinalNodes(INodeEnumerator * enumerator) const;
 			void CollectSequence(Array<Token> & to) const;
 			Array<Token> * CollectSequence(void) const;
+
+			bool IsUnlabeledNode(void) const;
+			void OptimizeNode(void);
 		};
 		class SyntaxTree : public Object
 		{

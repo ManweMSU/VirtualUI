@@ -142,26 +142,79 @@ namespace Engine
 			result->Retain();
 			return result;
 		}
+		bool SyntaxTreeNode::IsUnlabeledNode(void) const { return !Label.Length() && Expands.Class == TokenClass::Unknown; }
+		void SyntaxTreeNode::OptimizeNode(void)
+		{
+			for (int i = 0; i < Subnodes.Length(); i++) {
+				if (Subnodes[i].IsUnlabeledNode()) {
+					for (int j = Subnodes[i].Subnodes.Length() - 1; j >= 0; j--) {
+						Subnodes.Insert(Subnodes[i].Subnodes[j], i + 1);
+					}
+					Subnodes.Remove(i);
+					i--;
+				}
+			}
+			for (int i = 0; i < Subnodes.Length(); i++) Subnodes[i].OptimizeNode();
+		}
 
 		namespace SyntaxParser
 		{
 			void ParseRule(SyntaxTreeNode & node, Grammar::GrammarRule & rule, Grammar & grammar, const Array<Token> & stream, int & position)
 			{
 				if (!rule.CanBeginWith.Length()) rule.BuildBeginnings(grammar);
+				node.Label = rule.Label;
 				if (rule.Class == Grammar::GrammarRule::RuleClass::Sequence) {
-
+					int repeat = 0;
+					while (repeat < rule.MaxRepeat || rule.MaxRepeat <= 0) {
+						if (rule.IsPossibleBeginning(stream[position])) {
+							repeat++;
+							for (int i = 0; i < rule.Rules.Length(); i++) {
+								node.Subnodes << SyntaxTreeNode();
+								ParseRule(node.Subnodes.LastElement(), rule.Rules[i], grammar, stream, position);
+							}
+						} else break;
+					}
+					if (repeat < rule.MinRepeat) throw ParserSyntaxException(position, L"Another token expected");
 				} else if (rule.Class == Grammar::GrammarRule::RuleClass::Variant) {
-
+					int repeat = 0;
+					while (repeat < rule.MaxRepeat || rule.MaxRepeat <= 0) {
+						if (rule.IsPossibleBeginning(stream[position])) {
+							repeat++;
+							bool found = false;
+							for (int i = 0; i < rule.Rules.Length(); i++) {
+								if (rule.Rules[i].IsPossibleBeginning(stream[position])) {
+									node.Subnodes << SyntaxTreeNode();
+									ParseRule(node.Subnodes.LastElement(), rule.Rules[i], grammar, stream, position);
+									found = true;
+									break;
+								}
+							}
+							if (!found) throw ParserSyntaxException(position, L"Invalid variant token");
+						} else break;
+					}
+					if (repeat < rule.MinRepeat) throw ParserSyntaxException(position, L"Another token expected");
 				} else if (rule.Class == Grammar::GrammarRule::RuleClass::Reference) {
-
+					int repeat = 0;
+					while (repeat < rule.MaxRepeat || rule.MaxRepeat <= 0) {
+						if (rule.IsPossibleBeginning(stream[position])) {
+							repeat++;
+							auto replace = grammar.Rules[rule.Reference];
+							node.Subnodes << SyntaxTreeNode();
+							ParseRule(node.Subnodes.LastElement(), *replace, grammar, stream, position);
+						} else break;
+					}
+					if (repeat < rule.MinRepeat) throw ParserSyntaxException(position, L"Another token expected");
 				} else if (rule.Class == Grammar::GrammarRule::RuleClass::Token) {
-
+					int repeat = 0;
+					while (repeat < rule.MaxRepeat || rule.MaxRepeat <= 0) {
+						if (rule.IsPossibleBeginning(stream[position])) {
+							repeat++;
+							node.Expands = stream[position];
+							position++;
+						} else break;
+					}
+					if (repeat < rule.MinRepeat) throw ParserSyntaxException(position, L"Another token expected");
 				}
-				/*int repeat_count = 0;
-				while (rule.IsPossibleBeginning(stream[position]) && (rule.MaxRepeat <= 0 || repeat_count < rule.MaxRepeat)) {
-					repeat_count++;
-				}
-				if (repeat_count < rule.MinRepeat) throw ParserSyntaxException(position, L"Token repeat is too short.");*/
 			}
 		}
 
@@ -169,6 +222,7 @@ namespace Engine
 		{
 			int position = 0;
 			SyntaxParser::ParseRule(Root, *grammar.Rules[grammar.EntranceRule], grammar, token_stream, position);
+			if (token_stream[position].Class != TokenClass::EndOfStream) throw ParserSyntaxException(position, L"End-of-stream expected");
 		}
 		SyntaxTree::~SyntaxTree(void) {}
 	}

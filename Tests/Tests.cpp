@@ -17,6 +17,7 @@
 #include <UserInterface/OverlappedWindows.h>
 #include <Syntax/Tokenization.h>
 #include <Syntax/Grammar.h>
+#include <PlatformDependent/KeyCodes.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -234,9 +235,17 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		grammar.Rules.Append(add_operation->Label, add_operation);
 		grammar.Rules.Append(mul_operation->Label, mul_operation);
 		grammar.Rules.Append(operand->Label, operand);
+		grammar.EntranceRule = L"expression";
 
 		expression->BuildBeginnings(grammar);
+		
+		SafePointer< Array<Syntax::Token> > stream = Syntax::ParseText(L"(pidor + 5) * 7 + kornevgen / (30 + 70) + 666", blang);
+		SafePointer<Syntax::SyntaxTree> tree = new Syntax::SyntaxTree(*stream, grammar);
+		tree->Root.OptimizeNode();
 
+		(*conout) << L"==============================" << IO::NewLineChar;
+
+		(*conout) << Keyboard::GetKeyboardDelay() << L" : " << Keyboard::GetKeyboardSpeed() << IO::NewLineChar;
 		(*conout) << L"==============================" << IO::NewLineChar;
 	}
 

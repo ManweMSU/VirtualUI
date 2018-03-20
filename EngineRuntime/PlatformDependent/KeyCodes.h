@@ -8,6 +8,8 @@ namespace Engine
 	{
 		bool IsKeyPressed(uint key_code);
 		bool IsKeyToggled(uint key_code);
+		int GetKeyboardDelay(void);
+		int GetKeyboardSpeed(void);
 	}
 	namespace KeyCodes
 	{

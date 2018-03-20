@@ -33,4 +33,19 @@
       <Item Name="Требуемая лексема" Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Token">TokenClass</Item>
     </Expand>
   </Type>
+  <Type Name="Engine::Syntax::SyntaxTreeNode">
+    <DisplayString Condition="Expands.Class == Engine::Syntax::TokenClass::Unknown">Узел лексем {Label}</DisplayString>
+    <DisplayString Condition="Expands.Class != Engine::Syntax::TokenClass::Unknown">Лексема {Label}: {Expands}</DisplayString>
+    <Expand>
+      <Item Name="Метка">Label</Item>
+      <ExpandedItem Condition="Expands.Class == Engine::Syntax::TokenClass::Unknown">Subnodes</ExpandedItem>
+      <Item Name="Лексема" Condition="Expands.Class != Engine::Syntax::TokenClass::Unknown">Expands</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Syntax::SyntaxTree">
+    <DisplayString>Грамматическое дерево</DisplayString>
+    <Expand>
+      <ExpandedItem>Root</ExpandedItem>
+    </Expand>
+  </Type>
 </AutoVisualizer>

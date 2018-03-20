@@ -11,6 +11,8 @@ namespace Engine
 	DynamicString::operator const widechar*(void) const { return data.GetBuffer(); }
 	ImmutableString DynamicString::ToString(void) const { return ImmutableString(data.GetBuffer(), data.Length()); }
 	int DynamicString::Length(void) const { return StringLength(data.GetBuffer()); }
+	widechar * DynamicString::GetBuffer(void) { return data.GetBuffer(); }
+	const widechar * DynamicString::GetBuffer(void) const { return data.GetBuffer(); }
 	widechar DynamicString::CharAt(int index) const { return data[index]; }
 	widechar & DynamicString::CharAt(int index) { return data[index]; }
 	widechar DynamicString::operator[](int index) const { return data[index]; }
