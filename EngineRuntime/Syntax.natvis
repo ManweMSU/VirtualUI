@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Engine::Syntax::Token">
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Keyword">Ключевое слово: {Content}</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Identifier">Идентификатор: {Content}</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::EndOfStream">Конец потока</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::CharCombo">Комбинация символов: {Content}</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Constant &amp;&amp; ValueClass == Engine::Syntax::TokenConstantClass::Numeric">Числовая константа: {Content}</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Constant &amp;&amp; ValueClass == Engine::Syntax::TokenConstantClass::String">Строковая константа: "{Content}"</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Constant &amp;&amp; ValueClass == Engine::Syntax::TokenConstantClass::Boolean &amp;&amp; wcslen(Content.text) == 0">Логическая константа: Ложь</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Constant &amp;&amp; ValueClass == Engine::Syntax::TokenConstantClass::Boolean &amp;&amp; wcslen(Content.text) == 1">Логическая константа: Истина</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::TokenClass::Void">Пустая лексема</DisplayString>
+    <Expand>
+      <Item Name="Класс">Class</Item>
+      <Item Name="Класс константы">ValueClass</Item>
+      <Item Name="Содержимое">Content</Item>
+      <Item Name="Положение в источнике">SourcePosition</Item>
+    </Expand>
+  </Type>
+  <Type Name="Engine::Syntax::Grammar::GrammarRule">
+    <DisplayString Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Variant">Одно из правил</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Sequence">Последовательность правил</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Reference">Ссылка на правило: {Reference}</DisplayString>
+    <DisplayString Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Token">Лексема: {TokenClass}</DisplayString>
+    <Expand>
+      <Item Name="Класс">Class</Item>
+      <Item Name="Минимум повторов">MinRepeat</Item>
+      <Item Name="Максимум повторов">MaxRepeat</Item>
+      <Item Name="Метка">Label</Item>
+      <Item Name="[Может начинаться с...]">CanBeginWith</Item>
+      <ExpandedItem Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Variant || Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Sequence">Rules</ExpandedItem>
+      <Item Name="Имя подставляемого правила" Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Reference">Reference</Item>
+      <Item Name="Требуемая лексема" Condition="Class == Engine::Syntax::Grammar::GrammarRule::RuleClass::Token">TokenClass</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>

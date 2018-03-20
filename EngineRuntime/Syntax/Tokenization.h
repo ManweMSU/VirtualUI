@@ -8,6 +8,7 @@ namespace Engine
 	{
 		enum class TokenClass { EndOfStream, Keyword, Identifier, Constant, CharCombo, Unknown, Void };
 		enum class TokenConstantClass { String, Numeric, Boolean, Unknown };
+		enum class NumericTokenClass { Integer, Float, Double };
 
 		class ParserSpellingException : public Exception { public: int Position; string Comments; ParserSpellingException(int At, const string & About); string ToString(void) const override; };
 
@@ -15,21 +16,33 @@ namespace Engine
 		{
 		public:
 			string Content;
-			TokenClass Class;
-			TokenConstantClass ValueClass;
-			int SourcePosition;
+			TokenClass Class = TokenClass::Unknown;
+			TokenConstantClass ValueClass = TokenConstantClass::Unknown;
+			int SourcePosition = -1;
+
+			Token(void);
+			
+			static Token EndOfStreamToken(void);
+			static Token KeywordToken(const string & word);
+			static Token IdentifierToken(const string & ident);
+			static Token IdentifierToken(void);
+			static Token ConstantToken(const string & content, TokenConstantClass type);
+			static Token ConstantToken(TokenConstantClass type);
+			static Token ConstantToken(void);
+			static Token CharacterToken(const string & combo);
+			static Token VoidToken(void);
 
 			uint64 AsInteger(void) const;
 			double AsDouble(void) const;
 			float AsFloat(void) const;
 			bool AsBoolean(void) const;
+			NumericTokenClass NumericClass(void) const;
 
 			friend bool operator == (const Token & a, const Token & b);
 			friend bool operator != (const Token & a, const Token & b);
 
 			bool IsSimilar(const Token & Template) const;
 			bool IsVoid(void) const;
-			static Token VoidToken(void);
 		};
 		class Spelling
 		{
@@ -52,5 +65,6 @@ namespace Engine
 		};
 
 		Array<Token> * ParseText(const string & text, const Spelling & spelling);
+		string FormatStringToken(const string & input);
 	}
 }

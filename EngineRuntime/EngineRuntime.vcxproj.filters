@@ -165,8 +165,12 @@
     <ClCompile Include="Syntax\Regular.cpp">
       <Filter>Syntax</Filter>
     </ClCompile>
+    <ClCompile Include="Syntax\Grammar.cpp">
+      <Filter>Syntax</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineRuntime.natvis" />
+    <Natvis Include="Syntax.natvis" />
   </ItemGroup>
 </Project>

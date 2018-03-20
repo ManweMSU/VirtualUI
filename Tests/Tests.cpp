@@ -15,6 +15,8 @@
 #include <UserInterface/GroupControls.h>
 #include <UserInterface/Menues.h>
 #include <UserInterface/OverlappedWindows.h>
+#include <Syntax/Tokenization.h>
+#include <Syntax/Grammar.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -74,6 +76,34 @@ ENGINE_PACKED_STRUCTURE struct TestPacked
 };
 ENGINE_END_PACKED_STRUCTURE
 
+void CreateBlangSpelling(Syntax::Spelling & spelling)
+{
+	spelling.BooleanFalseLiteral = L"false";
+	spelling.BooleanTrueLiteral = L"true";
+	spelling.CommentEndOfLineWord = L"//";
+	spelling.CommentBlockOpeningWord = L"/*";
+	spelling.CommentBlockClosingWord = L"*/";
+	spelling.IsolatedChars << L'(';
+	spelling.IsolatedChars << L')';
+	spelling.IsolatedChars << L'[';
+	spelling.IsolatedChars << L']';
+	spelling.IsolatedChars << L'{';
+	spelling.IsolatedChars << L'}';
+	spelling.IsolatedChars << L',';
+	spelling.IsolatedChars << L';';
+	spelling.IsolatedChars << L'^';
+	spelling.IsolatedChars << L'.';
+	spelling.IsolatedChars << L'~';
+	spelling.IsolatedChars << L'@';
+	spelling.ContinuousCharCombos << L"#";
+	spelling.ContinuousCharCombos << L"=";
+	spelling.ContinuousCharCombos << L"+";
+	spelling.ContinuousCharCombos << L"-";
+	spelling.ContinuousCharCombos << L"*";
+	spelling.ContinuousCharCombos << L"/";
+	spelling.ContinuousCharCombos << L"%";
+}
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
@@ -93,6 +123,122 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
+
+	{
+		Syntax::Spelling blang;
+		CreateBlangSpelling(blang);
+
+		SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"test.blbl", Streaming::AccessRead, Streaming::OpenExisting);
+		Array<uint8> Data;
+		Data.SetLength(Input->Length() - 2);
+		Input->Seek(2, Streaming::Begin);
+		Input->Read(Data, Input->Length() - 2);
+		SafePointer< Array<Syntax::Token> > Tokens;
+		string text = string(Data, Input->Length() / 2 - 1, Encoding::UTF16);
+		try {
+			Tokens.SetReference(Syntax::ParseText(text, blang));
+		}
+		catch (Syntax::ParserSpellingException & e) {
+			(*conout) << e.Comments << IO::NewLineChar;
+			(*conout) << text.Fragment(e.Position, -1) << IO::NewLineChar;
+		}
+
+		if (Tokens) {
+			(*conout) << L"==============================" << IO::NewLineChar;
+			for (int i = 0; i < Tokens->Length(); i++) {
+				(*conout) << Tokens->ElementAt(i).Content << IO::NewLineChar;
+			}
+			(*conout) << L"==============================" << IO::NewLineChar;
+		}
+		Syntax::Grammar grammar;
+		SafePointer<Syntax::Grammar::GrammarRule> expression = new Syntax::Grammar::GrammarRule;
+		SafePointer<Syntax::Grammar::GrammarRule> composition = new Syntax::Grammar::GrammarRule;
+		SafePointer<Syntax::Grammar::GrammarRule> add_operation = new Syntax::Grammar::GrammarRule;
+		SafePointer<Syntax::Grammar::GrammarRule> mul_operation = new Syntax::Grammar::GrammarRule;
+		SafePointer<Syntax::Grammar::GrammarRule> operand = new Syntax::Grammar::GrammarRule;
+		expression->Label = L"expression";
+		composition->Label = L"composition";
+		add_operation->Label = L"add_operation";
+		mul_operation->Label = L"mul_operation";
+		operand->Label = L"operand";
+
+		expression->Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
+		Syntax::Grammar::GrammarRule temp, temp2, temp3;
+		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp.Reference = L"composition";
+		expression->Rules.Append(temp);
+		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
+		temp.MinRepeat = 0;
+		temp.MaxRepeat = -1;
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Token;
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp2.Reference = L"add_operation";
+		temp.Rules.Append(temp2);
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp2.Reference = L"composition";
+		temp.Rules.Append(temp2);
+		expression->Rules.Append(temp);
+
+		composition->Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
+		temp.Rules.Clear();
+		temp.MaxRepeat = temp.MinRepeat = 1;
+		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp.Reference = L"operand";
+		composition->Rules.Append(temp);
+		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
+		temp.MinRepeat = 0;
+		temp.MaxRepeat = -1;
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Token;
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp2.Reference = L"mul_operation";
+		temp.Rules.Append(temp2);
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp2.Reference = L"operand";
+		temp.Rules.Append(temp2);
+		composition->Rules.Append(temp);
+
+		add_operation->Class = Syntax::Grammar::GrammarRule::RuleClass::Variant;
+		temp3.Class = Syntax::Grammar::GrammarRule::RuleClass::Token;
+		temp3.TokenClass = Syntax::Token::CharacterToken(L"+");
+		add_operation->Rules.Append(temp3);
+		temp3.TokenClass = Syntax::Token::CharacterToken(L"-");
+		add_operation->Rules.Append(temp3);
+
+		mul_operation->Class = Syntax::Grammar::GrammarRule::RuleClass::Variant;
+		temp3.TokenClass = Syntax::Token::CharacterToken(L"*");
+		mul_operation->Rules.Append(temp3);
+		temp3.TokenClass = Syntax::Token::CharacterToken(L"/");
+		mul_operation->Rules.Append(temp3);
+		temp3.TokenClass = Syntax::Token::CharacterToken(L"%");
+		mul_operation->Rules.Append(temp3);
+
+		operand->Class = Syntax::Grammar::GrammarRule::RuleClass::Variant;
+		temp.Rules.Clear();
+		temp.MaxRepeat = temp.MinRepeat = 1;
+		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
+		temp3.TokenClass = Syntax::Token::CharacterToken(L"(");
+		temp.Rules.Append(temp3);
+		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
+		temp2.Reference = L"expression";
+		temp.Rules.Append(temp2);
+		temp3.TokenClass = Syntax::Token::CharacterToken(L")");
+		temp.Rules.Append(temp3);
+		operand->Rules.Append(temp);
+		temp3.TokenClass = Syntax::Token::IdentifierToken();
+		operand->Rules.Append(temp3);
+		temp3.TokenClass = Syntax::Token::ConstantToken(Syntax::TokenConstantClass::Numeric);
+		operand->Rules.Append(temp3);
+
+		grammar.Rules.Append(expression->Label, expression);
+		grammar.Rules.Append(composition->Label, composition);
+		grammar.Rules.Append(add_operation->Label, add_operation);
+		grammar.Rules.Append(mul_operation->Label, mul_operation);
+		grammar.Rules.Append(operand->Label, operand);
+
+		expression->BuildBeginnings(grammar);
+
+		(*conout) << L"==============================" << IO::NewLineChar;
+	}
 
 	Engine::Direct2D::InitializeFactory();
 

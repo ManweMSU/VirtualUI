@@ -9,6 +9,17 @@ namespace Engine
 		ParserSpellingException::ParserSpellingException(int At, const string & About) : Position(At), Comments(About) {}
 		string ParserSpellingException::ToString(void) const { return L"ParserSpellingException: " + Comments + L" at position " + string(Position); }
 
+		Token::Token(void) {}
+		Token Token::EndOfStreamToken(void) { Token result; result.Class = TokenClass::EndOfStream; return result; }
+		Token Token::KeywordToken(const string & word) { Token result; result.Class = TokenClass::Keyword; result.Content = word; return result; }
+		Token Token::IdentifierToken(const string & ident) { Token result; result.Class = TokenClass::Identifier; result.Content = ident; return result; }
+		Token Token::IdentifierToken(void) { Token result; result.Class = TokenClass::Identifier; return result; }
+		Token Token::ConstantToken(const string & content, TokenConstantClass type) { Token result; result.Class = TokenClass::Constant; result.ValueClass = type; result.Content = content; return result; }
+		Token Token::ConstantToken(TokenConstantClass type) { Token result; result.Class = TokenClass::Constant; result.ValueClass = type; return result; }
+		Token Token::ConstantToken(void) { Token result; result.Class = TokenClass::Constant; return result; }
+		Token Token::CharacterToken(const string & combo) { Token result; result.Class = TokenClass::CharCombo; result.Content = combo; return result; }
+		Token Token::VoidToken(void) { Token result; result.Class = TokenClass::Void; return result; }
+
 		uint64 Token::AsInteger(void) const
 		{
 			try {
@@ -29,19 +40,33 @@ namespace Engine
 			}
 			return 0;
 		}
-		double Token::AsDouble(void) const { return Content.ToDouble(); }
-		float Token::AsFloat(void) const { return Content.ToFloat(); }
-		bool Token::AsBoolean(void) const { return Content.Length() > 0; }
-		bool Token::IsSimilar(const Token & Template) const { return Class == Template.Class && ValueClass == Template.ValueClass && ((Class != TokenClass::Keyword && Class != TokenClass::CharCombo) || Content == Template.Content); }
-		bool Token::IsVoid(void) const { return Class == TokenClass::Void; }
-		Token Token::VoidToken(void)
+		double Token::AsDouble(void) const
 		{
-			Token token;
-			token.Class = TokenClass::Void;
-			token.ValueClass = TokenConstantClass::Unknown;
-			token.SourcePosition = -1;
-			return token;
+			if (Content[Content.Length() - 1] == L'f' || Content[Content.Length() - 1] == L'F') return Content.Fragment(0, Content.Length() - 1).ToDouble();
+			return Content.ToDouble();
 		}
+		float Token::AsFloat(void) const
+		{
+			if (Content[Content.Length() - 1] == L'f' || Content[Content.Length() - 1] == L'F') return Content.Fragment(0, Content.Length() - 1).ToFloat();
+			return Content.ToFloat();
+		}
+		bool Token::AsBoolean(void) const { return Content.Length() > 0; }
+		NumericTokenClass Token::NumericClass(void) const
+		{
+			for (int i = 0; i < Content.Length(); i++) {
+				if (Content[i] == L'.') {
+					return (Content[Content.Length() - 1] == L'f' || Content[Content.Length() - 1] == L'F') ? NumericTokenClass::Float : NumericTokenClass::Double;
+				}
+			}
+			return NumericTokenClass::Integer;
+		}
+		bool Token::IsSimilar(const Token & Template) const
+		{
+			if (Class != Template.Class) return false;
+			if (Class == TokenClass::Constant && (ValueClass == TokenConstantClass::Unknown || Template.ValueClass == TokenConstantClass::Unknown)) return true;
+			return ValueClass == Template.ValueClass && ((Class != TokenClass::Keyword && Class != TokenClass::CharCombo) || Content == Template.Content);
+		}
+		bool Token::IsVoid(void) const { return Class == TokenClass::Void; }
 
 		Spelling::Spelling(void) : Keywords(0x10), IsolatedChars(0x20), ContinuousCharCombos(0x20) {}
 		bool Spelling::IsKeyword(const string & word) const
@@ -152,14 +177,16 @@ namespace Engine
 									pos++;
 								} else if (escc == L'x' || escc == L'X') {
 									pos++;
-									while ((text[pos] >= L'0' && text[pos] <= L'9') || (text[pos] >= L'A' && text[pos] <= L'F') || (text[pos] >= L'a' && text[pos] <= L'f')) {
+									ucsdec = 0;
+									int count = 0;
+									while ((count < 8) && ((text[pos] >= L'0' && text[pos] <= L'9') || (text[pos] >= L'A' && text[pos] <= L'F') || (text[pos] >= L'a' && text[pos] <= L'f'))) {
 										int rec = 0;
-										ucsdec = 0;
 										if ((text[pos] >= L'0') && (text[pos] <= L'9')) rec = text[pos] - L'0';
 										else if ((text[pos] >= L'A') && (text[pos] <= L'F')) rec = text[pos] - L'A' + 10;
 										else rec = text[pos] - L'a' + 10;
 										ucsdec <<= 4;
 										ucsdec |= rec;
+										count++;
 										pos++;
 									}
 								} else if ((escc >= L'0') && (escc <= L'7')) {
@@ -206,11 +233,41 @@ namespace Engine
 							break;
 						}
 					}
-					if (!found) throw ParserSpellingException(pos, L"Illegal character input");		
+					if (!found) throw ParserSpellingException(pos, L"Illegal character input");
 				}
 			}
 			Result->Retain();
 			return Result;
+		}
+		string FormatStringToken(const string & input)
+		{
+			int ucslen = input.GetEncodedLength(Encoding::UTF32);
+			Array<uint32> ucs;
+			ucs.SetLength(ucslen);
+			input.Encode(ucs, Encoding::UTF32, false);
+			DynamicString result;
+			for (int i = 0; i < ucs.Length(); i++) {
+				if (ucs[i] < 0x20 || ucs[i] > 0xFFFF || ucs[i] == L'\\' || ucs[i] == L'\"') {
+					if (ucs[i] > 0xFFFF) {
+						result += L"\\x" + string(ucs[i], L"0123456789ABCDEF", 8);
+					} else if (ucs[i] == L'\\') {
+						result += L"\\\\";
+					} else if (ucs[i] == L'\"') {
+						result += L"\\\"";
+					} else if (ucs[i] == L'\n') {
+						result += L"\\n";
+					} else if (ucs[i] == L'\r') {
+						result += L"\\r";
+					} else if (ucs[i] == L'\t') {
+						result += L"\\t";
+					} else {
+						result += L"\\" + string(ucs[i], L"01234567", 3);
+					}
+				} else {
+					result += widechar(ucs[i]);
+				}
+			}
+			return result.ToString();
 		}
 	}
 }

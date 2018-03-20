@@ -259,6 +259,31 @@ namespace Engine
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ProgressBar") on->GetStation()->CreateWindow<ProgressBar>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
+
+						/*
+						NOT IMPLEMENTED:
+
+						HorizontalScrollBar
+						VerticalScrollBar
+						Edit
+						ScrollBox
+						HorizontalSplitBox
+						VerticalSplitBox
+						SplitBoxPart
+
+						ListBox
+						TreeView
+						ListView
+						ListViewColumn
+						MultiLineEdit
+
+						ComboBox
+						TextComboBox
+						VerticalTrackBar
+						HorizontalTrackBar
+						CustomControl
+						
+						*/
 					}
 				}
 			}

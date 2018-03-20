@@ -57,6 +57,7 @@
     <ClCompile Include="PlatformDependent\StringConvert.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
     <ClCompile Include="Streaming.cpp" />
+    <ClCompile Include="Syntax\Grammar.cpp" />
     <ClCompile Include="Syntax\Regular.cpp" />
     <ClCompile Include="Syntax\Tokenization.cpp" />
     <ClCompile Include="UserInterface\BinaryLoader.cpp" />
@@ -72,6 +73,7 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineRuntime.natvis" />
+    <Natvis Include="Syntax.natvis" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1668D08D-3F3F-46C6-89B5-8308CA348929}</ProjectGuid>

@@ -476,8 +476,10 @@ namespace Engine
 				if (_state == 2) {
 					ReleaseCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
-						static_cast<RadioButtonGroup *>(GetParent())->CheckRadioButton(this);
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						if (!Checked) {
+							static_cast<RadioButtonGroup *>(GetParent())->CheckRadioButton(this);
+							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						}
 					}
 				} else ReleaseCapture();
 			}
@@ -507,8 +509,10 @@ namespace Engine
 				if (key_code == L' ') {
 					if (_state == 0x12) {
 						_state = 0x0;
-						static_cast<RadioButtonGroup *>(GetParent())->CheckRadioButton(this);
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						if (!Checked) {
+							static_cast<RadioButtonGroup *>(GetParent())->CheckRadioButton(this);
+							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						}
 					}
 				}
 			}
