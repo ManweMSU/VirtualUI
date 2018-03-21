@@ -17,6 +17,7 @@
 #include <UserInterface/OverlappedWindows.h>
 #include <Syntax/Tokenization.h>
 #include <Syntax/Grammar.h>
+#include <Syntax/MathExpression.h>
 #include <PlatformDependent/KeyCodes.h>
 
 #include "stdafx.h"
@@ -151,97 +152,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			}
 			(*conout) << L"==============================" << IO::NewLineChar;
 		}
-		Syntax::Grammar grammar;
-		SafePointer<Syntax::Grammar::GrammarRule> expression = new Syntax::Grammar::GrammarRule;
-		SafePointer<Syntax::Grammar::GrammarRule> composition = new Syntax::Grammar::GrammarRule;
-		SafePointer<Syntax::Grammar::GrammarRule> add_operation = new Syntax::Grammar::GrammarRule;
-		SafePointer<Syntax::Grammar::GrammarRule> mul_operation = new Syntax::Grammar::GrammarRule;
-		SafePointer<Syntax::Grammar::GrammarRule> operand = new Syntax::Grammar::GrammarRule;
-		expression->Label = L"expression";
-		composition->Label = L"composition";
-		add_operation->Label = L"add_operation";
-		mul_operation->Label = L"mul_operation";
-		operand->Label = L"operand";
-
-		expression->Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
-		Syntax::Grammar::GrammarRule temp, temp2, temp3;
-		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp.Reference = L"composition";
-		expression->Rules.Append(temp);
-		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
-		temp.MinRepeat = 0;
-		temp.MaxRepeat = -1;
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Token;
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp2.Reference = L"add_operation";
-		temp.Rules.Append(temp2);
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp2.Reference = L"composition";
-		temp.Rules.Append(temp2);
-		expression->Rules.Append(temp);
-
-		composition->Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
-		temp.Rules.Clear();
-		temp.MaxRepeat = temp.MinRepeat = 1;
-		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp.Reference = L"operand";
-		composition->Rules.Append(temp);
-		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
-		temp.MinRepeat = 0;
-		temp.MaxRepeat = -1;
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Token;
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp2.Reference = L"mul_operation";
-		temp.Rules.Append(temp2);
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp2.Reference = L"operand";
-		temp.Rules.Append(temp2);
-		composition->Rules.Append(temp);
-
-		add_operation->Class = Syntax::Grammar::GrammarRule::RuleClass::Variant;
-		temp3.Class = Syntax::Grammar::GrammarRule::RuleClass::Token;
-		temp3.TokenClass = Syntax::Token::CharacterToken(L"+");
-		add_operation->Rules.Append(temp3);
-		temp3.TokenClass = Syntax::Token::CharacterToken(L"-");
-		add_operation->Rules.Append(temp3);
-
-		mul_operation->Class = Syntax::Grammar::GrammarRule::RuleClass::Variant;
-		temp3.TokenClass = Syntax::Token::CharacterToken(L"*");
-		mul_operation->Rules.Append(temp3);
-		temp3.TokenClass = Syntax::Token::CharacterToken(L"/");
-		mul_operation->Rules.Append(temp3);
-		temp3.TokenClass = Syntax::Token::CharacterToken(L"%");
-		mul_operation->Rules.Append(temp3);
-
-		operand->Class = Syntax::Grammar::GrammarRule::RuleClass::Variant;
-		temp.Rules.Clear();
-		temp.MaxRepeat = temp.MinRepeat = 1;
-		temp.Class = Syntax::Grammar::GrammarRule::RuleClass::Sequence;
-		temp3.TokenClass = Syntax::Token::CharacterToken(L"(");
-		temp.Rules.Append(temp3);
-		temp2.Class = Syntax::Grammar::GrammarRule::RuleClass::Reference;
-		temp2.Reference = L"expression";
-		temp.Rules.Append(temp2);
-		temp3.TokenClass = Syntax::Token::CharacterToken(L")");
-		temp.Rules.Append(temp3);
-		operand->Rules.Append(temp);
-		temp3.TokenClass = Syntax::Token::IdentifierToken();
-		operand->Rules.Append(temp3);
-		temp3.TokenClass = Syntax::Token::ConstantToken(Syntax::TokenConstantClass::Numeric);
-		operand->Rules.Append(temp3);
-
-		grammar.Rules.Append(expression->Label, expression);
-		grammar.Rules.Append(composition->Label, composition);
-		grammar.Rules.Append(add_operation->Label, add_operation);
-		grammar.Rules.Append(mul_operation->Label, mul_operation);
-		grammar.Rules.Append(operand->Label, operand);
-		grammar.EntranceRule = L"expression";
-
-		expression->BuildBeginnings(grammar);
 		
-		SafePointer< Array<Syntax::Token> > stream = Syntax::ParseText(L"(pidor + 5) * 7 + kornevgen / (30 + 70) + 666", blang);
-		SafePointer<Syntax::SyntaxTree> tree = new Syntax::SyntaxTree(*stream, grammar);
-		tree->Root.OptimizeNode();
+		string expr = L"sin(pi)";
+		(*conout) << expr << L" = " << Syntax::Math::CalculateExpressionDouble(expr) << IO::NewLineChar;
 
 		(*conout) << L"==============================" << IO::NewLineChar;
 
@@ -439,8 +352,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Title->Position = Template::Rectangle(
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Border"), 20.0, 0.0),
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Border"), 0.0, 0.0),
-					Template::Coordinate(Template::IntegerTemplate::Undefined(L"NegBorder"), 0.0, 1.0),
-					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Caption"), 0.0, 0.0)
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= 0 - Border"), 0.0, 1.0),
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= Border + Caption"), 0.0, 0.0)
 				);
 				Title->Font = ::Template->Font[L"NormalFont"];
 				Title->Text = Template::StringTemplate::Undefined(L"Text");

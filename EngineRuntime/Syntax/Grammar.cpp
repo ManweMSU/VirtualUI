@@ -15,6 +15,7 @@ namespace Engine
 			result.Class = RuleClass::Variant;
 			result.MinRepeat = min_repeat;
 			result.MaxRepeat = max_repeat;
+			result.Label = label;
 			return result;
 		}
 		Grammar::GrammarRule Grammar::GrammarRule::SequenceRule(const string & label, int min_repeat, int max_repeat)
@@ -23,6 +24,7 @@ namespace Engine
 			result.Class = RuleClass::Sequence;
 			result.MinRepeat = min_repeat;
 			result.MaxRepeat = max_repeat;
+			result.Label = label;
 			return result;
 		}
 		Grammar::GrammarRule Grammar::GrammarRule::ReferenceRule(const string & label, const string & another_rule, int min_repeat, int max_repeat)
@@ -32,15 +34,17 @@ namespace Engine
 			result.MinRepeat = min_repeat;
 			result.MaxRepeat = max_repeat;
 			result.Reference = another_rule;
+			result.Label = label;
 			return result;
 		}
 		Grammar::GrammarRule Grammar::GrammarRule::TokenRule(const string & label, const Token & token, int min_repeat, int max_repeat)
 		{
 			GrammarRule result;
-			result.Class = RuleClass::Reference;
+			result.Class = RuleClass::Token;
 			result.MinRepeat = min_repeat;
 			result.MaxRepeat = max_repeat;
 			result.TokenClass = token;
+			result.Label = label;
 			return result;
 		}
 		bool Grammar::GrammarRule::CanBeEmpty(void) const
@@ -83,11 +87,13 @@ namespace Engine
 					bool CanBeEmpty = false;
 					for (int j = 0; j < Rules[i].CanBeginWith.Length(); j++) {
 						if (Rules[i].CanBeginWith[j].IsVoid()) CanBeEmpty = true;
-						bool present = false;
-						for (int k = 0; k < CanBeginWith.Length(); k++) {
-							if (CanBeginWith[k] == Rules[i].CanBeginWith[j]) { present = true; break; }
+						if (!Rules[i].CanBeginWith[j].IsVoid() || i == Rules[i].CanBeginWith.Length() - 1) {
+							bool present = false;
+							for (int k = 0; k < CanBeginWith.Length(); k++) {
+								if (CanBeginWith[k] == Rules[i].CanBeginWith[j]) { present = true; break; }
+							}
+							if (!present) CanBeginWith << Rules[i].CanBeginWith[j];
 						}
-						if (!present) CanBeginWith << Rules[i].CanBeginWith[j];
 					}
 					if (!CanBeEmpty) break;
 				}
@@ -221,7 +227,9 @@ namespace Engine
 		SyntaxTree::SyntaxTree(const Array<Token>& token_stream, Grammar & grammar)
 		{
 			int position = 0;
-			SyntaxParser::ParseRule(Root, *grammar.Rules[grammar.EntranceRule], grammar, token_stream, position);
+			auto entrance = grammar.Rules[grammar.EntranceRule];
+			if (!entrance) throw Exception();
+			SyntaxParser::ParseRule(Root, *entrance, grammar, token_stream, position);
 			if (token_stream[position].Class != TokenClass::EndOfStream) throw ParserSyntaxException(position, L"End-of-stream expected");
 		}
 		SyntaxTree::~SyntaxTree(void) {}

@@ -3,6 +3,7 @@
 #include "ShapeBase.h"
 #include "../Miscellaneous/Dictionary.h"
 #include "../Miscellaneous/Reflection.h"
+#include "../Syntax/MathExpression.h"
 
 namespace Engine
 {
@@ -21,6 +22,17 @@ namespace Engine
 
 		namespace Template
 		{
+			class ExpressionArgumentProvider : public Syntax::Math::IVariableProvider
+			{
+			public:
+				IArgumentProvider * Source;
+				ExpressionArgumentProvider(IArgumentProvider * provider);
+				virtual int64 GetInteger(const string & name) override;
+				virtual double GetDouble(const string & name) override;
+			};
+			template <class T> T ResolveExpression(const string & expression, IArgumentProvider * provider) { return T(); }
+			template <> int ResolveExpression<int>(const string & expression, IArgumentProvider * provider);
+			template <> double ResolveExpression<double>(const string & expression, IArgumentProvider * provider);
 			template <class T> class BasicTemplate
 			{
 				T value;
@@ -35,9 +47,13 @@ namespace Engine
 				T Initialize(IArgumentProvider * provider) const
 				{
 					if (argument.Length()) {
-						T result;
-						provider->GetArgument(argument, &result);
-						return result;
+						if (argument[0] == L'=') {
+							return ResolveExpression<T>(argument.Fragment(1, -1), provider);
+						} else {
+							T result;
+							provider->GetArgument(argument, &result);
+							return result;
+						}
 					} else return value;
 				}
 			};

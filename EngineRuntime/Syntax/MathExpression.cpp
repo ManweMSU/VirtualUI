@@ -42,6 +42,7 @@ namespace Engine
 				spelling.Keywords << L"arcctg";
 				spelling.Keywords << L"ln";
 				spelling.Keywords << L"exp";
+				spelling.Keywords << L"sqrt";
 				grammar.EntranceRule = L"EXPRESSION";
 				SafePointer<Grammar::GrammarRule> Expression = new Grammar::GrammarRule(Grammar::GrammarRule::SequenceRule(L"EXPRESSION"));
 				SafePointer<Grammar::GrammarRule> MulArg = new Grammar::GrammarRule(Grammar::GrammarRule::SequenceRule(L"MULARG"));
@@ -87,6 +88,7 @@ namespace Engine
 				FuncWord->Rules << Grammar::GrammarRule::TokenRule(L"", Token::KeywordToken(L"arcctg"));
 				FuncWord->Rules << Grammar::GrammarRule::TokenRule(L"", Token::KeywordToken(L"ln"));
 				FuncWord->Rules << Grammar::GrammarRule::TokenRule(L"", Token::KeywordToken(L"exp"));
+				FuncWord->Rules << Grammar::GrammarRule::TokenRule(L"", Token::KeywordToken(L"sqrt"));
 				grammar.Rules.Append(Expression->Label, Expression);
 				grammar.Rules.Append(MulArg->Label, MulArg);
 				grammar.Rules.Append(Operand->Label, Operand);
@@ -104,51 +106,55 @@ namespace Engine
 						if (variables) {
 							return variables->GetInteger(expression.Subnodes[0].Expands.Content);
 						} else return 0;
-					} else if (expression.Subnodes[0].Expands.Class == TokenClass::Keyword) {
-						if (expression.Subnodes[0].Expands.Content == L"sgn") {
+					} else if (expression.Subnodes[0].Label == L"FUNCWORD") {
+						string func = expression.Subnodes[0].Subnodes[0].Expands.Content;
+						if (func == L"sgn") {
 							int64 value = CalculateIntegerValue(expression.Subnodes[2], variables);
 							return (value > 0) ? 1 : ((value < 0) ? -1 : 0);
-						} else if (expression.Subnodes[0].Expands.Content == L"abs") {
+						} else if (func == L"abs") {
 							int64 value = CalculateIntegerValue(expression.Subnodes[2], variables);
 							return (value > 0) ? value : -value;
-						} else if (expression.Subnodes[0].Expands.Content == L"sin") {
+						} else if (func == L"sin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(sin(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"cos") {
+						} else if (func == L"cos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(cos(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"tg") {
+						} else if (func == L"tg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(tan(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"ctg") {
+						} else if (func == L"ctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(1.0 / tan(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"arcsin") {
+						} else if (func == L"arcsin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(asin(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"arccos") {
+						} else if (func == L"arccos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(acos(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"arctg") {
+						} else if (func == L"arctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(atan(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"arcctg") {
+						} else if (func == L"arcctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(atan(1.0 / value));
-						} else if (expression.Subnodes[0].Expands.Content == L"ln") {
+						} else if (func == L"ln") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(log(value));
-						} else if (expression.Subnodes[0].Expands.Content == L"exp") {
+						} else if (func == L"exp") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(exp(value));
+						} else if (func == L"sqrt") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return int64(sqrt(value));
 						}
 						return 0;
 					} else {
 						int vi = 0;
 						int sgn = 1;
-						if (expression.Subnodes[0].Expands.Class == TokenClass::CharCombo) {
+						if (expression.Subnodes[0].Label == L"ADDOP") {
 							vi = 1;
-							if (expression.Subnodes[0].Expands.Content == L"-") sgn = -1;
+							if (expression.Subnodes[0].Subnodes[0].Expands.Content == L"-") sgn = -1;
 						}
 						if (expression.Subnodes[vi].Expands.NumericClass() == NumericTokenClass::Integer) {
 							return int64(expression.Subnodes[vi].Expands.AsInteger()) * sgn;
@@ -160,15 +166,15 @@ namespace Engine
 					int64 value = CalculateIntegerValue(expression.Subnodes[0], variables);
 					for (int i = 1; i < expression.Subnodes.Length(); i += 2) {
 						int64 value2 = CalculateIntegerValue(expression.Subnodes[i + 1], variables);
-						if (expression.Subnodes[i].Expands.Content == L"+") {
+						if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"+") {
 							value += value2;
-						} else if (expression.Subnodes[i].Expands.Content == L"-") {
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"-") {
 							value -= value2;
-						} else if (expression.Subnodes[i].Expands.Content == L"*") {
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"*") {
 							value *= value2;
-						} else if (expression.Subnodes[i].Expands.Content == L"/") {
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"/") {
 							value /= value2;
-						} else if (expression.Subnodes[i].Expands.Content == L"%") {
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"%") {
 							value %= value2;
 						}
 					}
@@ -177,7 +183,84 @@ namespace Engine
 			}
 			double CalculateDoubleValue(SyntaxTreeNode & expression, IVariableProvider * variables)
 			{
-
+				if (expression.Label == L"OPERAND") {
+					if (expression.Subnodes[0].Expands.Content == L"(") return CalculateDoubleValue(expression.Subnodes[1], variables);
+					else if (expression.Subnodes[0].Expands.Class == TokenClass::Identifier) {
+						if (variables) {
+							return variables->GetDouble(expression.Subnodes[0].Expands.Content);
+						} else return 0.0;
+					} else if (expression.Subnodes[0].Label == L"FUNCWORD") {
+						string func = expression.Subnodes[0].Subnodes[0].Expands.Content;
+						if (func == L"sgn") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return (value > 0.0) ? 1.0 : ((value < 0) ? -1.0 : 0.0);
+						} else if (func == L"abs") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return (value > 0.0) ? value : -value;
+						} else if (func == L"sin") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return sin(value);
+						} else if (func == L"cos") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return cos(value);
+						} else if (func == L"tg") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return tan(value);
+						} else if (func == L"ctg") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return 1.0 / tan(value);
+						} else if (func == L"arcsin") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return asin(value);
+						} else if (func == L"arccos") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return acos(value);
+						} else if (func == L"arctg") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return atan(value);
+						} else if (func == L"arcctg") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return atan(1.0 / value);
+						} else if (func == L"ln") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return log(value);
+						} else if (func == L"exp") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return exp(value);
+						} else if (func == L"sqrt") {
+							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
+							return sqrt(value);
+						}
+						return 0.0;
+					} else {
+						int vi = 0;
+						double sgn = 1.0;
+						if (expression.Subnodes[0].Label == L"ADDOP") {
+							vi = 1;
+							if (expression.Subnodes[0].Subnodes[0].Expands.Content == L"-") sgn = -1.0;
+						}
+						if (expression.Subnodes[vi].Expands.NumericClass() == NumericTokenClass::Integer) {
+							return double(expression.Subnodes[vi].Expands.AsInteger()) * sgn;
+						} else {
+							return expression.Subnodes[vi].Expands.AsDouble() * sgn;
+						}
+					}
+				} else {
+					double value = CalculateDoubleValue(expression.Subnodes[0], variables);
+					for (int i = 1; i < expression.Subnodes.Length(); i += 2) {
+						double value2 = CalculateDoubleValue(expression.Subnodes[i + 1], variables);
+						if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"+") {
+							value += value2;
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"-") {
+							value -= value2;
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"*") {
+							value *= value2;
+						} else if (expression.Subnodes[i].Subnodes[0].Expands.Content == L"/") {
+							value /= value2;
+						}
+					}
+					return value;
+				}
 			}
 			int64 CalculateExpressionInteger(const string & expression, IVariableProvider * variables)
 			{

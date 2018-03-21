@@ -30,7 +30,7 @@ namespace Engine
 						return Content.Fragment(2, -1).ToUInt64(L"01234567");
 					} else if (Content[1] == L'b' || Content[1] == L'B') {
 						return Content.Fragment(2, -1).ToUInt64(L"01");
-					}
+					} else return Content.ToUInt64();
 				} else {
 					return Content.ToUInt64();
 				}

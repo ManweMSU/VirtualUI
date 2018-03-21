@@ -22,21 +22,15 @@ namespace Engine
 					virtual void GetArgument(const string & name, int * value) override
 					{
 						if (name == L"Border") *value = Owner->GetBorderWidth();
-						else if (name == L"NegBorder") *value = -Owner->GetBorderWidth();
-						else if (name == L"Caption") *value = Owner->GetCaptionWidth() + Owner->GetBorderWidth();
-						else if (name == L"NegCaption") *value = -Owner->GetCaptionWidth() - Owner->GetBorderWidth();
+						else if (name == L"Caption") *value = Owner->GetCaptionWidth();
 						else if (name == L"ButtonsWidth") *value = Owner->GetButtonsWidth();
-						else if (name == L"NegButtonsWidth") *value = -Owner->GetButtonsWidth();
 						else *value = 0;
 					}
 					virtual void GetArgument(const string & name, double * value) override
 					{
 						if (name == L"Border") *value = double(Owner->GetBorderWidth());
-						else if (name == L"NegBorder") *value = -double(Owner->GetBorderWidth());
-						else if (name == L"Caption") *value = double(Owner->GetCaptionWidth() + Owner->GetBorderWidth());
-						else if (name == L"NegCaption") *value = -double(Owner->GetCaptionWidth() + Owner->GetBorderWidth());
+						else if (name == L"Caption") *value = double(Owner->GetCaptionWidth());
 						else if (name == L"ButtonsWidth") *value = double(Owner->GetButtonsWidth());
-						else if (name == L"NegButtonsWidth") *value = -double(Owner->GetButtonsWidth());
 						else *value = 0.0;
 					}
 					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }

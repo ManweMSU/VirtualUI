@@ -6,6 +6,27 @@ namespace Engine
 	{
 		namespace Template
 		{
+			ExpressionArgumentProvider::ExpressionArgumentProvider(IArgumentProvider * provider) : Source(provider) {}
+			int64 ExpressionArgumentProvider::GetInteger(const string & name)
+			{
+				int value;
+				Source->GetArgument(name, &value);
+				return value;
+			}
+			double ExpressionArgumentProvider::GetDouble(const string & name)
+			{
+				double value;
+				Source->GetArgument(name, &value);
+				return value;
+			}
+			template <> int ResolveExpression<int>(const string & expression, IArgumentProvider * provider)
+			{
+				return int(Syntax::Math::CalculateExpressionInteger(expression, &ExpressionArgumentProvider(provider)));
+			}
+			template <> double ResolveExpression<double>(const string & expression, IArgumentProvider * provider)
+			{
+				return Syntax::Math::CalculateExpressionDouble(expression, &ExpressionArgumentProvider(provider));
+			}
 			Coordinate::Coordinate(void) {}
 			Coordinate::Coordinate(const Engine::UI::Coordinate & src) : Absolute(src.Absolute), Zoom(src.Zoom), Anchor(src.Anchor) {}
 			Coordinate::Coordinate(const BasicTemplate<int>& shift, const BasicTemplate<double>& zoom, const BasicTemplate<double>& anchor) : Absolute(shift), Zoom(zoom), Anchor(anchor) {}
