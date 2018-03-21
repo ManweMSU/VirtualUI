@@ -115,17 +115,17 @@ namespace Engine
 
 		SyntaxTreeNode::SyntaxTreeNode(void) : Subnodes(0x20) {}
 
-		void SyntaxTreeNode::EnumerateNodes(INodeEnumerator * enumerator) const
+		void SyntaxTreeNode::EnumerateNodes(INodeEnumerator * enumerator)
 		{
 			enumerator->RegisterNode(*this);
 			for (int i = 0; i < Subnodes.Length(); i++) Subnodes[i].EnumerateNodes(enumerator);
 		}
-		void SyntaxTreeNode::EnumerateNodes(const string & with_label, INodeEnumerator * enumerator) const
+		void SyntaxTreeNode::EnumerateNodes(const string & with_label, INodeEnumerator * enumerator)
 		{
 			if (Label == with_label) enumerator->RegisterNode(*this);
 			for (int i = 0; i < Subnodes.Length(); i++) Subnodes[i].EnumerateNodes(with_label, enumerator);
 		}
-		void SyntaxTreeNode::EnumerateFinalNodes(INodeEnumerator * enumerator) const
+		void SyntaxTreeNode::EnumerateFinalNodes(INodeEnumerator * enumerator)
 		{
 			if (Expands.Class != TokenClass::Unknown && !Subnodes.Length()) enumerator->RegisterNode(*this);
 			else for (int i = 0; i < Subnodes.Length(); i++) Subnodes[i].EnumerateFinalNodes(enumerator);

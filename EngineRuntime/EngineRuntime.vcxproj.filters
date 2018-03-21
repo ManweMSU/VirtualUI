@@ -94,6 +94,9 @@
     <ClInclude Include="Syntax\Grammar.h">
       <Filter>Syntax</Filter>
     </ClInclude>
+    <ClInclude Include="Syntax\MathExpression.h">
+      <Filter>Syntax</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -166,6 +169,9 @@
       <Filter>Syntax</Filter>
     </ClCompile>
     <ClCompile Include="Syntax\Grammar.cpp">
+      <Filter>Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="Syntax\MathExpression.cpp">
       <Filter>Syntax</Filter>
     </ClCompile>
   </ItemGroup>

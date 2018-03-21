@@ -66,7 +66,7 @@ namespace Engine
 		class INodeEnumerator
 		{
 		public:
-			virtual void RegisterNode(const SyntaxTreeNode & node) = 0;
+			virtual void RegisterNode(SyntaxTreeNode & node) = 0;
 		};
 		class SyntaxTreeNode
 		{
@@ -77,9 +77,9 @@ namespace Engine
 
 			SyntaxTreeNode(void);
 
-			void EnumerateNodes(INodeEnumerator * enumerator) const;
-			void EnumerateNodes(const string & with_label, INodeEnumerator * enumerator) const;
-			void EnumerateFinalNodes(INodeEnumerator * enumerator) const;
+			void EnumerateNodes(INodeEnumerator * enumerator);
+			void EnumerateNodes(const string & with_label, INodeEnumerator * enumerator);
+			void EnumerateFinalNodes(INodeEnumerator * enumerator);
 			void CollectSequence(Array<Token> & to) const;
 			Array<Token> * CollectSequence(void) const;
 

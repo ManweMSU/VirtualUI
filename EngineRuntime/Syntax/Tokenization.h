@@ -19,6 +19,10 @@ namespace Engine
 			TokenClass Class = TokenClass::Unknown;
 			TokenConstantClass ValueClass = TokenConstantClass::Unknown;
 			int SourcePosition = -1;
+			union {
+				void * UserPtr;
+				eint UserInt;
+			};
 
 			Token(void);
 			

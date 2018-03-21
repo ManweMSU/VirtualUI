@@ -32,6 +32,7 @@
     <ClInclude Include="PlatformDependent\WindowStation.h" />
     <ClInclude Include="Streaming.h" />
     <ClInclude Include="Syntax\Grammar.h" />
+    <ClInclude Include="Syntax\MathExpression.h" />
     <ClInclude Include="Syntax\Regular.h" />
     <ClInclude Include="Syntax\Tokenization.h" />
     <ClInclude Include="UserInterface\BinaryLoader.h" />
@@ -58,6 +59,7 @@
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
     <ClCompile Include="Streaming.cpp" />
     <ClCompile Include="Syntax\Grammar.cpp" />
+    <ClCompile Include="Syntax\MathExpression.cpp" />
     <ClCompile Include="Syntax\Regular.cpp" />
     <ClCompile Include="Syntax\Tokenization.cpp" />
     <ClCompile Include="UserInterface\BinaryLoader.cpp" />
