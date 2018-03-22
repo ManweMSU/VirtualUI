@@ -255,6 +255,8 @@ namespace Engine
 						// Scrollable controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalScrollBar") on->GetStation()->CreateWindow<VerticalScrollBar>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalScrollBar") on->GetStation()->CreateWindow<HorizontalScrollBar>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalTrackBar") on->GetStation()->CreateWindow<VerticalTrackBar>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalTrackBar") on->GetStation()->CreateWindow<HorizontalTrackBar>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
@@ -275,8 +277,6 @@ namespace Engine
 
 						ComboBox
 						TextComboBox
-						VerticalTrackBar
-						HorizontalTrackBar
 						CustomControl
 						
 						*/

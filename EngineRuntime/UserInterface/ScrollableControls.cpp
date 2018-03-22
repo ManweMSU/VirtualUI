@@ -619,6 +619,304 @@ namespace Engine
 				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
 				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
 			}
+
+			VerticalTrackBar::VerticalTrackBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Step = 1; }
+			VerticalTrackBar::VerticalTrackBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
+			{
+				if (Template->Properties->GetTemplateClass() != L"VerticalTrackBar") throw InvalidArgumentException();
+				static_cast<Template::Controls::VerticalTrackBar &>(*this) = static_cast<Template::Controls::VerticalTrackBar &>(*Template->Properties);
+				if (Step < 1) Step = 1;
+			}
+			VerticalTrackBar::~VerticalTrackBar(void) {}
+			void VerticalTrackBar::Render(const Box & at)
+			{
+				Box tracker_pos = GetTrackerPosition(at);
+				Shape * tracker = 0;
+				Shape * bar = 0;
+				if (Disabled) {
+					if (_tracker_disabled) tracker = _tracker_disabled;
+					else if (ViewTrackerDisabled) {
+						_tracker_disabled.SetReference(ViewTrackerDisabled->Initialize(&ZeroArgumentProvider()));
+						tracker = _tracker_disabled;
+					}
+					if (_bar_disabled) bar = _bar_disabled;
+					else if (ViewBarDisabled) {
+						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&ZeroArgumentProvider()));
+						bar = _bar_disabled;
+					}
+				} else {
+					Shape ** storage = 0; Template::Shape * source = 0;
+					if (_state == 1) {
+						storage = _tracker_hot.InnerRef();
+						source = ViewTrackerHot.Inner();
+					} else if (_state == 2) {
+						storage = _tracker_pressed.InnerRef();
+						source = ViewTrackerPressed.Inner();
+					} else {
+						if (GetFocus() == this) {
+							storage = _tracker_focused.InnerRef();
+							source = ViewTrackerFocused.Inner();
+						} else {
+							storage = _tracker_normal.InnerRef();
+							source = ViewTrackerNormal.Inner();
+						}
+					}
+					if (*storage) tracker = *storage;
+					else if (source) {
+						*storage = source->Initialize(&ZeroArgumentProvider());
+						tracker = *storage;
+					}
+					if (_bar_normal) bar = _bar_normal;
+					else if (ViewBarNormal) {
+						_bar_normal.SetReference(ViewBarNormal->Initialize(&ZeroArgumentProvider()));
+						bar = _bar_normal;
+					}
+				}
+				auto device = GetStation()->GetRenderingDevice();
+				if (bar) bar->Render(device, at);
+				if (tracker) tracker->Render(device, tracker_pos);
+			}
+			void VerticalTrackBar::ResetCache(void)
+			{
+				_tracker_normal.SetReference(0);
+				_tracker_focused.SetReference(0);
+				_tracker_hot.SetReference(0);
+				_tracker_pressed.SetReference(0);
+				_tracker_disabled.SetReference(0);
+				_bar_normal.SetReference(0);
+				_bar_disabled.SetReference(0);
+			}
+			void VerticalTrackBar::Enable(bool enable) { Disabled = !enable; if (Disabled) _state = 0; }
+			bool VerticalTrackBar::IsEnabled(void) { return !Disabled; }
+			void VerticalTrackBar::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			bool VerticalTrackBar::IsVisible(void) { return !Invisible; }
+			bool VerticalTrackBar::IsTabStop(void) { return true; }
+			void VerticalTrackBar::SetID(int _ID) { ID = _ID; }
+			int VerticalTrackBar::GetID(void) { return ID; }
+			Window * VerticalTrackBar::FindChild(int _ID)
+			{
+				if (ID == _ID && ID != 0) return this;
+				else return 0;
+			}
+			void VerticalTrackBar::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle VerticalTrackBar::GetRectangle(void) { return ControlPosition; }
+			void VerticalTrackBar::CaptureChanged(bool got_capture) { if (!got_capture) _state = 0; }
+			void VerticalTrackBar::LeftButtonDown(Point at)
+			{
+				SetFocus();
+				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box tracker = GetTrackerPosition(my);
+				if (_state == 1 && tracker.IsInside(at)) {
+					_state = 2;
+					_mouse = at.y - GetTrackerShift(my);
+				}
+			}
+			void VerticalTrackBar::LeftButtonUp(Point at) { ReleaseCapture(); }
+			void VerticalTrackBar::MouseMove(Point at)
+			{
+				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box tracker = GetTrackerPosition(my);
+				if (_state == 0) {
+					if (tracker.IsInside(at)) {
+						_state = 1;
+						SetCapture();
+					}
+				} else if (_state == 1) {
+					if (!tracker.IsInside(at)) {
+						ReleaseCapture();
+					}
+				} else if (_state == 2) {
+					int np = MouseToTracker(my, at.y - _mouse);
+					SetTrackerPosition(np);
+				}
+			}
+			void VerticalTrackBar::KeyDown(int key_code)
+			{
+				if (key_code == KeyCodes::Up) {
+					SetTrackerPosition(Position - Step);
+				} else if (key_code == KeyCodes::Down) {
+					SetTrackerPosition(Position + Step);
+				}
+			}
+			Box VerticalTrackBar::GetTrackerPosition(const Box & at)
+			{
+				int le = TrackerWidth >> 1;
+				int re = TrackerWidth - le;
+				int pos = int32(int64(at.Bottom - at.Top - TrackerWidth) * (Position - RangeMinimal) / max(RangeMaximal - RangeMinimal, 1)) + le;
+				return Box(at.Left, at.Top + pos - le, at.Right, at.Top + pos + re);
+			}
+			int VerticalTrackBar::GetTrackerShift(const Box & at)
+			{
+				int le = TrackerWidth >> 1;
+				return int32(int64(at.Bottom - at.Top - TrackerWidth) * (Position - RangeMinimal) / max(RangeMaximal - RangeMinimal, 1)) + le;
+			}
+			int VerticalTrackBar::MouseToTracker(const Box & at, int mouse)
+			{
+				int le = TrackerWidth >> 1;
+				int hd = (RangeMaximal == RangeMinimal) ? 0 : (((at.Bottom - at.Top - TrackerWidth) / (RangeMaximal - RangeMinimal)) / 2);
+				return min(max(int32(int64(mouse - le + hd) * max(RangeMaximal - RangeMinimal, 1) / (at.Bottom - at.Top - TrackerWidth)) + RangeMinimal, RangeMinimal), RangeMaximal);
+			}
+			void VerticalTrackBar::SetTrackerPosition(int position)
+			{
+				int op = Position;
+				Position = max(min(const_cast<const int &>(position), RangeMaximal), RangeMinimal);
+				if (Position != op) GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+			}
+			void VerticalTrackBar::SetRange(int range_min, int range_max)
+			{
+				RangeMinimal = range_min; RangeMaximal = range_max;
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal), RangeMinimal);
+				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
+			}
+
+			HorizontalTrackBar::HorizontalTrackBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Step = 1; }
+			HorizontalTrackBar::HorizontalTrackBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
+			{
+				if (Template->Properties->GetTemplateClass() != L"HorizontalTrackBar") throw InvalidArgumentException();
+				static_cast<Template::Controls::HorizontalTrackBar &>(*this) = static_cast<Template::Controls::HorizontalTrackBar &>(*Template->Properties);
+				if (Step < 1) Step = 1;
+			}
+			HorizontalTrackBar::~HorizontalTrackBar(void) {}
+			void HorizontalTrackBar::Render(const Box & at)
+			{
+				Box tracker_pos = GetTrackerPosition(at);
+				Shape * tracker = 0;
+				Shape * bar = 0;
+				if (Disabled) {
+					if (_tracker_disabled) tracker = _tracker_disabled;
+					else if (ViewTrackerDisabled) {
+						_tracker_disabled.SetReference(ViewTrackerDisabled->Initialize(&ZeroArgumentProvider()));
+						tracker = _tracker_disabled;
+					}
+					if (_bar_disabled) bar = _bar_disabled;
+					else if (ViewBarDisabled) {
+						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&ZeroArgumentProvider()));
+						bar = _bar_disabled;
+					}
+				} else {
+					Shape ** storage = 0; Template::Shape * source = 0;
+					if (_state == 1) {
+						storage = _tracker_hot.InnerRef();
+						source = ViewTrackerHot.Inner();
+					} else if (_state == 2) {
+						storage = _tracker_pressed.InnerRef();
+						source = ViewTrackerPressed.Inner();
+					} else {
+						if (GetFocus() == this) {
+							storage = _tracker_focused.InnerRef();
+							source = ViewTrackerFocused.Inner();
+						} else {
+							storage = _tracker_normal.InnerRef();
+							source = ViewTrackerNormal.Inner();
+						}
+					}
+					if (*storage) tracker = *storage;
+					else if (source) {
+						*storage = source->Initialize(&ZeroArgumentProvider());
+						tracker = *storage;
+					}
+					if (_bar_normal) bar = _bar_normal;
+					else if (ViewBarNormal) {
+						_bar_normal.SetReference(ViewBarNormal->Initialize(&ZeroArgumentProvider()));
+						bar = _bar_normal;
+					}
+				}
+				auto device = GetStation()->GetRenderingDevice();
+				if (bar) bar->Render(device, at);
+				if (tracker) tracker->Render(device, tracker_pos);
+			}
+			void HorizontalTrackBar::ResetCache(void)
+			{
+				_tracker_normal.SetReference(0);
+				_tracker_focused.SetReference(0);
+				_tracker_hot.SetReference(0);
+				_tracker_pressed.SetReference(0);
+				_tracker_disabled.SetReference(0);
+				_bar_normal.SetReference(0);
+				_bar_disabled.SetReference(0);
+			}
+			void HorizontalTrackBar::Enable(bool enable) { Disabled = !enable; if (Disabled) _state = 0; }
+			bool HorizontalTrackBar::IsEnabled(void) { return !Disabled; }
+			void HorizontalTrackBar::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			bool HorizontalTrackBar::IsVisible(void) { return !Invisible; }
+			bool HorizontalTrackBar::IsTabStop(void) { return true; }
+			void HorizontalTrackBar::SetID(int _ID) { ID = _ID; }
+			int HorizontalTrackBar::GetID(void) { return ID; }
+			Window * HorizontalTrackBar::FindChild(int _ID)
+			{
+				if (ID == _ID && ID != 0) return this;
+				else return 0;
+			}
+			void HorizontalTrackBar::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle HorizontalTrackBar::GetRectangle(void) { return ControlPosition; }
+			void HorizontalTrackBar::CaptureChanged(bool got_capture) { if (!got_capture) _state = 0; }
+			void HorizontalTrackBar::LeftButtonDown(Point at)
+			{
+				SetFocus();
+				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box tracker = GetTrackerPosition(my);
+				if (_state == 1 && tracker.IsInside(at)) {
+					_state = 2;
+					_mouse = at.x - GetTrackerShift(my);
+				}
+			}
+			void HorizontalTrackBar::LeftButtonUp(Point at) { ReleaseCapture(); }
+			void HorizontalTrackBar::MouseMove(Point at)
+			{
+				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box tracker = GetTrackerPosition(my);
+				if (_state == 0) {
+					if (tracker.IsInside(at)) {
+						_state = 1;
+						SetCapture();
+					}
+				} else if (_state == 1) {
+					if (!tracker.IsInside(at)) {
+						ReleaseCapture();
+					}
+				} else if (_state == 2) {
+					int np = MouseToTracker(my, at.x - _mouse);
+					SetTrackerPosition(np);
+				}
+			}
+			void HorizontalTrackBar::KeyDown(int key_code)
+			{
+				if (key_code == KeyCodes::Left) {
+					SetTrackerPosition(Position - Step);
+				} else if (key_code == KeyCodes::Right) {
+					SetTrackerPosition(Position + Step);
+				}
+			}
+			Box HorizontalTrackBar::GetTrackerPosition(const Box & at)
+			{
+				int le = TrackerWidth >> 1;
+				int re = TrackerWidth - le;
+				int pos = int32(int64(at.Right - at.Left - TrackerWidth) * (Position - RangeMinimal) / max(RangeMaximal - RangeMinimal, 1)) + le;
+				return Box(at.Left + pos - le, at.Top, at.Left + pos + re, at.Bottom);
+			}
+			int HorizontalTrackBar::GetTrackerShift(const Box & at)
+			{
+				int le = TrackerWidth >> 1;
+				return int32(int64(at.Right - at.Left - TrackerWidth) * (Position - RangeMinimal) / max(RangeMaximal - RangeMinimal, 1)) + le;
+			}
+			int HorizontalTrackBar::MouseToTracker(const Box & at, int mouse)
+			{
+				int le = TrackerWidth >> 1;
+				int hd = (RangeMaximal == RangeMinimal) ? 0 : (((at.Right - at.Left - TrackerWidth) / (RangeMaximal - RangeMinimal)) / 2);
+				return min(max(int32(int64(mouse - le + hd) * max(RangeMaximal - RangeMinimal, 1) / (at.Right - at.Left - TrackerWidth)) + RangeMinimal, RangeMinimal), RangeMaximal);
+			}
+			void HorizontalTrackBar::SetTrackerPosition(int position)
+			{
+				int op = Position;
+				Position = max(min(const_cast<const int &>(position), RangeMaximal), RangeMinimal);
+				if (Position != op) GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+			}
+			void HorizontalTrackBar::SetRange(int range_min, int range_max)
+			{
+				RangeMinimal = range_min; RangeMaximal = range_max;
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal), RangeMinimal);
+				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
+			}
 		}
 	}
 }
