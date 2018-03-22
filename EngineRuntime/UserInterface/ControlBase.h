@@ -138,6 +138,27 @@ namespace Engine
 				Parent->Children.Append(New);
 				return New;
 			}
+			template <class W, class A> W * CreateWindow(Window * Parent, A a)
+			{
+				if (!Parent) Parent = TopLevelWindow;
+				SafePointer<W> New = new W(Parent, this, a);
+				Parent->Children.Append(New);
+				return New;
+			}
+			template <class W, class A1, class A2> W * CreateWindow(Window * Parent, A1 a1, A2 a2)
+			{
+				if (!Parent) Parent = TopLevelWindow;
+				SafePointer<W> New = new W(Parent, this, a1, a2);
+				Parent->Children.Append(New);
+				return New;
+			}
+			template <class W, class A1, class A2, class A3> W * CreateWindow(Window * Parent, A1 a1, A2 a2, A3 a3)
+			{
+				if (!Parent) Parent = TopLevelWindow;
+				SafePointer<W> New = new W(Parent, this, a1, a2, a3);
+				Parent->Children.Append(New);
+				return New;
+			}
 			void DestroyWindow(Window * window);
 			void SetBox(const Box & box);
 			Box GetBox(void);

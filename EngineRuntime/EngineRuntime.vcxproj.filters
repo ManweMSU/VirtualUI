@@ -97,6 +97,9 @@
     <ClInclude Include="Syntax\MathExpression.h">
       <Filter>Syntax</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\ScrollableControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -173,6 +176,9 @@
     </ClCompile>
     <ClCompile Include="Syntax\MathExpression.cpp">
       <Filter>Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\ScrollableControls.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

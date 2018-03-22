@@ -3,6 +3,7 @@
 #include "GroupControls.h"
 #include "ButtonControls.h"
 #include "StaticControls.h"
+#include "ScrollableControls.h"
 
 using namespace Engine::UI::Windows;
 
@@ -251,14 +252,15 @@ namespace Engine
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Static") on->GetStation()->CreateWindow<Static>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ColorView") on->GetStation()->CreateWindow<ColorView>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ProgressBar") on->GetStation()->CreateWindow<ProgressBar>(on, &source->Children[i]);
+						// Scrollable controls
+						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalScrollBar") on->GetStation()->CreateWindow<VerticalScrollBar>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalScrollBar") on->GetStation()->CreateWindow<HorizontalScrollBar>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
 						/*
 						NOT IMPLEMENTED:
 
-						HorizontalScrollBar
-						VerticalScrollBar
 						Edit
 						ScrollBox
 						HorizontalSplitBox
