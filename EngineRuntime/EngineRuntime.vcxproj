@@ -24,6 +24,7 @@
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
+    <ClInclude Include="PlatformDependent\Clipboard.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\FileApi.h" />
@@ -52,6 +53,7 @@
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
+    <ClCompile Include="PlatformDependent\Clipboard.cpp" />
     <ClCompile Include="PlatformDependent\ComInterop.cpp" />
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\FileApi.cpp" />

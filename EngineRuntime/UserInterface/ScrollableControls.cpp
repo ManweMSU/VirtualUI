@@ -15,6 +15,40 @@ namespace Engine
 				static_cast<Template::Controls::VerticalScrollBar &>(*this) = static_cast<Template::Controls::VerticalScrollBar &>(*Template->Properties);
 				if (Line < 1) Line = 1;
 			}
+			VerticalScrollBar::VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template) : Window(Parent, Station)
+			{
+				ViewBarNormal = Template->ViewVerticalScrollBarBarNormal;
+				ViewBarDisabled = Template->ViewVerticalScrollBarBarDisabled;
+				ViewUpButtonNormal = Template->ViewVerticalScrollBarUpButtonNormal;
+				ViewUpButtonHot = Template->ViewVerticalScrollBarUpButtonHot;
+				ViewUpButtonPressed = Template->ViewVerticalScrollBarUpButtonPressed;
+				ViewUpButtonDisabled = Template->ViewVerticalScrollBarUpButtonDisabled;
+				ViewDownButtonNormal = Template->ViewVerticalScrollBarDownButtonNormal;
+				ViewDownButtonHot = Template->ViewVerticalScrollBarDownButtonHot;
+				ViewDownButtonPressed = Template->ViewVerticalScrollBarDownButtonPressed;
+				ViewDownButtonDisabled = Template->ViewVerticalScrollBarDownButtonDisabled;
+				ViewScrollerNormal = Template->ViewVerticalScrollBarScrollerNormal;
+				ViewScrollerHot = Template->ViewVerticalScrollBarScrollerHot;
+				ViewScrollerPressed = Template->ViewVerticalScrollBarScrollerPressed;
+				ViewScrollerDisabled = Template->ViewVerticalScrollBarScrollerDisabled;
+			}
+			VerticalScrollBar::VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::VerticallyScrollable * Template) : Window(Parent, Station)
+			{
+				ViewBarNormal = Template->ViewScrollBarBarNormal;
+				ViewBarDisabled = Template->ViewScrollBarBarDisabled;
+				ViewUpButtonNormal = Template->ViewScrollBarUpButtonNormal;
+				ViewUpButtonHot = Template->ViewScrollBarUpButtonHot;
+				ViewUpButtonPressed = Template->ViewScrollBarUpButtonPressed;
+				ViewUpButtonDisabled = Template->ViewScrollBarUpButtonDisabled;
+				ViewDownButtonNormal = Template->ViewScrollBarDownButtonNormal;
+				ViewDownButtonHot = Template->ViewScrollBarDownButtonHot;
+				ViewDownButtonPressed = Template->ViewScrollBarDownButtonPressed;
+				ViewDownButtonDisabled = Template->ViewScrollBarDownButtonDisabled;
+				ViewScrollerNormal = Template->ViewScrollBarScrollerNormal;
+				ViewScrollerHot = Template->ViewScrollBarScrollerHot;
+				ViewScrollerPressed = Template->ViewScrollBarScrollerPressed;
+				ViewScrollerDisabled = Template->ViewScrollBarScrollerDisabled;
+			}
 			VerticalScrollBar::~VerticalScrollBar(void) {}
 			void VerticalScrollBar::Render(const Box & at)
 			{
@@ -61,10 +95,12 @@ namespace Engine
 						_down_disabled.SetReference(ViewDownButtonDisabled->Initialize(&ZeroArgumentProvider()));
 						down_shape = _down_disabled;
 					}
-					if (_scroller_disabled) scroller_shape = _scroller_disabled;
-					else if (ViewScrollerDisabled) {
-						_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&ZeroArgumentProvider()));
-						scroller_shape = _scroller_disabled;
+					if (Position > RangeMinimal || Position + max(Page, 1) - 1 < RangeMaximal) {
+						if (_scroller_disabled) scroller_shape = _scroller_disabled;
+						else if (ViewScrollerDisabled) {
+							_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&ZeroArgumentProvider()));
+							scroller_shape = _scroller_disabled;
+						}
 					}
 					if (_bar_disabled) bar_shape = _bar_disabled;
 					else if (ViewBarDisabled) {
@@ -313,6 +349,26 @@ namespace Engine
 				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
 				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
 			}
+			void VerticalScrollBar::SetScrollerPositionSilent(int position)
+			{
+				int op = Position;
+				int _page = max(Page, 1);
+				Position = max(min(const_cast<const int &>(position), RangeMaximal - _page + 1), RangeMinimal);
+			}
+			void VerticalScrollBar::SetPageSilent(int page)
+			{
+				Page = page;
+				int _page = max(Page, 1);
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
+				if (pos != Position) Position = pos;
+			}
+			void VerticalScrollBar::SetRangeSilent(int range_min, int range_max)
+			{
+				RangeMinimal = range_min; RangeMaximal = range_max;
+				int _page = max(Page, 1);
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
+				if (pos != Position) Position = pos;
+			}
 
 			HorizontalScrollBar::HorizontalScrollBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Line = 1; }
 			HorizontalScrollBar::HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
@@ -320,6 +376,23 @@ namespace Engine
 				if (Template->Properties->GetTemplateClass() != L"HorizontalScrollBar") throw InvalidArgumentException();
 				static_cast<Template::Controls::HorizontalScrollBar &>(*this) = static_cast<Template::Controls::HorizontalScrollBar &>(*Template->Properties);
 				if (Line < 1) Line = 1;
+			}
+			HorizontalScrollBar::HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template) : Window(Parent, Station)
+			{
+				ViewBarNormal = Template->ViewHorizontalScrollBarBarNormal;
+				ViewBarDisabled = Template->ViewHorizontalScrollBarBarDisabled;
+				ViewLeftButtonNormal = Template->ViewHorizontalScrollBarLeftButtonNormal;
+				ViewLeftButtonHot = Template->ViewHorizontalScrollBarLeftButtonHot;
+				ViewLeftButtonPressed = Template->ViewHorizontalScrollBarLeftButtonPressed;
+				ViewLeftButtonDisabled = Template->ViewHorizontalScrollBarLeftButtonDisabled;
+				ViewRightButtonNormal = Template->ViewHorizontalScrollBarRightButtonNormal;
+				ViewRightButtonHot = Template->ViewHorizontalScrollBarRightButtonHot;
+				ViewRightButtonPressed = Template->ViewHorizontalScrollBarRightButtonPressed;
+				ViewRightButtonDisabled = Template->ViewHorizontalScrollBarRightButtonDisabled;
+				ViewScrollerNormal = Template->ViewHorizontalScrollBarScrollerNormal;
+				ViewScrollerHot = Template->ViewHorizontalScrollBarScrollerHot;
+				ViewScrollerPressed = Template->ViewHorizontalScrollBarScrollerPressed;
+				ViewScrollerDisabled = Template->ViewHorizontalScrollBarScrollerDisabled;
 			}
 			HorizontalScrollBar::~HorizontalScrollBar(void) {}
 			void HorizontalScrollBar::Render(const Box & at)
@@ -367,10 +440,12 @@ namespace Engine
 						_right_disabled.SetReference(ViewRightButtonDisabled->Initialize(&ZeroArgumentProvider()));
 						right_shape = _right_disabled;
 					}
-					if (_scroller_disabled) scroller_shape = _scroller_disabled;
-					else if (ViewScrollerDisabled) {
-						_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&ZeroArgumentProvider()));
-						scroller_shape = _scroller_disabled;
+					if (Position > RangeMinimal || Position + max(Page, 1) - 1 < RangeMaximal) {
+						if (_scroller_disabled) scroller_shape = _scroller_disabled;
+						else if (ViewScrollerDisabled) {
+							_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&ZeroArgumentProvider()));
+							scroller_shape = _scroller_disabled;
+						}
 					}
 					if (_bar_disabled) bar_shape = _bar_disabled;
 					else if (ViewBarDisabled) {
@@ -619,6 +694,26 @@ namespace Engine
 				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
 				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
 			}
+			void HorizontalScrollBar::SetScrollerPositionSilent(int position)
+			{
+				int op = Position;
+				int _page = max(Page, 1);
+				Position = max(min(const_cast<const int &>(position), RangeMaximal - _page + 1), RangeMinimal);
+			}
+			void HorizontalScrollBar::SetPageSilent(int page)
+			{
+				Page = page;
+				int _page = max(Page, 1);
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
+				if (pos != Position) Position = pos;
+			}
+			void HorizontalScrollBar::SetRangeSilent(int range_min, int range_max)
+			{
+				RangeMinimal = range_min; RangeMaximal = range_max;
+				int _page = max(Page, 1);
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal - _page + 1), RangeMinimal);
+				if (pos != Position) Position = pos;
+			}
 
 			VerticalTrackBar::VerticalTrackBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Step = 1; }
 			VerticalTrackBar::VerticalTrackBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
@@ -717,12 +812,12 @@ namespace Engine
 				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
 				Box tracker = GetTrackerPosition(my);
 				if (_state == 0) {
-					if (tracker.IsInside(at)) {
+					if (tracker.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
 						_state = 1;
 						SetCapture();
 					}
 				} else if (_state == 1) {
-					if (!tracker.IsInside(at)) {
+					if (!tracker.IsInside(at) || GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						ReleaseCapture();
 					}
 				} else if (_state == 2) {
@@ -767,6 +862,17 @@ namespace Engine
 				RangeMinimal = range_min; RangeMaximal = range_max;
 				int pos = max(min(const_cast<const int &>(Position), RangeMaximal), RangeMinimal);
 				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
+			}
+			void VerticalTrackBar::SetTrackerPositionSilent(int position)
+			{
+				int op = Position;
+				Position = max(min(const_cast<const int &>(position), RangeMaximal), RangeMinimal);
+			}
+			void VerticalTrackBar::SetRangeSilent(int range_min, int range_max)
+			{
+				RangeMinimal = range_min; RangeMaximal = range_max;
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal), RangeMinimal);
+				if (pos != Position) Position = pos;
 			}
 
 			HorizontalTrackBar::HorizontalTrackBar(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Step = 1; }
@@ -866,12 +972,12 @@ namespace Engine
 				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
 				Box tracker = GetTrackerPosition(my);
 				if (_state == 0) {
-					if (tracker.IsInside(at)) {
+					if (tracker.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
 						_state = 1;
 						SetCapture();
 					}
 				} else if (_state == 1) {
-					if (!tracker.IsInside(at)) {
+					if (!tracker.IsInside(at) || GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						ReleaseCapture();
 					}
 				} else if (_state == 2) {
@@ -916,6 +1022,17 @@ namespace Engine
 				RangeMinimal = range_min; RangeMaximal = range_max;
 				int pos = max(min(const_cast<const int &>(Position), RangeMaximal), RangeMinimal);
 				if (pos != Position) { Position = pos; GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
+			}
+			void HorizontalTrackBar::SetTrackerPositionSilent(int position)
+			{
+				int op = Position;
+				Position = max(min(const_cast<const int &>(position), RangeMaximal), RangeMinimal);
+			}
+			void HorizontalTrackBar::SetRangeSilent(int range_min, int range_max)
+			{
+				RangeMinimal = range_min; RangeMaximal = range_max;
+				int pos = max(min(const_cast<const int &>(Position), RangeMaximal), RangeMinimal);
+				if (pos != Position) Position = pos;
 			}
 		}
 	}

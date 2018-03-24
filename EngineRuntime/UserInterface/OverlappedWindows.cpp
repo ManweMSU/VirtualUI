@@ -244,6 +244,7 @@ namespace Engine
 						// Group controls
 						if (source->Children[i].Properties->GetTemplateClass() == L"ControlGroup") on->GetStation()->CreateWindow<ControlGroup>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"RadioButtonGroup") on->GetStation()->CreateWindow<RadioButtonGroup>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"ScrollBox") on->GetStation()->CreateWindow<ScrollBox>(on, &source->Children[i]);
 						// Button controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Button") on->GetStation()->CreateWindow<Button>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"CheckBox") on->GetStation()->CreateWindow<CheckBox>(on, &source->Children[i]);
@@ -264,7 +265,6 @@ namespace Engine
 						NOT IMPLEMENTED:
 
 						Edit
-						ScrollBox
 						HorizontalSplitBox
 						VerticalSplitBox
 						SplitBoxPart

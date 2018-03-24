@@ -31,6 +31,8 @@ namespace Engine
 			public:
 				VerticalScrollBar(Window * Parent, WindowStation * Station);
 				VerticalScrollBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template);
+				VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::VerticallyScrollable * Template);
 				~VerticalScrollBar(void) override;
 
 				virtual void Render(const Box & at) override;
@@ -52,6 +54,9 @@ namespace Engine
 				void SetScrollerPosition(int position);
 				void SetPage(int page);
 				void SetRange(int range_min, int range_max);
+				void SetScrollerPositionSilent(int position);
+				void SetPageSilent(int page);
+				void SetRangeSilent(int range_min, int range_max);
 			};
 			class HorizontalScrollBar : public Window, public Template::Controls::HorizontalScrollBar
 			{
@@ -75,6 +80,7 @@ namespace Engine
 			public:
 				HorizontalScrollBar(Window * Parent, WindowStation * Station);
 				HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template);
 				~HorizontalScrollBar(void) override;
 
 				virtual void Render(const Box & at) override;
@@ -96,6 +102,9 @@ namespace Engine
 				void SetScrollerPosition(int position);
 				void SetPage(int page);
 				void SetRange(int range_min, int range_max);
+				void SetScrollerPositionSilent(int position);
+				void SetPageSilent(int page);
+				void SetRangeSilent(int range_min, int range_max);
 			};
 			class VerticalTrackBar : public Window, public Template::Controls::VerticalTrackBar
 			{
@@ -135,6 +144,8 @@ namespace Engine
 
 				void SetTrackerPosition(int position);
 				void SetRange(int range_min, int range_max);
+				void SetTrackerPositionSilent(int position);
+				void SetRangeSilent(int range_min, int range_max);
 			};
 			class HorizontalTrackBar : public Window, public Template::Controls::HorizontalTrackBar
 			{
@@ -174,6 +185,8 @@ namespace Engine
 
 				void SetTrackerPosition(int position);
 				void SetRange(int range_min, int range_max);
+				void SetTrackerPositionSilent(int position);
+				void SetRangeSilent(int range_min, int range_max);
 			};
 		}
 	}

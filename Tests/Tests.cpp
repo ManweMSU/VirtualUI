@@ -424,7 +424,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			};
 			auto Callback = new _cb;
 
-			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle::Invalid(), station);
+			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.5), Coordinate(0, 0.0, 0.4)), station);
 			static_cast<Controls::ColorView *>(w2->FindChild(7777))->SetColor(0xDDFF8040);
 			w2->SetText(L"window");

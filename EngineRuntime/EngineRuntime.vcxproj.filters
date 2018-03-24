@@ -100,6 +100,9 @@
     <ClInclude Include="UserInterface\ScrollableControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\Clipboard.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -179,6 +182,9 @@
     </ClCompile>
     <ClCompile Include="UserInterface\ScrollableControls.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Clipboard.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

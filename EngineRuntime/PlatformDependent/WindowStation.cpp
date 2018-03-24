@@ -135,9 +135,9 @@ namespace Engine
 				POINTS p = MAKEPOINTS(LParam);
 				RightButtonDoubleClick(Point(p.x, p.y));
 			} else if (Msg == WM_MOUSEWHEEL) {
-				ScrollVertically(GET_WHEEL_DELTA_WPARAM(WParam));
+				ScrollVertically(-GET_WHEEL_DELTA_WPARAM(WParam) * 3 / WHEEL_DELTA);
 			} else if (Msg == WM_MOUSEHWHEEL) {
-				ScrollHorizontally(GET_WHEEL_DELTA_WPARAM(WParam));
+				ScrollHorizontally(GET_WHEEL_DELTA_WPARAM(WParam) * 3 / WHEEL_DELTA);
 			} else if (Msg == WM_SIZE) {
 				RECT Rect;
 				GetClientRect(_window, &Rect);
