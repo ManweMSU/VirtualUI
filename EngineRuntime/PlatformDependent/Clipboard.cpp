@@ -12,7 +12,7 @@ namespace Engine
 			BOOL result = false;
 			if (format == Format::Text) result = IsClipboardFormatAvailable(CF_UNICODETEXT);
 			CloseClipboard();
-			return result;
+			return result != 0;
 		}
 		bool GetData(string & value)
 		{

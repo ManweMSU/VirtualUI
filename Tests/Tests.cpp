@@ -352,7 +352,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Title->Position = Template::Rectangle(
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Border"), 20.0, 0.0),
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"Border"), 0.0, 0.0),
-					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= 0 - Border"), 0.0, 1.0),
+					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= 0 - Border - ButtonsWidth"), 0.0, 1.0),
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= Border + Caption"), 0.0, 0.0)
 				);
 				Title->Font = ::Template->Font[L"NormalFont"];
@@ -425,8 +425,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto Callback = new _cb;
 
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
-			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.5), Coordinate(0, 0.0, 0.4)), station);
-			static_cast<Controls::ColorView *>(w2->FindChild(7777))->SetColor(0xDDFF8040);
+			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
+			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 			w2->SetText(L"window");
 
 			(*conout) << L"Done!" << IO::NewLineChar;

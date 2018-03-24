@@ -29,7 +29,9 @@ namespace Engine
 		{
 			class OverlappedWindow : public ParentWindow
 			{
+				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramelessDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramedDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+				friend class ContentFrame;
 			private:
 				struct size
 				{
@@ -46,6 +48,7 @@ namespace Engine
 				SafePointer<Shape> _inactive;
 				bool _visible, _enabled;
 				int _mode, _border, _caption, _state, _minwidth, _minheight, _btnwidth;
+				bool _initialized = false;
 				Rectangle ControlPosition;
 				Window * _close;
 				Window * _maximize;
@@ -98,6 +101,7 @@ namespace Engine
 
 				virtual void Render(const Box & at) override;
 				virtual void ResetCache(void) override;
+				virtual void ArrangeChildren(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 			};

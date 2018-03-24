@@ -235,6 +235,307 @@ namespace Engine
 				}
 				return this;
 			}
+			Window * ScrollBox::GetVirtualGroup(void) { return _virtual; }
+
+			SplitBoxPart::SplitBoxPart(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Size = 0; }
+			SplitBoxPart::SplitBoxPart(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			{
+				if (Template->Properties->GetTemplateClass() != L"SplitBoxPart") throw InvalidArgumentException();
+				static_cast<Template::Controls::SplitBoxPart &>(*this) = static_cast<Template::Controls::SplitBoxPart &>(*Template->Properties);
+				Size = 0;
+				Constructor::ConstructChildren(this, Template);
+			}
+			SplitBoxPart::~SplitBoxPart(void) {}
+			void SplitBoxPart::SetID(int _ID) { ID = _ID; }
+			int SplitBoxPart::GetID(void) { return ID; }
+			void SplitBoxPart::SetRectangle(const Rectangle & rect) { ControlPosition = rect; }
+			Rectangle SplitBoxPart::GetRectangle(void) { return ControlPosition; }
+
+			VerticalSplitBox::VerticalSplitBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
+			VerticalSplitBox::VerticalSplitBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			{
+				if (Template->Properties->GetTemplateClass() != L"VerticalSplitBox") throw InvalidArgumentException();
+				static_cast<Template::Controls::VerticalSplitBox &>(*this) = static_cast<Template::Controls::VerticalSplitBox &>(*Template->Properties);
+				ResetCache();
+				for (int i = 0; i < Template->Children.Length(); i++) auto part = Station->CreateWindow<SplitBoxPart>(this, &Template->Children[i]);
+			}
+			VerticalSplitBox::~VerticalSplitBox(void) {}
+			void VerticalSplitBox::Render(const Box & at)
+			{
+				for (int i = 0; i < ChildrenCount() - 1; i++) {
+					auto box = Child(i)->GetPosition();
+					auto splitter = Box(at.Left, at.Top + box.Bottom, at.Right, at.Top + box.Bottom + SplitterSize);
+					auto device = GetStation()->GetRenderingDevice();
+					if (_part == i && _state == 2) {
+						if (_splitter_pressed) _splitter_pressed->Render(device, splitter);
+					} else if (_part == i && _state == 1) {
+						if (_splitter_hot) _splitter_hot->Render(device, splitter);
+					} else {
+						if (_splitter_normal) _splitter_normal->Render(device, splitter);
+					}
+				}
+				ParentWindow::Render(at);
+			}
+			void VerticalSplitBox::ResetCache(void)
+			{
+				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&ZeroArgumentProvider()) : 0);
+				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&ZeroArgumentProvider()) : 0);
+				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&ZeroArgumentProvider()) : 0);
+				ParentWindow::ResetCache();
+			}
+			void VerticalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } }
+			bool VerticalSplitBox::IsEnabled(void) { return !Disabled; }
+			void VerticalSplitBox::Show(bool visible) { Invisible = !visible; if (Invisible) { _state = 0; _part = -1; } }
+			bool VerticalSplitBox::IsVisible(void) { return !Invisible; }
+			void VerticalSplitBox::SetID(int _ID) { ID = _ID; }
+			int VerticalSplitBox::GetID(void) { return ID; }
+			void VerticalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle VerticalSplitBox::GetRectangle(void) { return ControlPosition; }
+			void VerticalSplitBox::ArrangeChildren(void) {}
+			void VerticalSplitBox::SetPosition(const Box & box)
+			{
+				WindowPosition = box;
+				int size = box.Bottom - box.Top;
+				int available_size = size - (ChildrenCount() - 1) * SplitterSize;
+				int stretch_part = -1;
+				if (!_initialized) {
+					for (int i = 0; i < ChildrenCount(); i++) {
+						auto child = static_cast<SplitBoxPart *>(Child(i));
+						auto rect = child->GetRectangle();
+						child->SetRectangle(Rectangle::Invalid());
+						int part_size = rect.Bottom.Absolute + int(rect.Bottom.Zoom * Zoom) + int(available_size * rect.Bottom.Anchor);
+						child->Size = part_size;
+					}
+					_initialized = true;
+				}
+				int used_size = 0;
+				for (int i = 0; i < ChildrenCount(); i++) {
+					auto child = static_cast<SplitBoxPart *>(Child(i));
+					used_size += child->Size;
+					if (child->Stretch) stretch_part = i;
+				}
+				if (used_size != available_size) {
+					int extra = available_size - used_size;
+					if (stretch_part >= 0) {
+						auto child = static_cast<SplitBoxPart *>(Child(stretch_part));
+						child->Size += extra;
+						if (child->Size < child->MinimalSize) {
+							extra = child->Size - child->MinimalSize;
+							child->Size = child->MinimalSize;
+						} else extra = 0;
+					}
+					if (extra) {
+						for (int i = 0; i < ChildrenCount(); i++) {
+							auto child = static_cast<SplitBoxPart *>(Child(i));
+							int diff = (i == ChildrenCount() - 1) ? (-extra) : (min(child->Size - child->MinimalSize, -extra));
+							child->Size -= diff;
+							extra += diff;
+							if (!extra) break;
+						}
+					}
+				}
+				int pos = 0;
+				int width = box.Right - box.Left;
+				for (int i = 0; i < ChildrenCount(); i++) {
+					int part_size = static_cast<SplitBoxPart *>(Child(i))->Size;
+					Child(i)->SetPosition(Box(0, pos, width, pos + part_size));
+					pos += part_size + SplitterSize;
+				}
+			}
+			void VerticalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; } }
+			void VerticalSplitBox::LeftButtonDown(Point at)
+			{
+				if (_state == 1 && _part != -1) {
+					_state = 2;
+					_mouse = at.y;
+				}
+			}
+			void VerticalSplitBox::LeftButtonUp(Point at) { ReleaseCapture(); }
+			void VerticalSplitBox::MouseMove(Point at)
+			{
+				if (_state != 2) {
+					int pos = 0;
+					_part = -1;
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						for (int i = 0; i < ChildrenCount() - 1; i++) {
+							auto child = static_cast<SplitBoxPart *>(Child(i));
+							if (at.y >= pos + child->Size && at.y < pos + child->Size + SplitterSize) { _part = i; break; }
+							pos += child->Size + SplitterSize;
+						}
+					}
+					if (_part != -1) {
+						_state = 1;
+						SetCapture();
+					} else if (_state == 1) ReleaseCapture();
+				} else {
+					int mouse = at.y;
+					int ds = at.y - _mouse;
+					auto left = static_cast<SplitBoxPart *>(Child(_part));
+					auto right = static_cast<SplitBoxPart *>(Child(_part + 1));
+					if (left->Size + ds < left->MinimalSize) {
+						mouse += left->MinimalSize - left->Size - ds;
+						ds = left->MinimalSize - left->Size;
+					} else if (right->Size - ds < right->MinimalSize) {
+						mouse += right->Size - right->MinimalSize - ds;
+						ds = right->Size - right->MinimalSize;
+					}
+					if (ds) {
+						_mouse = mouse;
+						left->Size += ds;
+						right->Size -= ds;
+						auto left_box = left->GetPosition();
+						auto right_box = right->GetPosition();
+						left_box.Bottom += ds;
+						right_box.Top += ds;
+						left->SetPosition(left_box);
+						right->SetPosition(right_box);
+					}
+				}
+			}
+			void VerticalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeUpDown)); }
+
+			HorizontalSplitBox::HorizontalSplitBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
+			HorizontalSplitBox::HorizontalSplitBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			{
+				if (Template->Properties->GetTemplateClass() != L"HorizontalSplitBox") throw InvalidArgumentException();
+				static_cast<Template::Controls::HorizontalSplitBox &>(*this) = static_cast<Template::Controls::HorizontalSplitBox &>(*Template->Properties);
+				ResetCache();
+				for (int i = 0; i < Template->Children.Length(); i++) auto part = Station->CreateWindow<SplitBoxPart>(this, &Template->Children[i]);
+			}
+			HorizontalSplitBox::~HorizontalSplitBox(void) {}
+			void HorizontalSplitBox::Render(const Box & at)
+			{
+				for (int i = 0; i < ChildrenCount() - 1; i++) {
+					auto box = Child(i)->GetPosition();
+					auto splitter = Box(at.Left + box.Right, at.Top, at.Left + box.Right + SplitterSize, at.Bottom);
+					auto device = GetStation()->GetRenderingDevice();
+					if (_part == i && _state == 2) {
+						if (_splitter_pressed) _splitter_pressed->Render(device, splitter);
+					} else if (_part == i && _state == 1) {
+						if (_splitter_hot) _splitter_hot->Render(device, splitter);
+					} else {
+						if (_splitter_normal) _splitter_normal->Render(device, splitter);
+					}
+				}
+				ParentWindow::Render(at);
+			}
+			void HorizontalSplitBox::ResetCache(void)
+			{
+				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&ZeroArgumentProvider()) : 0);
+				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&ZeroArgumentProvider()) : 0);
+				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&ZeroArgumentProvider()) : 0);
+				ParentWindow::ResetCache();
+			}
+			void HorizontalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } }
+			bool HorizontalSplitBox::IsEnabled(void) { return !Disabled; }
+			void HorizontalSplitBox::Show(bool visible) { Invisible = !visible; if (Invisible) { _state = 0; _part = -1; } }
+			bool HorizontalSplitBox::IsVisible(void) { return !Invisible; }
+			void HorizontalSplitBox::SetID(int _ID) { ID = _ID; }
+			int HorizontalSplitBox::GetID(void) { return ID; }
+			void HorizontalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle HorizontalSplitBox::GetRectangle(void) { return ControlPosition; }
+			void HorizontalSplitBox::ArrangeChildren(void) {}
+			void HorizontalSplitBox::SetPosition(const Box & box)
+			{
+				WindowPosition = box;
+				int size = box.Right - box.Left;
+				int available_size = size - (ChildrenCount() - 1) * SplitterSize;
+				int stretch_part = -1;
+				if (!_initialized) {
+					for (int i = 0; i < ChildrenCount(); i++) {
+						auto child = static_cast<SplitBoxPart *>(Child(i));
+						auto rect = child->GetRectangle();
+						child->SetRectangle(Rectangle::Invalid());
+						int part_size = rect.Right.Absolute + int(rect.Right.Zoom * Zoom) + int(available_size * rect.Right.Anchor);
+						child->Size = part_size;
+					}
+					_initialized = true;
+				}
+				int used_size = 0;
+				for (int i = 0; i < ChildrenCount(); i++) {
+					auto child = static_cast<SplitBoxPart *>(Child(i));
+					used_size += child->Size;
+					if (child->Stretch) stretch_part = i;
+				}
+				if (used_size != available_size) {
+					int extra = available_size - used_size;
+					if (stretch_part >= 0) {
+						auto child = static_cast<SplitBoxPart *>(Child(stretch_part));
+						child->Size += extra;
+						if (child->Size < child->MinimalSize) {
+							extra = child->Size - child->MinimalSize;
+							child->Size = child->MinimalSize;
+						} else extra = 0;
+					}
+					if (extra) {
+						for (int i = 0; i < ChildrenCount(); i++) {
+							auto child = static_cast<SplitBoxPart *>(Child(i));
+							int diff = (i == ChildrenCount() - 1) ? (-extra) : (min(child->Size - child->MinimalSize, -extra));
+							child->Size -= diff;
+							extra += diff;
+							if (!extra) break;
+						}
+					}
+				}
+				int pos = 0;
+				int height = box.Bottom - box.Top;
+				for (int i = 0; i < ChildrenCount(); i++) {
+					int part_size = static_cast<SplitBoxPart *>(Child(i))->Size;
+					Child(i)->SetPosition(Box(pos, 0, pos + part_size, height));
+					pos += part_size + SplitterSize;
+				}
+			}
+			void HorizontalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; } }
+			void HorizontalSplitBox::LeftButtonDown(Point at)
+			{
+				if (_state == 1 && _part != -1) {
+					_state = 2;
+					_mouse = at.x;
+				}
+			}
+			void HorizontalSplitBox::LeftButtonUp(Point at) { ReleaseCapture(); }
+			void HorizontalSplitBox::MouseMove(Point at)
+			{
+				if (_state != 2) {
+					int pos = 0;
+					_part = -1;
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						for (int i = 0; i < ChildrenCount() - 1; i++) {
+							auto child = static_cast<SplitBoxPart *>(Child(i));
+							if (at.x >= pos + child->Size && at.x < pos + child->Size + SplitterSize) { _part = i; break; }
+							pos += child->Size + SplitterSize;
+						}
+					}
+					if (_part != -1) {
+						_state = 1;
+						SetCapture();
+					} else if (_state == 1) ReleaseCapture();
+				} else {
+					int mouse = at.x;
+					int ds = at.x - _mouse;
+					auto left = static_cast<SplitBoxPart *>(Child(_part));
+					auto right = static_cast<SplitBoxPart *>(Child(_part + 1));
+					if (left->Size + ds < left->MinimalSize) {
+						mouse += left->MinimalSize - left->Size - ds;
+						ds = left->MinimalSize - left->Size;
+					} else if (right->Size - ds < right->MinimalSize) {
+						mouse += right->Size - right->MinimalSize - ds;
+						ds = right->Size - right->MinimalSize;
+					}
+					if (ds) {
+						_mouse = mouse;
+						left->Size += ds;
+						right->Size -= ds;
+						auto left_box = left->GetPosition();
+						auto right_box = right->GetPosition();
+						left_box.Right += ds;
+						right_box.Left += ds;
+						left->SetPosition(left_box);
+						right->SetPosition(right_box);
+					}
+				}
+			}
+			void HorizontalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight)); }
 		}
 	}
 }

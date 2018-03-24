@@ -81,6 +81,7 @@ namespace Engine
 			bool IsGeneralizedParent(Window * window);
 			bool IsAvailable(void);
 			Window * GetOverlappedParent(void);
+			template <class W> W * As(void) { return static_cast<W *>(this); }
 		};
 		class ICursor : public Object {};
 		enum class SystemCursor { Null = 0, Arrow = 1, Beam = 2, Link = 3, SizeLeftRight = 4, SizeUpDown = 5, SizeLeftUpRightDown = 6, SizeLeftDownRightUp = 7, SizeAll = 8 };

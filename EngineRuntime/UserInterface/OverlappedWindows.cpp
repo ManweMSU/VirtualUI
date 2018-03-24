@@ -233,6 +233,7 @@ namespace Engine
 				ParentWindow::Render(at);
 			}
 			void ContentFrame::ResetCache(void) { _background.SetReference(0); ParentWindow::ResetCache(); }
+			void ContentFrame::ArrangeChildren(void) { if (static_cast<OverlappedWindow *>(GetParent())->_initialized) ParentWindow::ArrangeChildren(); }
 			void ContentFrame::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle ContentFrame::GetRectangle(void) { return ControlPosition; }
 
@@ -245,6 +246,8 @@ namespace Engine
 						if (source->Children[i].Properties->GetTemplateClass() == L"ControlGroup") on->GetStation()->CreateWindow<ControlGroup>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"RadioButtonGroup") on->GetStation()->CreateWindow<RadioButtonGroup>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ScrollBox") on->GetStation()->CreateWindow<ScrollBox>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalSplitBox") on->GetStation()->CreateWindow<VerticalSplitBox>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalSplitBox") on->GetStation()->CreateWindow<HorizontalSplitBox>(on, &source->Children[i]);
 						// Button controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Button") on->GetStation()->CreateWindow<Button>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"CheckBox") on->GetStation()->CreateWindow<CheckBox>(on, &source->Children[i]);
@@ -265,9 +268,6 @@ namespace Engine
 						NOT IMPLEMENTED:
 
 						Edit
-						HorizontalSplitBox
-						VerticalSplitBox
-						SplitBoxPart
 
 						ListBox
 						TreeView
@@ -293,6 +293,7 @@ namespace Engine
 				sizes.Right -= sizes.Left;
 				sizes.Bottom -= sizes.Top;
 				window->GetContentFrame()->SetRectangle(Rectangle::Entire());
+				window->_initialized = true;
 				if (Position.IsValid()) {
 					window->SetRectangle(Position);
 				} else {
@@ -384,6 +385,7 @@ namespace Engine
 						window->_btnwidth += caption;
 					}
 				}
+				window->_initialized = true;
 				window->SetPosition(Box((outer.Right - outer.Left - sizes.Right) / 2 + outer.Left, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top,
 					(outer.Right - outer.Left - sizes.Right) / 2 + outer.Left + sizes.Right, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top + sizes.Bottom));
 				window->SetCallback(Callback);
