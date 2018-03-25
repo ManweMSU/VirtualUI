@@ -8,7 +8,7 @@
             "name": "(lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/Unix Tests/test.exe",
+            "program": "${workspaceFolder}/Unix Tests/Test.app/Contents/MacOS/test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

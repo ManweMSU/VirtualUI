@@ -1,18 +1,31 @@
-#include "../VirtualUI/EngineBase.h"
-#include "../VirtualUI/Streaming.h"
-#include "../VirtualUI/PlatformDependent/FileApi.h"
+#include "../EngineRuntime/EngineBase.h"
+#include "../EngineRuntime/Streaming.h"
+#include "../EngineRuntime/PlatformDependent/FileApi.h"
 
 using namespace Engine;
 
 #include <stdio.h>
 #include <unistd.h>
 
+@import Foundation;
+@import AppKit;
+
 int main(int argc, char ** argv)
 {
     SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+    Streaming::TextWriter Console(ConsoleOutStream);
+    Console << IO::GetCurrentDirectory() << IO::NewLineChar;
+    Console << IO::GetExecutablePath() << IO::NewLineChar;
+
+    string path = IO::Path::GetDirectory(IO::GetExecutablePath()) + string(IO::PathChar) + L".." + string(IO::PathChar) + L".." + string(IO::PathChar) + L"..";
+    Console << L"cd: " << path << IO::NewLineChar;
+
+    IO::SetCurrentDirectory(path);
+
+    Console << IO::GetCurrentDirectory() << IO::NewLineChar;
+
     SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"in.txt", Streaming::AccessRead, Streaming::OpenExisting);
     SafePointer<Streaming::FileStream> LogOutput = new Streaming::FileStream(L"пидор 🌹.txt", Streaming::AccessWrite, Streaming::CreateAlways);
-    Streaming::TextWriter Console(ConsoleOutStream);
     Streaming::TextWriter Log(LogOutput);
 
     Console << int(sizeof(off_t)) << IO::NewLineChar;
@@ -28,6 +41,8 @@ int main(int argc, char ** argv)
 
     Log.WriteEncodingSignature();
     Log << str << IO::NewLineChar << L"Пидор 🌹" << IO::NewLineChar << IO::GetCurrentDirectory();
+    
+    [[NSApplication sharedApplication] run];
 
     return 0;
 }

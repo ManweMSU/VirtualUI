@@ -1,5 +1,5 @@
-#include "../../VirtualUI/PlatformDependent/FileApi.h"
-#include "../../VirtualUI/Miscellaneous/Dictionary.h"
+#include "../../EngineRuntime/PlatformDependent/FileApi.h"
+#include "../../EngineRuntime/Miscellaneous/Dictionary.h"
 
 #define _DARWIN_FEATURE_ONLY_64_BIT_INODE
 
@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <errno.h>
+#include <mach-o/dyld.h>
 
 namespace Engine
 {
@@ -21,6 +22,7 @@ namespace Engine
         string FileAccessException::ToString(void) const { return L"FileAccessException"; }
 		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
 		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
+        string DirectoryAlreadyExistsException::ToString(void) const { return L"DirectoryAlreadyExistsException"; }
 		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
 		string NormalizePath(const string & path)
 		{
@@ -167,5 +169,74 @@ namespace Engine
             } while(true);
             return string(Path->GetBuffer(), -1, Encoding::UTF8);
         }
-    }
+        void CreateDirectory(const string & path)
+		{
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            if (mkdir(reinterpret_cast<char *>(Path->GetBuffer()), 0777) == -1) {
+                if (errno == EEXIST) {
+                    throw DirectoryAlreadyExistsException();
+                }
+                throw FileAccessException();
+            }
+		}
+		void RemoveDirectory(const string & path)
+		{
+            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
+            if (rmdir(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException();
+		}
+		string GetExecutablePath(void)
+		{
+            Array<uint8> Path(0x800);
+            Path.SetLength(0x800);
+            uint32 length = Path.Length();
+            if (_NSGetExecutablePath(reinterpret_cast<char *>(Path.GetBuffer()), &length) == -1) {
+                Path.SetLength(length);
+                _NSGetExecutablePath(reinterpret_cast<char *>(Path.GetBuffer()), &length);
+            }
+            return ExpandPath(string(Path.GetBuffer(), -1, Encoding::UTF8));
+		}
+		namespace Path
+		{
+			string GetExtension(const string & path)
+			{
+				int s = path.Length() - 1;
+				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
+				for (int i = s; i >= 0; i--) {
+					if (path[i] == L'.') {
+						if (i != 0 && path[i - 1] != L'\\' && path[i - 1] != L'/') return path.Fragment(i + 1, s - i);
+					}
+					if (path[i] == L'/' || path[i] == L'\\') return L"";
+				}
+				return L"";
+			}
+			string GetFileName(const string & path)
+			{
+				int s = path.Length() - 1;
+				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
+				for (int i = s; i >= 0; i--) {
+					if (path[i] == L'\\' || path[i] == L'/') return path.Fragment(i + 1, s - i);
+				}
+				return path.Fragment(0, s + 1);
+			}
+			string GetDirectory(const string & path)
+			{
+				int s = path.Length() - 1;
+				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
+				for (int i = s; i >= 0; i--) {
+					if (path[i] == L'\\' || path[i] == L'/') return path.Fragment(0, i);
+				}
+				return L"";
+			}
+			string GetFileNameWithoutExtension(const string & path)
+			{
+				string name = GetFileName(path);
+				for (int i = name.Length() - 1; i > 0; i--) {
+					if (name[i] == L'.') return name.Fragment(0, i);
+				}
+				return name;
+			}
+		}
+	}
 }
+
+    
