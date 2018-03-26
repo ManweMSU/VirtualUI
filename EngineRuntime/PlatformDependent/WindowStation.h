@@ -23,6 +23,7 @@ namespace Engine
 			SafePointer<ICursor> _size_left_up_right_down;
 			SafePointer<ICursor> _size_left_down_right_up;
 			SafePointer<ICursor> _size_all;
+			uint32 _surrogate = 0;
 		public:
 			HandleWindowStation(HWND window);
 			~HandleWindowStation(void) override;

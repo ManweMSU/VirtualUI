@@ -52,4 +52,8 @@ namespace Engine
 	{
 		for (int i = 0; i < length; i++) str[i] = widechar(reinterpret_cast<intptr>(CharUpperW(reinterpret_cast<LPWSTR>(str[i]))));
 	}
+	bool IsAlphabetical(uint32 letter)
+	{
+		return IsCharAlphaW(widechar(letter)) != 0;
+	}
 }

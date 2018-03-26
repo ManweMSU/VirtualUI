@@ -107,12 +107,18 @@ namespace Engine
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftAlternative);
 					else KeyUp(KeyCodes::RightAlternative);
 				} else KeyUp(int32(WParam));
-			} else if (Msg == WM_UNICHAR) {
-				if (WParam == UNICODE_NOCHAR) return TRUE;
-				else {
-					CharDown(uint32(WParam));
-					return FALSE;
+			} else if (Msg == WM_CHAR) {
+				if ((WParam & 0xFC00) == 0xD800) {
+					_surrogate = ((WParam & 0x3FF) << 10) + 0x10000;
+				} else if ((WParam & 0xFC00) == 0xDC00) {
+					_surrogate |= (WParam & 0x3FF) + 0x10000;
+					CharDown(_surrogate);
+					_surrogate = 0;
+				} else {
+					_surrogate = 0;
+					CharDown(WParam);
 				}
+				return FALSE;
 			} else if (Msg == WM_MOUSEMOVE) {
 				POINTS p = MAKEPOINTS(LParam);
 				MouseMove(Point(p.x, p.y));

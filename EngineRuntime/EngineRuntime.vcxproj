@@ -23,6 +23,7 @@
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
+    <ClInclude Include="Miscellaneous\UndoBuffer.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="PlatformDependent\Clipboard.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
@@ -40,6 +41,7 @@
     <ClInclude Include="UserInterface\ButtonControls.h" />
     <ClInclude Include="UserInterface\ControlBase.h" />
     <ClInclude Include="UserInterface\ControlClasses.h" />
+    <ClInclude Include="UserInterface\EditControls.h" />
     <ClInclude Include="UserInterface\GroupControls.h" />
     <ClInclude Include="UserInterface\Menues.h" />
     <ClInclude Include="UserInterface\OverlappedWindows.h" />
@@ -69,6 +71,7 @@
     <ClCompile Include="UserInterface\ButtonControls.cpp" />
     <ClCompile Include="UserInterface\ControlBase.cpp" />
     <ClCompile Include="UserInterface\ControlClasses.cpp" />
+    <ClCompile Include="UserInterface\EditControls.cpp" />
     <ClCompile Include="UserInterface\GroupControls.cpp" />
     <ClCompile Include="UserInterface\Menues.cpp" />
     <ClCompile Include="UserInterface\OverlappedWindows.cpp" />

@@ -4,6 +4,7 @@
 #include "ButtonControls.h"
 #include "StaticControls.h"
 #include "ScrollableControls.h"
+#include "EditControls.h"
 
 using namespace Engine::UI::Windows;
 
@@ -261,13 +262,13 @@ namespace Engine
 						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalScrollBar") on->GetStation()->CreateWindow<HorizontalScrollBar>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalTrackBar") on->GetStation()->CreateWindow<VerticalTrackBar>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalTrackBar") on->GetStation()->CreateWindow<HorizontalTrackBar>(on, &source->Children[i]);
+						// Edit controls
+						else if (source->Children[i].Properties->GetTemplateClass() == L"Edit") on->GetStation()->CreateWindow<Edit>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
 						/*
 						NOT IMPLEMENTED:
-
-						Edit
 
 						ListBox
 						TreeView

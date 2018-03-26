@@ -103,6 +103,12 @@
     <ClInclude Include="PlatformDependent\Clipboard.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\EditControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\UndoBuffer.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -185,6 +191,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\Clipboard.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\EditControls.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

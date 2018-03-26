@@ -56,4 +56,5 @@ namespace Engine
 	// Case converters for fixed-length strings - should work with any language chars
 	void StringLower(widechar * str, int length);
 	void StringUpper(widechar * str, int length);
+	bool IsAlphabetical(uint32 letter);
 }

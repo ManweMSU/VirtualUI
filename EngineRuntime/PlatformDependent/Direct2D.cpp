@@ -106,7 +106,7 @@ namespace Engine
 				float p = float(point);
 				float s = 0.0f;
 				for (int i = 0; i < GlyphAdvances.Length(); i++) {
-					if (p >= s) {
+					if (p <= s + GlyphAdvances[i]) {
 						if (p < s + GlyphAdvances[i] / 2.0f) return i;
 						else return i + 1;
 						break;

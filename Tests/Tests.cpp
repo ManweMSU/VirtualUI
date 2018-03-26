@@ -374,6 +374,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Inactive->Children.Append(Blur);
 				station->GetVisualStyles().WindowActiveView.SetRetain(Active);
 				station->GetVisualStyles().WindowInactiveView.SetRetain(Inactive);
+				station->GetVisualStyles().CaretWidth = 2;
 			}
 			SafePointer<Template::FrameShape> wb = new Template::FrameShape;
 			wb->Children.Append(::Template->Application[L"Waffle"]);
@@ -546,6 +547,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
     default:
+		if (!station && message == WM_UNICHAR && wParam == UNICODE_NOCHAR) return TRUE;
 		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
         return DefWindowProc(hWnd, message, wParam, lParam);
     }

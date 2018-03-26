@@ -111,6 +111,8 @@ namespace Engine
 				SafePointer<Template::Shape> MenuBackground;
 				SafePointer<Template::Shape> MenuArrow;
 				int MenuBorder = 0;
+
+				int CaretWidth = 1;
 			};
 		private:
 			SafePointer<IRenderingDevice> RenderingDevice;
