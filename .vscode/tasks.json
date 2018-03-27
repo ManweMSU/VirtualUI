@@ -13,12 +13,12 @@
             "args": [
                 //"-Wall",
                 "\"${workspaceFolder}/Unix Tests/test.mm\"",
-                "\"${workspaceFolder}/Unix Tests/MacOSX/Base.mm\"",
-                "\"${workspaceFolder}/Unix Tests/MacOSX/FileApi.cpp\"",
 
-                "\"${workspaceFolder}/EngineRuntime/PlatformDependent/StringConvert.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime/EngineBase.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime/Streaming.cpp\"",
+                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/Base.mm\"",
+                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/FileApi.cpp\"",
+                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/StringConvert.cpp\"",
+                "\"${workspaceFolder}/EngineRuntime-MacOSX/EngineBase.cpp\"",
+                "\"${workspaceFolder}/EngineRuntime-MacOSX/Streaming.cpp\"",
                 "-std=c++14",
                 "-v",
                 "-o",
@@ -26,6 +26,7 @@
                 "-DENGINE_UNIX=1",
                 "-DENGINE_X64=1",
                 "-fmodules",
+                "-fobjc-arc",
                 "-fcxx-modules"
             ],
             "group": "build",

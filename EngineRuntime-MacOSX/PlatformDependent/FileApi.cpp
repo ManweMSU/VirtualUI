@@ -1,5 +1,5 @@
-#include "../../EngineRuntime/PlatformDependent/FileApi.h"
-#include "../../EngineRuntime/Miscellaneous/Dictionary.h"
+#include "FileApi.h"
+#include "../Miscellaneous/Dictionary.h"
 
 #define _DARWIN_FEATURE_ONLY_64_BIT_INODE
 
