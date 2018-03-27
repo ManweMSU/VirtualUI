@@ -1,13 +1,15 @@
-//
-//  EngineRuntime.h
-//  EngineRuntime
-//
-//  Created by Дмитрий Емельянов on 27.03.2018.
-//  Copyright © 2018 Engine Software. All rights reserved.
-//
+#pragma once
 
-#ifndef EngineRuntime_h
-#define EngineRuntime_h
+#define ENGINE_X64
+#define ENGINE_UNIX
+#define ENGINE_MACOSX
 
-
-#endif /* EngineRuntime_h */
+#include "EngineBase.h"
+#include "Streaming.h"
+#include "Syntax/Grammar.h"
+#include "Syntax/MathExpression.h"
+#include "Syntax/Regular.h"
+#include "Syntax/Tokenization.h"
+#include "Miscellaneous/Dictionary.h"
+#include "Miscellaneous/DynamicString.h"
+#include "Miscellaneous/UndoBuffer.h"

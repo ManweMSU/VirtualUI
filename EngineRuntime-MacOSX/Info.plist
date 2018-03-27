@@ -3,24 +3,26 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
+	<string>EngineRuntime</string>
 	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<string>com.EngineSoftware.EngineRuntime</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Engine Runtime</string>
 	<key>CFBundlePackageType</key>
 	<string>FMWK</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>1.0.0.0</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2018 Engine Software. All rights reserved.</string>
+	<string>© Engine Software. 2018</string>
 	<key>NSPrincipalClass</key>
 	<string></string>
+	<key>CFBundleGetInfoString</key>
+	<string>Engine Runtime</string>
 </dict>
 </plist>

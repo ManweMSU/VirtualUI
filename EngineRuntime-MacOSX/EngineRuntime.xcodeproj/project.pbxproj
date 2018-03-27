@@ -7,13 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		734D4C46206A9F2000C4EEDC /* EngineRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 734D4C44206A9F2000C4EEDC /* EngineRuntime.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		7317F7AC206AA08800AA84B8 /* EngineRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 7317F7AA206AA03F00AA84B8 /* EngineRuntime.h */; };
+		7317F7AF206AA0E400AA84B8 /* Streaming.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7317F7AD206AA0E400AA84B8 /* Streaming.cpp */; };
+		7317F7B0206AA0E400AA84B8 /* Streaming.h in Headers */ = {isa = PBXBuildFile; fileRef = 7317F7AE206AA0E400AA84B8 /* Streaming.h */; };
+		7317F7B3206AA0EF00AA84B8 /* EngineBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7317F7B1206AA0EF00AA84B8 /* EngineBase.cpp */; };
+		7317F7B4206AA0EF00AA84B8 /* EngineBase.h in Headers */ = {isa = PBXBuildFile; fileRef = 7317F7B2206AA0EF00AA84B8 /* EngineBase.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7317F7A8206A9F7C00AA84B8 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
+		7317F7AA206AA03F00AA84B8 /* EngineRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EngineRuntime.h; sourceTree = SOURCE_ROOT; };
+		7317F7AD206AA0E400AA84B8 /* Streaming.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Streaming.cpp; sourceTree = SOURCE_ROOT; };
+		7317F7AE206AA0E400AA84B8 /* Streaming.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Streaming.h; sourceTree = SOURCE_ROOT; };
+		7317F7B1206AA0EF00AA84B8 /* EngineBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EngineBase.cpp; sourceTree = SOURCE_ROOT; };
+		7317F7B2206AA0EF00AA84B8 /* EngineBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EngineBase.h; sourceTree = SOURCE_ROOT; };
+		7317F7B5206AA0FD00AA84B8 /* Syntax */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Syntax; sourceTree = SOURCE_ROOT; };
+		7317F7B7206AA11000AA84B8 /* PlatformDependent */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PlatformDependent; sourceTree = SOURCE_ROOT; };
+		7317F7B9206AA11700AA84B8 /* Miscellaneous */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Miscellaneous; sourceTree = SOURCE_ROOT; };
 		734D4C41206A9F2000C4EEDC /* EngineRuntime.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = EngineRuntime.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		734D4C44206A9F2000C4EEDC /* EngineRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EngineRuntime.h; sourceTree = "<group>"; };
-		734D4C45206A9F2000C4EEDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -34,6 +45,7 @@
 				734D4C42206A9F2000C4EEDC /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 1;
 		};
 		734D4C42206A9F2000C4EEDC /* Products */ = {
 			isa = PBXGroup;
@@ -46,8 +58,15 @@
 		734D4C43206A9F2000C4EEDC /* EngineRuntime */ = {
 			isa = PBXGroup;
 			children = (
-				734D4C44206A9F2000C4EEDC /* EngineRuntime.h */,
-				734D4C45206A9F2000C4EEDC /* Info.plist */,
+				7317F7B1206AA0EF00AA84B8 /* EngineBase.cpp */,
+				7317F7B9206AA11700AA84B8 /* Miscellaneous */,
+				7317F7B7206AA11000AA84B8 /* PlatformDependent */,
+				7317F7B2206AA0EF00AA84B8 /* EngineBase.h */,
+				7317F7B5206AA0FD00AA84B8 /* Syntax */,
+				7317F7AD206AA0E400AA84B8 /* Streaming.cpp */,
+				7317F7AE206AA0E400AA84B8 /* Streaming.h */,
+				7317F7A8206A9F7C00AA84B8 /* Info.plist */,
+				7317F7AA206AA03F00AA84B8 /* EngineRuntime.h */,
 			);
 			path = EngineRuntime;
 			sourceTree = "<group>";
@@ -59,7 +78,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				734D4C46206A9F2000C4EEDC /* EngineRuntime.h in Headers */,
+				7317F7AC206AA08800AA84B8 /* EngineRuntime.h in Headers */,
+				7317F7B0206AA0E400AA84B8 /* Streaming.h in Headers */,
+				7317F7B4206AA0EF00AA84B8 /* EngineBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +152,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7317F7B3206AA0EF00AA84B8 /* EngineBase.cpp in Sources */,
+				7317F7AF206AA0E400AA84B8 /* Streaming.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,7 +280,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_VERSION = A;
-				INFOPLIST_FILE = EngineRuntime/Info.plist;
+				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.EngineSoftware.EngineRuntime;
@@ -277,7 +300,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_VERSION = A;
-				INFOPLIST_FILE = EngineRuntime/Info.plist;
+				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.EngineSoftware.EngineRuntime;
