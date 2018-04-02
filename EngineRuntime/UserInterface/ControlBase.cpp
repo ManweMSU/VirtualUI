@@ -345,6 +345,8 @@ namespace Engine
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
 		ICursor * WindowStation::LoadCursor(Streaming::Stream * Source) { return 0; }
+		ICursor * WindowStation::LoadCursor(Codec::Image * Source) { return 0; }
+		ICursor * WindowStation::LoadCursor(Codec::Frame * Source) { return 0; }
 		ICursor * WindowStation::GetSystemCursor(SystemCursor cursor) { return 0; }
 		void WindowStation::SetSystemCursor(SystemCursor entity, ICursor * cursor) {}
 		void WindowStation::SetCursor(ICursor * cursor) {}

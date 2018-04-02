@@ -37,6 +37,8 @@ namespace Engine
 			virtual Window * GetExclusiveWindow(void) override;
 			virtual Point GetCursorPos(void) override;
 			virtual ICursor * LoadCursor(Streaming::Stream * Source) override;
+			virtual ICursor * LoadCursor(Codec::Image * Source) override;
+			virtual ICursor * LoadCursor(Codec::Frame * Source) override;
 			virtual ICursor * GetSystemCursor(SystemCursor cursor) override;
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor) override;
 			virtual void SetCursor(ICursor * cursor) override;

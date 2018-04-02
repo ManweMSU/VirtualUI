@@ -1,6 +1,9 @@
 #include "WindowStation.h"
 
 #include "KeyCodes.h"
+#include "../ImageCodec/CodecBase.h"
+
+#undef ZeroMemory
 
 namespace Engine
 {
@@ -54,8 +57,38 @@ namespace Engine
 		}
 		ICursor * HandleWindowStation::LoadCursor(Streaming::Stream * Source)
 		{
-			throw Exception();
-#pragma message("METHOD NOT IMPLEMENTED!")
+			SafePointer<Codec::Image> Image = Codec::DecodeImage(Source);
+			if (Image) { return LoadCursor(Image); } else throw InvalidArgumentException();
+		}
+		ICursor * HandleWindowStation::LoadCursor(Codec::Image * Source) { return LoadCursor(Source->GetFrameBestDpiFit(UI::Zoom)); }
+		ICursor * HandleWindowStation::LoadCursor(Codec::Frame * Source)
+		{
+			SafePointer<Codec::Frame> Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+			BITMAPINFOHEADER hdr;
+			Array<uint32> Fake(0x100);
+			Fake.SetLength(Conv->GetWidth() * Conv->GetHeight());
+			ZeroMemory(Fake.GetBuffer(), 4 * Conv->GetWidth() * Conv->GetHeight());
+			ZeroMemory(&hdr, sizeof(hdr));
+			hdr.biSize = sizeof(hdr);
+			hdr.biWidth = Conv->GetWidth();
+			hdr.biHeight = Conv->GetHeight();
+			hdr.biBitCount = 32;
+			hdr.biPlanes = 1;
+			hdr.biSizeImage = 4 * Conv->GetWidth() * Conv->GetHeight();
+			HDC DC = GetDC(0);
+			HBITMAP ColorMap = CreateDIBitmap(DC, &hdr, CBM_INIT, Conv->GetData(), reinterpret_cast<LPBITMAPINFO>(&hdr), DIB_RGB_COLORS);
+			HBITMAP MaskMap = CreateDIBitmap(DC, &hdr, CBM_INIT, Fake.GetBuffer(), reinterpret_cast<LPBITMAPINFO>(&hdr), DIB_RGB_COLORS);
+			ICONINFO Icon;
+			Icon.fIcon = FALSE;
+			Icon.hbmColor = ColorMap;
+			Icon.hbmMask = MaskMap;
+			Icon.xHotspot = Conv->HotPointX;
+			Icon.yHotspot = Conv->HotPointY;
+			HCURSOR Cursor = CreateIconIndirect(&Icon);
+			DeleteObject(ColorMap);
+			DeleteObject(MaskMap);
+			ReleaseDC(0, DC);
+			return new HandleWindowStationHelper::WindowsCursor(Cursor, true);
 		}
 		ICursor * HandleWindowStation::GetSystemCursor(SystemCursor cursor)
 		{
@@ -116,7 +149,7 @@ namespace Engine
 					_surrogate = 0;
 				} else {
 					_surrogate = 0;
-					CharDown(WParam);
+					CharDown(uint32(WParam));
 				}
 				return FALSE;
 			} else if (Msg == WM_MOUSEMOVE) {

@@ -2,6 +2,7 @@
 
 #include "../EngineBase.h"
 #include "../Streaming.h"
+#include "../ImageCodec/CodecBase.h"
 
 namespace Engine
 {
@@ -159,6 +160,8 @@ namespace Engine
 			virtual int GetHeight(void) const = 0;
 			virtual bool IsDynamic(void) const = 0;
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) = 0;
+			virtual void Reload(IRenderingDevice * Device, Codec::Image * Source) = 0;
+			virtual void Reload(IRenderingDevice * Device, Codec::Frame * Source) = 0;
 		};
 		class IFont : public Object
 		{
@@ -178,6 +181,8 @@ namespace Engine
 			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) = 0;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
+			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
+			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;

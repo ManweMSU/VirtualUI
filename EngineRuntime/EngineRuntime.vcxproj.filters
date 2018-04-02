@@ -17,6 +17,9 @@
     <Filter Include="Syntax">
       <UniqueIdentifier>{569f7495-0230-4aa0-b033-1ff873855e6d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ImageCodec">
+      <UniqueIdentifier>{a7d11f69-e741-41e1-8736-7f7b9bc51687}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -109,6 +112,12 @@
     <ClInclude Include="Miscellaneous\UndoBuffer.h">
       <Filter>Miscellaneous</Filter>
     </ClInclude>
+    <ClInclude Include="ImageCodec\CodecBase.h">
+      <Filter>ImageCodec</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCodec\IconCodec.h">
+      <Filter>ImageCodec</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -194,6 +203,12 @@
     </ClCompile>
     <ClCompile Include="UserInterface\EditControls.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCodec\CodecBase.cpp">
+      <Filter>ImageCodec</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCodec\IconCodec.cpp">
+      <Filter>ImageCodec</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

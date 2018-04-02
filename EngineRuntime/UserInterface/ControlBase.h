@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../EngineBase.h"
+#include "../ImageCodec/CodecBase.h"
 #include "ShapeBase.h"
 #include "Templates.h"
 
@@ -201,6 +202,8 @@ namespace Engine
 			virtual void CharDown(uint32 ucs_code);
 			virtual Point GetCursorPos(void);
 			virtual ICursor * LoadCursor(Streaming::Stream * Source);
+			virtual ICursor * LoadCursor(Codec::Image * Source);
+			virtual ICursor * LoadCursor(Codec::Frame * Source);
 			virtual ICursor * GetSystemCursor(SystemCursor cursor);
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor);
 			virtual void SetCursor(ICursor * cursor);

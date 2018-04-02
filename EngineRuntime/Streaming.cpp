@@ -102,7 +102,7 @@ namespace Engine
 		string TextWriter::ToString(void) const { return L"TextWriter"; }
 		TextWriter & TextWriter::operator<<(const string & text) { Write(text); return *this; }
 		const TextWriter & TextWriter::operator<<(const string & text) const { Write(text); return *this; }
-		FragmentStream::FragmentStream(Stream * Inner, uint64 From, uint64 Length) : inner(Inner), begin(From), end(From + Length), pointer(From) { inner->Retain(); }
+		FragmentStream::FragmentStream(Stream * Inner, uint64 From, uint64 Length) : inner(Inner), begin(From), end(From + Length), pointer(0) { inner->Retain(); }
 		void FragmentStream::Read(void * buffer, uint32 length)
 		{
 			if (uint64(length) > end - begin - pointer) {

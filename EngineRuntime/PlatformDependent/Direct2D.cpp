@@ -17,6 +17,9 @@ namespace Engine
 {
 	namespace Direct2D
 	{
+		using namespace Codec;
+		using namespace Streaming;
+
 		class D2DTexture;
 		class D2DFont;
 		class D2DRenderDevice;
@@ -43,6 +46,178 @@ namespace Engine
 			if (WICFactory) { WICFactory->Release(); WICFactory = 0; }
 			if (DWriteFactory) { DWriteFactory->Release(); DWriteFactory = 0; }
 		}
+
+		class WicCodec : public Codec
+		{
+		public:
+			virtual void EncodeFrame(Stream * stream, Frame * frame, const string & format) override
+			{
+				SafePointer<Image> Fake = new Image;
+				Fake->Frames.Append(frame);
+				EncodeImage(stream, Fake, format);
+			}
+			virtual void EncodeImage(Stream * stream, Image * image, const string & format) override
+			{
+				if (!image->Frames.Length()) throw InvalidArgumentException();
+				SafePointer<IWICBitmapEncoder> Encoder;
+				if (format == L"BMP") {
+					if (WICFactory->CreateEncoder(GUID_ContainerFormatBmp, 0, Encoder.InnerRef()) != S_OK) throw Exception();
+				} else if (format == L"PNG") {
+					if (WICFactory->CreateEncoder(GUID_ContainerFormatPng, 0, Encoder.InnerRef()) != S_OK) throw Exception();
+				} else if (format == L"JPG") {
+					if (WICFactory->CreateEncoder(GUID_ContainerFormatJpeg, 0, Encoder.InnerRef()) != S_OK) throw Exception();
+				} else if (format == L"GIF") {
+					if (WICFactory->CreateEncoder(GUID_ContainerFormatGif, 0, Encoder.InnerRef()) != S_OK) throw Exception();
+				} else if (format == L"TIF") {
+					if (WICFactory->CreateEncoder(GUID_ContainerFormatTiff, 0, Encoder.InnerRef()) != S_OK) throw Exception();
+				} else if (format == L"DDS") {
+					if (WICFactory->CreateEncoder(GUID_ContainerFormatDds, 0, Encoder.InnerRef()) != S_OK) throw Exception();
+				} else throw InvalidArgumentException();
+				SafePointer<ComStream> Output = new ComStream(stream);
+				if (Encoder->Initialize(Output, WICBitmapEncoderNoCache) != S_OK) throw Exception();
+				int max_frame = (format == L"GIF" || format == L"TIF") ? image->Frames.Length() : 1;
+				for (int i = 0; i < max_frame; i++) {
+					SafePointer<IWICBitmapFrameEncode> Frame;
+					SafePointer<IPropertyBag2> Properties;
+					if (Encoder->CreateNewFrame(Frame.InnerRef(), Properties.InnerRef()) == S_OK) {
+						WICPixelFormatGUID PixelFormat = GUID_WICPixelFormat32bppBGRA;
+						Frame->Initialize(Properties);
+						Frame->SetSize(image->Frames[i].GetWidth(), image->Frames[i].GetHeight());
+						Frame->SetPixelFormat(&PixelFormat);
+						FrameFormat Format;
+						bool Deny = false;
+						if (PixelFormat == GUID_WICPixelFormat32bppBGRA) {
+							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat32bppPBGRA) {
+							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat32bppRGBA) {
+							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat32bppPRGBA) {
+							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaFormat::Premultiplied, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat32bppBGR) {
+							Format = FrameFormat(PixelFormat::B8G8R8U8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat32bppRGB) {
+							Format = FrameFormat(PixelFormat::R8G8B8U8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat24bppBGR) {
+							Format = FrameFormat(PixelFormat::B8G8R8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat24bppRGB) {
+							Format = FrameFormat(PixelFormat::R8G8B8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else if (PixelFormat == GUID_WICPixelFormat8bppIndexed) {
+							Format = FrameFormat(PixelFormat::P8, AlphaFormat::Normal, LineDirection::TopDown);
+						} else Deny = true;
+						if (!Deny) {
+							SafePointer<Engine::Codec::Frame> Conv = image->Frames[i].ConvertFormat(Format);
+							if (IsPalettePixel(Format.Format)) {
+								SafePointer<IWICPalette> Palette;
+								WICFactory->CreatePalette(Palette.InnerRef());
+								Palette->InitializeCustom(const_cast<WICColor *>(Conv->GetPalette()), Conv->GetPaletteVolume());
+								Frame->SetPalette(Palette);
+							}
+							if (format == L"GIF") {
+								SafePointer<IWICMetadataQueryWriter> MetaWriter;
+								Frame->GetMetadataQueryWriter(MetaWriter.InnerRef());
+								PROPVARIANT Value;
+								PropVariantInit(&Value);
+								Value.vt = VT_UI2;
+								Value.uiVal = Conv->Duration / 10;
+								MetaWriter->SetMetadataByName(L"/grctlext/Delay", &Value);
+								PropVariantClear(&Value);
+							}
+							Frame->WritePixels(image->Frames[i].GetHeight(), Conv->GetScanLineLength(), Conv->GetScanLineLength() * Conv->GetHeight(), Conv->GetData());
+							Frame->Commit();
+						}
+					}
+				}
+				Encoder->Commit();
+			}
+			virtual Frame * DecodeFrame(Stream * stream) override
+			{
+				SafePointer<Image> image = DecodeImage(stream);
+				SafePointer<Frame> frame = image->Frames.ElementAt(0);
+				frame->Retain();
+				frame->Retain();
+				return frame;
+			}
+			virtual Image * DecodeImage(Stream * stream) override
+			{
+				Streaming::ComStream * Stream = new Streaming::ComStream(stream);
+				IWICBitmapDecoder * Decoder = 0;
+				IWICBitmapFrameDecode * FrameDecoder = 0;
+				IWICMetadataQueryReader * Metadata = 0;
+				IWICFormatConverter * Converter = 0;			
+				SafePointer<Image> Result = new Image;
+				try {
+					uint32 FrameCount;
+					HRESULT r;
+					if (r = WICFactory->CreateDecoderFromStream(Stream, 0, WICDecodeMetadataCacheOnDemand, &Decoder) != S_OK) throw IO::FileFormatException();
+					if (Decoder->GetFrameCount(&FrameCount) != S_OK) throw IO::FileFormatException();
+					for (uint32 i = 0; i < FrameCount; i++) {
+						if (Decoder->GetFrame(i, &FrameDecoder) != S_OK) throw IO::FileFormatException();
+						uint32 fw, fh;
+						if (FrameDecoder->GetSize(&fw, &fh) != S_OK) throw IO::FileFormatException();
+						SafePointer<Frame> frame = new Frame(fw, fh, -1, PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::TopDown);
+						if (FrameDecoder->GetMetadataQueryReader(&Metadata) == S_OK) {
+							PROPVARIANT Value;
+							PropVariantInit(&Value);
+							if (Metadata->GetMetadataByName(L"/grctlext/Delay", &Value) == S_OK) {
+								if (Value.vt == VT_UI2) {
+									frame->Duration = uint(Value.uiVal) * 10;
+								}
+							}
+							PropVariantClear(&Value);
+							Metadata->Release();
+							Metadata = 0;
+						}
+						if (WICFactory->CreateFormatConverter(&Converter) != S_OK) throw Exception();
+						if (Converter->Initialize(FrameDecoder, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, 0, 0.0f, WICBitmapPaletteTypeCustom) != S_OK) throw IO::FileFormatException();					
+						Converter->CopyPixels(0, 4 * frame->GetWidth(), 4 * frame->GetWidth() * frame->GetHeight(), frame->GetData());
+						Converter->Release();
+						Converter = 0;
+						FrameDecoder->Release();
+						FrameDecoder = 0;
+						Result->Frames.Append(frame);
+					}
+					Decoder->Release();
+					Decoder = 0;
+				} catch (...) {
+					Stream->Release();
+					if (Decoder) Decoder->Release();
+					if (FrameDecoder) FrameDecoder->Release();
+					if (Metadata) Metadata->Release();
+					if (Converter) Converter->Release();
+					return 0;
+				}
+				Stream->Release();
+				Result->Retain();
+				return Result;
+			}
+			virtual bool IsImageCodec(void) override { return true; }
+			virtual bool IsFrameCodec(void) override { return true; }
+			virtual string ExamineData(Stream * stream) override
+			{
+				uint64 size = stream->Length() - stream->Seek(0, Current);
+				if (size < 8) return L"";
+				uint64 begin = stream->Seek(0, Current);
+				uint64 sign;
+				try {
+					stream->Read(&sign, sizeof(sign));
+					stream->Seek(begin, Begin);
+				} catch (...) { return L""; }
+				if ((sign & 0xFFFF) == 0x4D42) return L"BMP";
+				else if (sign == 0x0A1A0A0D474E5089) return L"PNG";
+				else if ((sign & 0xFFFFFF) == 0xFFD8FF) return L"JPG";
+				else if ((sign & 0xFFFFFFFFFFFF) == 0x613938464947) return L"GIF";
+				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
+				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
+				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
+				else return L"";
+			}
+			virtual bool CanEncode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS"); }
+			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS"); }
+		};
+
+		Engine::Codec::Codec * _WicCodec = 0;
+		Engine::Codec::Codec * CreateWicCodec(void) { if (!_WicCodec) { _WicCodec = new WicCodec(); _WicCodec->Release(); } return _WicCodec; }
 
 		struct BarRenderingInfo : public IBarRenderingInfo
 		{
@@ -162,6 +337,30 @@ namespace Engine
 			virtual int GetHeight(void) const override { return h; }
 			virtual bool IsDynamic(void) const override { return false; }
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override
+			{
+				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
+				auto New = static_cast<D2DTexture *>(Device->LoadTexture(Source));
+				Frames = New->Frames;
+				FrameDuration = New->FrameDuration;
+				TotalDuration = New->TotalDuration;
+				w = New->w;
+				h = New->h;
+				New->Frames.Clear();
+				New->Release();
+			}
+			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Image * Source) override
+			{
+				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
+				auto New = static_cast<D2DTexture *>(Device->LoadTexture(Source));
+				Frames = New->Frames;
+				FrameDuration = New->FrameDuration;
+				TotalDuration = New->TotalDuration;
+				w = New->w;
+				h = New->h;
+				New->Frames.Clear();
+				New->Release();
+			}
+			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Frame * Source) override
 			{
 				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
 				auto New = static_cast<D2DTexture *>(Device->LoadTexture(Source));
@@ -388,67 +587,69 @@ namespace Engine
 		}
 		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source)
 		{
-			Streaming::ComStream * Stream = new Streaming::ComStream(Source);
-			IWICBitmapDecoder * Decoder = 0;
-			IWICBitmapFrameDecode * FrameDecoder = 0;
-			IWICMetadataQueryReader * Metadata = 0;
-			IWICFormatConverter * Converter = 0;
+			SafePointer<Image> image = Engine::Codec::DecodeImage(Source);
+			if (!image) throw InvalidFormatException();
+			return LoadTexture(image);
+		}
+		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source)
+		{
+			if (!Source->Frames.Length()) throw InvalidArgumentException();
+			int32 w = Source->Frames[0].GetWidth();
+			int32 h = Source->Frames[0].GetHeight();
+			for (int i = 1; i < Source->Frames.Length(); i++) {
+				if (Source->Frames[i].GetWidth() != w || Source->Frames[i].GetHeight() != h) throw InvalidArgumentException();
+			}
 			D2DTexture * Texture = new (std::nothrow) D2DTexture;
-			if (!Texture) { Stream->Release(); throw OutOfMemoryException(); }
+			if (!Texture) { throw OutOfMemoryException(); }
 			try {
-				uint32 FrameCount;
-				HRESULT r;
-				if (r = WICFactory->CreateDecoderFromStream(Stream, 0, WICDecodeMetadataCacheOnDemand, &Decoder) != S_OK) throw IO::FileFormatException();
-				if (Decoder->GetFrameCount(&FrameCount) != S_OK) throw IO::FileFormatException();
-				Texture->w = Texture->h = -1;
-				for (uint32 i = 0; i < FrameCount; i++) {
-					if (Decoder->GetFrame(i, &FrameDecoder) != S_OK) throw IO::FileFormatException();
-					uint32 fw, fh;
-					if (FrameDecoder->GetSize(&fw, &fh) != S_OK) throw IO::FileFormatException();
-					if (Texture->w != -1 && Texture->w != fw) throw IO::FileFormatException();
-					if (Texture->h != -1 && Texture->h != fh) throw IO::FileFormatException();
-					Texture->w = int(fw); Texture->h = int(fh);
-					if (FrameDecoder->GetMetadataQueryReader(&Metadata) == S_OK) {
-						PROPVARIANT Value;
-						PropVariantInit(&Value);
-						if (Metadata->GetMetadataByName(L"/grctlext/Delay", &Value) == S_OK) {
-							if (Value.vt == VT_UI2) {
-								Texture->FrameDuration << uint(Value.uiVal) * 10;
-							} else Texture->FrameDuration << 0;
-						} else Texture->FrameDuration << 0;
-						PropVariantClear(&Value);
-						Metadata->Release();
-						Metadata = 0;
-					} else Texture->FrameDuration << 0;
-					if (WICFactory->CreateFormatConverter(&Converter) != S_OK) throw Exception();
-					if (Converter->Initialize(FrameDecoder, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, 0, 0.0f, WICBitmapPaletteTypeCustom) != S_OK) throw IO::FileFormatException();
-					ID2D1Bitmap * Frame;
-					if (Target->CreateBitmapFromWicBitmap(Converter, &Frame) != S_OK) throw IO::FileFormatException();
-					try { Texture->Frames << Frame; }
-					catch (...) { Frame->Release(); throw; }
-					Converter->Release();
-					Converter = 0;
-					FrameDecoder->Release();
-					FrameDecoder = 0;
+				Texture->w = w; Texture->h = h;
+				for (int i = 0; i < Source->Frames.Length(); i++) {
+					SafePointer<ID2D1Bitmap> Bitmap;
+					if (Target->CreateBitmap(D2D1::SizeU(w, h), D2D1::BitmapProperties(
+						D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)), Bitmap.InnerRef()) != S_OK) {
+						throw Exception();
+					}
+					SafePointer<Frame> conv = Source->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
+					Bitmap->CopyFromMemory(&D2D1::RectU(0, 0, w, h), conv->GetData(), conv->GetScanLineLength());
+					Bitmap->AddRef();
+					Texture->Frames << Bitmap;
+					Texture->FrameDuration << Source->Frames[i].Duration;
 				}
-				Decoder->Release();
-				Decoder = 0;
 			}
 			catch (...) {
-				Stream->Release();
-				if (Decoder) Decoder->Release();
-				if (FrameDecoder) FrameDecoder->Release();
-				if (Metadata) Metadata->Release();
-				if (Converter) Converter->Release();
 				if (Texture) Texture->Release();
 				throw;
 			}
-			Stream->Release();
 			Texture->TotalDuration = Texture->FrameDuration[0];
 			for (int i = 1; i < Texture->FrameDuration.Length(); i++) {
 				auto v = Texture->FrameDuration[i];
 				Texture->FrameDuration[i] = Texture->TotalDuration;
 				Texture->TotalDuration += v;
+			}
+			return Texture;
+		}
+		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source)
+		{
+			SafePointer<ID2D1Bitmap> Bitmap;
+			if (Target->CreateBitmap(D2D1::SizeU(Source->GetWidth(), Source->GetHeight()),
+				D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)), Bitmap.InnerRef()) != S_OK) {
+				throw Exception();
+			}
+			SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
+			Bitmap->CopyFromMemory(&D2D1::RectU(0, 0, Source->GetWidth(), Source->GetHeight()), conv->GetData(), conv->GetScanLineLength());
+			D2DTexture * Texture = new (std::nothrow) D2DTexture;
+			if (!Texture) { throw OutOfMemoryException(); }
+			try {
+				Texture->Frames.Append(Bitmap);
+				Bitmap->AddRef();
+				Texture->FrameDuration << Source->Duration;
+				Texture->TotalDuration = Source->Duration;
+				Texture->w = Source->GetWidth();
+				Texture->h = Source->GetHeight();
+			}
+			catch (...) {
+				if (Texture) Texture->Release();
+				throw;
 			}
 			return Texture;
 		}

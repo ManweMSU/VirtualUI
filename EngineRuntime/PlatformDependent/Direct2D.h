@@ -2,6 +2,7 @@
 
 #include "../UserInterface/ShapeBase.h"
 #include "../Miscellaneous/Dictionary.h"
+#include "../ImageCodec/CodecBase.h"
 
 #include <d2d1_1.h>
 #include <dwrite.h>
@@ -19,6 +20,8 @@ namespace Engine
 
 		void InitializeFactory(void);
 		void ShutdownFactory(void);
+
+		Engine::Codec::Codec * CreateWicCodec(void);
 
 		class D2DRenderDevice : public IRenderingDevice
 		{
@@ -46,6 +49,8 @@ namespace Engine
 			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) override;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) override;
+			virtual ITexture * LoadTexture(Engine::Codec::Image * Source) override;
+			virtual ITexture * LoadTexture(Engine::Codec::Frame * Source) override;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) override;

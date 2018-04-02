@@ -20,6 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h" />
+    <ClInclude Include="ImageCodec\CodecBase.h" />
+    <ClInclude Include="ImageCodec\IconCodec.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
@@ -52,6 +54,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp" />
+    <ClCompile Include="ImageCodec\CodecBase.cpp" />
+    <ClCompile Include="ImageCodec\IconCodec.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />

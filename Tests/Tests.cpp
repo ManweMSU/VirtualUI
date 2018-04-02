@@ -19,6 +19,7 @@
 #include <Syntax/Grammar.h>
 #include <Syntax/MathExpression.h>
 #include <PlatformDependent/KeyCodes.h>
+#include <ImageCodec/IconCodec.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -163,6 +164,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	}
 
 	Engine::Direct2D::InitializeFactory();
+	Engine::Codec::CreateIconCodec();
+	Engine::Direct2D::CreateWicCodec();
 
     // TODO: разместите код здесь.
 
@@ -289,7 +292,52 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Back->From = Rectangle::Entire();
 				Back->RenderMode = TextureShape::TextureRenderMode::Fit;
 				Back->Position = Rectangle::Entire();
-				Back->Texture = ::Template->Texture[L"Wallpaper"];
+				//Back->Texture = ::Template->Texture[L"Wallpaper"];
+				{
+					Streaming::FileStream Source(L"test.ico", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream Source2(L"Wallpaper.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream Source3(L"bl.gif", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream Source4(L"test.icns", Streaming::AccessRead, Streaming::OpenExisting);
+					SafePointer<Codec::Image> Image = Codec::DecodeImage(&Source);
+					SafePointer<Codec::Image> Image2 = Codec::DecodeImage(&Source2);
+					SafePointer<Codec::Image> Image3 = Codec::DecodeImage(&Source3);
+					SafePointer<Codec::Image> Image4 = Codec::DecodeImage(&Source4);
+					SafePointer<ITexture> __back = Device->LoadTexture(Image3);
+					Back->Texture = Template::TextureTemplate(__back);
+					(*conout) << L"==============================" << IO::NewLineChar;
+
+					Streaming::FileStream _1024(L"frames/1024.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream _512(L"frames/512.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream _256(L"frames/256.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream _128(L"frames/128.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream _64(L"frames/64.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream _32(L"frames/32.png", Streaming::AccessRead, Streaming::OpenExisting);
+					Streaming::FileStream _16(L"frames/16.png", Streaming::AccessRead, Streaming::OpenExisting);
+					SafePointer<Codec::Frame> __1024 = Codec::DecodeFrame(&_1024);
+					SafePointer<Codec::Frame> __512 = Codec::DecodeFrame(&_512);
+					SafePointer<Codec::Frame> __256 = Codec::DecodeFrame(&_256);
+					SafePointer<Codec::Frame> __128 = Codec::DecodeFrame(&_128);
+					SafePointer<Codec::Frame> __64 = Codec::DecodeFrame(&_64);
+					SafePointer<Codec::Frame> __32 = Codec::DecodeFrame(&_32);
+					SafePointer<Codec::Frame> __16 = Codec::DecodeFrame(&_16);
+
+					SafePointer<Codec::Image> aicon = new Codec::Image;
+					aicon->Frames.Append(__1024);
+					aicon->Frames.Append(__512);
+					aicon->Frames.Append(__256);
+					aicon->Frames.Append(__128);
+					aicon->Frames.Append(__64);
+					aicon->Frames.Append(__32);
+					aicon->Frames.Append(__16);
+
+					Streaming::FileStream aout(L"test.icon.icns", Streaming::AccessReadWrite, Streaming::CreateAlways);
+					Codec::EncodeImage(&aout, aicon, L"ICNS");
+					aout.Seek(0, Streaming::Begin);
+
+					SafePointer<Codec::Image> acursor = Codec::DecodeImage(&aout);
+					SafePointer<ICursor> cursor = station->LoadCursor(&acursor->Frames[8]);
+					station->SetSystemCursor(SystemCursor::Arrow, cursor);
+				}
 				SafePointer<Template::BarShape> Fill = new Template::BarShape;
 				Fill->Gradient << GradientPoint(0xFF303050);
 				back->Children.Append(Back);
