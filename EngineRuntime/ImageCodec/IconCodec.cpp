@@ -117,43 +117,49 @@ namespace Engine
 					stream->Write(&size, 4);
 					encoded.CopyTo(stream);
 				} else if (section == L"is32" || section == L"il32") {
-					Array<uint8> out(0x800);
+					Array<uint8> out_r(0x200);
+					Array<uint8> out_g(0x200);
+					Array<uint8> out_b(0x200);
 					auto format = frame->GetPixelFormat();
 					auto alpha = frame->GetAlphaFormat();
 					if (IsPalettePixel(format)) {
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
 							uint8 cv = uint8(GetRedChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
-							out << cv;
+							out_r << cv;
 						}
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
 							uint8 cv = uint8(GetGreenChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
-							out << cv;
+							out_g << cv;
 						}
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
 							uint8 cv = uint8(GetBlueChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
-							out << cv;
+							out_b << cv;
 						}
 					} else {
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
 							uint8 cv = uint8(GetRedChannel(frame->GetPixel(x, y), format, alpha));
-							out << cv;
+							out_r << cv;
 						}
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
 							uint8 cv = uint8(GetGreenChannel(frame->GetPixel(x, y), format, alpha));
-							out << cv;
+							out_g << cv;
 						}
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
 							uint8 cv = uint8(GetBlueChannel(frame->GetPixel(x, y), format, alpha));
-							out << cv;
+							out_b << cv;
 						}
 					}
-					SafePointer< Array<uint8> > com = AppleRleCompress(&out);
+					SafePointer< Array<uint8> > com_r = AppleRleCompress(&out_r);
+					SafePointer< Array<uint8> > com_g = AppleRleCompress(&out_g);
+					SafePointer< Array<uint8> > com_b = AppleRleCompress(&out_b);
 					uint32 type, size;
 					section.Encode(&type, Encoding::ANSI, false);
-					size = InverseEndianess(uint32(com->Length()) + 8);
+					size = InverseEndianess(uint32(com_r->Length() + com_g->Length() + com_b->Length()) + 8);
 					stream->Write(&type, 4);
 					stream->Write(&size, 4);
-					stream->Write(com->GetBuffer(), com->Length());
+					stream->Write(com_r->GetBuffer(), com_r->Length());
+					stream->Write(com_g->GetBuffer(), com_g->Length());
+					stream->Write(com_b->GetBuffer(), com_b->Length());
 				} else if (section == L"s8mk" || section == L"l8mk") {
 					Array<uint8> out(0x800);
 					auto format = frame->GetPixelFormat();
