@@ -46,6 +46,18 @@ namespace Engine
 			Rectangle(void);
 			Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom);
 
+			Rectangle friend operator + (const Rectangle & a, const Rectangle & b);
+			Rectangle friend operator - (const Rectangle & a, const Rectangle & b);
+			Rectangle friend operator * (const Rectangle & a, double b);
+			Rectangle friend operator * (double b, const Rectangle & a);
+			Rectangle friend operator / (const Rectangle & a, double b);
+
+			Rectangle & operator += (const Rectangle & a);
+			Rectangle & operator -= (const Rectangle & a);
+			Rectangle & operator *= (double a);
+			Rectangle & operator /= (double a);
+			Rectangle operator - (void) const;
+
 			bool friend operator == (const Rectangle & a, const Rectangle & b);
 			bool friend operator != (const Rectangle & a, const Rectangle & b);
 

@@ -305,38 +305,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					SafePointer<ITexture> __back = Device->LoadTexture(Image3);
 					Back->Texture = Template::TextureTemplate(__back);
 					(*conout) << L"==============================" << IO::NewLineChar;
-
-					Streaming::FileStream _1024(L"frames/1024.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream _512(L"frames/512.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream _256(L"frames/256.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream _128(L"frames/128.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream _64(L"frames/64.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream _32(L"frames/32.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream _16(L"frames/16.png", Streaming::AccessRead, Streaming::OpenExisting);
-					SafePointer<Codec::Frame> __1024 = Codec::DecodeFrame(&_1024);
-					SafePointer<Codec::Frame> __512 = Codec::DecodeFrame(&_512);
-					SafePointer<Codec::Frame> __256 = Codec::DecodeFrame(&_256);
-					SafePointer<Codec::Frame> __128 = Codec::DecodeFrame(&_128);
-					SafePointer<Codec::Frame> __64 = Codec::DecodeFrame(&_64);
-					SafePointer<Codec::Frame> __32 = Codec::DecodeFrame(&_32);
-					SafePointer<Codec::Frame> __16 = Codec::DecodeFrame(&_16);
-
-					SafePointer<Codec::Image> aicon = new Codec::Image;
-					aicon->Frames.Append(__1024);
-					aicon->Frames.Append(__512);
-					aicon->Frames.Append(__256);
-					aicon->Frames.Append(__128);
-					aicon->Frames.Append(__64);
-					aicon->Frames.Append(__32);
-					aicon->Frames.Append(__16);
-
-					Streaming::FileStream aout(L"test.icon.icns", Streaming::AccessReadWrite, Streaming::CreateAlways);
-					Codec::EncodeImage(&aout, aicon, L"ICNS");
-					aout.Seek(0, Streaming::Begin);
-
-					SafePointer<Codec::Image> acursor = Codec::DecodeImage(&aout);
-					SafePointer<ICursor> cursor = station->LoadCursor(&acursor->Frames[8]);
-					station->SetSystemCursor(SystemCursor::Arrow, cursor);
 				}
 				SafePointer<Template::BarShape> Fill = new Template::BarShape;
 				Fill->Gradient << GradientPoint(0xFF303050);
@@ -457,6 +425,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (ID == 202) {
 						static_cast<Controls::ToolButtonPart *>(window->FindChild(202))->Checked ^= true;
 						static_cast<Controls::ToolButtonPart *>(window->FindChild(201))->Disabled ^= true;
+					} else if (ID == 201) {
+						auto bar = window->FindChild(888);
+						if (bar->IsVisible()) {
+							bar->HideAnimated(Animation::SlideSide::Top, 500, Animation::AnimationClass::Smooth);
+						} else {
+							bar->ShowAnimated(Animation::SlideSide::Left, 500, Animation::AnimationClass::Smooth);
+						}
 					}
 				}
 				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
@@ -472,9 +447,49 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				}
 			};
 			auto Callback = new _cb;
+			class _cb2 : public Windows::IWindowEventCallback
+			{
+			public:
+				virtual void OnInitialized(UI::Window * window) override {}
+				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
+				{
+					if (ID == 1) {
+						auto group1 = window->FindChild(101);
+						auto group2 = window->FindChild(102);
+						if (group1->IsVisible()) {
+							group1->HideAnimated(Animation::SlideSide::Left, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+							group2->ShowAnimated(Animation::SlideSide::Right, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+						} else {
+							group2->HideAnimated(Animation::SlideSide::Left, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+							group1->ShowAnimated(Animation::SlideSide::Right, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+						}
+					} else if (ID == 2) {
+						auto group1 = window->FindChild(101);
+						auto group2 = window->FindChild(102);
+						if (group1->IsVisible()) {
+							group1->HideAnimated(Animation::SlideSide::Right, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+							group2->ShowAnimated(Animation::SlideSide::Left, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+						} else {
+							group2->HideAnimated(Animation::SlideSide::Right, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+							group1->ShowAnimated(Animation::SlideSide::Left, 500,
+								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+						}
+					}
+				}
+				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override {}
+			};
+			auto Callback2 = new _cb2;
 
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
+			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 			w2->SetText(L"window");
 

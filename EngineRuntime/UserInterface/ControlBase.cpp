@@ -114,6 +114,52 @@ namespace Engine
 			} while (true);
 			return 0;
 		}
+		void Window::MoveAnimated(const Rectangle & to, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			Station->AnimateWindow(this, to, duration, begin_class, end_class, action);
+		}
+		void Window::HideAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass begin, Animation::AnimationClass end)
+		{
+			auto position = GetRectangle();
+			auto width = position.Right - position.Left;
+			auto height = position.Bottom - position.Top;
+			if (side == Animation::SlideSide::Left) {
+				MoveAnimated(Rectangle(-width, position.Top, Coordinate(0), position.Bottom), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			} else if (side == Animation::SlideSide::Top) {
+				MoveAnimated(Rectangle(position.Left, -height, position.Right, Coordinate(0)), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			} else if (side == Animation::SlideSide::Right) {
+				MoveAnimated(Rectangle(Coordinate::Right(), position.Top, Coordinate::Right() + width, position.Bottom), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			} else if (side == Animation::SlideSide::Bottom) {
+				MoveAnimated(Rectangle(position.Left, Coordinate::Bottom(), position.Right, Coordinate::Bottom() + height), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			}
+		}
+		void Window::ShowAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass end, Animation::AnimationClass begin)
+		{
+			auto position = GetRectangle();
+			auto width = position.Right - position.Left;
+			auto height = position.Bottom - position.Top;
+			if (side == Animation::SlideSide::Left) {
+				Station->AnimateWindow(this, Rectangle(-width, position.Top, Coordinate(0), position.Bottom),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			} else if (side == Animation::SlideSide::Top) {
+				Station->AnimateWindow(this, Rectangle(position.Left, -height, position.Right, Coordinate(0)),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			} else if (side == Animation::SlideSide::Right) {
+				Station->AnimateWindow(this, Rectangle(Coordinate::Right(), position.Top, Coordinate::Right() + width, position.Bottom),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			} else if (side == Animation::SlideSide::Bottom) {
+				Station->AnimateWindow(this, Rectangle(position.Left, Coordinate::Bottom(), position.Right, Coordinate::Bottom() + height),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			}
+		}
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
@@ -123,7 +169,7 @@ namespace Engine
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
 		}
-		WindowStation::WindowStation(void) : Position(0, 0, 0, 0) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); ActiveWindow.SetRetain(TopLevelWindow); }
+		WindowStation::WindowStation(void) : Position(0, 0, 0, 0), Animations(0x10) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); ActiveWindow.SetRetain(TopLevelWindow); }
 		WindowStation::~WindowStation(void) { if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow); }
 		void WindowStation::DestroyWindow(Window * window)
 		{
@@ -138,7 +184,23 @@ namespace Engine
 		}
 		void WindowStation::SetBox(const Box & box) { Position = box; if (TopLevelWindow) { TopLevelWindow->WindowPosition = box; TopLevelWindow->ArrangeChildren(); } }
 		Box WindowStation::GetBox(void) { return Position; }
-		void WindowStation::Render(void) { if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position); }
+		void WindowStation::Render(void)
+		{
+			uint32 time = GetTimerValue();
+			for (int i = 0; i < Animations.Length(); i++) {
+				if (Animations[i].IsOver(time)) {
+					Animations[i].Target->SetRectangle(Animations[i].GetFrame(Animations[i].EndTime));
+					if (Animations[i].Action == Animation::AnimationAction::HideWindow || Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
+						Animations[i].Target->Show(false);
+						if (Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) Animations[i].Target->SetRectangle(Animations[i].BeginState);
+					}
+					Animations.Remove(i); i--;
+				} else {
+					Animations[i].Target->SetRectangle(Animations[i].GetFrame(time));
+				}
+			}
+			if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position);
+		}
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
 		Engine::UI::TopLevelWindow * WindowStation::GetDesktop(void) { return TopLevelWindow; }
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner()) return TopLevelWindow->HitTest(at); else return 0; }
@@ -180,6 +242,21 @@ namespace Engine
 		}
 		void WindowStation::SetActiveWindow(Window * window) { if (ActiveWindow.Inner() != window) ActiveWindow.SetRetain(window); if (ActiveWindow) ActiveWindow->SetOrder(Window::DepthOrder::SetFirst); }
 		Window * WindowStation::GetActiveWindow(void) { return ActiveWindow; }
+		void WindowStation::AnimateWindow(Window * window, const Rectangle & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
+			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
+			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
+				begin_class, end_class, action);
+		}
+		void WindowStation::AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
+			window->SetRectangle(from);
+			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
+			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
+				begin_class, end_class, action);
+		}
 		void WindowStation::SetFocus(Window * window)
 		{
 			if (window == FocusedWindow.Inner()) return;

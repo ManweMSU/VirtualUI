@@ -4,6 +4,7 @@
 #include "../ImageCodec/CodecBase.h"
 #include "ShapeBase.h"
 #include "Templates.h"
+#include "Animation.h"
 
 namespace Engine
 {
@@ -82,9 +83,14 @@ namespace Engine
 			bool IsGeneralizedParent(Window * window);
 			bool IsAvailable(void);
 			Window * GetOverlappedParent(void);
+			void MoveAnimated(const Rectangle & to, uint32 duration, Animation::AnimationClass begin_class,
+				Animation::AnimationClass end_class, Animation::AnimationAction action);
+			void HideAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass begin, Animation::AnimationClass end = Animation::AnimationClass::Hard);
+			void ShowAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass end, Animation::AnimationClass begin = Animation::AnimationClass::Hard);
 			template <class W> W * As(void) { return static_cast<W *>(this); }
 		};
 		class ICursor : public Object {};
+		typedef Animation::AnimationState<Window, Rectangle> WindowAnimationState;
 		enum class SystemCursor { Null = 0, Arrow = 1, Beam = 2, Link = 3, SizeLeftRight = 4, SizeUpDown = 5, SizeLeftUpRightDown = 6, SizeLeftDownRightUp = 7, SizeAll = 8 };
 		class WindowStation : public Object
 		{
@@ -124,6 +130,7 @@ namespace Engine
 			SafePointer<Window> ExclusiveWindow;
 			Box Position;
 			VisualStyles Styles;
+			Array<WindowAnimationState> Animations;
 			void DeconstructChain(Window * window);
 		public:
 			WindowStation(void);
@@ -178,6 +185,10 @@ namespace Engine
 			void GetMouseTarget(Point global, Window ** target, Point * local);
 			void SetActiveWindow(Window * window);
 			Window * GetActiveWindow(void);
+			void AnimateWindow(Window * window, const Rectangle & position, uint32 duration,
+				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
+			void AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration,
+				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
 
 			virtual void SetFocus(Window * window);
 			virtual Window * GetFocus(void);

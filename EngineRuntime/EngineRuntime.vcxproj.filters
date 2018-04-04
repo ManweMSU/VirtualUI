@@ -118,6 +118,9 @@
     <ClInclude Include="ImageCodec\IconCodec.h">
       <Filter>ImageCodec</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\Animation.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">

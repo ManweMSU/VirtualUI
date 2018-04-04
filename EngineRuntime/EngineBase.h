@@ -162,6 +162,10 @@ namespace Engine
 
 	double sgn(double x);
 	float sgn(float x);
+	double saturate(double x);
+	float saturate(float x);
+
+	template <class V> V lerp(const V & a, const V & b, double t) { return t * (b - a) + a; }
 
 	template <class V> class Array : public Object
 	{
