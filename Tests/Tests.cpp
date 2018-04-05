@@ -18,6 +18,7 @@
 #include <Syntax/Tokenization.h>
 #include <Syntax/Grammar.h>
 #include <Syntax/MathExpression.h>
+#include <Syntax/Regular.h>
 #include <PlatformDependent/KeyCodes.h>
 #include <ImageCodec/IconCodec.h>
 
@@ -126,6 +127,49 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
+
+	(*conout) << L"----------------" << IO::NewLineChar;
+	(*conout) << L"Pidor : pidoR = " << Syntax::MatchFilePattern(L"Pidor", L"pidoR") << IO::NewLineChar;
+	(*conout) << L"Pido : pidoR = " << Syntax::MatchFilePattern(L"Pido", L"pidoR") << IO::NewLineChar;
+	(*conout) << L"Pidor : pido = " << Syntax::MatchFilePattern(L"Pidor", L"pido") << IO::NewLineChar;
+	(*conout) << L"Pidor : pidoP = " << Syntax::MatchFilePattern(L"Pidor", L"pidoP") << IO::NewLineChar;
+	(*conout) << L"Pidor : pi?oR = " << Syntax::MatchFilePattern(L"Pidor", L"pi?oR") << IO::NewLineChar;
+	(*conout) << L"Piror : pi?oR = " << Syntax::MatchFilePattern(L"Piror", L"pi?oR") << IO::NewLineChar;
+	(*conout) << L"Pidor : p?oR = " << Syntax::MatchFilePattern(L"Pidor", L"p?oR") << IO::NewLineChar;
+	(*conout) << L"Pidor : pid?oR = " << Syntax::MatchFilePattern(L"Pidor", L"pid?oR") << IO::NewLineChar;
+	(*conout) << L"Piror : pi?R = " << Syntax::MatchFilePattern(L"Piror", L"pi?R") << IO::NewLineChar;
+	(*conout) << L"Piror : pi?doR = " << Syntax::MatchFilePattern(L"Piror", L"pi?doR") << IO::NewLineChar;
+	(*conout) << L"Pidor : pi??R = " << Syntax::MatchFilePattern(L"Pidor", L"pi??R") << IO::NewLineChar;
+	(*conout) << L"Pirer : pi??R = " << Syntax::MatchFilePattern(L"Pirer", L"pi??R") << IO::NewLineChar;
+	(*conout) << L"Pido : pi?? = " << Syntax::MatchFilePattern(L"Pido", L"pi??") << IO::NewLineChar;
+	(*conout) << L"Pidor : pidoR* = " << Syntax::MatchFilePattern(L"Pidor", L"pidoR*") << IO::NewLineChar;
+	(*conout) << L"Pidor : pi*R = " << Syntax::MatchFilePattern(L"Pidor", L"pi*R") << IO::NewLineChar;
+	(*conout) << L"Pir : pi*R = " << Syntax::MatchFilePattern(L"Pir", L"pi*R") << IO::NewLineChar;
+	(*conout) << L"Pid : pi* = " << Syntax::MatchFilePattern(L"Pid", L"pi*") << IO::NewLineChar;
+	(*conout) << L"Pidor : pi*q = " << Syntax::MatchFilePattern(L"Pidor", L"pi*q") << IO::NewLineChar;
+	(*conout) << L"Pidor : pi*doR = " << Syntax::MatchFilePattern(L"Pidor", L"pi*doR") << IO::NewLineChar;
+	(*conout) << L"aaabbbaabc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabc", L"aa*bbb*cc") << IO::NewLineChar;
+	(*conout) << L"aaabbbaabcc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabcc", L"aa*bbb*cc") << IO::NewLineChar;
+	(*conout) << L"aaabbbaabccc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabccc", L"aa*bbb*cc") << IO::NewLineChar;
+
+	{
+		SafePointer< Array<string> > files = IO::Search::GetFiles(L"*", true);
+		for (int i = 0; i < files->Length(); i++) (*conout) << files->ElementAt(i) << IO::NewLineChar;
+	}
+	//{
+	//	Streaming::FileStream conin_stream(IO::GetStandartInput());
+	//	Streaming::TextReader conin(&conin_stream);
+	//	do {
+	//		string in; 
+	//		conin >> in;
+	//		(*conout) << Syntax::Math::CalculateExpressionDouble(in) << IO::NewLineChar;
+	//	} while (true);
+	//	/*Streaming::FileStream s(L"Tests.cpp", Streaming::AccessRead, Streaming::OpenExisting);
+	//	Streaming::TextReader r(&s);
+	//	(*conout) << r.ReadAll();
+	//	auto e = r.GetEncoding();
+	//	(*conout) << IO::NewLineChar;*/
+	//}
 
 	{
 		Syntax::Spelling blang;

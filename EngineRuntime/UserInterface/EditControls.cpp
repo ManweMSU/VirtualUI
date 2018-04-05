@@ -313,13 +313,13 @@ namespace Engine
 			void Edit::CharDown(uint32 ucs_code)
 			{
 				if (!ReadOnly) {
-					string filthered = FiltherInput(string(&ucs_code, 1, Encoding::UTF32));
-					if (filthered.Length()) {
+					string filtered = FilterInput(string(&ucs_code, 1, Encoding::UTF32));
+					if (filtered.Length()) {
 						if (_save) {
 							_undo.PushCurrentVersion();
 							_save = false;
 						}
-						Print(filthered);
+						Print(filtered);
 						_deferred_scroll = true;
 					}
 				}
@@ -375,11 +375,11 @@ namespace Engine
 				if (!ReadOnly) {
 					string text;
 					if (Clipboard::GetData(text)) {
-						string filther = FiltherInput(text);
-						if (filther.Length()) {
+						string filter = FilterInput(text);
+						if (filter.Length()) {
 							_undo.PushCurrentVersion();
 							_save = true;
-							Print(filther);
+							Print(filter);
 							_deferred_scroll = true;
 						}
 					}
@@ -416,16 +416,16 @@ namespace Engine
 			}
 			void Edit::SetPlaceholder(const string & text) { Placeholder = text; _placeholder_info.SetReference(0); }
 			string Edit::GetPlaceholder(void) { return Placeholder; }
-			void Edit::SetCharacterFilther(const string & filther)
+			void Edit::SetCharacterFilter(const string & filter)
 			{
-				CharactersEnabled = filther;
-				_chars_enabled.SetLength(filther.GetEncodedLength(Encoding::UTF32));
-				filther.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
+				CharactersEnabled = filter;
+				_chars_enabled.SetLength(filter.GetEncodedLength(Encoding::UTF32));
+				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
-			string Edit::GetCharacterFilther(void) { return CharactersEnabled; }
+			string Edit::GetCharacterFilter(void) { return CharactersEnabled; }
 			void Edit::SetContextMenu(Menues::Menu * menu) { _menu.SetRetain(menu); }
 			Menues::Menu * Edit::GetContextMenu(void) { return _menu; }
-			string Edit::FiltherInput(const string & input)
+			string Edit::FilterInput(const string & input)
 			{
 				string conv = input;
 				if (LowerCase) conv = conv.LowerCase();

@@ -59,5 +59,10 @@ namespace Engine
 			string GetDirectory(const string & path);
 			string GetFileNameWithoutExtension(const string & path);
 		}
+		namespace Search
+		{
+			Array<string> * GetFiles(const string & path, bool recursive = false);
+			Array<string> * GetDirectories(const string & path);
+		}
 	}
 }

@@ -1,5 +1,7 @@
 #include "Streaming.h"
 
+#include "Miscellaneous/DynamicString.h"
+
 namespace Engine
 {
 	namespace Streaming
@@ -139,5 +141,122 @@ namespace Engine
 		void FragmentStream::Flush(void) {}
 		FragmentStream::~FragmentStream(void) { inner->Release(); }
 		string FragmentStream::ToString(void) const { return L"FragmentStream"; }
+		TextReader::TextReader(Stream * Source) { source = Source; source->Retain(); coding = Encoding::Unknown; eof = false; }
+		TextReader::TextReader(Stream * Source, Encoding encoding) { source = Source; source->Retain(); coding = encoding; eof = false; }
+		uint32 TextReader::ReadChar(void) const
+		{
+			try {
+				if (coding == Encoding::Unknown) {
+					uint8 byte;
+					source->Read(&byte, 1);
+					if (byte == 0xEF) {
+						uint16 word;
+						source->Read(&word, 2);
+						if (word == 0xBFBB) coding = Encoding::UTF8;
+						else throw InvalidFormatException();
+					} else if (byte == 0xFF) {
+						source->Read(&byte, 1);
+						if (byte != 0xFE) throw InvalidFormatException();
+						coding = Encoding::UTF16;
+					} else {
+						coding = Encoding::ANSI;
+						return byte;
+					}
+				}
+				if (coding == Encoding::ANSI) {
+					uint8 byte;
+					source->Read(&byte, 1);
+					return byte;
+				} else if (coding == Encoding::UTF8) {
+					uint32 code = 0;
+					source->Read(&code, 1);
+					if (code & 0x80) {
+						code &= 0x7F;
+						if (code & 0x20) {
+							code &= 0x1F;
+							if (code & 0x10) {
+								code &= 0x07;
+								code <<= 18;
+								uint8 c2, c3, c4;
+								source->Read(&c2, 1);
+								source->Read(&c3, 1);
+								source->Read(&c4, 1);
+								code |= (c2 & 0x3F) << 12;
+								code |= (c3 & 0x3F) << 6;
+								code |= (c4 & 0x3F);
+							} else {
+								code &= 0x0F;
+								code <<= 12;
+								uint8 c2, c3;
+								source->Read(&c2, 1);
+								source->Read(&c3, 1);
+								code |= (c2 & 0x3F) << 6;
+								code |= (c3 & 0x3F);
+							}
+						} else {
+							code &= 0x1F;
+							code <<= 6;
+							uint8 c2;
+							source->Read(&c2, 1);
+							code |= (c2 & 0x3F);
+						}
+					}
+					return code;
+				} else if (coding == Encoding::UTF16) {
+					uint32 code = 0;
+					source->Read(&code, 2);
+					if (code == 0) {
+						coding = Encoding::UTF32;
+						source->Read(&code, 4);
+						return code;
+					} else {
+						if ((code & 0xFC00) == 0xD800) {
+							code &= 0x03FF;
+							code <<= 10;
+							uint16 c;
+							source->Read(&c, 2);
+							code |= (c & 0x3FF);
+							code += 0x10000;
+						}
+						return code;
+					}
+				} else if (coding == Encoding::UTF32) {
+					uint32 code;
+					source->Read(&code, 4);
+					return code;
+				} else return 0;
+			}
+			catch (FileReadEndOfFileException &) { eof = true; return 0xFFFFFFFF; }
+		}
+		string TextReader::ReadLine(void) const
+		{
+			DynamicString result;
+			uint32 chr;
+			do {
+				chr = ReadChar();
+				if (chr != 0xFFFFFFFF && (chr >= 0x20 || chr == L'\t')) {
+					result << string(&chr, 1, Encoding::UTF32);
+				}
+			} while (chr != 0xFFFFFFFF && chr != L'\n');
+			return result.ToString();
+		}
+		string TextReader::ReadAll(void) const
+		{
+			DynamicString result;
+			uint32 chr;
+			do {
+				chr = ReadChar();
+				if (chr != 0xFFFFFFFF) {
+					result << string(&chr, 1, Encoding::UTF32);
+				}
+			} while (chr != 0xFFFFFFFF);
+			return result.ToString();
+		}
+		bool TextReader::EofReached(void) const { return eof; }
+		Encoding TextReader::GetEncoding(void) const { return coding; }
+		TextReader::~TextReader(void) { source->Release(); }
+		string TextReader::ToString(void) const { return L"TextReader"; }
+		TextReader & TextReader::operator >> (string & str) { str = ReadLine(); return *this; }
+		const TextReader & TextReader::operator >> (string & str) const { str = ReadLine(); return *this; }
 	}
 }

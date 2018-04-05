@@ -77,11 +77,11 @@ namespace Engine
 				void ScrollToCaret(void);
 				void SetPlaceholder(const string & text);
 				string GetPlaceholder(void);
-				void SetCharacterFilther(const string & filther);
-				string GetCharacterFilther(void);
+				void SetCharacterFilter(const string & filter);
+				string GetCharacterFilter(void);
 				void SetContextMenu(Menues::Menu * menu);
 				Menues::Menu * GetContextMenu(void);
-				string FiltherInput(const string & input);
+				string FilterInput(const string & input);
 				void Print(const string & text);
 			};
 		}

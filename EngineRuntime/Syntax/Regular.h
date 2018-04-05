@@ -6,6 +6,6 @@ namespace Engine
 {
 	namespace Syntax
 	{
-
+		bool MatchFilePattern(const string & path, const string & filter);
 	}
 }

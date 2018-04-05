@@ -1,5 +1,6 @@
 #include "FileApi.h"
 #include "../Miscellaneous/DynamicString.h"
+#include "../Syntax/Regular.h"
 
 #include <Windows.h>
 
@@ -241,6 +242,62 @@ namespace Engine
 					if (name[i] == L'.') return name.Fragment(0, i);
 				}
 				return name;
+			}
+		}
+		namespace Search
+		{
+			namespace SearchHelper
+			{
+				void FillFiles(Array<string> * to, const string & path, const string & filter, const string & prefix, bool recursive)
+				{
+					if (recursive) {
+						SafePointer< Array<string> > subs = GetDirectories(path + L"\\*");
+						for (int i = 0; i < subs->Length(); i++) {
+							FillFiles(to, path + L"\\" + subs->ElementAt(i), filter, prefix + subs->ElementAt(i) + string(PathChar), recursive);
+						}
+					}
+					WIN32_FIND_DATAW Find;
+					HANDLE Search = FindFirstFileW(path + L"\\*", &Find);
+					if (Search != INVALID_HANDLE_VALUE) {
+						BOOL Continue = TRUE;
+						while (Continue) {
+							if ((Find.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 && Syntax::MatchFilePattern(Find.cFileName, filter)) {
+								to->Append(prefix + Find.cFileName);
+							}
+							Continue = FindNextFileW(Search, &Find);
+						}
+						FindClose(Search);
+					}
+				}
+			}
+			Array<string>* GetFiles(const string & path, bool recursive)
+			{
+				SafePointer< Array<string> > result = new Array<string>(0x10);
+				auto epath = ExpandPath(path);
+				SearchHelper::FillFiles(result, Path::GetDirectory(epath), Path::GetFileName(epath), L"", recursive);
+				result->Retain();
+				return result;
+			}
+			Array<string>* GetDirectories(const string & path)
+			{
+				SafePointer< Array<string> > result = new Array<string>(0x10);
+				auto epath = ExpandPath(path);
+				auto filter = Path::GetFileName(epath);
+				WIN32_FIND_DATAW Find;
+				HANDLE Search = FindFirstFileW(Path::GetDirectory(epath) + L"\\*", &Find);
+				if (Search != INVALID_HANDLE_VALUE) {
+					BOOL Continue = TRUE;
+					while (Continue) {
+						if ((Find.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && Syntax::MatchFilePattern(Find.cFileName, filter) &&
+							StringCompare(Find.cFileName, L".") != 0 && StringCompare(Find.cFileName, L"..") != 0) {
+							result->Append(Find.cFileName);
+						}
+						Continue = FindNextFileW(Search, &Find);
+					}
+					FindClose(Search);
+				}
+				result->Retain();
+				return result;
 			}
 		}
 	}

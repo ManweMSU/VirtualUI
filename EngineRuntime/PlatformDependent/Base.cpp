@@ -56,4 +56,29 @@ namespace Engine
 	{
 		return IsCharAlphaW(widechar(letter)) != 0;
 	}
+	bool IsPlatformAvailable(Platform platform)
+	{
+		if (platform == Platform::X86) return true;
+		if (platform == Platform::X64) {
+#ifdef ENGINE_X64
+			return true;
+#else
+			SYSTEM_INFO info;
+			GetNativeSystemInfo(&info);
+			return info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64;
+#endif
+		}
+	}
+	int GetProcessorsNumber(void)
+	{
+		SYSTEM_INFO info;
+		GetNativeSystemInfo(&info);
+		return int(info.dwNumberOfProcessors);
+	}
+	uint64 GetInstalledMemory(void)
+	{
+		uint64 result;
+		GetPhysicallyInstalledSystemMemory(&result);
+		return result;
+	}
 }
