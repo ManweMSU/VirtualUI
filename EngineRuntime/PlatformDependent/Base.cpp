@@ -68,6 +68,7 @@ namespace Engine
 			return info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64;
 #endif
 		}
+		return false;
 	}
 	int GetProcessorsNumber(void)
 	{

@@ -20,6 +20,9 @@
     <Filter Include="ImageCodec">
       <UniqueIdentifier>{a7d11f69-e741-41e1-8736-7f7b9bc51687}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Processes">
+      <UniqueIdentifier>{875d00d9-f3fd-43dc-a781-3f237cb9de17}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -121,6 +124,12 @@
     <ClInclude Include="UserInterface\Animation.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="Processes\Process.h">
+      <Filter>Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="Processes\Threading.h">
+      <Filter>Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -212,6 +221,12 @@
     </ClCompile>
     <ClCompile Include="ImageCodec\IconCodec.cpp">
       <Filter>ImageCodec</Filter>
+    </ClCompile>
+    <ClCompile Include="Processes\Process.cpp">
+      <Filter>Processes</Filter>
+    </ClCompile>
+    <ClCompile Include="Processes\Threading.cpp">
+      <Filter>Processes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

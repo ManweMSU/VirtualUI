@@ -34,6 +34,8 @@
     <ClInclude Include="PlatformDependent\KeyCodes.h" />
     <ClInclude Include="PlatformDependent\StringConvert.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
+    <ClInclude Include="Processes\Process.h" />
+    <ClInclude Include="Processes\Threading.h" />
     <ClInclude Include="Streaming.h" />
     <ClInclude Include="Syntax\Grammar.h" />
     <ClInclude Include="Syntax\MathExpression.h" />
@@ -67,6 +69,8 @@
     <ClCompile Include="PlatformDependent\KeyCodes.cpp" />
     <ClCompile Include="PlatformDependent\StringConvert.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
+    <ClCompile Include="Processes\Process.cpp" />
+    <ClCompile Include="Processes\Threading.cpp" />
     <ClCompile Include="Streaming.cpp" />
     <ClCompile Include="Syntax\Grammar.cpp" />
     <ClCompile Include="Syntax\MathExpression.cpp" />

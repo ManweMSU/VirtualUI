@@ -1,6 +1,7 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
+#include <Processes/Process.h>
 #include <Miscellaneous/DynamicString.h>
 #include <UserInterface/ShapeBase.h>
 #include <UserInterface/Templates.h>
@@ -35,6 +36,8 @@
 
 #undef CreateWindow
 #undef GetCurrentDirectory
+#undef GetCommandLine
+#undef CreateProcess
 
 using namespace Engine;
 using namespace Engine::UI;
@@ -153,8 +156,24 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"aaabbbaabccc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabccc", L"aa*bbb*cc") << IO::NewLineChar;
 
 	{
+		SafePointer<Process> p = CreateProcess(L"C:\\Windows\\notepad.exe");
+		if (!p) (*conout) << L"CreateProcess failed" << IO::NewLineChar;
+		for (int i = 0; i < 20; i++) {
+			Engine::Sleep(1000);
+			if (p->Exited()) {
+				(*conout) << L"Exited: " << p->GetExitCode() << IO::NewLineChar;
+			} else {
+				(*conout) << L"Not exited." << IO::NewLineChar;
+			}
+			if (i == 10) p->Terminate();
+		}
+		p->Wait();
+
 		SafePointer< Array<string> > files = IO::Search::GetFiles(L"*", true);
 		for (int i = 0; i < files->Length(); i++) (*conout) << files->ElementAt(i) << IO::NewLineChar;
+
+		SafePointer< Array<string> > ll = Engine::GetCommandLine();
+		for (int i = 0; i < ll->Length(); i++) (*conout) << ll->ElementAt(i) << IO::NewLineChar;
 	}
 	//{
 	//	Streaming::FileStream conin_stream(IO::GetStandartInput());

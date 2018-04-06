@@ -163,7 +163,9 @@ namespace Engine
 		widechar * conv = new (std::nothrow) widechar[0x10];
 		if (!conv) throw OutOfMemoryException();
 		conv[0] = 0;
-		if (src == 0xFFFFFFFF) {
+		bool rev = true;
+		if (src == 0x80000000) {
+			rev = false;
 			StringCopy(conv, L"-2147483648");
 		} else {
 			bool neg = false;
@@ -180,7 +182,8 @@ namespace Engine
 		int len = StringLength(conv);
 		text = new (std::nothrow) widechar[len + 1];
 		if (!text) { delete[] conv; throw OutOfMemoryException(); }
-		for (int i = 0; i < len; i++) text[i] = conv[len - i - 1];
+		if (rev) for (int i = 0; i < len; i++) text[i] = conv[len - i - 1];
+		else for (int i = 0; i < len; i++) text[i] = conv[i];
 		text[len] = 0;
 		delete[] conv;
 	}
@@ -206,7 +209,9 @@ namespace Engine
 		widechar * conv = new (std::nothrow) widechar[0x20];
 		if (!conv) throw OutOfMemoryException();
 		conv[0] = 0;
-		if (src == 0xFFFFFFFFFFFFFFFF) {
+		bool rev = true;
+		if (src == 0x8000000000000000) {
+			rev = false;
 			StringCopy(conv, L"-9223372036854775808");
 		} else {
 			bool neg = false;
@@ -223,7 +228,8 @@ namespace Engine
 		int len = StringLength(conv);
 		text = new (std::nothrow) widechar[len + 1];
 		if (!text) { delete[] conv; throw OutOfMemoryException(); }
-		for (int i = 0; i < len; i++) text[i] = conv[len - i - 1];
+		if (rev) for (int i = 0; i < len; i++) text[i] = conv[len - i - 1];
+		else for (int i = 0; i < len; i++) text[i] = conv[i];
 		text[len] = 0;
 		delete[] conv;
 	}
