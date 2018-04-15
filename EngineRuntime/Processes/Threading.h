@@ -12,9 +12,6 @@ namespace Engine
 		virtual bool Exited(void) = 0;
 		virtual int GetExitCode(void) = 0;
 		virtual void Wait(void) = 0;
-		virtual void Terminate(void) = 0;
-		virtual void Suspend(void) = 0;
-		virtual void Resume(void) = 0;
 	};
 	class Semaphore : public Object
 	{

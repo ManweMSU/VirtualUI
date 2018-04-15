@@ -27,9 +27,6 @@ namespace Engine
 				return (result && code != STILL_ACTIVE) ? int(code) : -1;
 			}
 			virtual void Wait(void) override { WaitForSingleObject(thread, INFINITE); }
-			virtual void Terminate(void) override { TerminateThread(thread, -1); }
-			virtual void Suspend(void) override { SuspendThread(thread); }
-			virtual void Resume(void) override { ResumeThread(thread); }
 		};
 		class Semaphore : public Engine::Semaphore
 		{
