@@ -16,6 +16,10 @@
 	<string>test</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
+	<key>CFBundleIconFile</key>
+	<string>Test</string>
+	<key>CFBundleIconName</key>
+	<string>Test</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>CFBundleInfoDictionaryVersion</key>

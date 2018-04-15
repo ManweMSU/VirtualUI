@@ -92,5 +92,24 @@ namespace Engine
 			TextWriter & operator << (const string & text);
 			const TextWriter & operator << (const string & text) const;
 		};
+		class TextReader final : public Object
+		{
+			Stream * source;
+			mutable Encoding coding;
+			mutable bool eof;
+		public:
+			TextReader(Stream * Source);
+			TextReader(Stream * Source, Encoding encoding);
+			uint32 ReadChar(void) const;
+			string ReadLine(void) const;
+			string ReadAll(void) const;
+			bool EofReached(void) const;
+			Encoding GetEncoding(void) const;
+			virtual ~TextReader(void) override;
+			virtual string ToString(void) const override;
+
+			TextReader & operator >> (string & str);
+			const TextReader & operator >> (string & str) const;
+		};
 	}
 }

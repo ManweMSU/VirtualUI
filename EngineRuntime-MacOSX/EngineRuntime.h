@@ -6,6 +6,9 @@
 
 #include "EngineBase.h"
 #include "Streaming.h"
+#include "Processes/Process.h"
+#include "Processes/Threading.h"
+#include "Processes/Shell.h"
 #include "Syntax/Grammar.h"
 #include "Syntax/MathExpression.h"
 #include "Syntax/Regular.h"

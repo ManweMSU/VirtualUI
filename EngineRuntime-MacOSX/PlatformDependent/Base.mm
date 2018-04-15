@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
 @import Foundation;
 
@@ -41,6 +43,8 @@ namespace Engine
 		@autoreleasepool {
 			NSString * a = [[NSString alloc] initWithBytes: A length: StringLength(A) * sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
 			NSString * b = [[NSString alloc] initWithBytes: B length: StringLength(B) * sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+			[a autorelease];
+			[b autorelease];
 			NSComparisonResult result = [a localizedCaseInsensitiveCompare: b];
 			if (result == NSOrderedAscending) return -1;
 			else if (result == NSOrderedDescending) return 1;
@@ -56,6 +60,8 @@ namespace Engine
 			@autoreleasepool {
 				NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
 				NSString * c = [s lowercaseStringWithLocale: [NSLocale currentLocale]];
+				[s autorelease];
+				[c autorelease];
 				[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
 					options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
 			}
@@ -67,9 +73,41 @@ namespace Engine
 			@autoreleasepool {
 				NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
 				NSString * c = [s uppercaseStringWithLocale: [NSLocale currentLocale]];
+				[s autorelease];
+				[c autorelease];
 				[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
 					options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
 			}
 		}
+	}
+	bool IsAlphabetical(uint32 letter)
+	{
+		if (letter >= 0x10000) return false;
+		bool result = false;
+		@autoreleasepool {
+			NSCharacterSet * letters = [NSCharacterSet letterCharacterSet];
+			[letters autorelease];
+			if ([letters characterIsMember: unichar(letter)]) result = true;
+		}
+		return result;
+	}
+	bool IsPlatformAvailable(Platform platform)
+	{
+		if (platform == Platform::X86) return false;
+		if (platform == Platform::X64) return true;
+	}
+	int GetProcessorsNumber(void)
+	{
+		return sysconf(_SC_NPROCESSORS_ONLN);
+	}
+	uint64 GetInstalledMemory(void)
+	{
+		int name[2];
+		name[0] = CTL_HW;
+		name[1] = HW_MEMSIZE;
+		uint64 result = 0;
+		uint64 length = sizeof(result);
+		if (sysctl(name, 2, &result, reinterpret_cast<size_t *>(&length), 0, 0) == 0) return result;
+		return 0;
 	}
 }

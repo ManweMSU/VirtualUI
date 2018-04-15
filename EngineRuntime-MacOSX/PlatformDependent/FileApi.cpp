@@ -1,5 +1,6 @@
 #include "FileApi.h"
 #include "../Miscellaneous/Dictionary.h"
+#include "../Syntax/Regular.h"
 
 #define _DARWIN_FEATURE_ONLY_64_BIT_INODE
 
@@ -10,6 +11,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <mach-o/dyld.h>
+#include <dirent.h>
 
 namespace Engine
 {
@@ -234,6 +236,63 @@ namespace Engine
 					if (name[i] == L'.') return name.Fragment(0, i);
 				}
 				return name;
+			}
+		}
+		namespace Search
+		{
+			namespace SearchHelper
+			{
+				void FillFiles(Array<string> * to, const string & path, const string & filter, const string & prefix, bool recursive)
+				{
+					if (recursive) {
+						SafePointer< Array<string> > subs = GetDirectories(path + L"/*");
+						for (int i = 0; i < subs->Length(); i++) {
+							FillFiles(to, path + L"/" + subs->ElementAt(i), filter, prefix + subs->ElementAt(i) + string(PathChar), recursive);
+						}
+					}
+					SafePointer< Array<uint8> > path_utf8 = path.EncodeSequence(Encoding::UTF8, true);
+					struct dirent ** elements;
+					int count = scandir(reinterpret_cast<char *>(path_utf8->GetBuffer()), &elements, 0, alphasort);
+					if (count >= 0) {
+						for (int i = 0; i < count; i++) {
+							if (elements[i]->d_type == DT_REG) {
+								string name = string(elements[i]->d_name, elements[i]->d_namlen, Encoding::UTF8);
+								if (Syntax::MatchFilePattern(name, filter)) to->Append(prefix + name);
+							}
+							free(elements[i]);
+						}
+						free(elements);
+					}
+				}
+			}
+			Array<string>* GetFiles(const string & path, bool recursive)
+			{
+				SafePointer< Array<string> > result = new Array<string>(0x10);
+				auto epath = ExpandPath(path);
+				SearchHelper::FillFiles(result, Path::GetDirectory(epath), Path::GetFileName(epath), L"", recursive);
+				result->Retain();
+				return result;
+			}
+			Array<string>* GetDirectories(const string & path)
+			{
+				SafePointer< Array<string> > result = new Array<string>(0x10);
+				auto epath = ExpandPath(path);
+				auto filter = Path::GetFileName(epath);
+				SafePointer< Array<uint8> > path_utf8 = Path::GetDirectory(epath).EncodeSequence(Encoding::UTF8, true);
+				struct dirent ** elements;
+				int count = scandir(reinterpret_cast<char *>(path_utf8->GetBuffer()), &elements, 0, alphasort);
+				if (count >= 0) {
+					for (int i = 0; i < count; i++) {
+						{
+							string name = string(elements[i]->d_name, elements[i]->d_namlen, Encoding::UTF8);
+							if (name != L"." && name != L".." && Syntax::MatchFilePattern(name, filter)) result->Append(name);
+						}
+						free(elements[i]);
+					}
+					free(elements);
+				}
+				result->Retain();
+				return result;
 			}
 		}
 	}

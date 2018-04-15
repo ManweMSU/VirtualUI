@@ -1,6 +1,4 @@
-#include "../EngineRuntime-MacOSX/EngineBase.h"
-#include "../EngineRuntime-MacOSX/Streaming.h"
-#include "../EngineRuntime-MacOSX/PlatformDependent/FileApi.h"
+#include "../EngineRuntime-MacOSX/EngineRuntime.h"
 
 using namespace Engine;
 
@@ -10,35 +8,63 @@ using namespace Engine;
 @import Foundation;
 @import AppKit;
 
+SafePointer<Semaphore> write_sem;
+
+int task(void * arg)
+{
+    SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+    Streaming::TextWriter Console(ConsoleOutStream);
+    for (int i = 0; i < 20; i++) {
+        write_sem->Wait();
+        Console << string(reinterpret_cast<widechar *>(arg)) << IO::NewLineChar;
+        write_sem->Open();
+        Sleep(100);
+    }
+    return 666;
+}
+
 int main(int argc, char ** argv)
 {
     SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
     Streaming::TextWriter Console(ConsoleOutStream);
-    Console << IO::GetCurrentDirectory() << IO::NewLineChar;
-    Console << IO::GetExecutablePath() << IO::NewLineChar;
+    SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandartInput());
+    Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
 
-    string path = IO::Path::GetDirectory(IO::GetExecutablePath()) + string(IO::PathChar) + L".." + string(IO::PathChar) + L".." + string(IO::PathChar) + L"..";
-    Console << L"cd: " << path << IO::NewLineChar;
+    string in;
+    // do {
+    //     Input >> in;
+    //     if (in.Length()) {
+    //         try {
+    //             Console << Syntax::Math::CalculateExpressionDouble(in) << IO::NewLineChar;
+    //         }
+    //         catch (...) { Console << L"pizdets" << IO::NewLineChar; }
+    //     }
+    // } while (in.Length());
 
-    IO::SetCurrentDirectory(path);
+    write_sem.SetReference(CreateSemaphore(1));
 
-    Console << IO::GetCurrentDirectory() << IO::NewLineChar;
+    SafePointer<Thread> t1 = CreateThread(task, (void*) L"text A");
+    SafePointer<Thread> t2 = CreateThread(task, (void*) L"text B");
 
-    SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"in.txt", Streaming::AccessRead, Streaming::OpenExisting);
-    SafePointer<Streaming::FileStream> LogOutput = new Streaming::FileStream(L"пидор 🌹.txt", Streaming::AccessWrite, Streaming::CreateAlways);
-    Streaming::TextWriter Log(LogOutput);
+    for (int i = 0; i < 30; i++) {
+        write_sem->Wait();
+        if (t1->Exited()) {
+            Console << L"Thread A: exited with " + string(t1->GetExitCode()) << IO::NewLineChar;
+        } else {
+            Console << L"Thread A: working " << IO::NewLineChar;
+        }
+        if (t2->Exited()) {
+            Console << L"Thread B: exited with " + string(t2->GetExitCode()) << IO::NewLineChar;
+        } else {
+            Console << L"Thread B: working " << IO::NewLineChar;
+        }
+        write_sem->Open();
+        Sleep(100);
+    }
 
-    Console << int(sizeof(off_t)) << IO::NewLineChar;
-
-    Array<uint8> chars;
-    chars.SetLength(Input->Length());
-    Input->Read(chars.GetBuffer(), Input->Length());
-    string str = string(chars.GetBuffer(), chars.Length(), Encoding::UTF8);
-
-    Console << str << IO::NewLineChar << L"корневген пидор" << IO::NewLineChar << IO::GetCurrentDirectory() << IO::NewLineChar;
-
-    Log.WriteEncodingSignature();
-    Log << str << IO::NewLineChar << L"Пидор 🌹" << IO::NewLineChar << IO::GetCurrentDirectory();
+    t1->Wait();
+    t1->Release();
+    t2->Release();
     
     [NSApplication sharedApplication];
 

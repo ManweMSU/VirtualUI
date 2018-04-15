@@ -17,12 +17,12 @@ namespace Engine
 
 #ifdef ENGINE_WINDOWS
 		constexpr widechar PathChar = L'\\';
-		constexpr widechar * NewLineChar = L"\r\n";
+		constexpr const widechar * NewLineChar = L"\r\n";
 		constexpr Encoding TextFileEncoding = Encoding::ANSI;
 #endif
 #ifdef ENGINE_UNIX
 		constexpr widechar PathChar = L'/';
-		constexpr widechar * NewLineChar = L"\n";
+		constexpr const widechar * NewLineChar = L"\n";
 		constexpr Encoding TextFileEncoding = Encoding::UTF8;
 #endif
 
@@ -58,6 +58,11 @@ namespace Engine
 			string GetFileName(const string & path);
 			string GetDirectory(const string & path);
 			string GetFileNameWithoutExtension(const string & path);
+		}
+		namespace Search
+		{
+			Array<string> * GetFiles(const string & path, bool recursive = false);
+			Array<string> * GetDirectories(const string & path);
 		}
 	}
 }

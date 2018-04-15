@@ -10,7 +10,11 @@
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.13.sdk/usr/include",
                 "${workspaceRoot}"
             ],
-            "defines": ["ENGINE_UNIX", "ENGINE_X64"],
+            "defines": [
+                "ENGINE_UNIX",
+                "ENGINE_MACOSX",
+                "ENGINE_X64"
+            ],
             "intelliSenseMode": "clang-x64",
             "browse": {
                 "path": [
@@ -26,7 +30,10 @@
             },
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.13.sdk/System/Library/Frameworks"
-            ]
+            ],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
         }
     ],
     "version": 3

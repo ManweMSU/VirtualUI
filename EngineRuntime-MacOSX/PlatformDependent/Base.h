@@ -14,25 +14,36 @@ namespace Engine
 	typedef signed char int8;
 	typedef unsigned char uint8;
 
+	typedef wchar_t widechar;
+
+	enum class Platform { X86, X64 };
+
 #define ENGINE_PACKED_STRUCTURE __pragma(pack(push, 1))
 #define ENGINE_END_PACKED_STRUCTURE __pragma(pack(pop))
 #define ENGINE_PI 3.14159265358979323846
 
 #ifdef ENGINE_WINDOWS
 	constexpr Encoding SystemEncoding = Encoding::UTF16;
+	constexpr const widechar * OperatingSystemName = L"Windows";
 #endif
 #ifdef ENGINE_UNIX
 	constexpr Encoding SystemEncoding = Encoding::UTF32;
+#ifdef ENGINE_MACOSX
+	constexpr const widechar * OperatingSystemName = L"Mac OS";
+#else
+	constexpr const widechar * OperatingSystemName = L"Unix";
+#endif
 #endif
 
 #ifdef ENGINE_X64
 	typedef uint64 intptr;
+	constexpr Platform ApplicationPlatform = Platform::X64;
 #else
 	typedef uint32 intptr;
+	constexpr Platform ApplicationPlatform = Platform::X86;
 #endif
 
 	typedef intptr eint;
-	typedef wchar_t widechar;
 	typedef void * handle;
 
 	// Atomic increment and decrement; memory initialization
@@ -57,4 +68,9 @@ namespace Engine
 	void StringLower(widechar * str, int length);
 	void StringUpper(widechar * str, int length);
 	bool IsAlphabetical(uint32 letter);
+
+	// Query system information
+	bool IsPlatformAvailable(Platform platform);
+	int GetProcessorsNumber(void);
+	uint64 GetInstalledMemory(void);
 }
