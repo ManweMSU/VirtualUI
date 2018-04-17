@@ -10,6 +10,8 @@
 
 #undef ZeroMemory
 
+extern Engine::SafePointer<Engine::Streaming::TextWriter> conout;
+
 using namespace Engine::UI;
 
 namespace Engine
@@ -17,6 +19,37 @@ namespace Engine
 	namespace NativeWindows
 	{
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+		void FillWinapiMenu(HMENU Menu, ObjectArray<Menues::MenuElement> & Elements)
+		{
+			for (int i = 0; i < Elements.Length(); i++) {
+				if (Elements[i].IsSeparator()) {
+					AppendMenuW(Menu, MF_OWNERDRAW | MF_DISABLED | MF_GRAYED, 0, reinterpret_cast<LPCWSTR>(Elements.ElementAt(i)));
+				} else {
+					Menues::MenuItem * item = static_cast<Menues::MenuItem *>(Elements.ElementAt(i));
+					uint flags = MF_OWNERDRAW;
+					if (item->Checked) flags |= MF_CHECKED;
+					if (item->Disabled) flags |= MF_DISABLED | MF_GRAYED;
+					if (item->Children.Length()) {
+						HMENU Submenu = CreatePopupMenu();
+						FillWinapiMenu(Submenu, item->Children);
+						AppendMenuW(Menu, flags | MF_POPUP, reinterpret_cast<UINT_PTR>(Submenu), reinterpret_cast<LPCWSTR>(Elements.ElementAt(i)));
+					} else {
+						AppendMenuW(Menu, flags, static_cast<UINT_PTR>(item->ID), reinterpret_cast<LPCWSTR>(Elements.ElementAt(i)));
+					}
+				}
+			}
+		}
+		void DestroyWinapiMenu(HMENU Menu)
+		{
+			int count = GetMenuItemCount(Menu);
+			for (int i = count - 1; i >= 0; i--) {
+				HMENU Submenu = GetSubMenu(Menu, i);
+				DeleteMenu(Menu, i, MF_BYPOSITION);
+				if (Submenu) DestroyWinapiMenu(Submenu);
+			}
+			DestroyMenu(Menu);
+		}
+
 		bool SystemInitialized = false;
 		void InitializeWindowSystem(void)
 		{
@@ -28,12 +61,12 @@ namespace Engine
 				Cls.lpfnWndProc = WindowCallbackProc;
 				Cls.cbWndExtra = sizeof(void*);
 				Cls.hInstance = GetModuleHandleW(0);
-				Cls.hIcon = (HICON) LoadImageW(Cls.hInstance, MAKEINTRESOURCE(1), IMAGE_ICON, GetSystemMetrics(SM_CXICON), 
-					GetSystemMetrics(SM_CYICON), 0);
-				Cls.hIconSm = (HICON) LoadImageW(Cls.hInstance, MAKEINTRESOURCE(1), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-					GetSystemMetrics(SM_CYSMICON), 0);
+				Cls.hIcon = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCE(1), IMAGE_ICON,
+					GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0));
+				Cls.hIconSm = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCE(1), IMAGE_ICON,
+					GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
 				Cls.lpszClassName = L"engine_runtime_main_class";
-				ATOM r = RegisterClassExW(&Cls);
+				RegisterClassExW(&Cls);
 				SystemInitialized = true;
 			}
 		}
@@ -182,6 +215,31 @@ namespace Engine
 			GetWindowRect(reinterpret_cast<NativeStation *>(Station)->GetHandle(), &Rect);
 			return UI::Box(Rect.left, Rect.top, Rect.right, Rect.bottom);
 		}
+		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at)
+		{
+			POINT p = { at.x, at.y };
+			HWND server = static_cast<NativeStation *>(owner->GetStation())->GetHandle();
+			ClientToScreen(server, &p);
+			SafePointer<ID2D1DCRenderTarget> RenderTarget;
+			D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
+			RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+			RenderTargetProps.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			RenderTargetProps.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+			RenderTargetProps.dpiX = 0.0f;
+			RenderTargetProps.dpiY = 0.0f;
+			RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+			RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+			if (Direct2D::D2DFactory->CreateDCRenderTarget(&RenderTargetProps, RenderTarget.InnerRef()) != S_OK) throw Exception();
+			SafePointer<Direct2D::D2DRenderDevice> LocalRenderingDevice = new Direct2D::D2DRenderDevice(RenderTarget);
+			LocalRenderingDevice->SetTimerValue(0);
+			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(LocalRenderingDevice);
+			HMENU Menu = CreatePopupMenu();
+			FillWinapiMenu(Menu, menu->Children);
+			int result = TrackPopupMenuEx(Menu, TPM_RETURNCMD, p.x, p.y, server, 0);
+			DestroyWinapiMenu(Menu);
+			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();
+			return result;
+		}
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));
@@ -211,6 +269,30 @@ namespace Engine
 					station->RenderContent();
 					ValidateRect(Wnd, 0);
 				}
+			} else if (Msg == WM_MEASUREITEM) {
+				LPMEASUREITEMSTRUCT mis = reinterpret_cast<LPMEASUREITEMSTRUCT>(LParam);
+				if (mis->CtlType == ODT_MENU) {
+					auto item = reinterpret_cast<Menues::MenuElement *>(mis->itemData);
+					mis->itemWidth = item->GetWidth();
+					mis->itemHeight = item->GetHeight();
+				}
+				Result = 1;
+			} else if (Msg == WM_DRAWITEM) {
+				LPDRAWITEMSTRUCT dis = reinterpret_cast<LPDRAWITEMSTRUCT>(LParam);
+				if (dis->CtlType == ODT_MENU) {
+					auto item = reinterpret_cast<Menues::MenuElement *>(dis->itemData);
+					auto box = Box(0, 0, dis->rcItem.right - dis->rcItem.left, dis->rcItem.bottom - dis->rcItem.top);
+					auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderDevice *>(item->GetRenderingDevice())->GetRenderTarget());
+					target->BindDC(dis->hDC, &dis->rcItem);
+					target->BeginDraw();
+					if (dis->itemState & ODS_SELECTED) {
+						item->Render(box, true);
+					} else {
+						item->Render(box, false);
+					}
+					target->EndDraw();
+				}
+				Result = 1;
 			} else if (Msg == WM_GETMINMAXINFO) {
 				if (station) {
 					LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(LParam);

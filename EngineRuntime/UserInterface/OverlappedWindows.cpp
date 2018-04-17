@@ -7,6 +7,7 @@
 #include "EditControls.h"
 
 #include "../PlatformDependent/NativeStation.h"
+#include "../PlatformDependent/KeyCodes.h"
 
 using namespace Engine::UI::Windows;
 
@@ -14,6 +15,14 @@ namespace Engine
 {
 	namespace UI
 	{
+		namespace Accelerators
+		{
+			AcceleratorCommand::AcceleratorCommand(void) {}
+			AcceleratorCommand::AcceleratorCommand(int invoke_command, uint on_key, bool control, bool shift, bool alternative) :
+				CommandID(invoke_command), KeyCode(on_key), Control(control), Shift(shift), Alternative(alternative), SystemCommand(false) {}
+			AcceleratorCommand::AcceleratorCommand(AcceleratorSystemCommand command, uint on_key, bool control, bool shift, bool alternative) :
+				CommandID(static_cast<int>(command)), KeyCode(on_key), Control(control), Shift(shift), Alternative(alternative), SystemCommand(true) {}
+		}
 		namespace Controls
 		{
 			namespace ArgumentService
@@ -49,13 +58,13 @@ namespace Engine
 			}
 
 			OverlappedWindow::OverlappedWindow(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _callback(0), _visible(false), _enabled(true), _mode(0), _border(0), _caption(0), _state(0),
-				_minwidth(0), _minheight(0), _btnwidth(0), ControlPosition(Rectangle::Invalid()), _close(0), _maximize(0), _minimize(0), _help(0)
+				_minwidth(0), _minheight(0), _btnwidth(0), ControlPosition(Rectangle::Invalid()), _close(0), _maximize(0), _minimize(0), _help(0), _accels(0x10)
 			{
 				_inner = Station->CreateWindow<ContentFrame>(this);
 			}
 			OverlappedWindow::OverlappedWindow(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) :
 				ParentWindow(Parent, Station), _callback(0), _visible(false), _enabled(true), _mode(0), _border(0), _caption(0), _state(0), _minwidth(0), _minheight(0), _btnwidth(0),
-				ControlPosition(Rectangle::Invalid()), _close(0), _maximize(0), _minimize(0), _help(0)
+				ControlPosition(Rectangle::Invalid()), _close(0), _maximize(0), _minimize(0), _help(0), _accels(0x10)
 			{
 				_inner = Station->CreateWindow<ContentFrame>(this, Template);
 			}
@@ -224,6 +233,37 @@ namespace Engine
 					GetPart(at);
 				}
 			}
+			bool OverlappedWindow::TranslateAccelerators(int key_code)
+			{
+				for (int i = 0; i < _accels.Length(); i++) {
+					if (key_code == _accels[i].KeyCode &&
+						Keyboard::IsKeyPressed(KeyCodes::Shift) == _accels[i].Shift &&
+						Keyboard::IsKeyPressed(KeyCodes::Control) == _accels[i].Control &&
+						Keyboard::IsKeyPressed(KeyCodes::Alternative) == _accels[i].Alternative) {
+						if (_accels[i].SystemCommand) {
+							if (_accels[i].CommandID == static_cast<int>(Accelerators::AcceleratorSystemCommand::WindowClose)) {
+								if (_callback) _callback->OnFrameEvent(this, Windows::FrameEvent::Close);
+							} else if (_accels[i].CommandID == static_cast<int>(Accelerators::AcceleratorSystemCommand::WindowInvokeHelp)) {
+								if (_callback) _callback->OnFrameEvent(this, Windows::FrameEvent::Help);
+							} else if (_accels[i].CommandID == static_cast<int>(Accelerators::AcceleratorSystemCommand::WindowNextControl)) {
+								Window * Focus = GetStation()->GetFocus();
+								if (!Focus) Focus = this;
+								auto New = Focus->GetNextTabStopControl();
+								if (New) New->SetFocus();
+							} else if (_accels[i].CommandID == static_cast<int>(Accelerators::AcceleratorSystemCommand::WindowPreviousControl)) {
+								Window * Focus = GetStation()->GetFocus();
+								if (!Focus) Focus = this;
+								auto New = Focus->GetPreviousTabStopControl();
+								if (New) New->SetFocus();
+							}
+						} else {
+							if (_callback) _callback->OnControlEvent(this, _accels[i].CommandID, Event::AcceleratorCommand, 0);
+						}
+						return true;
+					}
+				}
+				return false;
+			}
 			void OverlappedWindow::PopupMenuCancelled(void) { if (_callback) _callback->OnFrameEvent(this, FrameEvent::PopupMenuCancelled); }
 			void OverlappedWindow::SetCursor(Point at)
 			{
@@ -269,6 +309,17 @@ namespace Engine
 			{
 				GetContentFrame()->Background.SetRetain(shape);
 				GetContentFrame()->ResetCache();
+			}
+			Array<Accelerators::AcceleratorCommand>& OverlappedWindow::GetAcceleratorTable(void) { return _accels; }
+			const Array<Accelerators::AcceleratorCommand>& OverlappedWindow::GetAcceleratorTable(void) const { return _accels; }
+			void OverlappedWindow::AddDialogStandartAccelerators(void)
+			{
+				_accels << Accelerators::AcceleratorCommand(1, KeyCodes::Return, false, false, false);
+				_accels << Accelerators::AcceleratorCommand(2, KeyCodes::Escape, false, false, false);
+				_accels << Accelerators::AcceleratorCommand(Accelerators::AcceleratorSystemCommand::WindowNextControl,
+					KeyCodes::Tab, false, false, false);
+				_accels << Accelerators::AcceleratorCommand(Accelerators::AcceleratorSystemCommand::WindowPreviousControl,
+					KeyCodes::Tab, false, true, false);
 			}
 
 			ContentFrame::ContentFrame(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }

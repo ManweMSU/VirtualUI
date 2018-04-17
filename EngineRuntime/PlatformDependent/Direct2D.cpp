@@ -402,7 +402,10 @@ namespace Engine
 		};
 
 		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
-			Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
+		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) :
+			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
@@ -448,10 +451,12 @@ namespace Engine
 			}
 			auto Info = new (std::nothrow) BlurEffectRenderingInfo;
 			if (!Info) throw OutOfMemoryException();
-			if (Target->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
-			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
-			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
-			Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+			if (ExtendedTarget) {
+				if (ExtendedTarget->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
+				Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
+				Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
+				Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+			}
 			BlurCache.Append(power, Info);
 			return Info;
 		}
@@ -460,14 +465,16 @@ namespace Engine
 			if (!InversionInfo.Inner()) {
 				auto Info = new (std::nothrow) InversionEffectRenderingInfo;
 				if (!Info) throw OutOfMemoryException();
-				if (Target->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
-				Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
-					-1.0f, 0.0f, 0.0f, 0.0f,
-					0.0f, -1.0f, 0.0f, 0.0f,
-					0.0f, 0.0f, -1.0f, 0.0f,
-					0.0f, 0.0f, 0.0f, 1.0f,
-					1.0f, 1.0f, 1.0f, 0.0f
-				));
+				if (ExtendedTarget) {
+					if (ExtendedTarget->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
+					Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
+						-1.0f, 0.0f, 0.0f, 0.0f,
+						0.0f, -1.0f, 0.0f, 0.0f,
+						0.0f, 0.0f, -1.0f, 0.0f,
+						0.0f, 0.0f, 0.0f, 1.0f,
+						1.0f, 1.0f, 1.0f, 0.0f
+					));
+				}
 				InversionInfo.SetReference(Info);
 			}
 			InversionInfo->Retain();
@@ -812,23 +819,7 @@ namespace Engine
 		{
 			if (Layers.Length()) return;
 			auto info = static_cast<BlurEffectRenderingInfo *>(Info);
-			SafePointer<ID2D1Bitmap> Fragment;
-			Box Corrected = At;
-			if (Corrected.Left < 0) Corrected.Left = 0;
-			if (Corrected.Top < 0) Corrected.Top = 0;
-			if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
-				for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
-				Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
-				for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
-				info->Effect->SetInput(0, Fragment);
-				Target->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
-			}
-		}
-		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink)
-		{
-			if (Layers.Length()) return;
-			if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
-				auto info = static_cast<InversionEffectRenderingInfo *>(Info);
+			if (info->Effect) {
 				SafePointer<ID2D1Bitmap> Fragment;
 				Box Corrected = At;
 				if (Corrected.Left < 0) Corrected.Left = 0;
@@ -838,7 +829,27 @@ namespace Engine
 					Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
 					for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
 					info->Effect->SetInput(0, Fragment);
-					Target->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
+					ExtendedTarget->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
+				}
+			}
+		}
+		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink)
+		{
+			if (Layers.Length()) return;
+			if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
+				auto info = static_cast<InversionEffectRenderingInfo *>(Info);
+				if (info->Effect) {
+					SafePointer<ID2D1Bitmap> Fragment;
+					Box Corrected = At;
+					if (Corrected.Left < 0) Corrected.Left = 0;
+					if (Corrected.Top < 0) Corrected.Top = 0;
+					if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+						for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
+						Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
+						for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
+						info->Effect->SetInput(0, Fragment);
+						ExtendedTarget->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
+					}
 				}
 			}
 		}

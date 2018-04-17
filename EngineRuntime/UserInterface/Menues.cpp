@@ -1,5 +1,7 @@
 #include "Menues.h"
 
+#include "../PlatformDependent/NativeStation.h"
+
 namespace Engine
 {
 	namespace UI
@@ -330,6 +332,7 @@ namespace Engine
 				}
 				return 0;
 			}
+			IRenderingDevice * MenuItem::GetRenderingDevice(void) { return _device; }
 
 			MenuSeparator::MenuSeparator(void)
 			{
@@ -364,6 +367,7 @@ namespace Engine
 			}
 			bool MenuSeparator::IsSeparator(void) const { return true; }
 			MenuItem * MenuSeparator::FindChild(int ID) { return 0; }
+			IRenderingDevice * MenuSeparator::GetRenderingDevice(void) { return _device; }
 
 			Menu::Menu(void) : Children(0x10) {}
 			Menu::Menu(Template::ControlTemplate * MenuTemplate) : Children(0x10)
@@ -396,26 +400,32 @@ namespace Engine
 			{
 				if (!owner) throw InvalidArgumentException();
 				auto station = owner->GetStation();
-				auto holder = station->CreateWindow<MenuService::MenuHolder>(0);
-				Box desktop = station->GetBox();
-				holder->SetPosition(desktop);
-				holder->Owner.SetRetain(owner);
-				holder->Source.SetRetain(this);
-				for (int i = 0; i < Children.Length(); i++) Children[i].WakeUp(owner->GetStation()->GetRenderingDevice());
-				station->SetExclusiveWindow(holder);
-				holder->Focus.SetRetain(station->GetFocus());
-				station->SetFocus(holder);
-				auto menu = station->CreateWindow<MenuService::MenuList>(holder);
-				menu->Elements = &Children;
-				menu->CalculateDimensions();
-				if (desktop.Right >= at.x + menu->TotalWidth && desktop.Bottom >= at.y + menu->TotalHeight) {
-					menu->SetPosition(Box(at.x, at.y, at.x + menu->TotalWidth, at.y + menu->TotalHeight));
-				} else if (desktop.Right >= at.x + menu->TotalWidth) {
-					menu->SetPosition(Box(at.x, at.y - menu->TotalHeight + 1, at.x + menu->TotalWidth, at.y + 1));
-				} else if (desktop.Bottom >= at.y + menu->TotalHeight) {
-					menu->SetPosition(Box(at.x - menu->TotalWidth + 1, at.y, at.x + 1, at.y + menu->TotalHeight));
+				if (station->IsNativeStationWrapper()) {
+					int command = NativeWindows::RunMenuPopup(this, owner, at);
+					if (command) owner->RaiseEvent(command, Window::Event::MenuCommand, 0);
+					else owner->PopupMenuCancelled();
 				} else {
-					menu->SetPosition(Box(at.x - menu->TotalWidth + 1, at.y - menu->TotalHeight + 1, at.x + 1, at.y + 1));
+					auto holder = station->CreateWindow<MenuService::MenuHolder>(0);
+					Box desktop = station->GetBox();
+					holder->SetPosition(desktop);
+					holder->Owner.SetRetain(owner);
+					holder->Source.SetRetain(this);
+					for (int i = 0; i < Children.Length(); i++) Children[i].WakeUp(owner->GetStation()->GetRenderingDevice());
+					station->SetExclusiveWindow(holder);
+					holder->Focus.SetRetain(station->GetFocus());
+					station->SetFocus(holder);
+					auto menu = station->CreateWindow<MenuService::MenuList>(holder);
+					menu->Elements = &Children;
+					menu->CalculateDimensions();
+					if (desktop.Right >= at.x + menu->TotalWidth && desktop.Bottom >= at.y + menu->TotalHeight) {
+						menu->SetPosition(Box(at.x, at.y, at.x + menu->TotalWidth, at.y + menu->TotalHeight));
+					} else if (desktop.Right >= at.x + menu->TotalWidth) {
+						menu->SetPosition(Box(at.x, at.y - menu->TotalHeight + 1, at.x + menu->TotalWidth, at.y + 1));
+					} else if (desktop.Bottom >= at.y + menu->TotalHeight) {
+						menu->SetPosition(Box(at.x - menu->TotalWidth + 1, at.y, at.x + 1, at.y + menu->TotalHeight));
+					} else {
+						menu->SetPosition(Box(at.x - menu->TotalWidth + 1, at.y - menu->TotalHeight + 1, at.x + 1, at.y + 1));
+					}
 				}
 			}
 		}

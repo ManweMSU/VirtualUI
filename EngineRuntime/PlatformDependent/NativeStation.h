@@ -3,6 +3,7 @@
 #include "../UserInterface/ControlBase.h"
 #include "../UserInterface/Templates.h"
 #include "../UserInterface/OverlappedWindows.h"
+#include "../UserInterface/Menues.h"
 
 namespace Engine
 {
@@ -18,5 +19,6 @@ namespace Engine
 		bool IsWindowEnabled(UI::WindowStation * Station);
 		string GetWindowTitle(UI::WindowStation * Station);
 		UI::Box GetWindowPosition(UI::WindowStation * Station);
+		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at);
 	}
 }

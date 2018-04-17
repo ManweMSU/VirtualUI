@@ -25,7 +25,8 @@ namespace Engine
 
 		class D2DRenderDevice : public IRenderingDevice
 		{
-			ID2D1DeviceContext * Target;
+			ID2D1DeviceContext * ExtendedTarget;
+			ID2D1RenderTarget * Target;
 			Array<ID2D1Layer *> Layers;
 			Array<Box> Clipping;
 			uint32 AnimationTimer;
@@ -36,6 +37,7 @@ namespace Engine
 			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
 		public:
 			D2DRenderDevice(ID2D1DeviceContext * target);
+			D2DRenderDevice(ID2D1RenderTarget * target);
 			~D2DRenderDevice(void) override;
 
 			ID2D1RenderTarget * GetRenderTarget(void) const;

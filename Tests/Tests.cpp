@@ -173,19 +173,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	// Starting D3D
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
-	Inversion = Device->CreateInversionEffectRenderingInfo();
 	{
-		Array<UI::GradientPoint> ps;
-		ps << UI::GradientPoint(UI::Color(0, 255, 0), 0.0);
-		ps << UI::GradientPoint(UI::Color(0, 0, 255), 1.0);
-		::Shape = new FrameShape(UI::Rectangle(100, 100, Coordinate::Right(), 600), FrameShape::FrameRenderMode::Layering, 0.5);
-		auto s2 = new BarShape(UI::Rectangle(100, 100, Coordinate(-100, 0.0, 1.0), 300), ps, 3.141592 / 6.0);
-		::Shape->Children.Append(s2);
-		s2->Release();
-		s2 = new BarShape(UI::Rectangle(0, -50, 200, 200), UI::Color(255, 0, 255));
-		::Shape->Children.Append(s2);
-		s2->Release();
-
 		{
 			UI::Zoom = 2.0;
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
@@ -350,27 +338,29 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 				{
 					(*conout) << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
-					if (ID == 876) {
-						menu->RunPopup(sender, station->GetCursorPos());
-					} else if (ID == 2) {
-						auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
-						bar->SetValue(min(max(bar->GetValue() + 0.05, 0.0), 1.0));
-						window->FindChild(1)->Enable(true);
-						if (bar->GetValue() == 1.0) sender->Enable(false);
-					} else if (ID == 1) {
-						auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
-						bar->SetValue(min(max(bar->GetValue() - 0.05, 0.0), 1.0));
-						window->FindChild(2)->Enable(true);
-						if (bar->GetValue() == 0.0) sender->Enable(false);
-					} else if (ID == 202) {
-						static_cast<Controls::ToolButtonPart *>(window->FindChild(202))->Checked ^= true;
-						static_cast<Controls::ToolButtonPart *>(window->FindChild(201))->Disabled ^= true;
-					} else if (ID == 201) {
-						auto bar = window->FindChild(888);
-						if (bar->IsVisible()) {
-							bar->HideAnimated(Animation::SlideSide::Top, 500, Animation::AnimationClass::Smooth);
-						} else {
-							bar->ShowAnimated(Animation::SlideSide::Left, 500, Animation::AnimationClass::Smooth);
+					if (event == Window::Event::Command || event == Window::Event::MenuCommand) {
+						if (ID == 876) {
+							menu->RunPopup(sender, station->GetCursorPos());
+						} else if (ID == 2) {
+							auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
+							bar->SetValue(min(max(bar->GetValue() + 0.05, 0.0), 1.0));
+							window->FindChild(1)->Enable(true);
+							if (bar->GetValue() == 1.0) sender->Enable(false);
+						} else if (ID == 1) {
+							auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
+							bar->SetValue(min(max(bar->GetValue() - 0.05, 0.0), 1.0));
+							window->FindChild(2)->Enable(true);
+							if (bar->GetValue() == 0.0) sender->Enable(false);
+						} else if (ID == 202) {
+							static_cast<Controls::ToolButtonPart *>(window->FindChild(202))->Checked ^= true;
+							static_cast<Controls::ToolButtonPart *>(window->FindChild(201))->Disabled ^= true;
+						} else if (ID == 201) {
+							auto bar = window->FindChild(888);
+							if (bar->IsVisible()) {
+								bar->HideAnimated(Animation::SlideSide::Top, 500, Animation::AnimationClass::Smooth);
+							} else {
+								bar->ShowAnimated(Animation::SlideSide::Left, 500, Animation::AnimationClass::Smooth);
+							}
 						}
 					}
 				}
@@ -434,13 +424,21 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
 			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
+			auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 			w2->SetText(L"window");
+
+			w->AddDialogStandartAccelerators();
+			w2->AddDialogStandartAccelerators();
+			w3->AddDialogStandartAccelerators();
+			w4->AddDialogStandartAccelerators();
+			w5->AddDialogStandartAccelerators();
 
 			w->Show(true);
 			w2->Show(true);
 			w3->Show(true);
 			w4->Show(true);
+			w5->Show(true);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}

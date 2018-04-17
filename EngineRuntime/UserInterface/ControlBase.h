@@ -40,7 +40,7 @@ namespace Engine
 			friend class ParentWindow;
 		public:
 			enum class DepthOrder { SetFirst = 0, SetLast = 1, MoveUp = 2, MoveDown = 3 };
-			enum class Event { Command = 0, MenuCommand = 1, DoubleClick = 2, ContextClick = 3, ValueChange = 4 };
+			enum class Event { Command = 0, AcceleratorCommand = 1, MenuCommand = 2, DoubleClick = 3, ContextClick = 4, ValueChange = 5 };
 		private:
 			ObjectArray<Window> Children;
 			SafePointer<Window> Parent;
@@ -83,6 +83,7 @@ namespace Engine
 			virtual void ScrollHorizontally(int delta);
 			virtual void KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
+			virtual bool TranslateAccelerators(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual void PopupMenuCancelled(void);
 			virtual Window * HitTest(Point at);
@@ -107,6 +108,9 @@ namespace Engine
 				Animation::AnimationClass end_class, Animation::AnimationAction action);
 			void HideAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass begin, Animation::AnimationClass end = Animation::AnimationClass::Hard);
 			void ShowAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass end, Animation::AnimationClass begin = Animation::AnimationClass::Hard);
+			Window * GetNextTabStopControl(void);
+			Window * GetPreviousTabStopControl(void);
+			int GetIndexAtParent(void);
 			template <class W> W * As(void) { return static_cast<W *>(this); }
 		};
 		class ICursor : public Object {};

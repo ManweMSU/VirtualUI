@@ -39,6 +39,7 @@ namespace Engine
 		void Window::ScrollHorizontally(int delta) { if (Parent) Parent->ScrollHorizontally(delta); }
 		void Window::KeyDown(int key_code) {}
 		void Window::KeyUp(int key_code) {}
+		bool Window::TranslateAccelerators(int key_code) { return false; }
 		void Window::CharDown(uint32 ucs_code) {}
 		void Window::PopupMenuCancelled(void) {}
 		Window * Window::HitTest(Point at) { return this; }
@@ -159,6 +160,58 @@ namespace Engine
 					position, duration, begin, end,
 					Animation::AnimationAction::ShowWindow);
 			}
+		}
+		Window * Window::GetNextTabStopControl(void)
+		{
+			Window * Current = this;
+			int ParentIndex = GetIndexAtParent();
+			do {
+				if (Current->Children.Length()) {
+					Current = Current->Children.FirstElement();
+					ParentIndex = 0;
+				} else if (!Current->IsOverlapped()) {
+					int SuperParentIndex = ParentIndex;
+					while (!Current->IsOverlapped() && SuperParentIndex == Current->Parent->Children.Length() - 1) {
+						Current = Current->Parent;
+						SuperParentIndex = Current->GetIndexAtParent();
+					}
+					if (!Current->IsOverlapped()) {
+						ParentIndex = SuperParentIndex + 1;
+						Current = Current->Parent->Children.ElementAt(ParentIndex);
+					}
+				}
+				if (Current == this) return this;
+			} while (!Current->IsTabStop() || !Current->IsEnabled() || !Current->IsVisible());
+			return Current;
+		}
+		Window * Window::GetPreviousTabStopControl(void)
+		{
+			Window * Current = this;
+			int ParentIndex = GetIndexAtParent();
+			do {
+				if (Current->IsOverlapped()) {
+					while (Current->Children.Length()) Current = Current->Children.LastElement();
+					ParentIndex = Current->GetIndexAtParent();
+				} else {
+					if (ParentIndex == 0) {
+						Current = Current->Parent;
+						ParentIndex = Current->GetIndexAtParent();
+					} else {
+						ParentIndex--;
+						Current = Current->Parent->Children.ElementAt(ParentIndex);
+						while (Current->Children.Length()) Current = Current->Children.LastElement();
+						ParentIndex = Current->GetIndexAtParent();
+					}
+				}
+				if (Current == this) return this;
+			} while (!Current->IsTabStop() || !Current->IsEnabled() || !Current->IsVisible());
+			return Current;
+		}
+		int Window::GetIndexAtParent(void)
+		{
+			if (!Parent) return -1;
+			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == this) return i;
+			return -1;
 		}
 
 		void WindowStation::DeconstructChain(Window * window)
@@ -435,7 +488,13 @@ namespace Engine
 				if (Target) Target->ScrollHorizontally(delta);
 			}
 		}
-		void WindowStation::KeyDown(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyDown(key_code); }
+		void WindowStation::KeyDown(int key_code)
+		{
+			if (ExclusiveWindow || !ActiveWindow->TranslateAccelerators(key_code)) {
+				if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0);
+				if (FocusedWindow) FocusedWindow->KeyDown(key_code);
+			}
+		}
 		void WindowStation::KeyUp(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
