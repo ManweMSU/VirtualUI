@@ -170,11 +170,14 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">xcopy /y /d %(FullPath) $(OutDir)</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">xcopy /y /d %(FullPath) $(OutDir)</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">xcopy /y /d %(FullPath) $(OutDir)</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">test.eui</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">test.eui</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">test.eui</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)test.eui</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test.euip" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

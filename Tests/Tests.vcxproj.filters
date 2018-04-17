@@ -53,5 +53,8 @@
     <None Include="test.eui">
       <Filter>Файлы ресурсов</Filter>
     </None>
+    <None Include="test.euip">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
   </ItemGroup>
 </Project>
