@@ -45,9 +45,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico">
-      <Filter>Файлы ресурсов</Filter>
-    </Image>
     <Image Include="Tests.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>

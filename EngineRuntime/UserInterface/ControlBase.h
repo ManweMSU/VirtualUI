@@ -6,6 +6,26 @@
 #include "Templates.h"
 #include "Animation.h"
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                   Retain/Release Features
+// Window Stations and Windows have different Retain/Release
+// policy required. Window Station warranties a life of any
+// internal window. So, retain windows only if there is a need
+// to use it after station was destroyed. Window Station is
+// refrenced by any window it contains, Window is referenced
+// by it's children. So Release() will not destroy them.
+// Instead of it use:
+// on windows: window's Destroy() or station's DestroyWindow()
+// methods: they detach window from it's window station and
+// destroy parent-child linking, then station automaticly
+// releases your window.
+// on window stations: DestroyStation() method: it destroys
+// all links between owned windows and the station, then calls
+// Release().
+// Both window and window station are invalid after these calls.
+// To create a window, use station's CreateWindow() methods.
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 namespace Engine
 {
 	namespace UI
@@ -95,6 +115,11 @@ namespace Engine
 		class WindowStation : public Object
 		{
 		public:
+			class IDesktopWindowFactory
+			{
+			public:
+				virtual Window * CreateDesktopWindow(WindowStation * Station) = 0;
+			};
 			struct VisualStyles
 			{
 				SafePointer<Template::Shape> WindowActiveView; // Argumented with Text, Border, NegBorder, ButtonsWidth, NegButtonsWidth, Caption and NegCaption
@@ -121,9 +146,11 @@ namespace Engine
 
 				int CaretWidth = 1;
 			};
+		protected:
+			WindowStation(IDesktopWindowFactory * Factory);
 		private:
 			SafePointer<IRenderingDevice> RenderingDevice;
-			SafePointer<Engine::UI::TopLevelWindow> TopLevelWindow;
+			SafePointer<Window> TopLevelWindow;
 			SafePointer<Window> CaptureWindow;
 			SafePointer<Window> FocusedWindow;
 			SafePointer<Window> ActiveWindow;
@@ -171,11 +198,12 @@ namespace Engine
 				return New;
 			}
 			void DestroyWindow(Window * window);
+			void DestroyStation(void);
 			void SetBox(const Box & box);
 			Box GetBox(void);
 			void Render(void);
 			void ResetCache(void);
-			Engine::UI::TopLevelWindow * GetDesktop(void);
+			Window * GetDesktop(void);
 			Window * HitTest(Point at);
 			Window * EnabledHitTest(Point at);
 			void SetRenderingDevice(IRenderingDevice * Device);
@@ -199,6 +227,7 @@ namespace Engine
 			virtual Window * GetExclusiveWindow(void);
 			virtual void FocusChanged(bool got_focus);
 			virtual void CaptureChanged(bool got_capture);
+			virtual bool NativeHitTest(const Point & at);
 			virtual void LeftButtonDown(Point at);
 			virtual void LeftButtonUp(Point at);
 			virtual void LeftButtonDoubleClick(Point at);
@@ -218,6 +247,8 @@ namespace Engine
 			virtual ICursor * GetSystemCursor(SystemCursor cursor);
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor);
 			virtual void SetCursor(ICursor * cursor);
+			virtual bool IsNativeStationWrapper(void) const;
+			virtual void OnDesktopDestroy(void);
 
 			VisualStyles & GetVisualStyles(void);
 		};

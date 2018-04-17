@@ -130,6 +130,15 @@
     <ClInclude Include="Processes\Threading.h">
       <Filter>Processes</Filter>
     </ClInclude>
+    <ClInclude Include="Processes\Shell.h">
+      <Filter>Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\Direct3D.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\NativeStation.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -227,6 +236,15 @@
     </ClCompile>
     <ClCompile Include="Processes\Threading.cpp">
       <Filter>Processes</Filter>
+    </ClCompile>
+    <ClCompile Include="Processes\Shell.cpp">
+      <Filter>Processes</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Direct3D.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\NativeStation.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

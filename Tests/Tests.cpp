@@ -8,6 +8,7 @@
 #include <UserInterface/ControlBase.h>
 #include <Streaming.h>
 #include <PlatformDependent/Direct2D.h>
+#include <PlatformDependent/Direct3D.h>
 #include <Miscellaneous/Dictionary.h>
 #include <UserInterface/ControlClasses.h>
 #include <UserInterface/BinaryLoader.h>
@@ -22,15 +23,13 @@
 #include <Syntax/Regular.h>
 #include <PlatformDependent/KeyCodes.h>
 #include <ImageCodec/IconCodec.h>
+#include <Processes/Shell.h>
 
 #include "stdafx.h"
 #include "Tests.h"
 
 #include <dwmapi.h>
 #pragma comment(lib, "dwmapi.lib")
-
-#include <d3d11_1.h>
-#pragma comment(lib, "d3d11.lib")
 
 #include <PlatformDependent/WindowStation.h>
 
@@ -61,10 +60,6 @@ Engine::UI::ITexture * Texture;
 
 Engine::UI::HandleWindowStation * station = 0;
 
-ID3D11Device * D3DDevice;
-ID3D11DeviceContext * D3DDeviceContext;
-IDXGIDevice1 * DXGIDevice;
-ID2D1Device * D2DDevice;
 ID2D1DeviceContext * Target = 0;
 IDXGISwapChain1 * SwapChain = 0;
 
@@ -116,6 +111,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+
+
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	SetProcessDPIAware();
 
@@ -130,65 +127,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
-
-	(*conout) << L"----------------" << IO::NewLineChar;
-	(*conout) << L"Pidor : pidoR = " << Syntax::MatchFilePattern(L"Pidor", L"pidoR") << IO::NewLineChar;
-	(*conout) << L"Pido : pidoR = " << Syntax::MatchFilePattern(L"Pido", L"pidoR") << IO::NewLineChar;
-	(*conout) << L"Pidor : pido = " << Syntax::MatchFilePattern(L"Pidor", L"pido") << IO::NewLineChar;
-	(*conout) << L"Pidor : pidoP = " << Syntax::MatchFilePattern(L"Pidor", L"pidoP") << IO::NewLineChar;
-	(*conout) << L"Pidor : pi?oR = " << Syntax::MatchFilePattern(L"Pidor", L"pi?oR") << IO::NewLineChar;
-	(*conout) << L"Piror : pi?oR = " << Syntax::MatchFilePattern(L"Piror", L"pi?oR") << IO::NewLineChar;
-	(*conout) << L"Pidor : p?oR = " << Syntax::MatchFilePattern(L"Pidor", L"p?oR") << IO::NewLineChar;
-	(*conout) << L"Pidor : pid?oR = " << Syntax::MatchFilePattern(L"Pidor", L"pid?oR") << IO::NewLineChar;
-	(*conout) << L"Piror : pi?R = " << Syntax::MatchFilePattern(L"Piror", L"pi?R") << IO::NewLineChar;
-	(*conout) << L"Piror : pi?doR = " << Syntax::MatchFilePattern(L"Piror", L"pi?doR") << IO::NewLineChar;
-	(*conout) << L"Pidor : pi??R = " << Syntax::MatchFilePattern(L"Pidor", L"pi??R") << IO::NewLineChar;
-	(*conout) << L"Pirer : pi??R = " << Syntax::MatchFilePattern(L"Pirer", L"pi??R") << IO::NewLineChar;
-	(*conout) << L"Pido : pi?? = " << Syntax::MatchFilePattern(L"Pido", L"pi??") << IO::NewLineChar;
-	(*conout) << L"Pidor : pidoR* = " << Syntax::MatchFilePattern(L"Pidor", L"pidoR*") << IO::NewLineChar;
-	(*conout) << L"Pidor : pi*R = " << Syntax::MatchFilePattern(L"Pidor", L"pi*R") << IO::NewLineChar;
-	(*conout) << L"Pir : pi*R = " << Syntax::MatchFilePattern(L"Pir", L"pi*R") << IO::NewLineChar;
-	(*conout) << L"Pid : pi* = " << Syntax::MatchFilePattern(L"Pid", L"pi*") << IO::NewLineChar;
-	(*conout) << L"Pidor : pi*q = " << Syntax::MatchFilePattern(L"Pidor", L"pi*q") << IO::NewLineChar;
-	(*conout) << L"Pidor : pi*doR = " << Syntax::MatchFilePattern(L"Pidor", L"pi*doR") << IO::NewLineChar;
-	(*conout) << L"aaabbbaabc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabc", L"aa*bbb*cc") << IO::NewLineChar;
-	(*conout) << L"aaabbbaabcc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabcc", L"aa*bbb*cc") << IO::NewLineChar;
-	(*conout) << L"aaabbbaabccc : aa*bbb*cc = " << Syntax::MatchFilePattern(L"aaabbbaabccc", L"aa*bbb*cc") << IO::NewLineChar;
-
-	{
-		SafePointer<Process> p = CreateProcess(L"C:\\Windows\\notepad.exe");
-		if (!p) (*conout) << L"CreateProcess failed" << IO::NewLineChar;
-		for (int i = 0; i < 20; i++) {
-			Engine::Sleep(1000);
-			if (p->Exited()) {
-				(*conout) << L"Exited: " << p->GetExitCode() << IO::NewLineChar;
-			} else {
-				(*conout) << L"Not exited." << IO::NewLineChar;
-			}
-			if (i == 10) p->Terminate();
-		}
-		p->Wait();
-
-		SafePointer< Array<string> > files = IO::Search::GetFiles(L"*", true);
-		for (int i = 0; i < files->Length(); i++) (*conout) << files->ElementAt(i) << IO::NewLineChar;
-
-		SafePointer< Array<string> > ll = Engine::GetCommandLine();
-		for (int i = 0; i < ll->Length(); i++) (*conout) << ll->ElementAt(i) << IO::NewLineChar;
-	}
-	//{
-	//	Streaming::FileStream conin_stream(IO::GetStandartInput());
-	//	Streaming::TextReader conin(&conin_stream);
-	//	do {
-	//		string in; 
-	//		conin >> in;
-	//		(*conout) << Syntax::Math::CalculateExpressionDouble(in) << IO::NewLineChar;
-	//	} while (true);
-	//	/*Streaming::FileStream s(L"Tests.cpp", Streaming::AccessRead, Streaming::OpenExisting);
-	//	Streaming::TextReader r(&s);
-	//	(*conout) << r.ReadAll();
-	//	auto e = r.GetEncoding();
-	//	(*conout) << IO::NewLineChar;*/
-	//}
 
 	{
 		Syntax::Spelling blang;
@@ -208,25 +146,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			(*conout) << e.Comments << IO::NewLineChar;
 			(*conout) << text.Fragment(e.Position, -1) << IO::NewLineChar;
 		}
-
-		if (Tokens) {
-			(*conout) << L"==============================" << IO::NewLineChar;
-			for (int i = 0; i < Tokens->Length(); i++) {
-				(*conout) << Tokens->ElementAt(i).Content << IO::NewLineChar;
-			}
-			(*conout) << L"==============================" << IO::NewLineChar;
-		}
-		
-		string expr = L"sin(pi)";
-		(*conout) << expr << L" = " << Syntax::Math::CalculateExpressionDouble(expr) << IO::NewLineChar;
-
-		(*conout) << L"==============================" << IO::NewLineChar;
-
-		(*conout) << Keyboard::GetKeyboardDelay() << L" : " << Keyboard::GetKeyboardSpeed() << IO::NewLineChar;
-		(*conout) << L"==============================" << IO::NewLineChar;
 	}
 
 	Engine::Direct2D::InitializeFactory();
+	Engine::Direct3D::CreateDevices();
 	Engine::Codec::CreateIconCodec();
 	Engine::Direct2D::CreateWicCodec();
 
@@ -248,53 +171,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     MSG msg;
 
 	// Starting D3D
-	{
-		D3D_FEATURE_LEVEL lvl[] = {
-			D3D_FEATURE_LEVEL_11_1,
-			D3D_FEATURE_LEVEL_11_0,
-			D3D_FEATURE_LEVEL_10_1,
-			D3D_FEATURE_LEVEL_10_0,
-			D3D_FEATURE_LEVEL_9_3,
-			D3D_FEATURE_LEVEL_9_2,
-			D3D_FEATURE_LEVEL_9_1
-		};
-		D3D_FEATURE_LEVEL selected;
-
-		D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, D3D11_CREATE_DEVICE_BGRA_SUPPORT, lvl, 7, D3D11_SDK_VERSION, &D3DDevice, &selected, &D3DDeviceContext);
-		D3DDevice->QueryInterface(__uuidof(IDXGIDevice1), (void**) &DXGIDevice);
-		Direct2D::D2DFactory->CreateDevice(DXGIDevice, &D2DDevice);
-		D2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &Target);
-
-		DXGI_SWAP_CHAIN_DESC1 scd;
-		RtlZeroMemory(&scd, sizeof(scd));
-		scd.Width = 0;
-		scd.Height = 0;
-		scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		scd.Stereo = false;
-		scd.SampleDesc.Count = 1;
-		scd.SampleDesc.Quality = 0;
-		scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		scd.BufferCount = 2;
-		scd.Scaling = DXGI_SCALING_NONE;
-		scd.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
-		scd.Flags = 0;
-		scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-		scd.Scaling = DXGI_SCALING_STRETCH;
-
-		SafePointer<IDXGIAdapter> Adapter;
-		DXGIDevice->GetAdapter(Adapter.InnerRef());
-		SafePointer<IDXGIFactory2> Factory;
-		Adapter->GetParent(IID_PPV_ARGS(Factory.InnerRef()));
-		HRESULT r = Factory->CreateSwapChainForHwnd(D3DDevice, ::Window, &scd, 0, 0, &SwapChain);
-		DXGIDevice->SetMaximumFrameLatency(1);
-
-		D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f);
-		SafePointer<IDXGISurface> Surface;
-		SwapChain->GetBuffer(0, IID_PPV_ARGS(Surface.InnerRef()));
-		SafePointer<ID2D1Bitmap1> Bitmap;
-		Target->CreateBitmapFromDxgiSurface(Surface, props, Bitmap.InnerRef());
-		Target->SetTarget(Bitmap);
-	}
+	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 	Inversion = Device->CreateInversionEffectRenderingInfo();
 	{
@@ -374,7 +251,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				back->Children.Append(Back);
 				back->Children.Append(Fill);
 			}
-			Main->Background.SetRetain(back);
+			Main->As<TopLevelWindow>()->Background.SetRetain(back);
 
 			station->GetVisualStyles().MenuArrow.SetReference(::Template->Application[L"a"]);
 			SafePointer<Template::FrameShape> MenuBack = new Template::FrameShape;
@@ -546,15 +423,24 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 						}
 					}
 				}
-				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override {}
+				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
+				{
+					if (event == Windows::FrameEvent::Close) window->Destroy();
+				}
 			};
 			auto Callback2 = new _cb2;
 
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
+			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 			w2->SetText(L"window");
+
+			w->Show(true);
+			w2->Show(true);
+			w3->Show(true);
+			w4->Show(true);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}
@@ -632,6 +518,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+	case WM_ACTIVATE:
+		SetTimer(hWnd, 1, 25, 0);
+		break;
+	case WM_TIMER:
+		InvalidateRect(hWnd, 0, FALSE);
+		break;
     case WM_PAINT:
         {
 			RECT Rect;
@@ -648,7 +540,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				Target->EndDraw();
 				SwapChain->Present(1, 0);
 			}
-
+			ValidateRect(hWnd, 0);
             ReleaseDC(hWnd, hdc);
         }
         break;
@@ -656,16 +548,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		RECT Rect;
 		GetClientRect(hWnd, &Rect);
-		if (SwapChain) {
-			Target->SetTarget(0);
-			HRESULT r = SwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-			D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f);
-			SafePointer<IDXGISurface> Surface;
-			SwapChain->GetBuffer(0, IID_PPV_ARGS(Surface.InnerRef()));
-			SafePointer<ID2D1Bitmap1> Bitmap;
-			Target->CreateBitmapFromDxgiSurface(Surface, props, Bitmap.InnerRef());
-			Target->SetTarget(Bitmap);
-		}
+		Direct3D::ResizeRenderBufferForD2DDevice(Target, SwapChain);
 		if (station) station->ProcessWindowEvents(message, wParam, lParam);
 	}
 		break;
@@ -673,7 +556,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
     default:
-		if (!station && message == WM_UNICHAR && wParam == UNICODE_NOCHAR) return TRUE;
 		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
         return DefWindowProc(hWnd, message, wParam, lParam);
     }

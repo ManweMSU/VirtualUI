@@ -75,4 +75,5 @@ namespace Engine
 		return result;
 	}
 	void Sleep(uint32 time) { ::Sleep(time); }
+	void ExitProcess(int exit_code) { ::ExitProcess(exit_code); }
 }

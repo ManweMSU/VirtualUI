@@ -20,6 +20,17 @@ namespace Engine
 				~WindowsCursor(void) override { if (Owned) DestroyCursor(Handle); }
 			};
 		}
+		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory), _window(window)
+		{
+			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
+			_beam.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_IBEAM)));
+			_link.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_HAND)));
+			_size_left_right.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZEWE)));
+			_size_up_down.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENS)));
+			_size_left_up_right_down.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENWSE)));
+			_size_left_down_right_up.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENESW)));
+			_size_all.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZEALL)));
+		}
 		HandleWindowStation::HandleWindowStation(HWND window) : _window(window)
 		{
 			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
@@ -54,6 +65,12 @@ namespace Engine
 			::GetCursorPos(&p);
 			ScreenToClient(_window, &p);
 			return Point(p.x, p.y);
+		}
+		bool HandleWindowStation::NativeHitTest(const Point & at)
+		{
+			POINT p = { at.x, at.y };
+			ClientToScreen(_window, &p);
+			return (WindowFromPoint(p) == _window);
 		}
 		ICursor * HandleWindowStation::LoadCursor(Streaming::Stream * Source)
 		{

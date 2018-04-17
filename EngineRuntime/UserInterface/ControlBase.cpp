@@ -169,11 +169,23 @@ namespace Engine
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
 		}
-		WindowStation::WindowStation(void) : Position(0, 0, 0, 0), Animations(0x10) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); ActiveWindow.SetRetain(TopLevelWindow); }
-		WindowStation::~WindowStation(void) { if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow); }
+		WindowStation::WindowStation(IDesktopWindowFactory * Factory) : Position(0, 0, 0, 0), Animations(0x10)
+		{
+			TopLevelWindow.SetReference(Factory->CreateDesktopWindow(this));
+			ActiveWindow.SetRetain(TopLevelWindow);
+		}
+		WindowStation::WindowStation(void) : Position(0, 0, 0, 0), Animations(0x10)
+		{
+			TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this));
+			ActiveWindow.SetRetain(TopLevelWindow);
+		}
+		WindowStation::~WindowStation(void) {}
 		void WindowStation::DestroyWindow(Window * window)
 		{
-			if (!window->Parent) return;
+			if (!window->Parent) {
+				if (window == TopLevelWindow.Inner()) OnDesktopDestroy();
+				return;
+			}
 			SafePointer<Window> Parent = window->Parent;
 			Parent->Retain();
 			DeconstructChain(window);
@@ -181,6 +193,11 @@ namespace Engine
 				Parent->Children.Remove(i);
 				break;
 			}
+		}
+		void WindowStation::DestroyStation(void)
+		{
+			if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow);
+			this->Release();
 		}
 		void WindowStation::SetBox(const Box & box) { Position = box; if (TopLevelWindow) { TopLevelWindow->WindowPosition = box; TopLevelWindow->ArrangeChildren(); } }
 		Box WindowStation::GetBox(void) { return Position; }
@@ -202,8 +219,8 @@ namespace Engine
 			if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position);
 		}
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
-		Engine::UI::TopLevelWindow * WindowStation::GetDesktop(void) { return TopLevelWindow; }
-		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner()) return TopLevelWindow->HitTest(at); else return 0; }
+		Window * WindowStation::GetDesktop(void) { return TopLevelWindow; }
+		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner() && NativeHitTest(at)) return TopLevelWindow->HitTest(at); else return 0; }
 		Window * WindowStation::EnabledHitTest(Point at)
 		{
 			Window * target = TopLevelWindow->HitTest(at);
@@ -302,6 +319,7 @@ namespace Engine
 				}
 			}
 		}
+		bool WindowStation::NativeHitTest(const Point & at) { return true; }
 		void WindowStation::LeftButtonDown(Point at)
 		{
 			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
@@ -315,7 +333,7 @@ namespace Engine
 			if (Target) {
 				if (!ExclusiveWindow) {
 					Window * Parent = Target->GetOverlappedParent();
-					if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent) {
 						SetActiveWindow(Parent);
 						SetFocus(0);
 					}
@@ -356,7 +374,7 @@ namespace Engine
 			if (Target) {
 				if (!ExclusiveWindow) {
 					Window * Parent = Target->GetOverlappedParent();
-					if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent) {
 						SetActiveWindow(Parent);
 						SetFocus(0);
 					}
@@ -427,6 +445,8 @@ namespace Engine
 		ICursor * WindowStation::GetSystemCursor(SystemCursor cursor) { return 0; }
 		void WindowStation::SetSystemCursor(SystemCursor entity, ICursor * cursor) {}
 		void WindowStation::SetCursor(ICursor * cursor) {}
+		bool WindowStation::IsNativeStationWrapper(void) const { return false; }
+		void WindowStation::OnDesktopDestroy(void) {}
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}

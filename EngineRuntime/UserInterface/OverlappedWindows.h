@@ -68,6 +68,7 @@ namespace Engine
 				virtual bool IsVisible(void) override;
 				virtual bool IsOverlapped(void) override;
 				virtual void SetPosition(const Box & box) override;
+				virtual Box GetPosition(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetText(const string & text) override;
@@ -88,6 +89,8 @@ namespace Engine
 				int GetCaptionWidth(void);
 				int GetButtonsWidth(void);
 				int GetPart(Point cursor);
+				void RaiseFrameEvent(Windows::FrameEvent event);
+				void SetBackground(Template::Shape * shape);
 			};
 			class ContentFrame : public ParentWindow, private Template::Controls::DialogFrame
 			{

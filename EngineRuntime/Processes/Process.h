@@ -16,4 +16,5 @@ namespace Engine
 	Process * CreateProcess(const string & image, const Array<string> * command_line = 0);
 	Array<string> * GetCommandLine(void);
 	void Sleep(uint32 time);
+	void ExitProcess(int exit_code);
 }

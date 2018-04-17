@@ -12,8 +12,11 @@ namespace Engine
 	{
 		class HandleWindowStation : public WindowStation
 		{
-		private:
+		protected:
 			HWND _window;
+
+			HandleWindowStation(HWND window, IDesktopWindowFactory * Factory);
+		private:
 			SafePointer<ICursor> _null;
 			SafePointer<ICursor> _arrow;
 			SafePointer<ICursor> _beam;
@@ -36,6 +39,7 @@ namespace Engine
 			virtual void SetExclusiveWindow(Window * window) override;
 			virtual Window * GetExclusiveWindow(void) override;
 			virtual Point GetCursorPos(void) override;
+			virtual bool NativeHitTest(const Point & at) override;
 			virtual ICursor * LoadCursor(Streaming::Stream * Source) override;
 			virtual ICursor * LoadCursor(Codec::Image * Source) override;
 			virtual ICursor * LoadCursor(Codec::Frame * Source) override;

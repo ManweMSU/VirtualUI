@@ -43,7 +43,7 @@ namespace Engine
 			bool GradientPoint::IsDefined(void) const { return PointColor.IsDefined() && Position.IsDefined(); }
 			Engine::UI::GradientPoint GradientPoint::Initialize(IArgumentProvider * provider) const { return Engine::UI::GradientPoint(PointColor.Initialize(provider), Position.Initialize(provider)); }
 
-			BarShape::BarShape(void) : GradientAngle(0.0) { Position = Engine::UI::Rectangle::Entire(); }
+			BarShape::BarShape(void) : Gradient(0x4), GradientAngle(0.0) { Position = Engine::UI::Rectangle::Entire(); }
 			BarShape::~BarShape(void) {}
 			string BarShape::ToString(void) const { return L"Templates::BarShape"; }
 			bool BarShape::IsDefined(void) const
@@ -109,7 +109,7 @@ namespace Engine
 			{
 				return new Engine::UI::LineShape(Position.Initialize(provider), LineColor.Initialize(provider), Dotted);
 			}
-			FrameShape::FrameShape(void) : RenderMode(Engine::UI::FrameShape::FrameRenderMode::Normal), Opacity(1.0) { Position = Engine::UI::Rectangle::Entire(); }
+			FrameShape::FrameShape(void) : Children(0x4), RenderMode(Engine::UI::FrameShape::FrameRenderMode::Normal), Opacity(1.0) { Position = Engine::UI::Rectangle::Entire(); }
 			FrameShape::~FrameShape(void) {}
 			string FrameShape::ToString(void) const { return L"Templates::FrameShape"; }
 			bool FrameShape::IsDefined(void) const

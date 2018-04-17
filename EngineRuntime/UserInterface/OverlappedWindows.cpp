@@ -6,6 +6,8 @@
 #include "ScrollableControls.h"
 #include "EditControls.h"
 
+#include "../PlatformDependent/NativeStation.h"
+
 using namespace Engine::UI::Windows;
 
 namespace Engine
@@ -83,16 +85,74 @@ namespace Engine
 				_inactive.SetReference(0);
 				ParentWindow::ResetCache();
 			}
-			void OverlappedWindow::Enable(bool enable) { _enabled = enable; }
-			bool OverlappedWindow::IsEnabled(void) { return _enabled; }
-			void OverlappedWindow::Show(bool visible) { _visible = visible; }
-			bool OverlappedWindow::IsVisible(void) { return _visible; }
+			void OverlappedWindow::Enable(bool enable)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					NativeWindows::EnableWindow(GetStation(), enable);
+				} else {
+					_enabled = enable;
+				}
+			}
+			bool OverlappedWindow::IsEnabled(void)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					return NativeWindows::IsWindowEnabled(GetStation());
+				} else {
+					return _enabled;
+				}
+			}
+			void OverlappedWindow::Show(bool visible)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					NativeWindows::ShowWindow(GetStation(), visible);
+				} else {
+					_visible = visible;
+				}
+			}
+			bool OverlappedWindow::IsVisible(void)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					return NativeWindows::IsWindowVisible(GetStation());
+				} else {
+					return _visible;
+				}
+			}
 			bool OverlappedWindow::IsOverlapped(void) { return true; }
-			void OverlappedWindow::SetPosition(const Box & box) { ParentWindow::SetPosition(box); if (_callback) _callback->OnFrameEvent(this, FrameEvent::Move); }
+			void OverlappedWindow::SetPosition(const Box & box)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					NativeWindows::SetWindowPosition(GetStation(), box);
+				} else {
+					ParentWindow::SetPosition(box);
+					if (_callback) _callback->OnFrameEvent(this, FrameEvent::Move);
+				}
+			}
+			Box OverlappedWindow::GetPosition(void)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					return NativeWindows::GetWindowPosition(GetStation());
+				} else {
+					return ParentWindow::GetPosition();
+				}
+			}
 			void OverlappedWindow::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle OverlappedWindow::GetRectangle(void) { return ControlPosition; }
-			void OverlappedWindow::SetText(const string & text) { _inner->Title = text; ResetCache(); }
-			string OverlappedWindow::GetText(void) { return _inner->Title; }
+			void OverlappedWindow::SetText(const string & text)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					NativeWindows::SetWindowTitle(GetStation(), text);
+				} else {
+					_inner->Title = text; ResetCache();
+				}
+			}
+			string OverlappedWindow::GetText(void)
+			{
+				if (GetStation()->IsNativeStationWrapper()) {
+					return NativeWindows::GetWindowTitle(GetStation());
+				} else {
+					return _inner->Title;
+				}
+			}
 			void OverlappedWindow::RaiseEvent(int ID, Event event, Window * sender)
 			{
 				if (event == Event::Command) {
@@ -204,6 +264,12 @@ namespace Engine
 				_size.part = 1;
 				return 1;
 			}
+			void OverlappedWindow::RaiseFrameEvent(Windows::FrameEvent event) { if (_callback) _callback->OnFrameEvent(this, event); }
+			void OverlappedWindow::SetBackground(Template::Shape * shape)
+			{
+				GetContentFrame()->Background.SetRetain(shape);
+				GetContentFrame()->ResetCache();
+			}
 
 			ContentFrame::ContentFrame(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			ContentFrame::ContentFrame(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
@@ -303,95 +369,101 @@ namespace Engine
 				}
 				window->SetCallback(Callback);
 				if (Callback) Callback->OnInitialized(window);
-				window->Show(true);
 				return window;
 			}
 			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station)
 			{
-				auto window = Station->CreateWindow<Controls::OverlappedWindow>(0, Template);
-				window->_mode = 1;
-				auto props = static_cast<Template::Controls::DialogFrame *>(Template->Properties);
-				Box outer = Position.IsValid() ? Box(Position, Station->GetBox()) : Station->GetBox();
-				Box sizes = Box(Template->Properties->ControlPosition, outer);
-				Box margins;
-				sizes.Right -= sizes.Left;
-				sizes.Bottom -= sizes.Top;
-				int border = props->Sizeble ? Station->GetVisualStyles().WindowSizableBorder : Station->GetVisualStyles().WindowFixedBorder;
-				int caption = props->Captioned ? (props->ToolWindow ? Station->GetVisualStyles().WindowSmallCaptionHeight : Station->GetVisualStyles().WindowCaptionHeight) : 0;
-				window->_border = border;
-				window->_caption = caption;
-				margins.Left = margins.Right = margins.Bottom = border;
-				margins.Top = caption + border;
-				sizes.Right += margins.Left + margins.Right;
-				sizes.Bottom += margins.Top + margins.Bottom;
-				window->GetContentFrame()->SetRectangle(Rectangle(Coordinate(margins.Left, 0.0, 0.0), Coordinate(margins.Top, 0.0, 0.0), Coordinate(-margins.Right, 0.0, 1.0), Coordinate(-margins.Bottom, 0.0, 1.0)));
-				window->_minwidth = 2 * border + props->MinimalWidth;
-				window->_minheight = 2 * border + caption + props->MinimalHeight;
-				if (props->Captioned) {
-					Coordinate hdrtop = Coordinate(border, 0.0, 0.0);
-					Coordinate hdrbottom = Coordinate(border + caption, 0.0, 0.0);
-					Coordinate delta = Coordinate(caption, 0.0, 0.0);
-					Coordinate pos = Coordinate(-border, 0.0, 1.0);
-					Template::ControlTemplate * temp;
-					if (props->CloseButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallCloseButton : Station->GetVisualStyles().WindowCloseButton)) {
-						auto frame = Station->CreateWindow<Controls::ToolButton>(window);
-						frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
-						pos -= delta;
-						auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
-						button->SetRectangle(Rectangle::Entire());
-						button->Checked = false;
-						button->Disabled = false;
-						button->DropDownMenu.SetReference(0);
-						button->ID = 0;
-						window->_close = button;
-						window->_btnwidth += caption;
+				Controls::OverlappedWindow * window = 0;
+				if (!Station || Station->IsNativeStationWrapper()) {
+					WindowStation * new_native = NativeWindows::CreateOverlappedWindow(Template, Position, Station);
+					window = new_native->GetDesktop()->As<Controls::OverlappedWindow>();
+					window->_visible = true;
+					window->_initialized = true;
+				} else {
+					window = Station->CreateWindow<Controls::OverlappedWindow>(0, Template);
+					window->_mode = 1;
+					auto props = static_cast<Template::Controls::DialogFrame *>(Template->Properties);
+					Box outer = Position.IsValid() ? Box(Position, Station->GetBox()) : Station->GetBox();
+					Box sizes = Box(Template->Properties->ControlPosition, outer);
+					Box margins;
+					sizes.Right -= sizes.Left;
+					sizes.Bottom -= sizes.Top;
+					int border = props->Sizeble ? Station->GetVisualStyles().WindowSizableBorder : Station->GetVisualStyles().WindowFixedBorder;
+					int caption = props->Captioned ? (props->ToolWindow ? Station->GetVisualStyles().WindowSmallCaptionHeight : Station->GetVisualStyles().WindowCaptionHeight) : 0;
+					window->_border = border;
+					window->_caption = caption;
+					margins.Left = margins.Right = margins.Bottom = border;
+					margins.Top = caption + border;
+					sizes.Right += margins.Left + margins.Right;
+					sizes.Bottom += margins.Top + margins.Bottom;
+					window->GetContentFrame()->SetRectangle(Rectangle(Coordinate(margins.Left, 0.0, 0.0), Coordinate(margins.Top, 0.0, 0.0), Coordinate(-margins.Right, 0.0, 1.0), Coordinate(-margins.Bottom, 0.0, 1.0)));
+					window->_minwidth = 2 * border + props->MinimalWidth;
+					window->_minheight = 2 * border + caption + props->MinimalHeight;
+					if (props->Captioned) {
+						Coordinate hdrtop = Coordinate(border, 0.0, 0.0);
+						Coordinate hdrbottom = Coordinate(border + caption, 0.0, 0.0);
+						Coordinate delta = Coordinate(caption, 0.0, 0.0);
+						Coordinate pos = Coordinate(-border, 0.0, 1.0);
+						Template::ControlTemplate * temp;
+						if (props->CloseButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallCloseButton : Station->GetVisualStyles().WindowCloseButton)) {
+							auto frame = Station->CreateWindow<Controls::ToolButton>(window);
+							frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
+							pos -= delta;
+							auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
+							button->SetRectangle(Rectangle::Entire());
+							button->Checked = false;
+							button->Disabled = false;
+							button->DropDownMenu.SetReference(0);
+							button->ID = 0;
+							window->_close = button;
+							window->_btnwidth += caption;
+						}
+						if (props->MaximizeButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallMaximizeButton : Station->GetVisualStyles().WindowMaximizeButton)) {
+							auto frame = Station->CreateWindow<Controls::ToolButton>(window);
+							frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
+							pos -= delta;
+							auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
+							button->SetRectangle(Rectangle::Entire());
+							button->Checked = false;
+							button->Disabled = false;
+							button->DropDownMenu.SetReference(0);
+							button->ID = 0;
+							window->_maximize = button;
+							window->_btnwidth += caption;
+						}
+						if (props->MinimizeButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallMinimizeButton : Station->GetVisualStyles().WindowMinimizeButton)) {
+							auto frame = Station->CreateWindow<Controls::ToolButton>(window);
+							frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
+							pos -= delta;
+							auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
+							button->SetRectangle(Rectangle::Entire());
+							button->Checked = false;
+							button->Disabled = false;
+							button->DropDownMenu.SetReference(0);
+							button->ID = 0;
+							window->_minimize = button;
+							window->_btnwidth += caption;
+						}
+						if (props->HelpButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallHelpButton : Station->GetVisualStyles().WindowHelpButton)) {
+							auto frame = Station->CreateWindow<Controls::ToolButton>(window);
+							frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
+							pos -= delta;
+							auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
+							button->SetRectangle(Rectangle::Entire());
+							button->Checked = false;
+							button->Disabled = false;
+							button->DropDownMenu.SetReference(0);
+							button->ID = 0;
+							window->_help = button;
+							window->_btnwidth += caption;
+						}
 					}
-					if (props->MaximizeButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallMaximizeButton : Station->GetVisualStyles().WindowMaximizeButton)) {
-						auto frame = Station->CreateWindow<Controls::ToolButton>(window);
-						frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
-						pos -= delta;
-						auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
-						button->SetRectangle(Rectangle::Entire());
-						button->Checked = false;
-						button->Disabled = false;
-						button->DropDownMenu.SetReference(0);
-						button->ID = 0;
-						window->_maximize = button;
-						window->_btnwidth += caption;
-					}
-					if (props->MinimizeButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallMinimizeButton : Station->GetVisualStyles().WindowMinimizeButton)) {
-						auto frame = Station->CreateWindow<Controls::ToolButton>(window);
-						frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
-						pos -= delta;
-						auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
-						button->SetRectangle(Rectangle::Entire());
-						button->Checked = false;
-						button->Disabled = false;
-						button->DropDownMenu.SetReference(0);
-						button->ID = 0;
-						window->_minimize = button;
-						window->_btnwidth += caption;
-					}
-					if (props->HelpButton && (temp = props->ToolWindow ? Station->GetVisualStyles().WindowSmallHelpButton : Station->GetVisualStyles().WindowHelpButton)) {
-						auto frame = Station->CreateWindow<Controls::ToolButton>(window);
-						frame->SetRectangle(Rectangle(pos - delta, hdrtop, pos, hdrbottom));
-						pos -= delta;
-						auto button = Station->CreateWindow<Controls::ToolButtonPart>(frame, temp);
-						button->SetRectangle(Rectangle::Entire());
-						button->Checked = false;
-						button->Disabled = false;
-						button->DropDownMenu.SetReference(0);
-						button->ID = 0;
-						window->_help = button;
-						window->_btnwidth += caption;
-					}
+					window->_initialized = true;
+					window->SetPosition(Box((outer.Right - outer.Left - sizes.Right) / 2 + outer.Left, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top,
+						(outer.Right - outer.Left - sizes.Right) / 2 + outer.Left + sizes.Right, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top + sizes.Bottom));
 				}
-				window->_initialized = true;
-				window->SetPosition(Box((outer.Right - outer.Left - sizes.Right) / 2 + outer.Left, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top,
-					(outer.Right - outer.Left - sizes.Right) / 2 + outer.Left + sizes.Right, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top + sizes.Bottom));
 				window->SetCallback(Callback);
 				if (Callback) Callback->OnInitialized(window);
-				window->Show(true);
 				return window;
 			}
 		}
