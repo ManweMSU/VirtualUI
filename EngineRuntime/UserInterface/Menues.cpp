@@ -428,6 +428,11 @@ namespace Engine
 					}
 				}
 			}
+			void Menu::RunPopup(Window * owner)
+			{
+				if (!owner) throw InvalidArgumentException();
+				RunPopup(owner, owner->GetStation()->GetCursorPos());
+			}
 		}
 	}
 }

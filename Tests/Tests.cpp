@@ -35,6 +35,7 @@
 
 #undef CreateWindow
 #undef GetCurrentDirectory
+#undef SetCurrentDirectory
 #undef GetCommandLine
 #undef CreateProcess
 
@@ -128,25 +129,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 
-	{
-		Syntax::Spelling blang;
-		CreateBlangSpelling(blang);
-
-		SafePointer<Streaming::FileStream> Input = new Streaming::FileStream(L"test.blbl", Streaming::AccessRead, Streaming::OpenExisting);
-		Array<uint8> Data;
-		Data.SetLength(Input->Length() - 2);
-		Input->Seek(2, Streaming::Begin);
-		Input->Read(Data, Input->Length() - 2);
-		SafePointer< Array<Syntax::Token> > Tokens;
-		string text = string(Data, Input->Length() / 2 - 1, Encoding::UTF16);
-		try {
-			Tokens.SetReference(Syntax::ParseText(text, blang));
-		}
-		catch (Syntax::ParserSpellingException & e) {
-			(*conout) << e.Comments << IO::NewLineChar;
-			(*conout) << text.Fragment(e.Position, -1) << IO::NewLineChar;
-		}
-	}
+	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 
 	Engine::Direct2D::InitializeFactory();
 	Engine::Direct3D::CreateDevices();
@@ -220,20 +203,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Back->From = Rectangle::Entire();
 				Back->RenderMode = TextureShape::TextureRenderMode::Fit;
 				Back->Position = Rectangle::Entire();
-				//Back->Texture = ::Template->Texture[L"Wallpaper"];
-				{
-					Streaming::FileStream Source(L"test.ico", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream Source2(L"Wallpaper.png", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream Source3(L"bl.gif", Streaming::AccessRead, Streaming::OpenExisting);
-					Streaming::FileStream Source4(L"test.icns", Streaming::AccessRead, Streaming::OpenExisting);
-					SafePointer<Codec::Image> Image = Codec::DecodeImage(&Source);
-					SafePointer<Codec::Image> Image2 = Codec::DecodeImage(&Source2);
-					SafePointer<Codec::Image> Image3 = Codec::DecodeImage(&Source3);
-					SafePointer<Codec::Image> Image4 = Codec::DecodeImage(&Source4);
-					SafePointer<ITexture> __back = Device->LoadTexture(Image3);
-					Back->Texture = Template::TextureTemplate(__back);
-					(*conout) << L"==============================" << IO::NewLineChar;
-				}
+				Back->Texture = ::Template->Texture[L"Wallpaper"];
 				SafePointer<Template::BarShape> Fill = new Template::BarShape;
 				Fill->Gradient << GradientPoint(0xFF303050);
 				back->Children.Append(Back);

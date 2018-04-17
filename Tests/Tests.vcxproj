@@ -163,6 +163,19 @@
       <Project>{1668d08d-3f3f-46c6-89b5-8308ca348929}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="test.eui">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">xcopy /y /d %(FullPath) $(OutDir)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">xcopy /y /d %(FullPath) $(OutDir)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">xcopy /y /d %(FullPath) $(OutDir)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">xcopy /y /d %(FullPath) $(OutDir)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">test.eui</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">test.eui</Outputs>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

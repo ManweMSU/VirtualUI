@@ -84,6 +84,7 @@ namespace Engine
 				void CheckRange(int RangeMin, int RangeMax, int Element);
 
 				void RunPopup(Window * owner, Point at);
+				void RunPopup(Window * owner);
 			};
 		}
 	}
