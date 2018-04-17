@@ -24,14 +24,14 @@ namespace Engine
 
 #ifdef ENGINE_WINDOWS
 	constexpr Encoding SystemEncoding = Encoding::UTF16;
-	constexpr widechar * OperatingSystemName = L"Windows";
+	constexpr const widechar * OperatingSystemName = L"Windows";
 #endif
 #ifdef ENGINE_UNIX
 	constexpr Encoding SystemEncoding = Encoding::UTF32;
 #ifdef ENGINE_MACOSX
-	constexpr widechar * OperatingSystemName = L"Mac OS";
+	constexpr const widechar * OperatingSystemName = L"Mac OS";
 #else
-	constexpr widechar * OperatingSystemName = L"Unix";
+	constexpr const widechar * OperatingSystemName = L"Unix";
 #endif
 #endif
 
