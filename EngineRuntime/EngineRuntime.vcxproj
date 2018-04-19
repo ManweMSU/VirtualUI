@@ -26,6 +26,7 @@
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
+    <ClInclude Include="Network\InternetRequest.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="PlatformDependent\Clipboard.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
@@ -64,6 +65,7 @@
     <ClCompile Include="ImageCodec\IconCodec.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
+    <ClCompile Include="Network\InternetRequest.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="PlatformDependent\Clipboard.cpp" />
     <ClCompile Include="PlatformDependent\ComInterop.cpp" />

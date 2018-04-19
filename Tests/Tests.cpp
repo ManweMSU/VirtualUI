@@ -17,6 +17,7 @@
 #include <UserInterface/GroupControls.h>
 #include <UserInterface/Menues.h>
 #include <UserInterface/OverlappedWindows.h>
+#include <UserInterface/EditControls.h>
 #include <Syntax/Tokenization.h>
 #include <Syntax/Grammar.h>
 #include <Syntax/MathExpression.h>
@@ -24,6 +25,7 @@
 #include <PlatformDependent/KeyCodes.h>
 #include <ImageCodec/IconCodec.h>
 #include <Processes/Shell.h>
+#include <Network/InternetRequest.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -388,7 +390,31 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					if (event == Windows::FrameEvent::Close) window->Destroy();
 				}
 			};
+			class _thl : public Controls::Edit::IEditHook
+			{
+			public:
+				virtual string Filter(Controls::Edit * sender, const string & input)
+				{
+					return input.Replace(L'0', L"ЫЫЫ");
+				}
+				virtual Array<uint8> * ColorHighlight(Controls::Edit * sender, const Array<uint32> & text)
+				{
+					auto result = new Array<uint8>(text.Length());
+					for (int i = 0; i < text.Length(); i++) {
+						if (text[i] > 0xFFFF) result->Append(1);
+						else result->Append(0);
+					}
+					return result;
+				}
+				virtual Array<UI::Color> * GetPalette(Controls::Edit * sender)
+				{
+					auto result = new Array<UI::Color>(10);
+					result->Append(Color(255, 0, 0));
+					return result;
+				}
+			};
 			auto Callback2 = new _cb2;
+			auto Hook = new _thl;
 
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
@@ -403,6 +429,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w3->AddDialogStandartAccelerators();
 			w4->AddDialogStandartAccelerators();
 			w5->AddDialogStandartAccelerators();
+
+			w->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
+			w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 
 			w->Show(true);
 			w2->Show(true);

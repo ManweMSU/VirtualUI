@@ -23,6 +23,9 @@
     <Filter Include="Processes">
       <UniqueIdentifier>{875d00d9-f3fd-43dc-a781-3f237cb9de17}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{2204c14a-ecd8-4669-a627-ba0341a93a4c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -139,6 +142,9 @@
     <ClInclude Include="PlatformDependent\NativeStation.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="Network\InternetRequest.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -245,6 +251,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\NativeStation.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\InternetRequest.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

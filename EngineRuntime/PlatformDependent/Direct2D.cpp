@@ -237,15 +237,23 @@ namespace Engine
 		};
 		struct TextRenderingInfo : public ITextRenderingInfo
 		{
+			struct TextRange
+			{
+				int LeftEdge;
+				int RightEdge;
+				BarRenderingInfo * Brush;
+			};
 			D2DFont * Font;
 			Array<uint32> CharString;
 			Array<uint16> GlyphString;
 			Array<float> GlyphAdvances;
 			Array<uint8> UseAlternative;
+			Array<TextRange> Ranges;
 			ID2D1PathGeometry * Geometry;
 			ID2D1SolidColorBrush * TextBrush;
 			ID2D1SolidColorBrush * HighlightBrush;
 			ID2D1RenderTarget * RenderTarget;
+			D2DRenderDevice * Device;
 			uint16 NormalSpaceGlyph;
 			uint16 AlternativeSpaceGlyph;
 			int BaselineOffset;
@@ -258,8 +266,9 @@ namespace Engine
 			int hls, hle;
 			SafePointer<BarRenderingInfo> MainBrushInfo;
 			SafePointer<BarRenderingInfo> BackBrushInfo;
+			SafePointer< ObjectArray<BarRenderingInfo> > ExtraBrushes;
 
-			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), UseAlternative(0x40), hls(-1), hle(-1) {}
+			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), UseAlternative(0x40), Ranges(0x10), hls(-1), hle(-1) {}
 
 			void FillAdvances(void);
 			void FillGlyphs(void);
@@ -293,9 +302,31 @@ namespace Engine
 			virtual int EndOfChar(int Index) override
 			{
 				if (Index < 0) return 0;
-				float summ = 0;
+				float summ = 0.0f;
 				for (int i = 0; i <= Index; i++) summ += GlyphAdvances[i];
 				return int(summ);
+			}
+			virtual void SetCharPalette(const Array<Color> & colors) override
+			{
+				ExtraBrushes.SetReference(new ObjectArray<BarRenderingInfo>(colors.Length()));
+				for (int i = 0; i < colors.Length(); i++) {
+					SafePointer<BarRenderingInfo> Brush = reinterpret_cast<BarRenderingInfo *>(Device->CreateBarRenderingInfo(colors[i]));
+					ExtraBrushes->Append(Brush);
+				}
+			}
+			virtual void SetCharColors(const Array<uint8> & indicies) override
+			{
+				Ranges.Clear();
+				int cp = 0;
+				float summ = 0.0f;
+				while (cp < indicies.Length()) {
+					float base = summ;
+					int ep = cp;
+					while (ep < indicies.Length() && indicies[ep] == indicies[cp]) { summ += GlyphAdvances[ep]; ep++; }
+					int index = indicies[cp];
+					Ranges << TextRange{ int(base), int(summ), (index == 0) ? MainBrushInfo.Inner() : ExtraBrushes->ElementAt(index - 1) };
+					cp = ep;
+				}
 			}
 			virtual ~TextRenderingInfo(void) override
 			{
@@ -440,7 +471,21 @@ namespace Engine
 				BrushCache.Append(gradient[0].Color, Info);
 				return Info;
 			}
-			
+		}
+		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(Color color)
+		{
+			auto CachedInfo = BrushCache.ElementByKey(color);
+			if (CachedInfo) {
+				CachedInfo->Retain();
+				return CachedInfo;
+			}
+			BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
+			if (!Info) { throw OutOfMemoryException(); }
+			ID2D1SolidColorBrush * Brush;
+			if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Brush) != S_OK) { Info->Release(); throw Exception(); }
+			Info->Brush = Brush;
+			BrushCache.Append(color, Info);
+			return Info;
 		}
 		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power)
 		{
@@ -524,6 +569,7 @@ namespace Engine
 				Info->valign = vertical_align;
 				Info->Font = static_cast<D2DFont *>(font);
 				Info->RenderTarget = Target;
+				Info->Device = this;
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
 				Info->Geometry = 0;
@@ -555,6 +601,7 @@ namespace Engine
 				Info->valign = vertical_align;
 				Info->Font = static_cast<D2DFont *>(font);
 				Info->RenderTarget = Target;
+				Info->Device = this;
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
 				Info->Geometry = 0;
@@ -796,7 +843,15 @@ namespace Engine
 				Target->FillRectangle(Rect, info->HighlightBrush);
 			}
 			Target->SetTransform(D2D1::Matrix3x2F::Translation(D2D1::SizeF(float(shift_x), float(shift_y))));
-			Target->FillGeometry(info->Geometry, info->TextBrush, 0);
+			if (info->Ranges.Length()) {
+				for (int i = 0; i < info->Ranges.Length(); i++) {
+					PushClip(Box(info->Ranges[i].LeftEdge, -info->Font->Height, info->Ranges[i].RightEdge, info->Font->Height));
+					Target->FillGeometry(info->Geometry, info->Ranges[i].Brush->Brush, 0);
+					PopClip();
+				}
+			} else {
+				Target->FillGeometry(info->Geometry, info->TextBrush, 0);
+			}
 			if (info->Font->Underline) {
 				Target->FillRectangle(D2D1::RectF(0.0f, info->UnderlineOffset - info->UnderlineHalfWidth, float(info->run_length), info->UnderlineOffset + info->UnderlineHalfWidth), info->TextBrush);
 			}

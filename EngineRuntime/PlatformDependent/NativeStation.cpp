@@ -240,6 +240,12 @@ namespace Engine
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();
 			return result;
 		}
+		UI::Box GetScreenDimensions(void)
+		{
+			RECT Rect;
+			GetWindowRect(GetDesktopWindow(), &Rect);
+			return UI::Box(Rect.left, Rect.top, Rect.right, Rect.bottom);
+		}
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));

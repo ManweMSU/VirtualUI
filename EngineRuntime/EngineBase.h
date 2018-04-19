@@ -155,9 +155,7 @@ namespace Engine
 	template <class V> void swap(V & a, V & b) { if (&a == &b) return; uint8 buffer[sizeof(V)]; MemoryCopy(buffer, &a, sizeof(V)); MemoryCopy(&a, &b, sizeof(V)); MemoryCopy(&b, buffer, sizeof(V)); }
 	template <class V> void safe_swap(V & a, V & b) { V e = a; a = b; b = e; }
 
-	template <class V> V & min(V & a, V & b) { return (a < b) ? a : b; }
 	template <class V> V min(V a, V b) { return (a < b) ? a : b; }
-	template <class V> V & max(V & a, V & b) { return (a < b) ? b : a; }
 	template <class V> V max(V a, V b) { return (a < b) ? b : a; }
 
 	double sgn(double x);

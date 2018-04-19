@@ -157,6 +157,8 @@ namespace Engine
 			virtual void HighlightText(int Start, int End) = 0;
 			virtual int TestPosition(int point) = 0;
 			virtual int EndOfChar(int Index) = 0;
+			virtual void SetCharPalette(const Array<Color> & colors) = 0;
+			virtual void SetCharColors(const Array<uint8> & indicies) = 0;
 			virtual ~ITextRenderingInfo(void);
 		};
 		class ILineRenderingInfo : public Object
@@ -185,6 +187,7 @@ namespace Engine
 		{
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) = 0;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) = 0;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;

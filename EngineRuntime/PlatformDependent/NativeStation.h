@@ -20,5 +20,6 @@ namespace Engine
 		string GetWindowTitle(UI::WindowStation * Station);
 		UI::Box GetWindowPosition(UI::WindowStation * Station);
 		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at);
+		UI::Box GetScreenDimensions(void);
 	}
 }

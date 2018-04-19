@@ -43,6 +43,7 @@ namespace Engine
 			ID2D1RenderTarget * GetRenderTarget(void) const;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) override;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) override;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) override;
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) override;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) override;

@@ -81,6 +81,14 @@ namespace Engine
 								_text_info.SetReference(device->CreateTextRenderingInfo(Font, masked, 0, 1, text_color));
 							} else {
 								_text_info.SetReference(device->CreateTextRenderingInfo(Font, _text, 0, 1, text_color));
+								if (_hook) {
+									SafePointer< Array<UI::Color> > colors = _hook->GetPalette(this);
+									SafePointer< Array<uint8> > indicies = _hook->ColorHighlight(this, _text);
+									if (colors && indicies) {
+										_text_info->SetCharPalette(*colors);
+										_text_info->SetCharColors(*indicies);
+									}
+								}
 							}
 						}
 						if (_deferred_scroll) {
@@ -425,6 +433,17 @@ namespace Engine
 			string Edit::GetCharacterFilter(void) { return CharactersEnabled; }
 			void Edit::SetContextMenu(Menues::Menu * menu) { _menu.SetRetain(menu); }
 			Menues::Menu * Edit::GetContextMenu(void) { return _menu; }
+			void Edit::SetPasswordMode(bool hide) { Password = hide; _text_info.SetReference(0); }
+			bool Edit::GetPasswordMode(void) { return Password; }
+			void Edit::SetPasswordChar(uint32 ucs)
+			{
+				_mask_char = ucs;
+				PasswordCharacter = string(&_mask_char, 1, Encoding::UTF32);
+				_text_info.SetReference(0);
+			}
+			uint32 Edit::GetPasswordChar(void) { return _mask_char; }
+			void Edit::SetHook(IEditHook * hook) { _hook = hook; _text_info.SetReference(0); }
+			Edit::IEditHook * Edit::GetHook(void) { return _hook; }
 			string Edit::FilterInput(const string & input)
 			{
 				string conv = input;
@@ -448,6 +467,7 @@ namespace Engine
 					}
 					conv = string(utf32.GetBuffer(), utf32.Length(), Encoding::UTF32);
 				}
+				if (_hook) conv = _hook->Filter(this, conv);
 				return conv;
 			}
 			void Edit::Print(const string & text)
@@ -471,6 +491,9 @@ namespace Engine
 				_text_info.SetReference(0);
 				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 			}
+			string Edit::IEditHook::Filter(Edit * sender, const string & input) { return input; }
+			Array<uint8> * Edit::IEditHook::ColorHighlight(Edit * sender, const Array<uint32>& text) { return 0; }
+			Array<UI::Color>* Edit::IEditHook::GetPalette(Edit * sender) { return 0; }
 		}
 	}
 }

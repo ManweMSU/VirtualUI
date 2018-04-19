@@ -144,7 +144,13 @@ namespace Engine
 					return ParentWindow::GetPosition();
 				}
 			}
-			void OverlappedWindow::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void OverlappedWindow::SetRectangle(const Rectangle & rect)
+			{
+				ControlPosition = rect;
+				Window * Parent = GetParent();
+				if (Parent) Parent->ArrangeChildren();
+				else SetPosition(Box(ControlPosition, NativeWindows::GetScreenDimensions()));
+			}
 			Rectangle OverlappedWindow::GetRectangle(void) { return ControlPosition; }
 			void OverlappedWindow::SetText(const string & text)
 			{

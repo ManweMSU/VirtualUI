@@ -14,6 +14,15 @@ namespace Engine
 		{
 			class Edit : public Window, public Template::Controls::Edit
 			{
+			public:
+				class IEditHook
+				{
+				public:
+					virtual string Filter(Edit * sender, const string & input);
+					virtual Array<uint8> * ColorHighlight(Edit * sender, const Array<uint32> & text);
+					virtual Array<UI::Color> * GetPalette(Edit * sender);
+				};
+			private:
 				SafePointer<Shape> _normal;
 				SafePointer<Shape> _focused;
 				SafePointer<Shape> _normal_readonly;
@@ -33,6 +42,7 @@ namespace Engine
 				int _caret_width = -1;
 				bool _save = true;
 				bool _deferred_scroll = false;
+				IEditHook * _hook = 0;
 			public:
 				Edit(Window * Parent, WindowStation * Station);
 				Edit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
@@ -81,6 +91,12 @@ namespace Engine
 				string GetCharacterFilter(void);
 				void SetContextMenu(Menues::Menu * menu);
 				Menues::Menu * GetContextMenu(void);
+				void SetPasswordMode(bool hide);
+				bool GetPasswordMode(void);
+				void SetPasswordChar(uint32 ucs);
+				uint32 GetPasswordChar(void);
+				void SetHook(IEditHook * hook);
+				IEditHook * GetHook(void);
 				string FilterInput(const string & input);
 				void Print(const string & text);
 			};
