@@ -387,6 +387,7 @@ namespace Engine
 						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalTrackBar") on->GetStation()->CreateWindow<HorizontalTrackBar>(on, &source->Children[i]);
 						// Edit controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Edit") on->GetStation()->CreateWindow<Edit>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"MultiLineEdit") on->GetStation()->CreateWindow<MultiLineEdit>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
@@ -396,12 +397,17 @@ namespace Engine
 						ListBox
 						TreeView
 						ListView
-						ListViewColumn
-						MultiLineEdit
+						ListViewColumn		
 
 						ComboBox
 						TextComboBox
 						CustomControl
+
+						FUTUTE CONTROLS:
+
+						MenuBar
+						RichTextView
+						TabControl
 						
 						*/
 					}

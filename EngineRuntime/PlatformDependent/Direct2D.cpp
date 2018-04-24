@@ -417,6 +417,16 @@ namespace Engine
 			DWRITE_FONT_METRICS FontMetrics;
 			DWRITE_FONT_METRICS AltMetrics;
 			virtual ~D2DFont(void) override { if (FontFace) FontFace->Release(); if (AlternativeFace) AlternativeFace->Release(); }
+			virtual int GetWidth(void) const override
+			{
+				uint16 SpaceGlyph;
+				uint32 Space = 0x20;
+				FontFace->GetGlyphIndicesW(&Space, 1, &SpaceGlyph);
+				DWRITE_GLYPH_METRICS SpaceMetrics;
+				FontFace->GetGdiCompatibleGlyphMetrics(float(Height), 1.0f, 0, TRUE, &SpaceGlyph, 1, &SpaceMetrics);
+				return int(float(SpaceMetrics.advanceWidth) * float(Height) / float(FontMetrics.designUnitsPerEm));
+			}
+			virtual int GetHeight(void) const override { return ActualHeight; }
 			virtual void Reload(IRenderingDevice * Device) override
 			{
 				if (FontFace) FontFace->Release();
@@ -845,9 +855,11 @@ namespace Engine
 			Target->SetTransform(D2D1::Matrix3x2F::Translation(D2D1::SizeF(float(shift_x), float(shift_y))));
 			if (info->Ranges.Length()) {
 				for (int i = 0; i < info->Ranges.Length(); i++) {
-					PushClip(Box(info->Ranges[i].LeftEdge, -info->Font->Height, info->Ranges[i].RightEdge, info->Font->Height));
+					Target->PushAxisAlignedClip(
+						D2D1::RectF(float(info->Ranges[i].LeftEdge), float(At.Top - shift_y), float(info->Ranges[i].RightEdge), float(At.Bottom - shift_y)),
+						D2D1_ANTIALIAS_MODE_ALIASED);
 					Target->FillGeometry(info->Geometry, info->Ranges[i].Brush->Brush, 0);
-					PopClip();
+					Target->PopAxisAlignedClip();
 				}
 			} else {
 				Target->FillGeometry(info->Geometry, info->TextBrush, 0);
@@ -956,7 +968,16 @@ namespace Engine
 			for (int i = 0; i < GlyphString.Length(); i++) GlyphAdvances[i] = (UseAlternative[i]) ? AltFontUnitsToDIP(Metrics[i].advanceWidth) : FontUnitsToDIP(Metrics[i].advanceWidth);
 			BaselineOffset = int(FontUnitsToDIP(Font->FontMetrics.ascent));
 			float rl = 0.0f;
-			for (int i = 0; i < GlyphString.Length(); i++) rl += GlyphAdvances[i];
+			int tab_width = Font->GetWidth() * 4;
+			for (int i = 0; i < GlyphString.Length(); i++) {
+				if (CharString[i] == L'\t') {
+					int64 align_pos = ((int64(rl) + tab_width) / tab_width) * tab_width;
+					GlyphAdvances[i] = float(align_pos) - rl;
+					rl = float(align_pos);
+				} else {
+					rl += GlyphAdvances[i];
+				}
+			}
 			run_length = int(rl);
 		}
 		void TextRenderingInfo::FillGlyphs(void)
@@ -968,10 +989,15 @@ namespace Engine
 			if (Font->FontFace->GetGlyphIndicesW(CharString, CharString.Length(), GlyphString) != S_OK) throw Exception();
 			UseAlternative.SetLength(CharString.Length());
 			for (int i = 0; i < UseAlternative.Length(); i++) {
-				if (!GlyphString[i]) {
-					if (Font->AlternativeFace && Font->AlternativeFace->GetGlyphIndicesW(CharString.GetBuffer() + i, 1, GlyphString.GetBuffer() + i) == S_OK && GlyphString[i]) UseAlternative[i] = true;
-					else UseAlternative[i] = false;
-				} else UseAlternative[i] = false;
+				if (CharString[i] == L'\t') {
+					GlyphString[i] = NormalSpaceGlyph;
+					UseAlternative[i] = false;
+				} else {
+					if (!GlyphString[i]) {
+						if (Font->AlternativeFace && Font->AlternativeFace->GetGlyphIndicesW(CharString.GetBuffer() + i, 1, GlyphString.GetBuffer() + i) == S_OK && GlyphString[i]) UseAlternative[i] = true;
+						else UseAlternative[i] = false;
+					} else UseAlternative[i] = false;
+				}
 			}
 		}
 		void TextRenderingInfo::BuildGeometry(void)

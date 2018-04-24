@@ -166,7 +166,7 @@ namespace Engine
 			Window * Current = this;
 			int ParentIndex = GetIndexAtParent();
 			do {
-				if (Current->Children.Length()) {
+				if (Current->Children.Length() && Current->IsEnabled() && Current->IsVisible()) {
 					Current = Current->Children.FirstElement();
 					ParentIndex = 0;
 				} else if (!Current->IsOverlapped()) {
@@ -179,7 +179,7 @@ namespace Engine
 						ParentIndex = SuperParentIndex + 1;
 						Current = Current->Parent->Children.ElementAt(ParentIndex);
 					}
-				}
+				} else return Current;
 				if (Current == this) return this;
 			} while (!Current->IsTabStop() || !Current->IsEnabled() || !Current->IsVisible());
 			return Current;
@@ -190,7 +190,7 @@ namespace Engine
 			int ParentIndex = GetIndexAtParent();
 			do {
 				if (Current->IsOverlapped()) {
-					while (Current->Children.Length()) Current = Current->Children.LastElement();
+					while (Current->Children.Length() && Current->IsEnabled() && Current->IsVisible()) Current = Current->Children.LastElement();
 					ParentIndex = Current->GetIndexAtParent();
 				} else {
 					if (ParentIndex == 0) {
@@ -199,7 +199,7 @@ namespace Engine
 					} else {
 						ParentIndex--;
 						Current = Current->Parent->Children.ElementAt(ParentIndex);
-						while (Current->Children.Length()) Current = Current->Children.LastElement();
+						while (Current->Children.Length() && Current->IsEnabled() && Current->IsVisible()) Current = Current->Children.LastElement();
 						ParentIndex = Current->GetIndexAtParent();
 					}
 				}

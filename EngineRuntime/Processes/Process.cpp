@@ -1,6 +1,7 @@
 #include "Process.h"
 
 #include "../Miscellaneous/DynamicString.h"
+#include "../PlatformDependent/FileApi.h"
 
 #include <Windows.h>
 
@@ -56,7 +57,26 @@ namespace Engine
 		si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 		DynamicString cmd;
-		WinapiProcess::AppendCommandLine(cmd, image);
+		WinapiProcess::AppendCommandLine(cmd, IO::ExpandPath(image));
+		if (command_line) {
+			for (int i = 0; i < command_line->Length(); i++) WinapiProcess::AppendCommandLine(cmd, command_line->ElementAt(i));
+		}
+		if (!CreateProcessW(0, cmd, 0, 0, TRUE, 0, 0, 0, &si, &pi)) return 0;
+		CloseHandle(pi.hThread);
+		return new WinapiProcess::Process(pi.hProcess);
+	}
+	Process * CreateCommandProcess(const string & command_image, const Array<string>* command_line)
+	{
+		PROCESS_INFORMATION pi;
+		STARTUPINFOW si;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		si.dwFlags = STARTF_USESTDHANDLES;
+		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+		si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+		DynamicString cmd;
+		WinapiProcess::AppendCommandLine(cmd, command_image);
 		if (command_line) {
 			for (int i = 0; i < command_line->Length(); i++) WinapiProcess::AppendCommandLine(cmd, command_line->ElementAt(i));
 		}

@@ -17,6 +17,10 @@ namespace Engine
 			}
 			VerticalScrollBar::VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template) : Window(Parent, Station)
 			{
+				ControlPosition = Rectangle::Invalid();
+				Reflection::PropertyZeroInitializer Initializer;
+				EnumerateProperties(Initializer);
+				Line = 1;
 				ViewBarNormal = Template->ViewVerticalScrollBarBarNormal;
 				ViewBarDisabled = Template->ViewVerticalScrollBarBarDisabled;
 				ViewUpButtonNormal = Template->ViewVerticalScrollBarUpButtonNormal;
@@ -34,6 +38,10 @@ namespace Engine
 			}
 			VerticalScrollBar::VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::VerticallyScrollable * Template) : Window(Parent, Station)
 			{
+				ControlPosition = Rectangle::Invalid();
+				Reflection::PropertyZeroInitializer Initializer;
+				EnumerateProperties(Initializer);
+				Line = 1;
 				ViewBarNormal = Template->ViewScrollBarBarNormal;
 				ViewBarDisabled = Template->ViewScrollBarBarDisabled;
 				ViewUpButtonNormal = Template->ViewScrollBarUpButtonNormal;
@@ -379,6 +387,10 @@ namespace Engine
 			}
 			HorizontalScrollBar::HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template) : Window(Parent, Station)
 			{
+				ControlPosition = Rectangle::Invalid();
+				Reflection::PropertyZeroInitializer Initializer;
+				EnumerateProperties(Initializer);
+				Line = 1;
 				ViewBarNormal = Template->ViewHorizontalScrollBarBarNormal;
 				ViewBarDisabled = Template->ViewHorizontalScrollBarBarDisabled;
 				ViewLeftButtonNormal = Template->ViewHorizontalScrollBarLeftButtonNormal;

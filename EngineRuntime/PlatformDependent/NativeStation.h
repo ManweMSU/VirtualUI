@@ -21,5 +21,10 @@ namespace Engine
 		UI::Box GetWindowPosition(UI::WindowStation * Station);
 		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at);
 		UI::Box GetScreenDimensions(void);
+		double GetScreenScale(void);
+		void RunMainMessageLoop(void);
+		int RunModalDialog(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, UI::Window * Parent);
+		void ExitModal(int code);
+		void ExitMainLoop(void);
 	}
 }

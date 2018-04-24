@@ -180,6 +180,8 @@ namespace Engine
 		class IFont : public Object
 		{
 		public:
+			virtual int GetWidth(void) const = 0;
+			virtual int GetHeight(void) const = 0;
 			virtual void Reload(IRenderingDevice * Device) = 0;
 		};
 

@@ -246,6 +246,41 @@ namespace Engine
 			GetWindowRect(GetDesktopWindow(), &Rect);
 			return UI::Box(Rect.left, Rect.top, Rect.right, Rect.bottom);
 		}
+		double GetScreenScale(void)
+		{
+			HDC DC = GetDC(0);
+			int dpi = GetDeviceCaps(DC, LOGPIXELSX);
+			ReleaseDC(0, DC);
+			return double(dpi) / 96.0;
+		}
+		void RunMainMessageLoop(void)
+		{
+			MSG Msg;
+			while (GetMessageW(&Msg, 0, 0, 0)) {
+				TranslateMessage(&Msg);
+				DispatchMessageW(&Msg);
+			}
+		}
+		int RunModalDialog(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, UI::Window * Parent)
+		{
+			auto station = Parent ? static_cast<NativeStation *>(Parent->GetStation()) : 0;
+			HWND parent = station ? station->GetHandle() : 0;
+			auto dialog = Windows::CreateFramedDialog(Template, Callback, Rectangle::Invalid(), station);
+			auto dialog_station = static_cast<NativeStation *>(dialog->GetStation());
+			SetParent(dialog_station->GetHandle(), parent);
+			dialog->Show(true);
+			EnableWindow(parent, false);
+			MSG Msg;
+			while (GetMessageW(&Msg, 0, 0, 0)) {
+				TranslateMessage(&Msg);
+				DispatchMessageW(&Msg);
+			}
+			EnableWindow(parent, true);
+			dialog->Destroy();
+			return int(Msg.wParam);
+		}
+		void ExitModal(int code) { PostQuitMessage(code); }
+		void ExitMainLoop(void) { PostQuitMessage(0); }
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));

@@ -23,6 +23,7 @@
 #include <Syntax/MathExpression.h>
 #include <Syntax/Regular.h>
 #include <PlatformDependent/KeyCodes.h>
+#include <PlatformDependent/NativeStation.h>
 #include <ImageCodec/IconCodec.h>
 #include <Processes/Shell.h>
 #include <Network/InternetRequest.h>
@@ -130,6 +131,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
+	(*conout) << L"Scale          : " << NativeWindows::GetScreenScale() << IO::NewLineChar;
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 
@@ -150,10 +152,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     {
         return FALSE;
     }
-
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TESTS));
-
-    MSG msg;
 
 	// Starting D3D
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
@@ -393,11 +391,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			class _thl : public Controls::Edit::IEditHook
 			{
 			public:
-				virtual string Filter(Controls::Edit * sender, const string & input)
+				virtual string Filter(Controls::Edit * sender, const string & input) override
 				{
 					return input.Replace(L'0', L"ЫЫЫ");
 				}
-				virtual Array<uint8> * ColorHighlight(Controls::Edit * sender, const Array<uint32> & text)
+				virtual Array<uint8> * ColorHighlight(Controls::Edit * sender, const Array<uint32> & text) override
 				{
 					auto result = new Array<uint8>(text.Length());
 					for (int i = 0; i < text.Length(); i++) {
@@ -406,15 +404,41 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					}
 					return result;
 				}
-				virtual Array<UI::Color> * GetPalette(Controls::Edit * sender)
+				virtual Array<UI::Color> * GetPalette(Controls::Edit * sender) override
 				{
 					auto result = new Array<UI::Color>(10);
 					result->Append(Color(255, 0, 0));
 					return result;
 				}
 			};
+			class _thl2 : public Controls::MultiLineEdit::IMultiLineEditHook
+			{
+			public:
+				virtual string Filter(Controls::MultiLineEdit * sender, const string & input, Point at) override
+				{
+					return input.Replace(L'0', L"ЫЫЫ");
+				}
+				virtual Array<uint8> * ColorHighlight(Controls::MultiLineEdit * sender, const Array<uint32> & text, int line) override
+				{
+					auto result = new Array<uint8>(text.Length());
+					for (int i = 0; i < text.Length(); i++) {
+						if (text[i] > 0xFFFF) result->Append(1);
+						else if (text[i] >= L'0' && text[i] <= L'9') result->Append(2);
+						else result->Append(0);
+					}
+					return result;
+				}
+				virtual Array<UI::Color> * GetPalette(Controls::MultiLineEdit * sender) override
+				{
+					auto result = new Array<UI::Color>(10);
+					result->Append(Color(255, 0, 0));
+					result->Append(Color(0, 0, 255));
+					return result;
+				}
+			};
 			auto Callback2 = new _cb2;
 			auto Hook = new _thl;
+			auto Hook2 = new _thl2;
 
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
@@ -426,12 +450,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 			w->AddDialogStandartAccelerators();
 			w2->AddDialogStandartAccelerators();
-			w3->AddDialogStandartAccelerators();
-			w4->AddDialogStandartAccelerators();
 			w5->AddDialogStandartAccelerators();
 
 			w->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 			w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
+			w3->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
+			w4->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
 
 			w->Show(true);
 			w2->Show(true);
@@ -443,17 +467,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		}
 	}
 
-    // Цикл основного сообщения:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-
-    return (int) msg.wParam;
+	NativeWindows::RunMainMessageLoop();
+    
+    return 0;
 }
 
 ATOM MyRegisterClass(HINSTANCE hInstance)
@@ -550,7 +566,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 		break;
     case WM_DESTROY:
-        PostQuitMessage(0);
+		NativeWindows::ExitMainLoop();
         break;
     default:
 		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
