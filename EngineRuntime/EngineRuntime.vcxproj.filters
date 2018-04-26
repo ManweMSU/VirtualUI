@@ -145,6 +145,9 @@
     <ClInclude Include="Network\InternetRequest.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="Network\Socket.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -253,6 +256,9 @@
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="Network\InternetRequest.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\Socket.cpp">
       <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>

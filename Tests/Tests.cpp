@@ -27,6 +27,7 @@
 #include <ImageCodec/IconCodec.h>
 #include <Processes/Shell.h>
 #include <Network/InternetRequest.h>
+#include <Network/Socket.h>
 
 #include "stdafx.h"
 #include "Tests.h"

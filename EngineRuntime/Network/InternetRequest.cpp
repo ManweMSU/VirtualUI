@@ -71,23 +71,14 @@ namespace Engine
 			public:
 				InternetRequest(HINTERNET handle) : request(handle) {}
 				virtual ~InternetRequest(void) override { InternetCloseHandle(request); }
-				virtual void AddHeaders(const Dictionary::Dictionary<string, string>& headers) override
+				virtual void SetHeader(const string & header, const string & value) override
 				{
-					for (int i = 0; i < headers.Length(); i++) AddHeader(headers[i].key, *headers[i].object);
-				}
-				virtual void AddHeaders(const Array<string>& headers) override
-				{
-					for (int i = 0; i < headers.Length(); i++) AddHeader(headers[i]);
-				}
-				virtual void AddHeader(const string & parameter, const string & value) override { AddHeader(parameter + L": " + value); }
-				virtual void AddHeader(const string & header) override
-				{
-					SafePointer< Array<uint8> > encoded = header.EncodeSequence(Encoding::ANSI, false);
+					SafePointer< Array<uint8> > encoded = (header + L": " + value).EncodeSequence(Encoding::ANSI, false);
 					encoded->Append(13);
 					encoded->Append(10);
 					encoded->Append(0);
-					if (!HttpAddRequestHeadersA(request, reinterpret_cast<char *>(encoded->GetBuffer()), -1, HTTP_ADDREQ_FLAG_ADD))
-						throw Exception();
+					if (!HttpAddRequestHeadersA(request, reinterpret_cast<char *>(encoded->GetBuffer()), -1,
+						HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE)) throw Exception();
 				}
 				virtual void Send(void) override
 				{
@@ -107,13 +98,13 @@ namespace Engine
 				}
 				virtual void EndSend(void) override { writer.SetReference(0); reader.SetReference(new ReaderStream(request)); }
 				virtual Streaming::Stream * GetResponceStream(void) override { return reader; }
-				virtual uint32 GetStatus(void)
+				virtual uint32 GetStatus(void) override
 				{
 					DWORD status, len = 4, num = 0;
 					if (!HttpQueryInfoW(request, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER, &status, &len, &num)) throw Exception();
 					return status;
 				}
-				virtual string GetHeaders(void)
+				virtual string GetHeader(const string & header) override
 				{
 					Array<char> buffer(0x100);
 					DWORD size = 0;
@@ -125,15 +116,22 @@ namespace Engine
 						}
 					}
 					int cp = 0;
-					string result;
 					while (buffer[cp]) {
 						int ep = cp;
 						while (buffer[ep]) ep++;
 						ep++;
-						result += string(buffer.GetBuffer() + cp, -1, Encoding::ANSI) + IO::NewLineChar;
+						string line = string(buffer.GetBuffer() + cp, -1, Encoding::ANSI);
+						int colon = line.FindFirst(L':');
+						if (colon && string::CompareIgnoreCase(line.Fragment(0, colon), header) == 0) {
+							colon++;
+							while (line[colon] == L' ') colon++;
+							int end = line.Length() - 1;
+							while (line[end] == L' ') end--;
+							if (end < colon) return L""; else return line.Fragment(colon, end - colon + 1);
+						}
 						cp = ep;
 					}
-					return result;
+					return L"";
 				}
 			};
 			class InternetConnection : public Network::InternetConnection

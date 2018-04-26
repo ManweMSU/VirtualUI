@@ -12,17 +12,14 @@ namespace Engine
 		class InternetRequest : public Object
 		{
 		public:
-			virtual void AddHeaders(const Dictionary::Dictionary<string, string> & headers) = 0;
-			virtual void AddHeaders(const Array<string> & headers) = 0;
-			virtual void AddHeader(const string & parameter, const string & value) = 0;
-			virtual void AddHeader(const string & header) = 0;
+			virtual void SetHeader(const string & header, const string & value) = 0;
 			virtual void Send(void) = 0;
 			virtual void Send(const void * data, uint32 size) = 0;
 			virtual Streaming::Stream * BeginSend(void) = 0;
 			virtual void EndSend(void) = 0;
 			virtual Streaming::Stream * GetResponceStream(void) = 0;
 			virtual uint32 GetStatus(void) = 0;
-			virtual string GetHeaders(void) = 0;
+			virtual string GetHeader(const string & header) = 0;
 		};
 		class InternetConnection : public Object
 		{
