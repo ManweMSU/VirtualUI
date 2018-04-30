@@ -28,6 +28,7 @@
 #include <Processes/Shell.h>
 #include <Network/InternetRequest.h>
 #include <Network/Socket.h>
+#include <Network/Punycode.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -115,8 +116,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-
 
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	SetProcessDPIAware();

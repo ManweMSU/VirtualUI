@@ -1,12 +1,12 @@
 #include "Socket.h"
 
+#include "Punycode.h"
 #include "../Miscellaneous/DynamicString.h"
 
 #include <WinSock2.h>
 #include <ws2tcpip.h>
 
 #pragma comment(lib, "Ws2_32.lib")
-#pragma comment(lib, "Normaliz.lib")
 
 #undef ZeroMemory
 #undef min
@@ -104,6 +104,45 @@ namespace Engine
 			virtual Socket * Accept() override
 			{
 				SOCKET new_socket = accept(handle, 0, 0);
+				if (new_socket != INVALID_SOCKET) {
+					WSADATA data;
+					ZeroMemory(&data, sizeof(data));
+					WSAStartup(MAKEWORD(2, 2), &data);
+				}
+				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
+			}
+			virtual Socket * Accept(Address & address, uint16 & port)
+			{
+				SOCKET new_socket = INVALID_SOCKET;
+				if (ipv6) {
+					sockaddr_in6 addr;
+					int addr_len = sizeof(addr);
+					new_socket = accept(handle, reinterpret_cast<sockaddr *>(&addr), &addr_len);
+					if (new_socket != INVALID_SOCKET) {
+						port = InverseEndianess(addr.sin6_port);
+						address.DWord1 = InverseEndianess(addr.sin6_addr.u.Word[7]) |
+							(uint32(InverseEndianess(addr.sin6_addr.u.Word[6])) << 16);
+						address.DWord2 = InverseEndianess(addr.sin6_addr.u.Word[5]) |
+							(uint32(InverseEndianess(addr.sin6_addr.u.Word[4])) << 16);
+						address.DWord3 = InverseEndianess(addr.sin6_addr.u.Word[3]) |
+							(uint32(InverseEndianess(addr.sin6_addr.u.Word[2])) << 16);
+						address.DWord4 = InverseEndianess(addr.sin6_addr.u.Word[1]) |
+							(uint32(InverseEndianess(addr.sin6_addr.u.Word[0])) << 16);
+					}
+				} else {
+					sockaddr_in addr;
+					int addr_len = sizeof(addr);
+					new_socket = accept(handle, reinterpret_cast<sockaddr *>(&addr), &addr_len);
+					if (new_socket != INVALID_SOCKET) {
+						port = InverseEndianess(addr.sin_port);
+						address = Address::CreateIPv4(InverseEndianess(uint32(addr.sin_addr.S_un.S_addr)));
+					}
+				}
+				if (new_socket != INVALID_SOCKET) {
+					WSADATA data;
+					ZeroMemory(&data, sizeof(data));
+					WSAStartup(MAKEWORD(2, 2), &data);
+				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
 		};
@@ -179,83 +218,13 @@ namespace Engine
 		Address Address::CreateAny(void) { return CreateIPv6(0, 0, 0, 0); }
 		uint32 InverseEndianess(uint32 value) { return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24); }
 		uint16 InverseEndianess(uint16 value) { return ((value & 0xFF00) >> 8) | ((value & 0xFF) << 8); }
-		string InternalConverter(const string & text)
-		{
-			bool regular = true;
-			for (int i = 0; i < text.Length(); i++) if (text[i] & 0xFFFFFF80) regular = false;
-			if (regular) return text;
-			Array<uint32> ucs(0x10);
-			ucs.SetLength(text.GetEncodedLength(Encoding::UTF32) + 1);
-			text.Encode(ucs.GetBuffer(), Encoding::UTF32, true);
-			DynamicString result;
-			int run_length = 0;
-			uint32 max_char = 0;
-			for (int i = 0; i < ucs.Length() - 1; i++) {
-				if (ucs[i] > max_char) max_char = ucs[i];
-				if (ucs[i] < 128) {
-					run_length++;
-					result += string(ucs.GetBuffer() + i, 1, Encoding::UTF32);
-				}
-			}
-			if (run_length) result += L'-';
-			run_length++;
-			uint32 cur_char = 128;
-			int state = 0;
-			int last_state = -1;
-			int bias = 72;
-			while (cur_char <= max_char) {
-				for (int i = 0; i < ucs.Length(); i++) {
-					if (ucs[i] == cur_char) {
-						int ds = state - last_state - 1;
-						if (ds) {
-							int ids = ds;
-							int div = 0;
-							while (true) {
-								div += 36;
-								int edge = max(min(div - bias, 26), 1);
-								if (ds < edge) break;
-								result += L"abcdefghijklmnopqrstuvwxyz0123456789"[edge + ((ds - edge) % (36 - edge))];
-								ds = (ds - edge) / (36 - edge);
-							}
-							result += L"abcdefghijklmnopqrstuvwxyz0123456789"[ds];
-							if (last_state == -1) ids /= 700;
-							else ids /= 2;
-							ids += (ids / (run_length));
-							int k = 0;
-							while (ids > (35 * 26) / 2) {
-								ids /= 35;
-								k += 36;
-							}
-							bias = k + ((36 * ids) / (ids + 38));
-						} else {
-							result += L'a';
-						}
-						last_state = state;
-						run_length++;
-					}
-					if (ucs[i] <= cur_char) state++;
-				}
-				cur_char++;
-			}
-			return L"xn--" + result;
-		}
-		string ConvertToPunycode(const string & text)
-		{
-			auto domains = text.Split(L'.');
-			DynamicString result;
-			for (int i = 0; i < domains.Length(); i++) {
-				if (i) result += L'.';
-				result += InternalConverter(domains[i].LowerCase());
-			}
-			return result;
-		}
 		Array<AddressEntity>* GetAddressByHost(const string & host_name, uint16 host_port, SocketAddressDomain domain, SocketProtocol protocol)
 		{
 			WSADATA data;
 			ZeroMemory(&data, sizeof(data));
 			if (WSAStartup(MAKEWORD(2, 2), &data)) return 0;
 			try {
-				string wname = ConvertToPunycode(host_name);
+				string wname = DomainNameToPunycode(host_name);
 				SafePointer< Array<uint8> > name = wname.EncodeSequence(Encoding::ANSI, true);
 				SafePointer< Array<uint8> > port = string(host_port).EncodeSequence(Encoding::ANSI, true);
 				addrinfo * info = 0;

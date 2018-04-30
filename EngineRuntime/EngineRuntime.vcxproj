@@ -27,6 +27,7 @@
     <ClInclude Include="Miscellaneous\Reflection.h" />
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
     <ClInclude Include="Network\InternetRequest.h" />
+    <ClInclude Include="Network\Punycode.h" />
     <ClInclude Include="Network\Socket.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="PlatformDependent\Clipboard.h" />
@@ -67,6 +68,7 @@
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="Network\InternetRequest.cpp" />
+    <ClCompile Include="Network\Punycode.cpp" />
     <ClCompile Include="Network\Socket.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="PlatformDependent\Clipboard.cpp" />

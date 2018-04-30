@@ -50,11 +50,11 @@ namespace Engine
 			virtual void Bind(uint16 port) = 0;
 			virtual void Listen(void) = 0;
 			virtual Socket * Accept() = 0;
+			virtual Socket * Accept(Address & address, uint16 & port) = 0;
 		};
 		Socket * CreateSocket(SocketAddressDomain domain, SocketProtocol protocol);
 		uint32 InverseEndianess(uint32 value);
 		uint16 InverseEndianess(uint16 value);
-		string ConvertToPunycode(const string & text);
 		Array<AddressEntity> * GetAddressByHost(const string & host_name, uint16 host_port, SocketAddressDomain domain, SocketProtocol protocol);
 	}
 }
