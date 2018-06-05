@@ -12,6 +12,24 @@ namespace Engine
 			class OverlappedWindow;
 			class ContentFrame;
 		}
+		namespace Accelerators
+		{
+			enum class AcceleratorSystemCommand { WindowClose, WindowInvokeHelp, WindowNextControl, WindowPreviousControl };
+			class AcceleratorCommand
+			{
+			public:
+				uint KeyCode;
+				bool Shift;
+				bool Control;
+				bool Alternative;
+				int CommandID;
+				bool SystemCommand;
+
+				AcceleratorCommand(void);
+				AcceleratorCommand(int invoke_command, uint on_key, bool control = true, bool shift = false, bool alternative = false);
+				AcceleratorCommand(AcceleratorSystemCommand command, uint on_key, bool control = true, bool shift = false, bool alternative = false);
+			};
+		}
 		namespace Windows
 		{
 			enum class FrameEvent { Close, Move, Maximize, Minimize, Help, PopupMenuCancelled };
@@ -44,6 +62,7 @@ namespace Engine
 				};
 				ContentFrame * _inner;
 				Windows::IWindowEventCallback * _callback;
+				Array<Accelerators::AcceleratorCommand> _accels;
 				SafePointer<Shape> _active;
 				SafePointer<Shape> _inactive;
 				bool _visible, _enabled;
@@ -68,6 +87,7 @@ namespace Engine
 				virtual bool IsVisible(void) override;
 				virtual bool IsOverlapped(void) override;
 				virtual void SetPosition(const Box & box) override;
+				virtual Box GetPosition(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetText(const string & text) override;
@@ -78,6 +98,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void LeftButtonDoubleClick(Point at) override;
 				virtual void MouseMove(Point at) override;
+				virtual bool TranslateAccelerators(int key_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
 
@@ -88,6 +109,12 @@ namespace Engine
 				int GetCaptionWidth(void);
 				int GetButtonsWidth(void);
 				int GetPart(Point cursor);
+				void RaiseFrameEvent(Windows::FrameEvent event);
+				void SetBackground(Template::Shape * shape);
+
+				Array<Accelerators::AcceleratorCommand> & GetAcceleratorTable(void);
+				const Array<Accelerators::AcceleratorCommand> & GetAcceleratorTable(void) const;
+				void AddDialogStandartAccelerators(void);
 			};
 			class ContentFrame : public ParentWindow, private Template::Controls::DialogFrame
 			{

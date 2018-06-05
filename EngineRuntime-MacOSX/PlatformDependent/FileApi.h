@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../EngineBase.h"
+#include "../Miscellaneous/Time.h"
 
 namespace Engine
 {
@@ -37,6 +38,7 @@ namespace Engine
 		void SetStandartOutput(handle file);
 		void SetStandartInput(handle file);
 		void SetStandartError(handle file);
+		handle CloneHandle(handle file);
 		void CloseFile(handle file);
 		void Flush(handle file);
 		uint64 GetFileSize(handle file);
@@ -63,6 +65,15 @@ namespace Engine
 		{
 			Array<string> * GetFiles(const string & path, bool recursive = false);
 			Array<string> * GetDirectories(const string & path);
+		}
+		namespace DateTime
+		{
+			Time GetFileCreationTime(handle file);
+			Time GetFileAccessTime(handle file);
+			Time GetFileAlterTime(handle file);
+			void SetFileCreationTime(handle file, Time time);
+			void SetFileAccessTime(handle file, Time time);
+			void SetFileAlterTime(handle file, Time time);
 		}
 	}
 }

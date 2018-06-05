@@ -16,3 +16,6 @@
 #include "Miscellaneous/Dictionary.h"
 #include "Miscellaneous/DynamicString.h"
 #include "Miscellaneous/UndoBuffer.h"
+#include "Miscellaneous/Time.h"
+#include "Storage/Registry.h"
+#include "Storage/TextRegistry.h"

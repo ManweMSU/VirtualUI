@@ -1,8 +1,30 @@
 #pragma once
 
 #include "../EngineBase.h"
+#include "../ImageCodec/CodecBase.h"
 #include "ShapeBase.h"
 #include "Templates.h"
+#include "Animation.h"
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                   Retain/Release Features
+// Window Stations and Windows have different Retain/Release
+// policy required. Window Station warranties a life of any
+// internal window. So, retain windows only if there is a need
+// to use it after station was destroyed. Window Station is
+// refrenced by any window it contains, Window is referenced
+// by it's children. So Release() will not destroy them.
+// Instead of it use:
+// on windows: window's Destroy() or station's DestroyWindow()
+// methods: they detach window from it's window station and
+// destroy parent-child linking, then station automaticly
+// releases your window.
+// on window stations: DestroyStation() method: it destroys
+// all links between owned windows and the station, then calls
+// Release().
+// Both window and window station are invalid after these calls.
+// To create a window, use station's CreateWindow() methods.
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 namespace Engine
 {
@@ -18,7 +40,7 @@ namespace Engine
 			friend class ParentWindow;
 		public:
 			enum class DepthOrder { SetFirst = 0, SetLast = 1, MoveUp = 2, MoveDown = 3 };
-			enum class Event { Command = 0, MenuCommand = 1, DoubleClick = 2, ContextClick = 3, ValueChange = 4 };
+			enum class Event { Command = 0, AcceleratorCommand = 1, MenuCommand = 2, DoubleClick = 3, ContextClick = 4, ValueChange = 5 };
 		private:
 			ObjectArray<Window> Children;
 			SafePointer<Window> Parent;
@@ -61,6 +83,7 @@ namespace Engine
 			virtual void ScrollHorizontally(int delta);
 			virtual void KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
+			virtual bool TranslateAccelerators(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual void PopupMenuCancelled(void);
 			virtual Window * HitTest(Point at);
@@ -81,13 +104,26 @@ namespace Engine
 			bool IsGeneralizedParent(Window * window);
 			bool IsAvailable(void);
 			Window * GetOverlappedParent(void);
+			void MoveAnimated(const Rectangle & to, uint32 duration, Animation::AnimationClass begin_class,
+				Animation::AnimationClass end_class, Animation::AnimationAction action);
+			void HideAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass begin, Animation::AnimationClass end = Animation::AnimationClass::Hard);
+			void ShowAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass end, Animation::AnimationClass begin = Animation::AnimationClass::Hard);
+			Window * GetNextTabStopControl(void);
+			Window * GetPreviousTabStopControl(void);
+			int GetIndexAtParent(void);
 			template <class W> W * As(void) { return static_cast<W *>(this); }
 		};
 		class ICursor : public Object {};
+		typedef Animation::AnimationState<Window, Rectangle> WindowAnimationState;
 		enum class SystemCursor { Null = 0, Arrow = 1, Beam = 2, Link = 3, SizeLeftRight = 4, SizeUpDown = 5, SizeLeftUpRightDown = 6, SizeLeftDownRightUp = 7, SizeAll = 8 };
 		class WindowStation : public Object
 		{
 		public:
+			class IDesktopWindowFactory
+			{
+			public:
+				virtual Window * CreateDesktopWindow(WindowStation * Station) = 0;
+			};
 			struct VisualStyles
 			{
 				SafePointer<Template::Shape> WindowActiveView; // Argumented with Text, Border, NegBorder, ButtonsWidth, NegButtonsWidth, Caption and NegCaption
@@ -114,15 +150,18 @@ namespace Engine
 
 				int CaretWidth = 1;
 			};
+		protected:
+			WindowStation(IDesktopWindowFactory * Factory);
 		private:
 			SafePointer<IRenderingDevice> RenderingDevice;
-			SafePointer<Engine::UI::TopLevelWindow> TopLevelWindow;
+			SafePointer<Window> TopLevelWindow;
 			SafePointer<Window> CaptureWindow;
 			SafePointer<Window> FocusedWindow;
 			SafePointer<Window> ActiveWindow;
 			SafePointer<Window> ExclusiveWindow;
 			Box Position;
 			VisualStyles Styles;
+			Array<WindowAnimationState> Animations;
 			void DeconstructChain(Window * window);
 		public:
 			WindowStation(void);
@@ -163,11 +202,12 @@ namespace Engine
 				return New;
 			}
 			void DestroyWindow(Window * window);
+			void DestroyStation(void);
 			void SetBox(const Box & box);
 			Box GetBox(void);
 			void Render(void);
 			void ResetCache(void);
-			Engine::UI::TopLevelWindow * GetDesktop(void);
+			Window * GetDesktop(void);
 			Window * HitTest(Point at);
 			Window * EnabledHitTest(Point at);
 			void SetRenderingDevice(IRenderingDevice * Device);
@@ -177,6 +217,10 @@ namespace Engine
 			void GetMouseTarget(Point global, Window ** target, Point * local);
 			void SetActiveWindow(Window * window);
 			Window * GetActiveWindow(void);
+			void AnimateWindow(Window * window, const Rectangle & position, uint32 duration,
+				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
+			void AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration,
+				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
 
 			virtual void SetFocus(Window * window);
 			virtual Window * GetFocus(void);
@@ -187,6 +231,7 @@ namespace Engine
 			virtual Window * GetExclusiveWindow(void);
 			virtual void FocusChanged(bool got_focus);
 			virtual void CaptureChanged(bool got_capture);
+			virtual bool NativeHitTest(const Point & at);
 			virtual void LeftButtonDown(Point at);
 			virtual void LeftButtonUp(Point at);
 			virtual void LeftButtonDoubleClick(Point at);
@@ -201,9 +246,13 @@ namespace Engine
 			virtual void CharDown(uint32 ucs_code);
 			virtual Point GetCursorPos(void);
 			virtual ICursor * LoadCursor(Streaming::Stream * Source);
+			virtual ICursor * LoadCursor(Codec::Image * Source);
+			virtual ICursor * LoadCursor(Codec::Frame * Source);
 			virtual ICursor * GetSystemCursor(SystemCursor cursor);
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor);
 			virtual void SetCursor(ICursor * cursor);
+			virtual bool IsNativeStationWrapper(void) const;
+			virtual void OnDesktopDestroy(void);
 
 			VisualStyles & GetVisualStyles(void);
 		};

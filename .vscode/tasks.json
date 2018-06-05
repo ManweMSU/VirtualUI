@@ -7,61 +7,26 @@
     },
     "tasks": [
         {
-            "label": "build",
+            "label": "build builder tool",
             "type": "shell",
-            "command": "clang++",
+            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
             "args": [
-                //"-Wall",
-                "\"${workspaceFolder}/Unix Tests/test.mm\"",
-
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/Base.mm\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/FileApi.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/StringConvert.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/PlatformDependent/CocoaInterop.mm\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Processes/Shell.mm\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Processes/Process.mm\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Processes/Threading.mm\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/EngineBase.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Streaming.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Miscellaneous/DynamicString.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Syntax/Grammar.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Syntax/MathExpression.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Syntax/Regular.cpp\"",
-                "\"${workspaceFolder}/EngineRuntime-MacOSX/Syntax/Tokenization.cpp\"",
-                "-std=c++14",
-                "-v",
+                "\"${workspaceRoot}/Mac OS X Asm/ertbuild.project.ini\""
                 //"-shared",
                 //"-dynamiclib",
-                "-Wl,-install_name,@loader_path/../Frameworks/EngineRuntime.framework/EngineRuntime",
-                "-o",
+                //"-Wl,-install_name,@loader_path/../Frameworks/EngineRuntime.framework/EngineRuntime",
+                //"-o",
                 //"\"${workspaceFolder}/EngineRuntime-MacOSX/_build/EngineRuntime.dylib\"",
-                "\"${workspaceFolder}/Unix Tests/Test.app/Contents/MacOS/test\"",
-                "-DENGINE_UNIX=1",
-                "-DENGINE_X64=1",
-                "-DENGINE_MACOSX=1",
-                "-fmodules",
-                //"-fobjc-arc",
-                "-fcxx-modules"
+
             ],
             "group": "build",
             "presentation": {
-                // Reveal the output only if unrecognized errors occur.
-                //"reveal": "silent"
             },
-            // Use the standard MS compiler pattern to detect errors, warnings and infos
             "problemMatcher": {
                 "owner": "cpp",
-                "fileLocation": [
-                    "relative",
-                    "${workspaceRoot}"
-                ],
-                "pattern": {
-                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
                 }
             }
         }

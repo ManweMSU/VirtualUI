@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <sys/time.h>
 
 @import Foundation;
 
@@ -14,7 +15,23 @@ namespace Engine
 	uint InterlockedDecrement(uint & Value) { return __sync_sub_and_fetch(&Value, 1); }
     void ZeroMemory(void * Memory, intptr Size) { memset(Memory, 0, Size); }
     uint32 GetTimerValue(void) { timespec time; clock_gettime(CLOCK_MONOTONIC_RAW, &time); return time.tv_nsec / 1000000 + time.tv_sec * 1000; }
-    void * MemoryCopy(void * Dest, const void * Source, intptr Length) { return memcpy(Dest, Source, Length); }
+    uint64 GetNativeTime(void)
+	{
+		struct timeval time;
+		gettimeofday(&time, 0);
+		return time.tv_sec;
+	}
+	uint64 TimeUniversalToLocal(uint64 time)
+	{
+		time_t t = time_t(time);
+		return timegm(localtime(&t));
+	}
+	uint64 TimeLocalToUniversal(uint64 time)
+	{
+		time_t t = time_t(time);
+		return mktime(gmtime(&t));
+	}
+	void * MemoryCopy(void * Dest, const void * Source, intptr Length) { return memcpy(Dest, Source, Length); }
 	widechar * StringCopy(widechar * Dest, const widechar * Source)
 	{
 		int i = -1;

@@ -421,7 +421,7 @@ namespace Engine
 		{
 			require(count); int i = 0;
 			try { for (i = 0; i < count; i++) { data[i] = src.data[i]; if (src.data[i]) src.data[i]->Retain(); } } catch (...) {
-				for (int j = i - 1; j >= 0; j--) (data[i]) data[i]->Release();
+				for (int j = i - 1; j >= 0; j--) if (data[i]) data[i]->Release();
 				free(data); throw;
 			}
 		}

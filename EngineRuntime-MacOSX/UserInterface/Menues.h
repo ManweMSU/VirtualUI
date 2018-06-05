@@ -23,6 +23,7 @@ namespace Engine
 				virtual void Shutdown(void) = 0;
 				virtual bool IsSeparator(void) const = 0;
 				virtual MenuItem * FindChild(int ID) = 0;
+				virtual IRenderingDevice * GetRenderingDevice(void) = 0;
 			};
 			class MenuItem : public MenuElement, public Template::Controls::MenuItem
 			{
@@ -49,6 +50,7 @@ namespace Engine
 				virtual void Shutdown(void) override;
 				virtual bool IsSeparator(void) const override;
 				virtual MenuItem * FindChild(int ID) override;
+				virtual IRenderingDevice * GetRenderingDevice(void) override;
 			};
 			class MenuSeparator : public MenuElement, public Template::Controls::MenuSeparator
 			{
@@ -67,6 +69,7 @@ namespace Engine
 				virtual void Shutdown(void) override;
 				virtual bool IsSeparator(void) const override;
 				virtual MenuItem * FindChild(int ID) override;
+				virtual IRenderingDevice * GetRenderingDevice(void) override;
 			};
 			class Menu : public Object
 			{
@@ -81,6 +84,7 @@ namespace Engine
 				void CheckRange(int RangeMin, int RangeMax, int Element);
 
 				void RunPopup(Window * owner, Point at);
+				void RunPopup(Window * owner);
 			};
 		}
 	}

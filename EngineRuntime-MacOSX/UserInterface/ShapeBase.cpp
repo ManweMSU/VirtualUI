@@ -24,6 +24,11 @@ namespace Engine
 		Coordinate operator/(const Coordinate & a, double b) { return Coordinate(int(a.Absolute / b), a.Zoom / b, a.Anchor / b); }
 		bool operator==(const Coordinate & a, const Coordinate & b) { return a.Absolute == b.Absolute && a.Zoom == b.Zoom && a.Anchor == b.Anchor; }
 		bool operator!=(const Coordinate & a, const Coordinate & b) { return a.Absolute != b.Absolute || a.Zoom != b.Zoom || a.Anchor != b.Anchor; }
+		Rectangle operator+(const Rectangle & a, const Rectangle & b) { Rectangle Result = a; Result += b; return Result; }
+		Rectangle operator-(const Rectangle & a, const Rectangle & b) { Rectangle Result = a; Result -= b; return Result; }
+		Rectangle operator*(const Rectangle & a, double b) { Rectangle Result = a; Result *= b; return Result; }
+		Rectangle operator*(double b, const Rectangle & a) { Rectangle Result = a; Result *= b; return Result; }
+		Rectangle operator/(const Rectangle & a, double b) { Rectangle Result = a; Result /= b; return Result; }
 		bool operator==(const Rectangle & a, const Rectangle & b) { return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom; }
 		bool operator!=(const Rectangle & a, const Rectangle & b) { return a.Left != b.Left || a.Top != b.Top || a.Right != b.Right || a.Bottom != b.Bottom; }
 		bool operator==(const Point & a, const Point & b) { return a.x == b.x && a.y == b.y; }
@@ -36,6 +41,11 @@ namespace Engine
 		bool operator!=(const GradientPoint & a, const GradientPoint & b) { return a.Color != b.Color || a.Position != b.Position; }
 		Rectangle::Rectangle(void) {}
 		Rectangle::Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) : Left(left), Top(top), Right(right), Bottom(bottom) {}
+		Rectangle & Rectangle::operator+=(const Rectangle & a) { Left += a.Left; Top += a.Top; Right += a.Right; Bottom += a.Bottom; return *this; }
+		Rectangle & Rectangle::operator-=(const Rectangle & a) { Left -= a.Left; Top -= a.Top; Right -= a.Right; Bottom -= a.Bottom; return *this; }
+		Rectangle & Rectangle::operator*=(double a) { Left *= a; Top *= a; Right *= a; Bottom *= a; return *this; }
+		Rectangle & Rectangle::operator/=(double a) { Left /= a; Top /= a; Right /= a; Bottom /= a; return *this; }
+		Rectangle Rectangle::operator-(void) const { return Rectangle(-Left, -Top, -Right, -Bottom); }
 		bool Rectangle::IsValid(void) const { return Left.Anchor == Left.Anchor; }
 		Rectangle Rectangle::Entire() { return Rectangle(0, 0, Coordinate::Right(), Coordinate::Bottom()); }
 		Rectangle Rectangle::Invalid() { double z = 0.0, nan = z / z; return Rectangle(Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan)); }

@@ -18,15 +18,21 @@ namespace Engine
 
 	enum class Platform { X86, X64 };
 
-#define ENGINE_PACKED_STRUCTURE __pragma(pack(push, 1))
-#define ENGINE_END_PACKED_STRUCTURE __pragma(pack(pop))
 #define ENGINE_PI 3.14159265358979323846
 
 #ifdef ENGINE_WINDOWS
+
+#define ENGINE_PACKED_STRUCTURE(NAME) __pragma(pack(push, 1)) struct NAME {
+#define ENGINE_END_PACKED_STRUCTURE }; __pragma(pack(pop))
+
 	constexpr Encoding SystemEncoding = Encoding::UTF16;
 	constexpr const widechar * OperatingSystemName = L"Windows";
 #endif
 #ifdef ENGINE_UNIX
+
+#define ENGINE_PACKED_STRUCTURE(NAME) struct NAME {
+#define ENGINE_END_PACKED_STRUCTURE } __attribute__((packed));
+
 	constexpr Encoding SystemEncoding = Encoding::UTF32;
 #ifdef ENGINE_MACOSX
 	constexpr const widechar * OperatingSystemName = L"Mac OS";

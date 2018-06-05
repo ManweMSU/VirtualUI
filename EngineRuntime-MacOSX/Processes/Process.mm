@@ -7,6 +7,8 @@
 #include <time.h>
 #include <crt_externs.h>
 
+#include "../Streaming.h"
+
 @import Foundation;
 
 namespace Engine
@@ -42,8 +44,33 @@ namespace Engine
 			}
 		}
 		@try {
-			NSString * app = Cocoa::CocoaString(IO::NormalizePath(image));
+			NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::NormalizePath(image)));
 			NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
+			[app release];
+			[argv release];
+			argv = 0;
+			return new CocoaProcess::Process(task);
+		}
+		@catch (NSException * e) {}
+		[argv release];
+		return 0;
+	}
+	Process * CreateCommandProcess(const string & command_image, const Array<string> * command_line)
+	{
+		NSMutableArray * argv = [[NSMutableArray alloc] init];
+		if (command_line) {
+			for (int i = 0; i < command_line->Length(); i++) {
+				NSString * str = Cocoa::CocoaString(command_line->ElementAt(i));
+				[argv addObject: str];
+				[str release];
+			}
+		}
+		@try {
+			NSString * app = Cocoa::CocoaString(IO::NormalizePath(L"/bin/" + command_image));
+			NSTask * task = [[NSTask alloc] init];
+			[task setLaunchPath: app];
+			[task setArguments: argv];
+			[task launch];
 			[app release];
 			[argv release];
 			argv = 0;

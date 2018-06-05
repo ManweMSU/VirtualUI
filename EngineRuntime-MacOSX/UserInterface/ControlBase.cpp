@@ -39,6 +39,7 @@ namespace Engine
 		void Window::ScrollHorizontally(int delta) { if (Parent) Parent->ScrollHorizontally(delta); }
 		void Window::KeyDown(int key_code) {}
 		void Window::KeyUp(int key_code) {}
+		bool Window::TranslateAccelerators(int key_code) { return false; }
 		void Window::CharDown(uint32 ucs_code) {}
 		void Window::PopupMenuCancelled(void) {}
 		Window * Window::HitTest(Point at) { return this; }
@@ -114,6 +115,104 @@ namespace Engine
 			} while (true);
 			return 0;
 		}
+		void Window::MoveAnimated(const Rectangle & to, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			Station->AnimateWindow(this, to, duration, begin_class, end_class, action);
+		}
+		void Window::HideAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass begin, Animation::AnimationClass end)
+		{
+			auto position = GetRectangle();
+			auto width = position.Right - position.Left;
+			auto height = position.Bottom - position.Top;
+			if (side == Animation::SlideSide::Left) {
+				MoveAnimated(Rectangle(-width, position.Top, Coordinate(0), position.Bottom), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			} else if (side == Animation::SlideSide::Top) {
+				MoveAnimated(Rectangle(position.Left, -height, position.Right, Coordinate(0)), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			} else if (side == Animation::SlideSide::Right) {
+				MoveAnimated(Rectangle(Coordinate::Right(), position.Top, Coordinate::Right() + width, position.Bottom), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			} else if (side == Animation::SlideSide::Bottom) {
+				MoveAnimated(Rectangle(position.Left, Coordinate::Bottom(), position.Right, Coordinate::Bottom() + height), duration, begin,
+					end, Animation::AnimationAction::HideWindowKeepPosition);
+			}
+		}
+		void Window::ShowAnimated(Animation::SlideSide side, uint32 duration, Animation::AnimationClass end, Animation::AnimationClass begin)
+		{
+			auto position = GetRectangle();
+			auto width = position.Right - position.Left;
+			auto height = position.Bottom - position.Top;
+			if (side == Animation::SlideSide::Left) {
+				Station->AnimateWindow(this, Rectangle(-width, position.Top, Coordinate(0), position.Bottom),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			} else if (side == Animation::SlideSide::Top) {
+				Station->AnimateWindow(this, Rectangle(position.Left, -height, position.Right, Coordinate(0)),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			} else if (side == Animation::SlideSide::Right) {
+				Station->AnimateWindow(this, Rectangle(Coordinate::Right(), position.Top, Coordinate::Right() + width, position.Bottom),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			} else if (side == Animation::SlideSide::Bottom) {
+				Station->AnimateWindow(this, Rectangle(position.Left, Coordinate::Bottom(), position.Right, Coordinate::Bottom() + height),
+					position, duration, begin, end,
+					Animation::AnimationAction::ShowWindow);
+			}
+		}
+		Window * Window::GetNextTabStopControl(void)
+		{
+			Window * Current = this;
+			int ParentIndex = GetIndexAtParent();
+			do {
+				if (Current->Children.Length() && Current->IsEnabled() && Current->IsVisible()) {
+					Current = Current->Children.FirstElement();
+					ParentIndex = 0;
+				} else if (!Current->IsOverlapped()) {
+					int SuperParentIndex = ParentIndex;
+					while (!Current->IsOverlapped() && SuperParentIndex == Current->Parent->Children.Length() - 1) {
+						Current = Current->Parent;
+						SuperParentIndex = Current->GetIndexAtParent();
+					}
+					if (!Current->IsOverlapped()) {
+						ParentIndex = SuperParentIndex + 1;
+						Current = Current->Parent->Children.ElementAt(ParentIndex);
+					}
+				} else return Current;
+				if (Current == this) return this;
+			} while (!Current->IsTabStop() || !Current->IsEnabled() || !Current->IsVisible());
+			return Current;
+		}
+		Window * Window::GetPreviousTabStopControl(void)
+		{
+			Window * Current = this;
+			int ParentIndex = GetIndexAtParent();
+			do {
+				if (Current->IsOverlapped()) {
+					while (Current->Children.Length() && Current->IsEnabled() && Current->IsVisible()) Current = Current->Children.LastElement();
+					ParentIndex = Current->GetIndexAtParent();
+				} else {
+					if (ParentIndex == 0) {
+						Current = Current->Parent;
+						ParentIndex = Current->GetIndexAtParent();
+					} else {
+						ParentIndex--;
+						Current = Current->Parent->Children.ElementAt(ParentIndex);
+						while (Current->Children.Length() && Current->IsEnabled() && Current->IsVisible()) Current = Current->Children.LastElement();
+						ParentIndex = Current->GetIndexAtParent();
+					}
+				}
+				if (Current == this) return this;
+			} while (!Current->IsTabStop() || !Current->IsEnabled() || !Current->IsVisible());
+			return Current;
+		}
+		int Window::GetIndexAtParent(void)
+		{
+			if (!Parent) return -1;
+			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == this) return i;
+			return -1;
+		}
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
@@ -123,11 +222,23 @@ namespace Engine
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
 		}
-		WindowStation::WindowStation(void) : Position(0, 0, 0, 0) { TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this)); ActiveWindow.SetRetain(TopLevelWindow); }
-		WindowStation::~WindowStation(void) { if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow); }
+		WindowStation::WindowStation(IDesktopWindowFactory * Factory) : Position(0, 0, 0, 0), Animations(0x10)
+		{
+			TopLevelWindow.SetReference(Factory->CreateDesktopWindow(this));
+			ActiveWindow.SetRetain(TopLevelWindow);
+		}
+		WindowStation::WindowStation(void) : Position(0, 0, 0, 0), Animations(0x10)
+		{
+			TopLevelWindow.SetReference(new Engine::UI::TopLevelWindow(0, this));
+			ActiveWindow.SetRetain(TopLevelWindow);
+		}
+		WindowStation::~WindowStation(void) {}
 		void WindowStation::DestroyWindow(Window * window)
 		{
-			if (!window->Parent) return;
+			if (!window->Parent) {
+				if (window == TopLevelWindow.Inner()) OnDesktopDestroy();
+				return;
+			}
 			SafePointer<Window> Parent = window->Parent;
 			Parent->Retain();
 			DeconstructChain(window);
@@ -136,12 +247,33 @@ namespace Engine
 				break;
 			}
 		}
+		void WindowStation::DestroyStation(void)
+		{
+			if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow);
+			this->Release();
+		}
 		void WindowStation::SetBox(const Box & box) { Position = box; if (TopLevelWindow) { TopLevelWindow->WindowPosition = box; TopLevelWindow->ArrangeChildren(); } }
 		Box WindowStation::GetBox(void) { return Position; }
-		void WindowStation::Render(void) { if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position); }
+		void WindowStation::Render(void)
+		{
+			uint32 time = GetTimerValue();
+			for (int i = 0; i < Animations.Length(); i++) {
+				if (Animations[i].IsOver(time)) {
+					Animations[i].Target->SetRectangle(Animations[i].GetFrame(Animations[i].EndTime));
+					if (Animations[i].Action == Animation::AnimationAction::HideWindow || Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
+						Animations[i].Target->Show(false);
+						if (Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) Animations[i].Target->SetRectangle(Animations[i].BeginState);
+					}
+					Animations.Remove(i); i--;
+				} else {
+					Animations[i].Target->SetRectangle(Animations[i].GetFrame(time));
+				}
+			}
+			if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position);
+		}
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
-		Engine::UI::TopLevelWindow * WindowStation::GetDesktop(void) { return TopLevelWindow; }
-		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner()) return TopLevelWindow->HitTest(at); else return 0; }
+		Window * WindowStation::GetDesktop(void) { return TopLevelWindow; }
+		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner() && NativeHitTest(at)) return TopLevelWindow->HitTest(at); else return 0; }
 		Window * WindowStation::EnabledHitTest(Point at)
 		{
 			Window * target = TopLevelWindow->HitTest(at);
@@ -180,6 +312,21 @@ namespace Engine
 		}
 		void WindowStation::SetActiveWindow(Window * window) { if (ActiveWindow.Inner() != window) ActiveWindow.SetRetain(window); if (ActiveWindow) ActiveWindow->SetOrder(Window::DepthOrder::SetFirst); }
 		Window * WindowStation::GetActiveWindow(void) { return ActiveWindow; }
+		void WindowStation::AnimateWindow(Window * window, const Rectangle & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
+			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
+			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
+				begin_class, end_class, action);
+		}
+		void WindowStation::AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
+			window->SetRectangle(from);
+			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
+			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
+				begin_class, end_class, action);
+		}
 		void WindowStation::SetFocus(Window * window)
 		{
 			if (window == FocusedWindow.Inner()) return;
@@ -225,6 +372,7 @@ namespace Engine
 				}
 			}
 		}
+		bool WindowStation::NativeHitTest(const Point & at) { return true; }
 		void WindowStation::LeftButtonDown(Point at)
 		{
 			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
@@ -238,7 +386,7 @@ namespace Engine
 			if (Target) {
 				if (!ExclusiveWindow) {
 					Window * Parent = Target->GetOverlappedParent();
-					if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent) {
 						SetActiveWindow(Parent);
 						SetFocus(0);
 					}
@@ -279,7 +427,7 @@ namespace Engine
 			if (Target) {
 				if (!ExclusiveWindow) {
 					Window * Parent = Target->GetOverlappedParent();
-					if (Parent != TopLevelWindow && ActiveWindow.Inner() != Parent) {
+					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent) {
 						SetActiveWindow(Parent);
 						SetFocus(0);
 					}
@@ -340,14 +488,24 @@ namespace Engine
 				if (Target) Target->ScrollHorizontally(delta);
 			}
 		}
-		void WindowStation::KeyDown(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyDown(key_code); }
+		void WindowStation::KeyDown(int key_code)
+		{
+			if (ExclusiveWindow || !ActiveWindow->TranslateAccelerators(key_code)) {
+				if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0);
+				if (FocusedWindow) FocusedWindow->KeyDown(key_code);
+			}
+		}
 		void WindowStation::KeyUp(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
 		ICursor * WindowStation::LoadCursor(Streaming::Stream * Source) { return 0; }
+		ICursor * WindowStation::LoadCursor(Codec::Image * Source) { return 0; }
+		ICursor * WindowStation::LoadCursor(Codec::Frame * Source) { return 0; }
 		ICursor * WindowStation::GetSystemCursor(SystemCursor cursor) { return 0; }
 		void WindowStation::SetSystemCursor(SystemCursor entity, ICursor * cursor) {}
 		void WindowStation::SetCursor(ICursor * cursor) {}
+		bool WindowStation::IsNativeStationWrapper(void) const { return false; }
+		void WindowStation::OnDesktopDestroy(void) {}
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}

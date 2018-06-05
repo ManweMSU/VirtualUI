@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <mach-o/dyld.h>
 #include <dirent.h>
+#include <sys/time.h>
 
 namespace Engine
 {
@@ -91,6 +92,12 @@ namespace Engine
 		void SetStandartOutput(handle file) { close(1); dup2(reinterpret_cast<intptr>(file), 1); }
 		void SetStandartInput(handle file) { close(0); dup2(reinterpret_cast<intptr>(file), 0); }
 		void SetStandartError(handle file) { close(2); dup2(reinterpret_cast<intptr>(file), 2); }
+		handle CloneHandle(handle file)
+		{
+			int new_file = dup(reinterpret_cast<intptr>(file));
+			if (new_file == -1) throw FileAccessException();
+			return handle(new_file);
+		}
 		void CloseFile(handle file) {
 			close(reinterpret_cast<intptr>(file));
 			auto Path = PosixHelper::delete_on_close.ElementByKey(reinterpret_cast<intptr>(file));
@@ -293,6 +300,50 @@ namespace Engine
 				}
 				result->Retain();
 				return result;
+			}
+		}
+		namespace DateTime
+		{
+			Time GetFileCreationTime(handle file)
+			{
+				struct stat64 info;
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	return Time::FromUnixTime(info.st_birthtimespec.tv_sec);
+			}
+			Time GetFileAccessTime(handle file)
+			{
+				struct stat64 info;
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	return Time::FromUnixTime(info.st_atimespec.tv_sec);
+			}
+			Time GetFileAlterTime(handle file)
+			{
+				struct stat64 info;
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	return Time::FromUnixTime(info.st_mtimespec.tv_sec);
+			}
+			void SetFileCreationTime(handle file, Time time) {}
+			void SetFileAccessTime(handle file, Time time)
+			{
+				struct stat64 info;
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+				struct timeval times[2];
+				times[0].tv_sec = time.ToUnixTime();
+				times[0].tv_usec = 0;
+				times[1].tv_sec = info.st_mtimespec.tv_sec;
+				times[1].tv_usec = info.st_mtimespec.tv_nsec / 1000;
+				if (futimes(reinterpret_cast<intptr>(file), times) == -1) throw FileAccessException();
+			}
+			void SetFileAlterTime(handle file, Time time)
+			{
+				struct stat64 info;
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+				struct timeval times[2];
+				times[0].tv_sec = info.st_atimespec.tv_sec;
+				times[0].tv_usec = info.st_atimespec.tv_nsec / 1000;
+				times[1].tv_sec = time.ToUnixTime();
+				times[1].tv_usec = 0;
+				if (futimes(reinterpret_cast<intptr>(file), times) == -1) throw FileAccessException();
 			}
 		}
 	}

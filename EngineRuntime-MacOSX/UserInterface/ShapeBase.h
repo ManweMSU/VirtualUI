@@ -2,6 +2,7 @@
 
 #include "../EngineBase.h"
 #include "../Streaming.h"
+#include "../ImageCodec/CodecBase.h"
 
 namespace Engine
 {
@@ -44,6 +45,18 @@ namespace Engine
 
 			Rectangle(void);
 			Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom);
+
+			Rectangle friend operator + (const Rectangle & a, const Rectangle & b);
+			Rectangle friend operator - (const Rectangle & a, const Rectangle & b);
+			Rectangle friend operator * (const Rectangle & a, double b);
+			Rectangle friend operator * (double b, const Rectangle & a);
+			Rectangle friend operator / (const Rectangle & a, double b);
+
+			Rectangle & operator += (const Rectangle & a);
+			Rectangle & operator -= (const Rectangle & a);
+			Rectangle & operator *= (double a);
+			Rectangle & operator /= (double a);
+			Rectangle operator - (void) const;
 
 			bool friend operator == (const Rectangle & a, const Rectangle & b);
 			bool friend operator != (const Rectangle & a, const Rectangle & b);
@@ -144,6 +157,8 @@ namespace Engine
 			virtual void HighlightText(int Start, int End) = 0;
 			virtual int TestPosition(int point) = 0;
 			virtual int EndOfChar(int Index) = 0;
+			virtual void SetCharPalette(const Array<Color> & colors) = 0;
+			virtual void SetCharColors(const Array<uint8> & indicies) = 0;
 			virtual ~ITextRenderingInfo(void);
 		};
 		class ILineRenderingInfo : public Object
@@ -159,10 +174,14 @@ namespace Engine
 			virtual int GetHeight(void) const = 0;
 			virtual bool IsDynamic(void) const = 0;
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) = 0;
+			virtual void Reload(IRenderingDevice * Device, Codec::Image * Source) = 0;
+			virtual void Reload(IRenderingDevice * Device, Codec::Frame * Source) = 0;
 		};
 		class IFont : public Object
 		{
 		public:
+			virtual int GetWidth(void) const = 0;
+			virtual int GetHeight(void) const = 0;
 			virtual void Reload(IRenderingDevice * Device) = 0;
 		};
 
@@ -170,6 +189,7 @@ namespace Engine
 		{
 		public:
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) = 0;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) = 0;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;
@@ -178,6 +198,8 @@ namespace Engine
 			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) = 0;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
+			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
+			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;

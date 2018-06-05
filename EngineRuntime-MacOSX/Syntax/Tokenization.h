@@ -56,6 +56,8 @@ namespace Engine
 			Array<string> ContinuousCharCombos;
 			string BooleanFalseLiteral;
 			string BooleanTrueLiteral;
+			string InfinityLiteral;
+			string NonNumberLiteral;
 			string CommentEndOfLineWord;
 			string CommentBlockOpeningWord;
 			string CommentBlockClosingWord;
@@ -66,9 +68,13 @@ namespace Engine
 			bool IsIsolatedChars(widechar letter) const;
 			bool IsBooleanFalseLiteral(const string & word) const;
 			bool IsBooleanTrueLiteral(const string & word) const;
+			bool IsFloatInfinityLiteral(const string & word) const;
+			bool IsFloatNonNumberLiteral(const string & word) const;
 		};
 
 		Array<Token> * ParseText(const string & text, const Spelling & spelling);
 		string FormatStringToken(const string & input);
+		string FormatFloatToken(float input, const Spelling & spelling);
+		string FormatDoubleToken(double input, const Spelling & spelling);
 	}
 }
