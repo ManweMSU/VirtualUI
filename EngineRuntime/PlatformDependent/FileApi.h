@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../EngineBase.h"
+#include "../Miscellaneous/Time.h"
 
 namespace Engine
 {
@@ -63,6 +64,15 @@ namespace Engine
 		{
 			Array<string> * GetFiles(const string & path, bool recursive = false);
 			Array<string> * GetDirectories(const string & path);
+		}
+		namespace DateTime
+		{
+			Time GetFileCreationTime(handle file);
+			Time GetFileAccessTime(handle file);
+			Time GetFileAlterTime(handle file);
+			void SetFileCreationTime(handle file, Time time);
+			void SetFileAccessTime(handle file, Time time);
+			void SetFileAlterTime(handle file, Time time);
 		}
 	}
 }

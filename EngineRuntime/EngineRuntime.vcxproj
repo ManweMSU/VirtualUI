@@ -25,6 +25,7 @@
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
+    <ClInclude Include="Miscellaneous\Time.h" />
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
     <ClInclude Include="Network\InternetRequest.h" />
     <ClInclude Include="Network\Punycode.h" />
@@ -42,6 +43,9 @@
     <ClInclude Include="Processes\Process.h" />
     <ClInclude Include="Processes\Shell.h" />
     <ClInclude Include="Processes\Threading.h" />
+    <ClInclude Include="Storage\Registry.h" />
+    <ClInclude Include="Storage\TextRegistry.h" />
+    <ClInclude Include="Storage\TextRegistryGrammar.h" />
     <ClInclude Include="Streaming.h" />
     <ClInclude Include="Syntax\Grammar.h" />
     <ClInclude Include="Syntax\MathExpression.h" />
@@ -67,6 +71,7 @@
     <ClCompile Include="ImageCodec\IconCodec.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
+    <ClCompile Include="Miscellaneous\Time.cpp" />
     <ClCompile Include="Network\InternetRequest.cpp" />
     <ClCompile Include="Network\Punycode.cpp" />
     <ClCompile Include="Network\Socket.cpp" />
@@ -83,6 +88,9 @@
     <ClCompile Include="Processes\Process.cpp" />
     <ClCompile Include="Processes\Shell.cpp" />
     <ClCompile Include="Processes\Threading.cpp" />
+    <ClCompile Include="Storage\Registry.cpp" />
+    <ClCompile Include="Storage\TextRegistry.cpp" />
+    <ClCompile Include="Storage\TextRegistryGrammar.cpp" />
     <ClCompile Include="Streaming.cpp" />
     <ClCompile Include="Syntax\Grammar.cpp" />
     <ClCompile Include="Syntax\MathExpression.cpp" />
@@ -103,6 +111,7 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineRuntime.natvis" />
+    <Natvis Include="Storage.natvis" />
     <Natvis Include="Syntax.natvis" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -1,6 +1,7 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
+#include <Miscellaneous/Time.h>
 #include <Processes/Process.h>
 #include <Miscellaneous/DynamicString.h>
 #include <UserInterface/ShapeBase.h>
@@ -29,6 +30,9 @@
 #include <Network/InternetRequest.h>
 #include <Network/Socket.h>
 #include <Network/Punycode.h>
+#include <Storage/Registry.h>
+#include <Storage/TextRegistry.h>
+#include <Storage/TextRegistryGrammar.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -43,6 +47,8 @@
 #undef SetCurrentDirectory
 #undef GetCommandLine
 #undef CreateProcess
+#undef GetCurrentTime
+#undef CreateFile
 
 using namespace Engine;
 using namespace Engine::UI;

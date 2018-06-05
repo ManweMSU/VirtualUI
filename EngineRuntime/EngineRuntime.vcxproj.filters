@@ -26,6 +26,9 @@
     <Filter Include="Network">
       <UniqueIdentifier>{2204c14a-ecd8-4669-a627-ba0341a93a4c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Storage">
+      <UniqueIdentifier>{c65bcffa-ccce-41a7-b288-1b27ca105d12}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -151,6 +154,18 @@
     <ClInclude Include="Network\Punycode.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="Miscellaneous\Time.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\Registry.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\TextRegistry.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\TextRegistryGrammar.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -267,9 +282,22 @@
     <ClCompile Include="Network\Punycode.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="Miscellaneous\Time.cpp">
+      <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\Registry.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\TextRegistry.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\TextRegistryGrammar.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineRuntime.natvis" />
     <Natvis Include="Syntax.natvis" />
+    <Natvis Include="Storage.natvis" />
   </ItemGroup>
 </Project>

@@ -58,6 +58,9 @@ namespace Engine
 			virtual void Flush(void) override;
 			virtual ~MemoryStream(void) override;
 			virtual string ToString(void) const override;
+
+			void * GetBuffer(void);
+			const void * GetBuffer(void) const;
 		};
 		class FragmentStream final : public Stream
 		{

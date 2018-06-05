@@ -42,17 +42,30 @@ namespace Engine
 		}
 		double Token::AsDouble(void) const
 		{
+			double zero = 0.0;
+			if (Content == L"inf") {
+				return 1.0 / zero;
+			} else if (Content == L"nan") {
+				return zero / zero;
+			}
 			if (Content[Content.Length() - 1] == L'f' || Content[Content.Length() - 1] == L'F') return Content.Fragment(0, Content.Length() - 1).ToDouble();
 			return Content.ToDouble();
 		}
 		float Token::AsFloat(void) const
 		{
+			float zero = 0.0f;
+			if (Content == L"inf") {
+				return 1.0f / zero;
+			} else if (Content == L"nan") {
+				return zero / zero;
+			}
 			if (Content[Content.Length() - 1] == L'f' || Content[Content.Length() - 1] == L'F') return Content.Fragment(0, Content.Length() - 1).ToFloat();
 			return Content.ToFloat();
 		}
 		bool Token::AsBoolean(void) const { return Content.Length() > 0; }
 		NumericTokenClass Token::NumericClass(void) const
 		{
+			if (Content == L"inf" || Content == L"nan") return NumericTokenClass::Double;
 			for (int i = 0; i < Content.Length(); i++) {
 				if (Content[i] == L'.') {
 					return (Content[Content.Length() - 1] == L'f' || Content[Content.Length() - 1] == L'F') ? NumericTokenClass::Float : NumericTokenClass::Double;
@@ -81,6 +94,8 @@ namespace Engine
 		}
 		bool Spelling::IsBooleanFalseLiteral(const string & word) const { return word == BooleanFalseLiteral; }
 		bool Spelling::IsBooleanTrueLiteral(const string & word) const { return word == BooleanTrueLiteral; }
+		bool Spelling::IsFloatInfinityLiteral(const string & word) const { return word == InfinityLiteral; }
+		bool Spelling::IsFloatNonNumberLiteral(const string & word) const { return word == NonNumberLiteral; }
 
 		bool operator==(const Token & a, const Token & b) { return a.Content == b.Content && a.Class == b.Class && a.ValueClass == b.ValueClass; }
 		bool operator!=(const Token & a, const Token & b) { return a.Content != b.Content || a.Class != b.Class || a.ValueClass != b.ValueClass; }
@@ -111,6 +126,14 @@ namespace Engine
 						token.Content = L"1";
 						token.Class = TokenClass::Constant;
 						token.ValueClass = TokenConstantClass::Boolean;
+					} else if (spelling.IsFloatInfinityLiteral(token.Content)) {
+						token.Content = L"inf";
+						token.Class = TokenClass::Constant;
+						token.ValueClass = TokenConstantClass::Numeric;
+					} else if (spelling.IsFloatNonNumberLiteral(token.Content)) {
+						token.Content = L"nan";
+						token.Class = TokenClass::Constant;
+						token.ValueClass = TokenConstantClass::Numeric;
 					} else if (spelling.IsKeyword(token.Content)) {
 						token.Class = TokenClass::Keyword;
 						token.ValueClass = TokenConstantClass::Unknown;
@@ -268,6 +291,38 @@ namespace Engine
 				}
 			}
 			return result.ToString();
+		}
+		string FormatFloatToken(float input, const Spelling & spelling)
+		{
+			auto src = input;
+			uint32 & value = reinterpret_cast<uint32&>(input);
+			bool negative = (value & 0x80000000) != 0;
+			int exp = (value & 0x7F800000) >> 23;
+			value &= 0x007FFFFF;
+			if (exp == 0xFF) {
+				if (value == 0) return negative ? (L"-" + spelling.InfinityLiteral) : spelling.InfinityLiteral;
+				else return spelling.NonNumberLiteral;
+			} else {
+				string notation(src, L'.');
+				if (notation.FindFirst(L'.') == -1) notation += L".0";
+				return notation + L"f";
+			}
+		}
+		string FormatDoubleToken(double input, const Spelling & spelling)
+		{
+			auto src = input;
+			uint64 & value = reinterpret_cast<uint64&>(input);
+			bool negative = (value & 0x8000000000000000) != 0;
+			int exp = (value & 0x7FF0000000000000) >> 52;
+			value &= 0x000FFFFFFFFFFFFF;
+			if (exp == 0x7FF) {
+				if (value == 0) return negative ? (L"-" + spelling.InfinityLiteral) : spelling.InfinityLiteral;
+				else return spelling.NonNumberLiteral;
+			} else {
+				string notation(src, L'.');
+				if (notation.FindFirst(L'.') == -1) notation += L".0";
+				return notation;
+			}
 		}
 	}
 }

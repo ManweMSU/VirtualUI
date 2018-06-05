@@ -16,6 +16,26 @@ namespace Engine
 	uint InterlockedDecrement(uint & Value) { return _InterlockedDecrement(&Value); }
 	void ZeroMemory(void * Memory, intptr Size) { memset(Memory, 0, Size); }
 	uint32 GetTimerValue(void) { return timeGetTime(); }
+	uint64 GetNativeTime(void)
+	{
+		SYSTEMTIME sys_time;
+		FILETIME time;
+		GetSystemTime(&sys_time);
+		SystemTimeToFileTime(&sys_time, &time);
+		return time.dwLowDateTime + (uint64(time.dwHighDateTime) << 32);
+	}
+	uint64 TimeUniversalToLocal(uint64 time)
+	{
+		uint64 conv;
+		FileTimeToLocalFileTime(reinterpret_cast<FILETIME *>(&time), reinterpret_cast<FILETIME *>(&conv));
+		return conv;
+	}
+	uint64 TimeLocalToUniversal(uint64 time)
+	{
+		uint64 conv;
+		LocalFileTimeToFileTime(reinterpret_cast<FILETIME *>(&time), reinterpret_cast<FILETIME *>(&conv));
+		return conv;
+	}
 	void * MemoryCopy(void * Dest, const void * Source, intptr Length) { return memcpy(Dest, Source, Length); }
 	widechar * StringCopy(widechar * Dest, const widechar * Source)
 	{

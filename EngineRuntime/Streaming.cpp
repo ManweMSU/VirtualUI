@@ -84,6 +84,8 @@ namespace Engine
 		void MemoryStream::Flush(void) {}
 		MemoryStream::~MemoryStream(void) {}
 		string MemoryStream::ToString(void) const { return L"MemoryStream"; }
+		void * MemoryStream::GetBuffer(void) { return data.GetBuffer(); }
+		const void * MemoryStream::GetBuffer(void) const { return data.GetBuffer(); }
 		TextWriter::TextWriter(Stream * Dest) { dest = Dest; dest->Retain(); coding = TextFileEncoding; }
 		TextWriter::TextWriter(Stream * Dest, Encoding encoding) { dest = Dest; dest->Retain(); coding = encoding; }
 		void TextWriter::Write(const string & text) const

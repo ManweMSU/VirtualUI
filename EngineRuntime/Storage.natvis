@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Engine::Storage::RegistryValue">
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::Integer">{value_int32}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::Float">{value_float}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::Boolean">{(bool) value_int32}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::String">{(wchar_t*) value_binary}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::LongInteger">{value_int64}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::LongFloat">{value_double}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::Color">{value_int32}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::Time">{value_int64}</DisplayString>
+    <DisplayString Condition="type == Engine::Storage::RegistryValueType::Binary">Двоичные данные</DisplayString>
+    <Expand>
+      <Item Name="[Длина]" Condition="type == Engine::Storage::RegistryValueType::Binary">value_binary_size</Item>
+      <ArrayItems Condition="type == Engine::Storage::RegistryValueType::Binary">
+        <Size>value_binary_size</Size>
+        <ValuePointer>value_binary</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+</AutoVisualizer>

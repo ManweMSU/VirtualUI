@@ -53,6 +53,10 @@ namespace Engine
 
 	// System timer's value in milliseconds. The beginning of this time axis is not important
 	uint32 GetTimerValue(void);
+	// OS Native Time functions (both in OS dependent currency: Windows or Unix)
+	uint64 GetNativeTime(void);
+	uint64 TimeUniversalToLocal(uint64 time);
+	uint64 TimeLocalToUniversal(uint64 time);
 
 	// Some C standart library and language dependent case insensitive comparation
 	void * MemoryCopy(void * Dest, const void * Source, intptr Length);

@@ -300,5 +300,44 @@ namespace Engine
 				return result;
 			}
 		}
+		namespace DateTime
+		{
+			Time GetFileCreationTime(handle file)
+			{
+				FILETIME time;
+				GetFileTime(file, &time, 0, 0);
+				return Time::FromWindowsTime(*reinterpret_cast<uint64 *>(&time));
+			}
+			Time GetFileAccessTime(handle file)
+			{
+				FILETIME time;
+				GetFileTime(file, 0, &time, 0);
+				return Time::FromWindowsTime(*reinterpret_cast<uint64 *>(&time));
+			}
+			Time GetFileAlterTime(handle file)
+			{
+				FILETIME time;
+				GetFileTime(file, 0, 0, &time);
+				return Time::FromWindowsTime(*reinterpret_cast<uint64 *>(&time));
+			}
+			void SetFileCreationTime(handle file, Time time)
+			{
+				FILETIME os;
+				*reinterpret_cast<uint64 *>(&os) = time.ToWindowsTime();
+				SetFileTime(file, &os, 0, 0);
+			}
+			void SetFileAccessTime(handle file, Time time)
+			{
+				FILETIME os;
+				*reinterpret_cast<uint64 *>(&os) = time.ToWindowsTime();
+				SetFileTime(file, 0, &os, 0);
+			}
+			void SetFileAlterTime(handle file, Time time)
+			{
+				FILETIME os;
+				*reinterpret_cast<uint64 *>(&os) = time.ToWindowsTime();
+				SetFileTime(file, 0, 0, &os);
+			}
+		}
 	}
 }
