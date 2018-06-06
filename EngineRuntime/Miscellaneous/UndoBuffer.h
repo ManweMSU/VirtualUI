@@ -53,9 +53,9 @@ namespace Engine
 		virtual void PushCurrentVersion(void) override
 		{
 			UndoBuffer<V>::PushCurrentVersion();
-			if (VersionPool.Length() > MaxDepth) {
-				VersionPool.RemoveFirst();
-				PreviousPointer--;
+			if (UndoBuffer<V>::VersionPool.Length() > MaxDepth) {
+				UndoBuffer<V>::VersionPool.RemoveFirst();
+				UndoBuffer<V>::PreviousPointer--;
 			}
 		}
 	};

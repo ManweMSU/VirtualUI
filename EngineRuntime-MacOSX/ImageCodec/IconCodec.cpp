@@ -9,15 +9,12 @@ namespace Engine
 		using namespace Streaming;
 		class IconCodec : public Codec
 		{
-			ENGINE_PACKED_STRUCTURE
-			struct WindowsIconHeader
-			{
+			ENGINE_PACKED_STRUCTURE(WindowsIconHeader)
 				uint16 reserved;
 				uint16 type;
 				uint16 count;
-			};
-			struct WindowsIconFrameHeader
-			{
+			ENGINE_END_PACKED_STRUCTURE
+			ENGINE_PACKED_STRUCTURE(WindowsIconFrameHeader)
 				uint8 width;
 				uint8 height;
 				uint8 colors;
@@ -34,9 +31,8 @@ namespace Engine
 				};
 				uint32 size;
 				uint32 offset;
-			};
-			struct WindowsBitmapInfoHeader
-			{
+			ENGINE_END_PACKED_STRUCTURE
+			ENGINE_PACKED_STRUCTURE(WindowsBitmapInfoHeader)
 				uint32 struct_size;
 				int32 width;
 				int32 height;
@@ -48,7 +44,6 @@ namespace Engine
 				int32 dpm_y;
 				uint32 color_count;
 				uint32 color_used;
-			};
 			ENGINE_END_PACKED_STRUCTURE
 			static uint32 InverseEndianess(uint32 value) { return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24); }
 			static Array<uint8> * AppleRleCompress(const Array<uint8> * data)

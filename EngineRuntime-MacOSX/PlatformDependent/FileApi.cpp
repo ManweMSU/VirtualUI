@@ -53,8 +53,10 @@ namespace Engine
             else if (mode == CreateAlways) flags |= O_CREAT | O_TRUNC;
             else if (mode == OpenAlways) flags |= O_CREAT;
             else if (mode == TruncateExisting) flags |= O_TRUNC;
-            result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
-            if (result == -1) throw FileAccessException();
+			do {
+				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
+				if (result == -1 && errno != EINTR) throw FileAccessException();
+			} while (result == -1);
             return handle(result);
 		}
 		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
@@ -74,8 +76,10 @@ namespace Engine
             else if (mode == CreateAlways) flags |= O_CREAT | O_TRUNC;
             else if (mode == OpenAlways) flags |= O_CREAT;
             else if (mode == TruncateExisting) flags |= O_TRUNC;
-            result = open(reinterpret_cast<char *>(FullPath->GetBuffer()), flags, 0777);
-            if (result == -1) throw FileAccessException();
+            do {
+				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
+				if (result == -1 && errno != EINTR) throw FileAccessException();
+			} while (result == -1);
 			if (delete_on_close) PosixHelper::delete_on_close.Append(result, FullPath);
             return handle(result);
 		}
@@ -106,7 +110,14 @@ namespace Engine
 				PosixHelper::delete_on_close.RemoveByKey(reinterpret_cast<intptr>(file));
 			}
 		}
-		void Flush(handle file) { if (fsync(reinterpret_cast<intptr>(file)) == -1) throw FileAccessException(); }
+		void Flush(handle file)
+		{
+			int io;
+			do {
+				io = fsync(reinterpret_cast<intptr>(file));
+				if (io == -1 && errno != EINTR) throw FileAccessException();
+			} while (io == -1);
+		}
 		uint64 GetFileSize(handle file)
 		{
             struct stat64 info;
@@ -130,14 +141,20 @@ namespace Engine
 		}
 		void ReadFile(handle file, void * to, uint32 amount)
 		{
-            auto Read = read(reinterpret_cast<intptr>(file), to, amount);
-            if (Read == -1) throw FileAccessException();
-            if (Read < amount) throw FileReadEndOfFileException(Read);
+			do {
+				auto Read = read(reinterpret_cast<intptr>(file), to, amount);
+				if (Read == -1 && errno != EINTR) throw FileAccessException();
+				if (Read < amount) throw FileReadEndOfFileException(Read);
+				else if (Read == amount) return;
+			} while (true);
 		}
 		void WriteFile(handle file, const void * data, uint32 amount)
 		{
-            auto Written = write(reinterpret_cast<intptr>(file), data, amount);
-            if (Written == -1 || Written != amount) throw FileAccessException();
+			do {
+				auto Written = write(reinterpret_cast<intptr>(file), data, amount);
+				if ((Written == -1 && errno != EINTR) || Written != amount) throw FileAccessException();
+				else if (Written == amount) return;
+			} while (true);
 		}
 		int64 Seek(handle file, int64 position, SeekOrigin origin)
 		{
@@ -150,7 +167,11 @@ namespace Engine
 		}
 		void SetFileSize(handle file, uint64 size)
 		{
-            if (ftruncate(reinterpret_cast<intptr>(file), size) == -1) throw FileAccessException();
+			do {
+				int io = ftruncate(reinterpret_cast<intptr>(file), size);
+				if (io == -1 && errno != EINTR) throw FileAccessException();
+				else if (io != -1) return;
+			} while (true);
 		}
         void RemoveFile(const string & path)
         {

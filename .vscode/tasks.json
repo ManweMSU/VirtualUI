@@ -29,6 +29,60 @@
                     "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
                 }
             }
+        },
+        {
+            "label": "build syncronization tool",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
+            "args": [
+                "\"${workspaceRoot}/Mac OS X Asm/ertsync.project.ini\""
+
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "build runtime",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
+            "args": [
+                ":asmrt"
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "syncronize runtime",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertsync\"",
+            "args": [
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
         }
     ]
 }
