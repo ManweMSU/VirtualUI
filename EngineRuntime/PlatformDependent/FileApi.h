@@ -38,6 +38,7 @@ namespace Engine
 		void SetStandartOutput(handle file);
 		void SetStandartInput(handle file);
 		void SetStandartError(handle file);
+		handle CloneHandle(handle file);
 		void CloseFile(handle file);
 		void Flush(handle file);
 		uint64 GetFileSize(handle file);

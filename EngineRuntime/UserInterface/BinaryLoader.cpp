@@ -11,15 +11,14 @@ namespace Engine
 			namespace BinaryLoader
 			{
 				namespace Format {
-					ENGINE_PACKED_STRUCTURE
-					struct Header {
+					ENGINE_PACKED_STRUCTURE(Header)
 						uint8 Signature[8];
 						uint32 Version;
 						uint32 DataOffset;
 						uint32 DataSize;
 						uint32 TableOffset;
-					};
-					struct Table {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Table)
 						uint32 TextureOffset;
 						int32 TextureCount;
 						uint32 FontOffset;
@@ -28,8 +27,8 @@ namespace Engine
 						int32 ApplicationCount;
 						uint32 DialogOffset;
 						int32 DialogCount;
-					};
-					struct Texture {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Texture)
 						uint32 NameOffset;
 						uint32 VersionOffset10;
 						uint32 VersionSize10;
@@ -37,105 +36,104 @@ namespace Engine
 						uint32 VersionSize15;
 						uint32 VersionOffset20;
 						uint32 VersionSize20;
-					};
-					struct Font {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Font)
 						uint32 NameOffset;
 						uint32 FaceOffset;
 						uint32 HeightA;
 						double HeightZ;
 						uint32 Weight;
 						uint32 Flags;
-					};
-					struct Application {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Application)
 						uint32 NameOffset;
 						uint32 RootOffset;
-					};
+					ENGINE_END_PACKED_STRUCTURE
 					typedef Application Dialog;
-					struct Template4 {
+					ENGINE_PACKED_STRUCTURE(Template4)
 						uint32 Value;
 						uint32 Parameter;
-					};
-					struct Template8 {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Template8)
 						double Value;
 						uint32 Parameter;
-					};
-					struct Coordinate {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Coordinate)
 						Template4 A;
 						Template8 Z;
 						Template8 W;
-					};
-					struct Rectangle {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Rectangle)
 						Coordinate Left;
 						Coordinate Top;
 						Coordinate Right;
 						Coordinate Bottom;
-					};
-					struct GradientColor {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(GradientColor)
 						Template4 Color;
 						Template8 Position;
-					};
-					struct ShapeBase {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ShapeBase)
 						uint32 Type;
 						Rectangle Position;
-					};
-					struct ShapeFrame {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ShapeFrame)
 						ShapeBase Base;
 						int32 ChildrenCount;
 						uint32 ChildrenOffset[1];
-					};
-					struct ShapeBar {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ShapeBar)
 						ShapeBase Base;
 						uint32 Horizontal;
 						int32 ColorsCount;
 						uint32 ColorsOffset[1];
-					};
-					struct ShapeTexture {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ShapeTexture)
 						ShapeBase Base;
 						uint32 TextureMode;
 						Template4 TextureName;
 						Rectangle TextureFrom;
-					};
-					struct ShapeText {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ShapeText)
 						ShapeBase Base;
 						Template4 FontName;
 						Template4 Color;
 						Template4 Text;
 						uint32 DrawMode;
-					};
-					struct SmallCoordinate {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(SmallCoordinate)
 						double W;
 						double Z;
 						uint32 A;
 						uint32 unused;
-					};
-					struct SmallRectangle {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(SmallRectangle)
 						SmallCoordinate Left, Top, Right, Bottom;
-					};
-					struct ControlBase {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ControlBase)
 						uint32 ClassName;
 						SmallRectangle Position;
 						int32 SettersCount;
 						uint32 SettersOffset[1];
-					};
-					struct ControlTail {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(ControlTail)
 						int32 ChildrenCount;
 						uint32 ChildrenOffset[1];
-					};
-					struct Setter {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(Setter)
 						uint32 Name;
-					};
-					struct SetterBig {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(SetterBig)
 						uint32 Name;
 						SmallRectangle Value;
-					};
-					struct SetterMedium {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(SetterMedium)
 						uint32 Name;
 						SmallCoordinate Value;
-					};
-					struct SetterSmall {
+					ENGINE_END_PACKED_STRUCTURE
+					ENGINE_PACKED_STRUCTURE(SetterSmall)
 						uint32 Name;
 						uint32 Value;
-					};
 					ENGINE_END_PACKED_STRUCTURE
 				}
 				using namespace Format;

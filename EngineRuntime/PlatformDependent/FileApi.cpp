@@ -112,6 +112,12 @@ namespace Engine
 			CloseHandle(GetStdHandle(STD_ERROR_HANDLE));
 			SetStdHandle(STD_ERROR_HANDLE, dup);
 		}
+		handle CloneHandle(handle file)
+		{
+			handle result;
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &result, 0, FALSE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			return result;
+		}
 		void CloseFile(handle file) { CloseHandle(file); }
 		void Flush(handle file) { if (!FlushFileBuffers(file)) throw FileAccessException(); }
 		uint64 GetFileSize(handle file)

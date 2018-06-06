@@ -82,12 +82,10 @@ UI::IInversionEffectRenderingInfo * Inversion = 0;
 
 SafePointer<Menues::Menu> menu;
 
-ENGINE_PACKED_STRUCTURE struct TestPacked
-{
+ENGINE_PACKED_STRUCTURE(TestPacked)
 	uint8 foo;
 	uint32 bar;
 	uint16 foobar;
-};
 ENGINE_END_PACKED_STRUCTURE
 
 void CreateBlangSpelling(Syntax::Spelling & spelling)
