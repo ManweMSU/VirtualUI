@@ -1,4 +1,4 @@
-#include "../EngineRuntime-MacOSX/EngineRuntime.h"
+#include <EngineRuntime.h>
 
 using namespace Engine;
 
@@ -7,21 +7,6 @@ using namespace Engine;
 
 @import Foundation;
 @import AppKit;
-
-SafePointer<Semaphore> write_sem;
-
-int task(void * arg)
-{
-    SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
-    Streaming::TextWriter Console(ConsoleOutStream);
-    for (int i = 0; i < 20; i++) {
-        write_sem->Wait();
-        Console << string(reinterpret_cast<widechar *>(arg)) << IO::NewLineChar;
-        write_sem->Open();
-        Sleep(100);
-    }
-    return 666;
-}
 
 int main(int argc, char ** argv)
 {
@@ -41,30 +26,12 @@ int main(int argc, char ** argv)
     //     }
     // } while (in.Length());
 
-    write_sem.SetReference(CreateSemaphore(1));
-
-    SafePointer<Thread> t1 = CreateThread(task, (void*) L"text A");
-    SafePointer<Thread> t2 = CreateThread(task, (void*) L"text B");
-
-    for (int i = 0; i < 30; i++) {
-        write_sem->Wait();
-        if (t1->Exited()) {
-            Console << L"Thread A: exited with " + string(t1->GetExitCode()) << IO::NewLineChar;
-        } else {
-            Console << L"Thread A: working " << IO::NewLineChar;
-        }
-        if (t2->Exited()) {
-            Console << L"Thread B: exited with " + string(t2->GetExitCode()) << IO::NewLineChar;
-        } else {
-            Console << L"Thread B: working " << IO::NewLineChar;
-        }
-        write_sem->Open();
-        Sleep(100);
+    SafePointer<Process> shell = CreateCommandProcess(L"pdflatex");
+    if (!shell) {
+        Console << L"pidor" << IO::NewLineChar;
+        return 1;
     }
-
-    t1->Wait();
-    t1->Release();
-    t2->Release();
+    shell->Wait();
     
     [NSApplication sharedApplication];
 

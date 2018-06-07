@@ -80,7 +80,7 @@ int main(void)
                     IO::SetStandartOutput(clang_log);
                     IO::SetStandartError(clang_log);
                     IO::CloseFile(clang_log);
-                    SafePointer<Process> compiler = CreateProcess(sys_cfg->GetValueString(L"CompilerPath"), &clang_args);
+                    SafePointer<Process> compiler = CreateCommandProcess(sys_cfg->GetValueString(L"CompilerPath"), &clang_args);
                     if (!compiler) {
                         console << L"Failed to launch the compiler (" + sys_cfg->GetValueString(L"CompilerPath") + L")." << IO::NewLineChar;
                         return 1;
@@ -180,7 +180,7 @@ int main(void)
                 IO::SetStandartOutput(clang_log);
                 IO::SetStandartError(clang_log);
                 IO::CloseFile(clang_log);
-                SafePointer<Process> compiler = CreateProcess(sys_cfg->GetValueString(L"CompilerPath"), &clang_args);
+                SafePointer<Process> compiler = CreateCommandProcess(sys_cfg->GetValueString(L"CompilerPath"), &clang_args);
                 if (!compiler) {
                     console << L"Failed to launch the compiler (" + sys_cfg->GetValueString(L"CompilerPath") + L")." << IO::NewLineChar;
                     return 1;

@@ -23,6 +23,7 @@ bld/
 [Bb]in/
 [Oo]bj/
 _build/
+_buildlog/
 .stat/
 
 # Visual Studio 2015 cache/options directory

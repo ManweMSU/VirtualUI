@@ -7,9 +7,9 @@
 #include <time.h>
 #include <crt_externs.h>
 
-#include "../Streaming.h"
-
 @import Foundation;
+
+extern char **environ;
 
 namespace Engine
 {
@@ -43,20 +43,34 @@ namespace Engine
 				[str release];
 			}
 		}
+		NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::NormalizePath(image)));
 		@try {
-			NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::NormalizePath(image)));
 			NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
 			[app release];
 			[argv release];
-			argv = 0;
 			return new CocoaProcess::Process(task);
 		}
 		@catch (NSException * e) {}
+		[app release];
 		[argv release];
 		return 0;
 	}
 	Process * CreateCommandProcess(const string & command_image, const Array<string> * command_line)
 	{
+		if (command_image[0] == L'/') return CreateProcess(command_image, command_line);
+		Array<string> search_list(0x10);
+		search_list << IO::GetCurrentDirectory() + L"/" + command_image;
+		search_list << IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + command_image;
+		int envind = 0;
+		while (environ[envind]) {
+			if (environ[envind][0] == 'P' && environ[envind][1] == 'A' && environ[envind][2] == 'T' && environ[envind][3] == 'H' && environ[envind][4] == '=') {
+				string path_var = string(environ[envind] + 5, -1, Encoding::UTF8);
+				Array<string> paths = path_var.Split(L':');
+				for (int i = 0; i < paths.Length(); i++) search_list << paths[i] + L"/" + command_image;
+				break;
+			}
+			envind++;
+		}
 		NSMutableArray * argv = [[NSMutableArray alloc] init];
 		if (command_line) {
 			for (int i = 0; i < command_line->Length(); i++) {
@@ -65,18 +79,17 @@ namespace Engine
 				[str release];
 			}
 		}
-		@try {
-			NSString * app = Cocoa::CocoaString(IO::NormalizePath(L"/bin/" + command_image));
-			NSTask * task = [[NSTask alloc] init];
-			[task setLaunchPath: app];
-			[task setArguments: argv];
-			[task launch];
+		for (int i = 0; i < search_list.Length(); i++) {
+			NSString * app = Cocoa::CocoaString(IO::NormalizePath(search_list[i]));
+			@try {
+				NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
+				[app release];
+				[argv release];
+				return new CocoaProcess::Process(task);
+			}
+			@catch (NSException * e) {}
 			[app release];
-			[argv release];
-			argv = 0;
-			return new CocoaProcess::Process(task);
 		}
-		@catch (NSException * e) {}
 		[argv release];
 		return 0;
 	}
