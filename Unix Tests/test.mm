@@ -25,13 +25,6 @@ int main(int argc, char ** argv)
     //         catch (...) { Console << L"pizdets" << IO::NewLineChar; }
     //     }
     // } while (in.Length());
-
-    SafePointer<Process> shell = CreateCommandProcess(L"pdflatex");
-    if (!shell) {
-        Console << L"pidor" << IO::NewLineChar;
-        return 1;
-    }
-    shell->Wait();
     
     [NSApplication sharedApplication];
 

@@ -1,5 +1,4 @@
 #include "FileApi.h"
-#include "../Miscellaneous/Dictionary.h"
 #include "../Syntax/Regular.h"
 
 #define _DARWIN_FEATURE_ONLY_64_BIT_INODE
@@ -18,10 +17,6 @@ namespace Engine
 {
 	namespace IO
 	{
-        namespace PosixHelper {
-            Dictionary::Dictionary<int, Array<uint8> > delete_on_close(0x10);
-        }
-
         string FileAccessException::ToString(void) const { return L"FileAccessException"; }
 		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
 		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
@@ -80,7 +75,9 @@ namespace Engine
 				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
 				if (result == -1 && errno != EINTR) throw FileAccessException();
 			} while (result == -1);
-			if (delete_on_close) PosixHelper::delete_on_close.Append(result, FullPath);
+			if (delete_on_close) {
+				unlink(reinterpret_cast<char *>(Path->GetBuffer()));
+			}
             return handle(result);
 		}
 		void CreatePipe(handle * pipe_in, handle * pipe_out)
@@ -104,11 +101,6 @@ namespace Engine
 		}
 		void CloseFile(handle file) {
 			close(reinterpret_cast<intptr>(file));
-			auto Path = PosixHelper::delete_on_close.ElementByKey(reinterpret_cast<intptr>(file));
-			if (Path) {
-				unlink(reinterpret_cast<char *>(Path->GetBuffer()));
-				PosixHelper::delete_on_close.RemoveByKey(reinterpret_cast<intptr>(file));
-			}
 		}
 		void Flush(handle file)
 		{
