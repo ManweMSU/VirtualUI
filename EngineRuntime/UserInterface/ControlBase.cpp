@@ -560,7 +560,8 @@ namespace Engine
 		void TopLevelWindow::Render(const Box & at)
 		{
 			if (!BackgroundShape && Background) {
-				BackgroundShape.SetReference(Background->Initialize(&ZeroArgumentProvider()));
+				auto args = ZeroArgumentProvider();
+				BackgroundShape.SetReference(Background->Initialize(&args));
 			}
 			if (BackgroundShape) {
 				BackgroundShape->Render(GetStation()->GetRenderingDevice(), at);

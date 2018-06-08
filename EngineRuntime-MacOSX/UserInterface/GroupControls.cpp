@@ -18,7 +18,8 @@ namespace Engine
 			ControlGroup::~ControlGroup(void) {}
 			void ControlGroup::Render(const Box & at)
 			{
-				if (!_background && Background) _background.SetReference(Background->Initialize(&ZeroArgumentProvider()));
+				auto args = ZeroArgumentProvider();
+				if (!_background && Background) _background.SetReference(Background->Initialize(&args));
 				if (_background) _background->Render(GetStation()->GetRenderingDevice(), at);
 				ParentWindow::Render(at);
 			}
@@ -44,7 +45,8 @@ namespace Engine
 			RadioButtonGroup::~RadioButtonGroup(void) {}
 			void RadioButtonGroup::Render(const Box & at)
 			{
-				if (!_background && Background) _background.SetReference(Background->Initialize(&ZeroArgumentProvider()));
+				auto args = ZeroArgumentProvider();
+				if (!_background && Background) _background.SetReference(Background->Initialize(&args));
 				if (_background) _background->Render(GetStation()->GetRenderingDevice(), at);
 				ParentWindow::Render(at);
 			}
@@ -90,7 +92,8 @@ namespace Engine
 			void ScrollBox::Render(const Box & at)
 			{
 				if (!_background && Background) {
-					_background.SetReference(Background->Initialize(&ZeroArgumentProvider()));
+					auto args = ZeroArgumentProvider();
+					_background.SetReference(Background->Initialize(&args));
 				}
 				auto device = GetStation()->GetRenderingDevice();
 				if (_background) _background->Render(device, at);
@@ -278,9 +281,10 @@ namespace Engine
 			}
 			void VerticalSplitBox::ResetCache(void)
 			{
-				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&ZeroArgumentProvider()) : 0);
-				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&ZeroArgumentProvider()) : 0);
-				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&ZeroArgumentProvider()) : 0);
+				auto args = ZeroArgumentProvider();
+				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&args) : 0);
+				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&args) : 0);
+				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&args) : 0);
 				ParentWindow::ResetCache();
 			}
 			void VerticalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } }
@@ -421,9 +425,10 @@ namespace Engine
 			}
 			void HorizontalSplitBox::ResetCache(void)
 			{
-				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&ZeroArgumentProvider()) : 0);
-				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&ZeroArgumentProvider()) : 0);
-				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&ZeroArgumentProvider()) : 0);
+				auto args = ZeroArgumentProvider();
+				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&args) : 0);
+				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&args) : 0);
+				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&args) : 0);
 				ParentWindow::ResetCache();
 			}
 			void HorizontalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } }

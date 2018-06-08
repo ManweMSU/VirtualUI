@@ -21,11 +21,13 @@ namespace Engine
 			}
 			template <> int ResolveExpression<int>(const string & expression, IArgumentProvider * provider)
 			{
-				return int(Syntax::Math::CalculateExpressionInteger(expression, &ExpressionArgumentProvider(provider)));
+				auto argp = ExpressionArgumentProvider(provider);
+				return int(Syntax::Math::CalculateExpressionInteger(expression, &argp));
 			}
 			template <> double ResolveExpression<double>(const string & expression, IArgumentProvider * provider)
 			{
-				return Syntax::Math::CalculateExpressionDouble(expression, &ExpressionArgumentProvider(provider));
+				auto argp = ExpressionArgumentProvider(provider);
+				return Syntax::Math::CalculateExpressionDouble(expression, &argp);
 			}
 			Coordinate::Coordinate(void) {}
 			Coordinate::Coordinate(const Engine::UI::Coordinate & src) : Absolute(src.Absolute), Zoom(src.Zoom), Anchor(src.Anchor) {}

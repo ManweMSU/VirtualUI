@@ -77,7 +77,8 @@ public: ENGINE_CXX_TYPE_##reflected_type property_name;
 
 #endif
 
-#define ENGINE_STRING(macro) L#macro
+#define ENGINE_STRING(macro_arg) ENGINE_STRING_INTERNAL(#macro_arg)
+#define ENGINE_STRING_INTERNAL(macro_arg) L##macro_arg
 
 #define ENGINE_CXX_TYPE_INTEGER				int
 #define ENGINE_CXX_TYPE_DOUBLE				double

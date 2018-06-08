@@ -150,7 +150,8 @@ namespace Engine
 					temp = ViewDisabled.Inner();
 				}
 				if (!(*shape) && temp) {
-					*shape = temp->Initialize(&ArgumentService::ButtonArgumentProvider(this));
+					auto args = ArgumentService::ButtonArgumentProvider(this);
+					*shape = temp->Initialize(&args);
 				}
 				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
 			}
@@ -288,7 +289,8 @@ namespace Engine
 					}
 				}
 				if (!(*shape) && temp) {
-					*shape = temp->Initialize(&ArgumentService::CheckBoxArgumentProvider(this));
+					auto args = ArgumentService::CheckBoxArgumentProvider(this);
+					*shape = temp->Initialize(&args);
 				}
 				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
 			}
@@ -429,7 +431,8 @@ namespace Engine
 					}
 				}
 				if (!(*shape) && temp) {
-					*shape = temp->Initialize(&ArgumentService::RadioButtonArgumentProvider(this));
+					auto args = ArgumentService::RadioButtonArgumentProvider(this);
+					*shape = temp->Initialize(&args);
 				}
 				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
 			}
@@ -547,7 +550,8 @@ namespace Engine
 					temp = ViewDisabled.Inner();
 				}
 				if (!(*shape) && temp) {
-					*shape = temp->Initialize(&ZeroArgumentProvider());
+					auto args = ZeroArgumentProvider();
+					*shape = temp->Initialize(&args);
 				}
 				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
 				ParentWindow::Render(at);
@@ -664,7 +668,8 @@ namespace Engine
 					}
 				}
 				if (!(*shape) && temp) {
-					*shape = temp->Initialize(&ArgumentService::ToolButtonPartArgumentProvider(this));
+					auto args = ArgumentService::ToolButtonPartArgumentProvider(this);
+					*shape = temp->Initialize(&args);
 				}
 				if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
 			}

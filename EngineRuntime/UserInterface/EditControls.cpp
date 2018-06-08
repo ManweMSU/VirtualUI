@@ -66,7 +66,8 @@ namespace Engine
 					}
 				}
 				if (!(*back) && source) {
-					*back = source->Initialize(&ZeroArgumentProvider());
+					auto args = ZeroArgumentProvider();
+					*back = source->Initialize(&args);
 				}
 				if (*back) (*back)->Render(device, at);
 				Box field = Box(at.Left + Border + LeftSpace, at.Top + Border, at.Right - Border, at.Bottom - Border);
@@ -549,7 +550,8 @@ namespace Engine
 					}
 				}
 				if (!(*back) && source) {
-					*back = source->Initialize(&ZeroArgumentProvider());
+					auto args = ZeroArgumentProvider();
+					*back = source->Initialize(&args);
 				}
 				if (*back) (*back)->Render(device, at);
 				Box field = Box(at.Left + Border, at.Top + Border, at.Right - Border - VerticalScrollSize, at.Bottom - Border - HorizontalScrollSize);		
