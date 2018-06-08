@@ -44,6 +44,8 @@ namespace Engine
 			virtual PropertyInfo GetProperty(const string & name) = 0;
 		};
 
+#if (defined(_MSC_VER))
+
 #define ENGINE_REFLECTED_CLASS(class_name, parent_class) class class_name : public parent_class { \
 private: template<uint __index> void _mirror_property(::Engine::Reflection::IPropertyEnumerator & enumerator) {} \
 public: virtual void EnumerateProperties(::Engine::Reflection::IPropertyEnumerator & enumerator) override { parent_class::EnumerateProperties(enumerator); _mirror_property<__COUNTER__ + 1>(enumerator); } \
@@ -56,6 +58,24 @@ private: template<> void _mirror_property<__COUNTER__>(::Engine::Reflection::IPr
 enumerator.EnumerateProperty(ENGINE_STRING(property_name), &property_name, ENGINE_REFLECTED_TYPE_##reflected_type);\
 _mirror_property<__COUNTER__ + 1>(enumerator); } \
 public: ENGINE_CXX_TYPE_##reflected_type property_name;
+
+#else
+
+#define ENGINE_REFLECTED_CLASS(class_name, parent_class) class class_name : public parent_class { \
+private: using __class_name = class_name; \
+private: template<class __enum, uint __index> struct __mirror { static void _mirror_property(__enum & enumerator, __class_name & obj) {} }; \
+public: virtual void EnumerateProperties(::Engine::Reflection::IPropertyEnumerator & enumerator) override { parent_class::EnumerateProperties(enumerator); __mirror<::Engine::Reflection::IPropertyEnumerator, __COUNTER__ + 1>::_mirror_property(enumerator, *this); } \
+public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const string & name) override { ::Engine::Reflection::GetPropertyEnumerator enumerator(name); EnumerateProperties(enumerator); return enumerator.Result; } \
+
+#define ENGINE_END_REFLECTED_CLASS };
+
+#define ENGINE_DEFINE_REFLECTED_PROPERTY(reflected_type, property_name) \
+private: template<class __enum> struct __mirror<__enum, __COUNTER__> { static void _mirror_property(__enum & enumerator, __class_name & obj) {\
+enumerator.EnumerateProperty(ENGINE_STRING(property_name), &obj.property_name, ENGINE_REFLECTED_TYPE_##reflected_type);\
+__mirror<__enum, __COUNTER__ + 1>::_mirror_property(enumerator, obj); } }; \
+public: ENGINE_CXX_TYPE_##reflected_type property_name;
+
+#endif
 
 #define ENGINE_STRING(macro) L#macro
 
