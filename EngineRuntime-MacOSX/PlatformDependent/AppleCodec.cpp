@@ -1,0 +1,109 @@
+#include "AppleCodec.h"
+
+#include <ImageIO/ImageIO.h>
+
+namespace Engine
+{
+	namespace Cocoa
+	{
+        class AppleCodec : public Codec::Codec
+        {
+        public:
+            AppleCodec(void) {}
+			~AppleCodec(void) override {}
+			virtual void EncodeFrame(Streaming::Stream * stream, Engine::Codec::Frame * frame, const string & format) override
+            {
+                SafePointer<Engine::Codec::Image> Fake = new Engine::Codec::Image;
+				Fake->Frames.Append(frame);
+				EncodeImage(stream, Fake, format);
+            }
+			virtual void EncodeImage(Streaming::Stream * stream, Engine::Codec::Image * image, const string & format) override
+			{
+				if (!image->Frames.Length()) throw InvalidArgumentException();
+				
+			}
+			virtual Engine::Codec::Frame * DecodeFrame(Streaming::Stream * stream) override
+            {
+                SafePointer<Engine::Codec::Image> image = DecodeImage(stream);
+				SafePointer<Engine::Codec::Frame> frame = image->Frames.ElementAt(0);
+				frame->Retain();
+				frame->Retain();
+				return frame;
+            }
+			virtual Engine::Codec::Image * DecodeImage(Streaming::Stream * stream) override
+			{
+                SafePointer<Engine::Codec::Image> result;
+                int length = int(stream->Length() - stream->Seek(0, Streaming::Current));
+                Array<uint8> bytes(length);
+                bytes.SetLength(length);
+                stream->Read(bytes.GetBuffer(), length);
+                CFDataRef data = CFDataCreateWithBytesNoCopy(0, bytes.GetBuffer(), length, kCFAllocatorNull);
+                CGImageSourceRef source = CGImageSourceCreateWithData(data, 0);
+                if (source) {
+                    result = new Engine::Codec::Image;
+                    int frame_count = CGImageSourceGetCount(source);
+                    for (int i = 0; i < frame_count; i++) {
+                        CGImageRef frame = CGImageSourceCreateImageAtIndex(source, i, 0);
+						if (frame) {
+							int width = CGImageGetWidth(frame);
+							int height = CGImageGetHeight(frame);
+							SafePointer<Engine::Codec::Frame> eframe = new Engine::Codec::Frame(width, height, 4 * width, Engine::Codec::PixelFormat::R8G8B8A8,
+								Engine::Codec::AlphaFormat::Premultiplied, Engine::Codec::LineDirection::TopDown);
+							ZeroMemory(eframe->GetData(), width * height * 4);
+							CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+							CGContextRef context = CGBitmapContextCreate(eframe->GetData(), width, height, 8, eframe->GetScanLineLength(), rgb, kCGImageAlphaPremultipliedLast);
+							CGRect rect = CGRectMake(0.0f, 0.0f, float(width), float(height));
+							CGContextSetBlendMode(context, kCGBlendModeCopy);
+							CGContextDrawImage(context, rect, frame);
+							CFDictionaryRef props = CGImageSourceCopyPropertiesAtIndex(source, i, 0);
+							CFDictionaryRef gif_props = reinterpret_cast<CFDictionaryRef>(CFDictionaryGetValue(props, kCGImagePropertyGIFDictionary));
+							if (gif_props) {
+								CFNumberRef val_ref = reinterpret_cast<CFNumberRef>(CFDictionaryGetValue(gif_props, kCGImagePropertyGIFUnclampedDelayTime));
+								if (val_ref) {
+									double val;
+									CFNumberGetValue(val_ref, kCFNumberFloat64Type, &val);
+									eframe->Duration = int32(val * 1000.0);
+								}
+							}
+							CFRelease(props);
+							CGContextRelease(context);
+							CGColorSpaceRelease(rgb);
+							result->Frames.Append(eframe);
+							CGImageRelease(frame);
+						}
+                    }
+                    CFRelease(source);
+                }
+                CFRelease(data);
+                if (result) result->Retain();
+                return result;
+			}
+			virtual bool IsImageCodec(void) override { return true; }
+			virtual bool IsFrameCodec(void) override { return true; }
+			virtual string ExamineData(Streaming::Stream * stream) override
+			{
+				uint64 size = stream->Length() - stream->Seek(0, Streaming::Current);
+				if (size < 8) return L"";
+				uint64 begin = stream->Seek(0, Streaming::Current);
+				uint64 sign;
+				try {
+					stream->Read(&sign, sizeof(sign));
+					stream->Seek(begin, Streaming::Begin);
+				} catch (...) { return L""; }
+				if ((sign & 0xFFFF) == 0x4D42) return L"BMP";
+				else if (sign == 0x0A1A0A0D474E5089) return L"PNG";
+				else if ((sign & 0xFFFFFF) == 0xFFD8FF) return L"JPG";
+				else if ((sign & 0xFFFFFFFFFFFF) == 0x613938464947) return L"GIF";
+				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
+				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
+				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
+				else return L"";
+			}
+			virtual bool CanEncode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF"); }
+			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF"); }
+        };
+
+        Codec::Codec * _AppleCodec = 0;
+        Codec::Codec * CreateAppleCodec(void) { if (!_AppleCodec) { _AppleCodec = new AppleCodec(); _AppleCodec->Release(); } return _AppleCodec; }
+    }
+}
