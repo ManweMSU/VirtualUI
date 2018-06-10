@@ -5,13 +5,13 @@
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Standard image format strings:                                  Support          Windows  Mac OS X
-// BMP    - Windows Bitmap (.bmp)                                  WIC, IIO           YES      TBI
-// PNG    - Portable Network Graphics (.png)                       WIC, IIO           YES      TBI
-// JPG    - Joint Photographic Image Format (.jpg, .jpeg, .jfif)   WIC, IIO           YES      TBI
-// GIF    - Graphics Interchange Format (.gif)                     WIC, IIO           YES      TBI
-// TIF    - Tagged Image File Format (.tif, .tiff)                 WIC, IIO           YES      TBI
+// BMP    - Windows Bitmap (.bmp)                                  WIC, IIO           YES      YES
+// PNG    - Portable Network Graphics (.png)                       WIC, IIO           YES      YES
+// JPG    - Joint Photographic Image Format (.jpg, .jpeg, .jfif)   WIC, IIO           YES      YES
+// GIF    - Graphics Interchange Format (.gif)                     WIC, IIO           YES      YES
+// TIF    - Tagged Image File Format (.tif, .tiff)                 WIC, IIO           YES      YES
 // DDS    - Direct Draw Surface (.dds)                             WIC                YES      NO
-// HEIF   - High Efficiency Image Format (.heif, .heic)            IIO                NO       TBI
+// HEIF   - High Efficiency Image Format (.heif, .heic)            IIO                NO     READ-ONLY
 // ICO    - Windows Icon (.ico)                                    IC                 YES      YES
 // CUR    - Windows Cursor (.cur)                                  IC                 YES      YES
 // ICNS   - Apple Icon (.icns)                                     IC                 YES      YES

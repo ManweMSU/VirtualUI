@@ -1,6 +1,7 @@
 #include "AppleCodec.h"
 
 #include <ImageIO/ImageIO.h>
+#include <CoreServices/CoreServices.h>
 
 namespace Engine
 {
@@ -20,7 +21,82 @@ namespace Engine
 			virtual void EncodeImage(Streaming::Stream * stream, Engine::Codec::Image * image, const string & format) override
 			{
 				if (!image->Frames.Length()) throw InvalidArgumentException();
-				
+				CFStringRef encoder = 0;
+				int max_frame = 1;
+				if (format == L"BMP") {
+					encoder = kUTTypeBMP;
+				} else if (format == L"PNG") {
+					encoder = kUTTypePNG;
+				} else if (format == L"JPG") {
+					encoder = kUTTypeJPEG;
+				} else if (format == L"GIF") {
+					encoder = kUTTypeGIF;
+					max_frame = image->Frames.Length();
+					for (int i = 1; i < max_frame; i++) {
+						if (image->Frames[i].GetWidth() != image->Frames[0].GetWidth() ||
+							image->Frames[i].GetHeight() != image->Frames[0].GetHeight()) throw InvalidArgumentException();
+					}
+				} else if (format == L"TIF") {
+					encoder = kUTTypeTIFF;
+					max_frame = image->Frames.Length();
+				} else throw InvalidArgumentException();
+				CFMutableDataRef data = CFDataCreateMutable(0, 0);
+				CGImageDestinationRef dest = CGImageDestinationCreateWithData(data, encoder, max_frame, 0);
+				if (!dest) {
+					CFRelease(data);
+					throw Exception();
+				}
+				ObjectArray<Engine::Codec::Frame> conv(0x10);
+				for (int i = 0; i < max_frame; i++) {
+					SafePointer<Engine::Codec::Frame> frame = image->Frames[i].ConvertFormat(Engine::Codec::FrameFormat(
+						Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaFormat::Normal, Engine::Codec::LineDirection::TopDown));
+					conv.Append(frame);
+				}
+				for (int i = 0; i < max_frame; i++) {
+					CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+					CGDataProviderRef provider = CGDataProviderCreateWithData(0, conv[i].GetData(), conv[i].GetScanLineLength() * conv[i].GetHeight(), 0);
+					CGImageRef frame = CGImageCreate(conv[i].GetWidth(), conv[i].GetHeight(), 8, 32, conv[i].GetScanLineLength(),
+						rgb, kCGImageAlphaLast, provider, 0, false, kCGRenderingIntentDefault);
+					CGColorSpaceRelease(rgb);
+					CGDataProviderRelease(provider);
+					CFDictionaryRef props = 0;
+					float compression = 1.0f;
+					if (format == L"GIF") {
+						double duration = double(conv[i].Duration) / 1000.0;
+						CFStringRef gif_keys[1];
+						CFTypeRef gif_vals[1];
+						gif_keys[0] = kCGImagePropertyGIFDelayTime;
+						gif_vals[0] = CFNumberCreate(0, kCFNumberFloat64Type, &duration);
+						CFDictionaryRef gif_props = CFDictionaryCreate(0, reinterpret_cast<const void **>(gif_keys), reinterpret_cast<const void **>(gif_vals),
+							1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+						CFRelease(gif_vals[0]);
+						CFStringRef keys[2];
+						CFTypeRef vals[2];
+						keys[0] = kCGImageDestinationLossyCompressionQuality;
+						vals[0] = CFNumberCreate(0, kCFNumberFloatType, &compression);
+						keys[1] = kCGImagePropertyGIFDictionary;
+						vals[1] = gif_props;
+						props = CFDictionaryCreate(0, reinterpret_cast<const void **>(keys), reinterpret_cast<const void **>(vals),
+							2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+						CFRelease(vals[0]);
+						CFRelease(vals[1]);
+					} else {
+						CFStringRef keys[1];
+						CFTypeRef vals[1];
+						keys[0] = kCGImageDestinationLossyCompressionQuality;
+						vals[0] = CFNumberCreate(NULL, kCFNumberFloatType, &compression);
+						props = CFDictionaryCreate(0, reinterpret_cast<const void **>(keys), reinterpret_cast<const void **>(vals),
+							1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+						CFRelease(vals[0]);
+					}
+					CGImageDestinationAddImage(dest, frame, props);
+					CFRelease(props);
+					CGImageRelease(frame);
+				}
+				CGImageDestinationFinalize(dest);
+				CFRelease(dest);
+				stream->Write(CFDataGetBytePtr(data), CFDataGetLength(data));
+				CFRelease(data);
 			}
 			virtual Engine::Codec::Frame * DecodeFrame(Streaming::Stream * stream) override
             {
@@ -97,10 +173,11 @@ namespace Engine
 				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
+				else if (sign == 0x7079746618000000) return L"HEIF";
 				else return L"";
 			}
 			virtual bool CanEncode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF"); }
-			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF"); }
+			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"HEIF"); }
         };
 
         Codec::Codec * _AppleCodec = 0;

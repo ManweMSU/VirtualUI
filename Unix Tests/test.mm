@@ -15,41 +15,6 @@ int main(int argc, char ** argv)
     SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandartInput());
     Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
 
-    Codec::CreateIconCodec();
-    Cocoa::CreateAppleCodec();
-    SafePointer<Streaming::FileStream> file = new Streaming::FileStream(L"Unix Tests/ah.jpg", Streaming::AccessRead, Streaming::OpenExisting);
-    SafePointer<Codec::Image> img1 = Codec::DecodeImage(file);
-    file = new Streaming::FileStream(L"Unix Tests/rar.png", Streaming::AccessRead, Streaming::OpenExisting);
-    SafePointer<Codec::Image> img2 = Codec::DecodeImage(file);
-    file = new Streaming::FileStream(L"Unix Tests/sad.gif", Streaming::AccessRead, Streaming::OpenExisting);
-    SafePointer<Codec::Image> img3 = Codec::DecodeImage(file);
-
-    SafePointer<Streaming::FileStream> file2 = new Streaming::FileStream(L"Unix Tests/raw.ico", Streaming::AccessReadWrite, Streaming::CreateAlways);
-    SafePointer<Codec::Image> img5 = new Codec::Image;
-    SafePointer<Codec::Frame> frame = new Codec::Frame(128, 128, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Premultiplied, Codec::LineDirection::TopDown);
-    for (int x = 0; x < 128; x++) for (int y = 0; y < 128; y++) {
-        frame->SetPixel(x, y, img2->Frames[0].GetPixel(400 + x, 200 + y));
-    }
-    img5->Frames.Append(frame);
-    frame = new Codec::Frame(32, 32, 128, Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
-    for (int x = 0; x < 32; x++) for (int y = 0; y < 32; y++) {
-        if (x < 16) {
-            if (y < 16) {
-                frame->SetPixel(x, y, 0xFF0000FF);
-            } else {
-                frame->SetPixel(x, y, 0xFFFF0000);
-            }
-        } else {
-            if (y < 16) {
-                frame->SetPixel(x, y, 0xFF00FF00);
-            } else {
-                frame->SetPixel(x, y, 0xFF00FFFF);
-            }
-        }
-    }
-    img5->Frames.Append(frame);
-    Codec::EncodeImage(file2, img5, L"ICO");
-
     string in;
     // do {
     //     Input >> in;
