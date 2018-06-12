@@ -90,6 +90,8 @@ namespace Engine
 			bool friend operator != (const Box & a, const Box & b);
 
 			bool IsInside(const Point & p) const;
+
+			static Box Intersect(const Box & a, const Box & b);
 		};
 		class Color
 		{

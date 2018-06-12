@@ -63,6 +63,10 @@ namespace Engine
 		}
 		Box::Box(int left, int top, int right, int bottom) : Left(left), Top(top), Right(right), Bottom(bottom) {}
 		bool Box::IsInside(const Point & p) const { return p.x >= Left && p.x < Right && p.y >= Top && p.y < Bottom; }
+		Box Box::Intersect(const Box & a, const Box & b)
+		{
+			return Box(max(a.Left, b.Left), max(a.Top, b.Top), min(a.Right, b.Right), min(a.Bottom, b.Bottom));
+		}
 		Color::Color(void) {}
 		Color::Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa) : r(sr), g(sg), b(sb), a(sa) {}
 		Color::Color(int sr, int sg, int sb, int sa) : r(sr), g(sg), b(sb), a(sa) {}
