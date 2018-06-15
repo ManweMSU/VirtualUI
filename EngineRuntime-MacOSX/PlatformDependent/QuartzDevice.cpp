@@ -62,6 +62,14 @@ namespace Engine
             QuartzBarRenderingInfo(void) { r = g = b = a = prop_w = prop_h = 0.0; gradient = 0; }
             ~QuartzBarRenderingInfo(void) override { if (gradient) CGGradientRelease(gradient); }
         };
+        class QuartzInversionRenderingInfo : public UI::IInversionEffectRenderingInfo
+        {
+        public:
+            uint32 pixel;
+            CGImageRef white;
+            QuartzInversionRenderingInfo(void) { pixel = 0xFFFFFFFF; }
+            ~QuartzInversionRenderingInfo(void) override { CGImageRelease(white); }
+        };
         class QuartzTextureRenderingInfo : public UI::ITextureRenderingInfo
         {
         public:
@@ -69,6 +77,14 @@ namespace Engine
             bool fill;
             QuartzTextureRenderingInfo(void) {}
             ~QuartzTextureRenderingInfo(void) override {}
+        };
+        class QuartzLineRenderingInfo : public UI::ILineRenderingInfo
+        {
+        public:
+            double r, g, b, a;
+            bool dotted;
+            QuartzLineRenderingInfo(void) {}
+            ~QuartzLineRenderingInfo(void) override {}
         };
 
         QuartzRenderingDevice::QuartzRenderingDevice(void) : BrushCache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), Clipping(0x10), _animation(0)
@@ -130,7 +146,16 @@ namespace Engine
         }
         UI::IInversionEffectRenderingInfo * QuartzRenderingDevice::CreateInversionEffectRenderingInfo(void)
         {
-            return 0;
+            if (InversionCache) return InversionCache;
+            SafePointer<QuartzInversionRenderingInfo> info = new QuartzInversionRenderingInfo;
+            CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+            CGDataProviderRef data = CGDataProviderCreateWithData(0, &info->pixel, 4, 0);
+            info->white = CGImageCreate(1, 1, 8, 32, 4, rgb, kCGImageAlphaLast, data, 0, false, kCGRenderingIntentDefault);
+            CGDataProviderRelease(data);
+            CGColorSpaceRelease(rgb);
+            InversionCache.SetRetain(info);
+            info->Retain();
+            return info;
         }
         UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(UI::ITexture * texture, const UI::Box & take_area, bool fill_pattern)
         {
@@ -164,7 +189,14 @@ namespace Engine
         }
         UI::ILineRenderingInfo * QuartzRenderingDevice::CreateLineRenderingInfo(const UI::Color & color, bool dotted)
         {
-            return 0;
+            SafePointer<QuartzLineRenderingInfo> info = new QuartzLineRenderingInfo;
+            info->r = double(color.r) / 255.0;
+            info->g = double(color.g) / 255.0;
+            info->b = double(color.b) / 255.0;
+            info->a = double(color.a) / 255.0;
+            info->dotted = dotted;
+            info->Retain();
+            return info;
         }
 
         UI::ITexture * QuartzRenderingDevice::LoadTexture(Streaming::Stream * Source)
@@ -295,7 +327,22 @@ namespace Engine
         }
         void QuartzRenderingDevice::RenderLine(UI::ILineRenderingInfo * Info, const UI::Box & At)
         {
-
+            auto info = static_cast<QuartzLineRenderingInfo *>(Info);
+            double s = double(_scale);
+            CGPoint p[2];
+            p[0].x = double(At.Left + 0.5) / s;
+            p[0].y = double(_height - At.Top - 0.5) / s;
+            p[1].x = double(At.Right + 0.5) / s;
+            p[1].y = double(_height - At.Bottom - 0.5) / s;
+            if (info->dotted) {
+                double l[2] = { 1.0 / s, 1.0 / s };
+                CGContextSetLineDash(reinterpret_cast<CGContextRef>(_context), 0.5 / s, l, 2);
+            } else {
+                CGContextSetLineDash(reinterpret_cast<CGContextRef>(_context), 0.0, 0, 0);
+            }
+            CGContextSetRGBStrokeColor(reinterpret_cast<CGContextRef>(_context), info->r, info->g, info->b, info->a);
+            CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), 1.0 / s);
+            CGContextStrokeLineSegments(reinterpret_cast<CGContextRef>(_context), p, 2);
         }
         void QuartzRenderingDevice::ApplyBlur(UI::IBlurEffectRenderingInfo * Info, const UI::Box & At)
         {
@@ -303,7 +350,12 @@ namespace Engine
         }
         void QuartzRenderingDevice::ApplyInversion(UI::IInversionEffectRenderingInfo * Info, const UI::Box & At, bool Blink)
         {
-
+            auto info = static_cast<QuartzInversionRenderingInfo *>(Info);
+            if (!Blink || (_animation % 1000 < 500)) {
+                CGContextSetBlendMode(reinterpret_cast<CGContextRef>(_context), kCGBlendModeDifference);
+                CGContextDrawImage(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(At, _width, _height, _scale), info->white);
+                CGContextSetBlendMode(reinterpret_cast<CGContextRef>(_context), kCGBlendModeNormal);
+            }
         }
 
         void QuartzRenderingDevice::PushClip(const UI::Box & Rect)
@@ -331,6 +383,7 @@ namespace Engine
         void QuartzRenderingDevice::ClearCache(void)
         {
             BrushCache.Clear();
+            InversionCache.SetReference(0);
         }
     }
 }

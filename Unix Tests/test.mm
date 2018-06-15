@@ -1,4 +1,5 @@
 #include <EngineRuntime.h>
+#include <PlatformDependent/CocoaInterop.h>
 
 using namespace Engine;
 
@@ -12,7 +13,6 @@ UI::InterfaceTemplate interface;
 Cocoa::QuartzRenderingDevice device;
 UI::Shape * shape = 0;
 UI::ITexture * tex = 0;
-UI::ITextureRenderingInfo * tri = 0;
 UI::TextureShape * shape2 = 0;
 
 class Loader : public Engine::UI::IResourceLoader
@@ -98,6 +98,7 @@ public:
     UI::Box box = UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
     CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
     device.SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
+    device.SetTimerValue(GetTimerValue());
 
     shape2->Render(&device, box);
     shape->Render(&device, UI::Box(50, 50, 550, 110));
@@ -121,7 +122,6 @@ int main(int argc, char ** argv)
     Loader loader;
     UI::Loader::LoadUserInterfaceFromBinary(interface, &source, &loader, 0);
     tex = interface.Texture[L"Wallpaper"];
-    tri = device.CreateTextureRenderingInfo(tex, UI::Box(1000, 400, 1300, 700), true);
     Arguments args;
     auto temp = interface.Application[L"Progress"];
     Console << L"Template = " << string(reinterpret_cast<void *>(temp)) << IO::NewLineChar;
@@ -129,6 +129,18 @@ int main(int argc, char ** argv)
     shape2 = new UI::TextureShape(UI::Rectangle::Entire(), tex, UI::Rectangle::Entire(), UI::TextureShape::TextureRenderMode::Fit);
 
     Console << L"Shape = " << string(reinterpret_cast<void *>(shape)) << IO::NewLineChar;
+
+    NSUserDefaults * def = [[NSUserDefaults alloc] init];
+    NSDictionary<NSString *,id> * dict = [def dictionaryRepresentation];
+    NSArray<NSString *> * keys = [dict allKeys];
+    int c = [keys count];
+    Console << L"Dictionary length: " << c << IO::NewLineChar;
+    for (int i = 0; i < c; i++) {
+        Console << L"   - " << Cocoa::EngineString([keys objectAtIndex: i]) << IO::NewLineChar;
+    }
+    [keys release];
+    [dict release];
+    [def release];
     
     [NSApplication sharedApplication];
 

@@ -14,6 +14,7 @@ namespace Engine
             uint32 _animation;
 
             Dictionary::ObjectCache<UI::Color, UI::IBarRenderingInfo> BrushCache;
+			SafePointer<UI::IInversionEffectRenderingInfo> InversionCache;
 			Array<UI::Box> Clipping;
         public:
             QuartzRenderingDevice(void);
