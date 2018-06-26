@@ -8,7 +8,7 @@ namespace Engine
 	{
 		enum class CompressionMethod {
 			Huffman = 1,
-			LempelZivWelch = 2,
+			LempelZivWelch = 3,
 			RunLengthEncoding8bit = 9,
 			RunLengthEncoding16bit = 10,
 			RunLengthEncoding32bit = 11,
