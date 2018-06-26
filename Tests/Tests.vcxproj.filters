@@ -50,11 +50,11 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="test.eui">
-      <Filter>Файлы ресурсов</Filter>
-    </None>
     <None Include="test.euip">
       <Filter>Файлы ресурсов</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="test.eui" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,7 @@
 
 #include <Miscellaneous/Time.h>
 #include <Processes/Process.h>
+#include <Processes/Threading.h>
 #include <Miscellaneous/DynamicString.h>
 #include <UserInterface/ShapeBase.h>
 #include <UserInterface/Templates.h>
@@ -33,6 +34,9 @@
 #include <Storage/Registry.h>
 #include <Storage/TextRegistry.h>
 #include <Storage/TextRegistryGrammar.h>
+#include <Storage/Compression.h>
+#include <Storage/Chain.h>
+#include <Miscellaneous/ThreadPool.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -49,6 +53,7 @@
 #undef CreateProcess
 #undef GetCurrentTime
 #undef CreateFile
+#undef CreateSemaphore
 
 using namespace Engine;
 using namespace Engine::UI;

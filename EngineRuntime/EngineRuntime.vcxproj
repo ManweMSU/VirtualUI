@@ -25,6 +25,7 @@
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
+    <ClInclude Include="Miscellaneous\ThreadPool.h" />
     <ClInclude Include="Miscellaneous\Time.h" />
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
     <ClInclude Include="Network\InternetRequest.h" />
@@ -43,7 +44,10 @@
     <ClInclude Include="Processes\Process.h" />
     <ClInclude Include="Processes\Shell.h" />
     <ClInclude Include="Processes\Threading.h" />
+    <ClInclude Include="Storage\Chain.h" />
+    <ClInclude Include="Storage\Compression.h" />
     <ClInclude Include="Storage\Registry.h" />
+    <ClInclude Include="Storage\SubbyteCoding.h" />
     <ClInclude Include="Storage\TextRegistry.h" />
     <ClInclude Include="Storage\TextRegistryGrammar.h" />
     <ClInclude Include="Streaming.h" />
@@ -71,6 +75,7 @@
     <ClCompile Include="ImageCodec\IconCodec.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
+    <ClCompile Include="Miscellaneous\ThreadPool.cpp" />
     <ClCompile Include="Miscellaneous\Time.cpp" />
     <ClCompile Include="Network\InternetRequest.cpp" />
     <ClCompile Include="Network\Punycode.cpp" />
@@ -88,7 +93,10 @@
     <ClCompile Include="Processes\Process.cpp" />
     <ClCompile Include="Processes\Shell.cpp" />
     <ClCompile Include="Processes\Threading.cpp" />
+    <ClCompile Include="Storage\Chain.cpp" />
+    <ClCompile Include="Storage\Compression.cpp" />
     <ClCompile Include="Storage\Registry.cpp" />
+    <ClCompile Include="Storage\SubbyteCoding.cpp" />
     <ClCompile Include="Storage\TextRegistry.cpp" />
     <ClCompile Include="Storage\TextRegistryGrammar.cpp" />
     <ClCompile Include="Streaming.cpp" />

@@ -166,6 +166,18 @@
     <ClInclude Include="Storage\TextRegistryGrammar.h">
       <Filter>Storage</Filter>
     </ClInclude>
+    <ClInclude Include="Storage\SubbyteCoding.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\Compression.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\Chain.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\ThreadPool.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -293,6 +305,18 @@
     </ClCompile>
     <ClCompile Include="Storage\TextRegistryGrammar.cpp">
       <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\SubbyteCoding.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\Compression.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\Chain.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\ThreadPool.cpp">
+      <Filter>Miscellaneous</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
