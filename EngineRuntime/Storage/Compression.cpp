@@ -153,10 +153,10 @@ namespace Engine
 			Array<uint8> * HuffmanDecompress(Array<uint8> * input)
 			{
 				BitStream Source(input);
-				BitStream * Result = new (std::nothrow) BitStream;
+				Array<uint8> * Result = new (std::nothrow) Array<uint8>(0x100000);
 				if (!Result) throw OutOfMemoryException();
 				uint Length = Source.ReadDWord();
-				uint64 LongLength = uint64(Length) * 8;
+				uint64 LongLength = uint64(Length);
 				uint CodeNumber = Source.ReadByte();
 				if (CodeNumber == 0) CodeNumber = 256;
 				HuffmanTreeNode * Root = 0;
@@ -177,12 +177,12 @@ namespace Engine
 						Root->value = Code;
 					}
 					if (CodeNumber == 1) {
-						for (uint i = 0; i < Length; i++) Result->Write(&Root->value, 8);
+						for (uint i = 0; i < Length; i++) Result->Append(uint8(Root->value));
 					} else {
 						HuffmanTreeNode * Current = Root;
 						while (Result->Length() < LongLength) {
 							if (!Current->on0) {
-								Result->Write(&Current->value, 8);
+								Result->Append(uint8(Current->value));
 								Current = Root;
 							}
 							if (Result->Length() < LongLength) {
@@ -195,9 +195,7 @@ namespace Engine
 				}
 				catch (...) { Result->Release(); if (Root) Root->Release(); throw; }
 				Root->Release();
-				auto Data = Result->GetRetainedStorage();
-				Result->Release();
-				return Data;
+				return Result;
 			}
 			class LempelZivWelchDictionaryItem
 			{

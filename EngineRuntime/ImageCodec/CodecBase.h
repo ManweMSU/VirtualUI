@@ -15,11 +15,12 @@
 // ICO    - Windows Icon (.ico)                                    IC                 YES      YES
 // CUR    - Windows Cursor (.cur)                                  IC                 YES      YES
 // ICNS   - Apple Icon (.icns)                                     IC                 YES      YES
-// ???    - some universal format (.?)                             -                  NO       NO
+// EIWV   - Engine Image Wide Volume (.eiwv)                       VC                 YES      YES
 //
 // WIC - Windows Image Component (Windows only)
 // IIO - Image I/O Framework (Mac OS X only)
 // IC  - Icon Codec (Built-in, universal)
+// VC  - Volume Codec (Built-in, universal)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 namespace Engine

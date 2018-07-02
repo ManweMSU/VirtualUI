@@ -53,6 +53,7 @@ namespace Engine
 	class OutOfMemoryException : public Exception { public: ImmutableString ToString(void) const override; };
 	class InvalidArgumentException : public Exception { public: ImmutableString ToString(void) const override; };
 	class InvalidFormatException : public Exception { public: ImmutableString ToString(void) const override; };
+	class InvalidStateException : public Exception { public: ImmutableString ToString(void) const override; };
 
 	class ImmutableString final : public Object
 	{

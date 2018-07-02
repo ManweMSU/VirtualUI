@@ -364,13 +364,13 @@ namespace Engine
 				block++;
 				block_count--;
 			}
-			Seek(0, Streaming::Begin);
 		}
 		DecompressionStream::~DecompressionStream(void) {}
 		void DecompressionStream::Read(void * buffer, uint32 length)
 		{
 			uint8 * dest = reinterpret_cast<uint8 *>(buffer);
 			uint32 read = 0;
+			Seek(pointer, Streaming::Begin);
 			while (length) {
 				uint32 can_read = uint32(blocks[current_block].real_offset + uint64(blocks[current_block].length) - pointer);
 				if (!can_read) throw IO::FileReadEndOfFileException(read);

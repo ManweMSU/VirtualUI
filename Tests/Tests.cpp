@@ -37,6 +37,8 @@
 #include <Storage/Compression.h>
 #include <Storage/Chain.h>
 #include <Miscellaneous/ThreadPool.h>
+#include <Storage/Archive.h>
+#include <Storage/ImageVolume.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -144,10 +146,39 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 
+	/*{
+		SafePointer<Tasks::ThreadPool> pool = new Tasks::ThreadPool;
+		SafePointer<Streaming::Stream> output = new Streaming::FileStream(L"arch.ecsa", Streaming::AccessReadWrite, Streaming::CreateAlways);
+		SafePointer<Storage::NewArchive> arch = Storage::CreateArchive(output, 2);
+		SafePointer<Streaming::Stream> f1 = new Streaming::FileStream(L"EngineRuntime_x86.lib", Streaming::AccessRead, Streaming::OpenExisting);
+		SafePointer<Streaming::Stream> f2 = new Streaming::FileStream(L"test.eui", Streaming::AccessRead, Streaming::OpenExisting);
+		arch->SetFileName(1, L"EngineRuntime_x86.lib");
+		arch->SetFileType(1, L"LIB");
+		arch->SetFileID(1, 666);
+		arch->SetFileCustom(1, 6666);
+		arch->SetFileName(2, L"test.eui");
+		arch->SetFileType(2, L"EUI");
+		arch->SetFileID(2, 77);
+		arch->SetFileCustom(2, 7777);
+		arch->SetFileCreationTime(2, Time(2018, 6, 28, 12, 0, 0, 0));
+		arch->SetFileAttribute(2, L"kornevgen", L"pidor");
+		arch->SetFileData(1, f1, Storage::MethodChain(Storage::CompressionMethod::LempelZivWelch, Storage::CompressionMethod::Huffman), Storage::CompressionQuality::Sequential, pool);
+		arch->SetFileData(2, f2, Storage::MethodChain(Storage::CompressionMethod::LempelZivWelch, Storage::CompressionMethod::Huffman), Storage::CompressionQuality::Sequential, pool);
+
+		arch->Finalize();
+	}*/
+	/*{
+		SafePointer<Streaming::Stream> source = new Streaming::FileStream(L"arch.ecsa", Streaming::AccessRead, Streaming::OpenExisting);
+		SafePointer<Storage::Archive> arc = Storage::OpenArchive(source);
+
+		int t = 666;
+	}*/
+
 	Engine::Direct2D::InitializeFactory();
 	Engine::Direct3D::CreateDevices();
 	Engine::Codec::CreateIconCodec();
 	Engine::Direct2D::CreateWicCodec();
+	Engine::Storage::CreateVolumeCodec();
 
     // TODO: разместите код здесь.
 

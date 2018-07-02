@@ -44,8 +44,10 @@
     <ClInclude Include="Processes\Process.h" />
     <ClInclude Include="Processes\Shell.h" />
     <ClInclude Include="Processes\Threading.h" />
+    <ClInclude Include="Storage\Archive.h" />
     <ClInclude Include="Storage\Chain.h" />
     <ClInclude Include="Storage\Compression.h" />
+    <ClInclude Include="Storage\ImageVolume.h" />
     <ClInclude Include="Storage\Registry.h" />
     <ClInclude Include="Storage\SubbyteCoding.h" />
     <ClInclude Include="Storage\TextRegistry.h" />
@@ -93,8 +95,10 @@
     <ClCompile Include="Processes\Process.cpp" />
     <ClCompile Include="Processes\Shell.cpp" />
     <ClCompile Include="Processes\Threading.cpp" />
+    <ClCompile Include="Storage\Archive.cpp" />
     <ClCompile Include="Storage\Chain.cpp" />
     <ClCompile Include="Storage\Compression.cpp" />
+    <ClCompile Include="Storage\ImageVolume.cpp" />
     <ClCompile Include="Storage\Registry.cpp" />
     <ClCompile Include="Storage\SubbyteCoding.cpp" />
     <ClCompile Include="Storage\TextRegistry.cpp" />

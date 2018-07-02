@@ -178,6 +178,12 @@
     <ClInclude Include="Miscellaneous\ThreadPool.h">
       <Filter>Miscellaneous</Filter>
     </ClInclude>
+    <ClInclude Include="Storage\Archive.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\ImageVolume.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -317,6 +323,12 @@
     </ClCompile>
     <ClCompile Include="Miscellaneous\ThreadPool.cpp">
       <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\Archive.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\ImageVolume.cpp">
+      <Filter>Storage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
