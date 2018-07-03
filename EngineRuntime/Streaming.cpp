@@ -37,6 +37,8 @@ namespace Engine
 		uint64 FileStream::Length(void) { return GetFileSize(file); }
 		void FileStream::SetLength(uint64 length) { SetFileSize(file, length); }
 		void FileStream::Flush(void) { IO::Flush(file); }
+		handle FileStream::Handle(void) const { return file; }
+		handle & FileStream::Handle(void) { return file; }
 		FileStream::~FileStream(void) { if (owned) CloseFile(file); }
 		string FileStream::ToString(void) const { return L"FileStream"; }
 

@@ -39,6 +39,9 @@ namespace Engine
 			virtual void Flush(void) override;
 			virtual ~FileStream(void) override;
 			virtual string ToString(void) const override;
+
+			handle Handle(void) const;
+			handle & Handle(void);
 		};
 		class MemoryStream final : public Stream
 		{

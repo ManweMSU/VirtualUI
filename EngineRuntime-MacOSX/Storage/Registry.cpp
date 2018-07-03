@@ -290,7 +290,7 @@ namespace Engine
 				} else if (type == RegistryValueType::Time) return Time(uint64(value_int64)).ToString();
 				else if (type == RegistryValueType::Binary) {
 					DynamicString result;
-					for (int i = 0; i < value_binary_size; i++) {
+					for (uint i = 0; i < value_binary_size; i++) {
 						result += string(uint32(value_binary[i]), L"0123456789ABCDEF", 2);
 					}
 					return result.ToString();

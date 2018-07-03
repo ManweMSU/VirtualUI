@@ -28,7 +28,7 @@ namespace Engine
 			}
 			delete[] buffer;
 		}
-		void Stream::CopyTo(Stream * to) { CopyTo(to, Length()); }
+		void Stream::CopyTo(Stream * to) { CopyTo(to, Length() - Seek(0, Current)); }
 		FileStream::FileStream(const string & path, FileAccess access, FileCreationMode mode) : owned(true) { file = CreateFile(path, static_cast<IO::FileAccess>(access), static_cast<IO::FileCreationMode>(mode)); }
 		FileStream::FileStream(handle file_handle, bool take_control) : owned(take_control) { file = file_handle; }
 		void FileStream::Read(void * buffer, uint32 length) { ReadFile(file, buffer, length); }
@@ -37,6 +37,8 @@ namespace Engine
 		uint64 FileStream::Length(void) { return GetFileSize(file); }
 		void FileStream::SetLength(uint64 length) { SetFileSize(file, length); }
 		void FileStream::Flush(void) { IO::Flush(file); }
+		handle FileStream::Handle(void) const { return file; }
+		handle & FileStream::Handle(void) { return file; }
 		FileStream::~FileStream(void) { if (owned) CloseFile(file); }
 		string FileStream::ToString(void) const { return L"FileStream"; }
 

@@ -14,7 +14,17 @@
             "defines": [
                 "ENGINE_UNIX",
                 "ENGINE_MACOSX",
-                "ENGINE_X64"
+                "ENGINE_X64",
+                "ENGINE_VI_APPNAME",
+                "ENGINE_VI_COMPANY",
+                "ENGINE_VI_COPYRIGHT",
+                "ENGINE_VI_APPSYSNAME",
+                "ENGINE_VI_APPSHORTVERSION",
+                "ENGINE_VI_APPVERSION",
+                "ENGINE_VI_VERSIONMAJOR",
+                "ENGINE_VI_VERSIONMINOR",
+                "ENGINE_VI_SUBVERSION",
+                "ENGINE_VI_BUILD"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {
