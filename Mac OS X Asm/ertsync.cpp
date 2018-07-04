@@ -4,7 +4,7 @@ using namespace Engine;
 using namespace Engine::Streaming;
 using namespace Engine::Storage;
 
-int main(void)
+int Main(void)
 {
     handle console_output = IO::CloneHandle(IO::GetStandartInput());
     FileStream console_stream(console_output);

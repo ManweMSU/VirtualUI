@@ -15,6 +15,7 @@
                 "ENGINE_UNIX",
                 "ENGINE_MACOSX",
                 "ENGINE_X64",
+                "ENGINE_SUBSYSTEM_CONSOLE",
                 "ENGINE_VI_APPNAME",
                 "ENGINE_VI_COMPANY",
                 "ENGINE_VI_COPYRIGHT",

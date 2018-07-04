@@ -19,10 +19,20 @@ struct VersionInfo
 
 bool clean = false;
 string rt_path;
-SafePointer<Registry> sys_cfg;
-SafePointer<Registry> prj_cfg;
+SafePointer<RegistryNode> sys_cfg;
+SafePointer<RegistryNode> prj_cfg;
 VersionInfo prj_ver;
 Time proj_time = 0;
+#ifdef ENGINE_MACOSX
+string compile_system = L"macosx";
+string compile_architecture = L"x64";
+string compile_subsystem = L"console";
+#endif
+#ifdef ENGINE_WINDOWS
+string compile_system = L"windows";
+string compile_architecture = L"x86";
+string compile_subsystem = L"console";
+#endif
 
 bool compile(const string & source, const string & object, const string & log, TextWriter & console)
 {
@@ -49,6 +59,7 @@ bool compile(const string & source, const string & object, const string & log, T
     }
     console << L"Compiling " << IO::Path::GetFileName(source) << L"...";
     string out_path = object;
+    string argdef = sys_cfg->GetValueString(L"Compiler/DefineArgument");
     Array<string> clang_args(0x80);
     clang_args << source;
     clang_args << sys_cfg->GetValueString(L"Compiler/IncludeArgument");
@@ -56,26 +67,46 @@ bool compile(const string & source, const string & object, const string & log, T
     clang_args << sys_cfg->GetValueString(L"Compiler/OutputArgument");
     clang_args << out_path;
     if (prj_ver.UseDefines) {
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_APPNAME=L\"" + prj_ver.AppName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_COMPANY=L\"" + prj_ver.CompanyName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_COPYRIGHT=L\"" + prj_ver.Copyright.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_APPSYSNAME=L\"" + prj_ver.InternalName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_APPSHORTVERSION=L\"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"";
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_APPVERSION=L\"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"." + string(prj_ver.Subversion) + L"." + string(prj_ver.Build) + L"\"";
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_VERSIONMAJOR=" + string(prj_ver.VersionMajor);
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_VERSIONMINOR=" + string(prj_ver.VersionMinor);
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_SUBVERSION=" + string(prj_ver.Subversion);
-        clang_args << sys_cfg->GetValueString(L"Compiler/DefineArgument");
+        clang_args << argdef;
         clang_args << L"ENGINE_VI_BUILD=" + string(prj_ver.Build);
+    }
+    if (compile_system == L"windows") {
+        clang_args << argdef;
+        clang_args << L"ENGINE_WINDOWS=1";
+    } else if (compile_system == L"macosx") {
+        clang_args << argdef;
+        clang_args << L"ENGINE_UNIX=1";
+        clang_args << argdef;
+        clang_args << L"ENGINE_MACOSX=1";
+    }
+    if (compile_architecture == L"x64") {
+        clang_args << argdef;
+        clang_args << L"ENGINE_X64=1";
+    }
+    if (compile_subsystem == L"console") {
+        clang_args << argdef;
+        clang_args << L"ENGINE_SUBSYSTEM_CONSOLE=1";
+    } else {
+        clang_args << argdef;
+        clang_args << L"ENGINE_SUBSYSTEM_GUI=1";
     }
     {
         SafePointer<RegistryNode> args_node = sys_cfg->OpenNode(L"Compiler/Arguments");
@@ -142,7 +173,7 @@ bool BuildRuntime(TextWriter & console)
 {
     try {
         try {
-            FileStream sys_cfg_src(IO::GetExecutablePath() + L".ini", AccessRead, OpenExisting);
+            FileStream sys_cfg_src(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/ertbuild.ini", AccessRead, OpenExisting);
             sys_cfg = CompileTextRegistry(&sys_cfg_src);
             if (!sys_cfg) throw Exception();
         }
@@ -194,7 +225,7 @@ bool BuildRuntime(TextWriter & console)
     return true;
 }
 
-int main(void)
+int Main(void)
 {
     handle console_output = IO::CloneHandle(IO::GetStandartInput());
     FileStream console_stream(console_output);
@@ -205,28 +236,54 @@ int main(void)
     if (args->Length() < 2) {
         console << ENGINE_VI_APPNAME << IO::NewLineChar;
         console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'©', L"(C)") << IO::NewLineChar;
-        console << L"Version " << ENGINE_VI_VERSIONMAJOR << L"." << ENGINE_VI_VERSIONMINOR << L"." << ENGINE_VI_SUBVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
+        console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
         console << L"Command line syntax:" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean] [:x64]" << IO::NewLineChar;
         console << L"    to build your project" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" :asmrt [:clean]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" :asmrt [:clean] [:x64]" << IO::NewLineChar;
         console << L"    to rebuild runtime object cache" << IO::NewLineChar;
         console << L"  use :clean to recompile all the sources." << IO::NewLineChar;
         console << IO::NewLineChar;
     } else {
-        for (int i = 1; i < args->Length(); i++) if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
+        console << ENGINE_VI_APPNAME << IO::NewLineChar;
+        console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
+        for (int i = 1; i < args->Length(); i++) {
+            if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
+            else if (string::CompareIgnoreCase(args->ElementAt(i), L":x64") == 0) compile_architecture = L"x64";
+        }
         if (string::CompareIgnoreCase(args->ElementAt(1), L":asmrt") == 0) {
             prj_ver.UseDefines = false;
             if (!BuildRuntime(console)) return 1;
         } else {
             try {
+                console << L"Building " << IO::Path::GetFileName(args->ElementAt(1)) << L" on ";
+                if (compile_architecture == L"x64") console << L"64-bit "; else console << L"32-bit ";
+                if (compile_system == L"windows") console << L"Windows";
+                else if (compile_system == L"macosx") console << L"Mac OS X";
+                console << IO::NewLineChar;
+                string bootstrapper;
                 try {
-                    FileStream sys_cfg_src(IO::GetExecutablePath() + L".ini", AccessRead, OpenExisting);
+                    FileStream sys_cfg_src(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/ertbuild.ini", AccessRead, OpenExisting);
                     FileStream prj_cfg_src(IO::ExpandPath(args->ElementAt(1)), AccessRead, OpenExisting);
                     sys_cfg = CompileTextRegistry(&sys_cfg_src);
                     prj_cfg = CompileTextRegistry(&prj_cfg_src);
+                    SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
+                    sys_cfg.SetRetain(target);
                     if (!sys_cfg | !prj_cfg) throw Exception();
                     proj_time = IO::DateTime::GetFileAlterTime(prj_cfg_src.Handle());
+                    string ss = prj_cfg->GetValueString(L"Subsystem");
+                    if (string::CompareIgnoreCase(ss, L"console") == 0 || ss.Length() == 0) compile_subsystem = L"console";
+                    else if (string::CompareIgnoreCase(ss, L"gui") == 0) compile_subsystem = L"gui";
+                    else {
+                        console << L"Unknown subsystem \"" + ss + L"\". Use CONSOLE or GUI." << IO::NewLineChar;
+                        return 1;
+                    }
+                    bootstrapper = IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + sys_cfg->GetValueString(L"Bootstrapper");
+
+                    if (compile_subsystem == L"gui") {
+                        console << L"GUI SUBSYSTEM IS NOT SUPPORTED NOW." << IO::NewLineChar;
+                        return 1;
+                    }
                 }
                 catch (...) {
                     console << L"Failed to open project or runtime configuration." << IO::NewLineChar;
@@ -240,10 +297,10 @@ int main(void)
                     prj_ver.InternalName = prj_cfg->GetValueString(L"VersionInformation/InternalName");
                     try {
                         auto verind = prj_cfg->GetValueString(L"VersionInformation/Version").Split(L'.');
-                        if (verind.Length() > 0) prj_ver.VersionMajor = verind[0].ToUInt32();
-                        if (verind.Length() > 1) prj_ver.VersionMinor = verind[1].ToUInt32();
-                        if (verind.Length() > 2) prj_ver.Subversion = verind[2].ToUInt32();
-                        if (verind.Length() > 3) prj_ver.Build = verind[3].ToUInt32();
+                        if (verind.Length() > 0) prj_ver.VersionMajor = verind[0].ToUInt32(); else prj_ver.VersionMajor = 0;
+                        if (verind.Length() > 1) prj_ver.VersionMinor = verind[1].ToUInt32(); else prj_ver.VersionMinor = 0;
+                        if (verind.Length() > 2) prj_ver.Subversion = verind[2].ToUInt32(); else prj_ver.Subversion = 0;
+                        if (verind.Length() > 3) prj_ver.Build = verind[3].ToUInt32(); else prj_ver.Build = 0;
                     }
                     catch (...) {
                         console << L"Invalid application version notation." << IO::NewLineChar;
@@ -280,7 +337,10 @@ int main(void)
                         }
                     }
                 }
-                string out_path = IO::ExpandPath(prj_cfg_path + L"/" + prj_cfg->GetValueString(L"OutputLocation"));
+                string out_path = prj_cfg_path + L"/" + prj_cfg->GetValueString(L"OutputLocation");
+                string platform_path = prj_cfg->GetValueString(L"OutputLocation" + compile_system + compile_architecture.Fragment(1, -1));
+                if (platform_path.Length()) out_path += L"/" + platform_path;
+                out_path = IO::ExpandPath(out_path);
                 for (int i = 1; i < out_path.Length(); i++) {
                     if (out_path[i] == L'/') {
                         try { IO::CreateDirectory(out_path.Fragment(0, i)); }
@@ -289,6 +349,12 @@ int main(void)
                 }
                 try { IO::CreateDirectory(out_path); } catch (...) {}
                 try { IO::CreateDirectory(out_path + L"/_obj"); } catch (...) {}
+                {
+                    string obj = out_path + L"/_obj/_bootstrapper." + sys_cfg->GetValueString(L"ObjectExtension");
+                    string log = out_path + L"/_obj/_bootstrapper.log";
+                    if (!compile(bootstrapper, obj, log, console)) return 1;
+                    object_list << obj;
+                }
                 for (int i = 0; i < source_list.Length(); i++) {
                     string obj = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
                     string log = obj + L"log";
