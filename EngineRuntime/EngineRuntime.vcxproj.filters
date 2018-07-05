@@ -184,6 +184,9 @@
     <ClInclude Include="Storage\ImageVolume.h">
       <Filter>Storage</Filter>
     </ClInclude>
+    <ClInclude Include="EngineRuntime.h">
+      <Filter>EngineBase</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">

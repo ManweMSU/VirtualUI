@@ -1,4 +1,4 @@
-#include <EngineRuntime.h>
+﻿#include <EngineRuntime.h>
 
 using namespace Engine;
 using namespace Engine::Streaming;
@@ -56,6 +56,9 @@ bool compile(const string & source, const string & object, const string & log, T
         if (object_time < source_time) {
             console << IO::Path::GetFileName(source) << L" renewed (" << source_time.ToLocal().ToString() << L" against " << object_time.ToLocal().ToString() << L")" << IO::NewLineChar;
         }
+    } else if (clean) {
+        IO::CloseFile(source_handle);
+        IO::CloseFile(object_handle);
     }
     console << L"Compiling " << IO::Path::GetFileName(source) << L"...";
     string out_path = object;
@@ -64,8 +67,13 @@ bool compile(const string & source, const string & object, const string & log, T
     clang_args << source;
     clang_args << sys_cfg->GetValueString(L"Compiler/IncludeArgument");
     clang_args << rt_path;
-    clang_args << sys_cfg->GetValueString(L"Compiler/OutputArgument");
-    clang_args << out_path;
+    {
+        string out_arg = sys_cfg->GetValueString(L"Compiler/OutputArgument");
+        if (out_arg.FindFirst(L'$') == -1) {
+            clang_args << out_arg;
+            clang_args << out_path;
+        } else clang_args << out_arg.Replace(L'$', out_path);
+    }
     if (prj_ver.UseDefines) {
         clang_args << argdef;
         clang_args << L"ENGINE_VI_APPNAME=L\"" + prj_ver.AppName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
@@ -140,8 +148,13 @@ bool link(const Array<string> & objs, const string & exe, const string & log, Te
     console << L"Linking " << IO::Path::GetFileName(exe) << L"...";
     Array<string> clang_args(0x80);
     clang_args << objs;
-    clang_args << sys_cfg->GetValueString(L"Linker/OutputArgument");
-    clang_args << exe;
+    {
+        string out_arg = sys_cfg->GetValueString(L"Linker/OutputArgument");
+        if (out_arg.FindFirst(L'$') == -1) {
+            clang_args << out_arg;
+            clang_args << exe;
+        } else clang_args << out_arg.Replace(L'$', exe);
+    }
     {
         SafePointer<RegistryNode> args_node = sys_cfg->OpenNode(L"Linker/Arguments");
         if (args_node) {
@@ -175,6 +188,8 @@ bool BuildRuntime(TextWriter & console)
         try {
             FileStream sys_cfg_src(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/ertbuild.ini", AccessRead, OpenExisting);
             sys_cfg = CompileTextRegistry(&sys_cfg_src);
+            SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
+            sys_cfg.SetRetain(target);
             if (!sys_cfg) throw Exception();
         }
         catch (...) {
@@ -199,8 +214,7 @@ bool BuildRuntime(TextWriter & console)
             }
         }
         string asm_path = rt_path + L"/" + sys_cfg->GetValueString(L"ObjectPath");
-        try { IO::CreateDirectory(asm_path); }
-        catch (...) {}
+        try { IO::CreateDirectory(asm_path); } catch (...) {}
         {
             if (clean) {
                 SafePointer< Array<string> > files = IO::Search::GetFiles(asm_path + L"/*." + sys_cfg->GetValueString(L"ObjectExtension") + L";*.log");
@@ -227,7 +241,7 @@ bool BuildRuntime(TextWriter & console)
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandartInput());
+    handle console_output = IO::CloneHandle(IO::GetStandartOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -235,7 +249,7 @@ int Main(void)
     
     if (args->Length() < 2) {
         console << ENGINE_VI_APPNAME << IO::NewLineChar;
-        console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'©', L"(C)") << IO::NewLineChar;
+        console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::NewLineChar;
         console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
         console << L"Command line syntax:" << IO::NewLineChar;
         console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean] [:x64]" << IO::NewLineChar;
@@ -274,6 +288,7 @@ int Main(void)
                     string ss = prj_cfg->GetValueString(L"Subsystem");
                     if (string::CompareIgnoreCase(ss, L"console") == 0 || ss.Length() == 0) compile_subsystem = L"console";
                     else if (string::CompareIgnoreCase(ss, L"gui") == 0) compile_subsystem = L"gui";
+					else if (string::CompareIgnoreCase(ss, L"object") == 0) compile_subsystem = L"object";
                     else {
                         console << L"Unknown subsystem \"" + ss + L"\". Use CONSOLE or GUI." << IO::NewLineChar;
                         return 1;
@@ -338,31 +353,39 @@ int Main(void)
                     }
                 }
                 string out_path = prj_cfg_path + L"/" + prj_cfg->GetValueString(L"OutputLocation");
-                string platform_path = prj_cfg->GetValueString(L"OutputLocation" + compile_system + compile_architecture.Fragment(1, -1));
+                string bitness = compile_architecture == L"x64" ? L"64" : L"32";
+                string platform_path = prj_cfg->GetValueString(L"OutputLocation" + compile_system + bitness);
                 if (platform_path.Length()) out_path += L"/" + platform_path;
                 out_path = IO::ExpandPath(out_path);
                 for (int i = 1; i < out_path.Length(); i++) {
-                    if (out_path[i] == L'/') {
-                        try { IO::CreateDirectory(out_path.Fragment(0, i)); }
-                        catch (...) {}
+                    if (out_path[i] == L'/' || out_path[i] == L'\\') {
+                        try { IO::CreateDirectory(out_path.Fragment(0, i)); } catch (...) {}
                     }
                 }
                 try { IO::CreateDirectory(out_path); } catch (...) {}
                 try { IO::CreateDirectory(out_path + L"/_obj"); } catch (...) {}
-                {
+                if (compile_subsystem != L"object") {
                     string obj = out_path + L"/_obj/_bootstrapper." + sys_cfg->GetValueString(L"ObjectExtension");
                     string log = out_path + L"/_obj/_bootstrapper.log";
                     if (!compile(bootstrapper, obj, log, console)) return 1;
                     object_list << obj;
                 }
                 for (int i = 0; i < source_list.Length(); i++) {
-                    string obj = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
+					string obj;
+					if (compile_subsystem != L"object") {
+						obj = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
+					} else obj = out_path + L"/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
                     string log = obj + L"log";
                     obj += sys_cfg->GetValueString(L"ObjectExtension");
                     if (!compile(source_list[i], obj, log, console)) return 1;
                     object_list << obj;
                 }
-                if (!link(object_list, out_path + L"/" + prj_cfg->GetValueString(L"OutputName"), out_path + L"/_obj/linker-output.log", console)) return 1;
+				if (compile_subsystem != L"object") {
+					string out_file = out_path + L"/" + prj_cfg->GetValueString(L"OutputName");
+					string exe_ext = sys_cfg->GetValueString(L"ExecutableExtension");
+					if (exe_ext.Length() && string::CompareIgnoreCase(IO::Path::GetExtension(out_file), exe_ext)) out_file += L"." + exe_ext;
+					if (!link(object_list, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
+				}
             }
             catch (Exception & ex) {
                 console << L"Some shit occured: Engine Exception " << ex.ToString() << IO::NewLineChar;
