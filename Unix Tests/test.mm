@@ -105,7 +105,7 @@ public:
 }
 @end
 
-int main(int argc, char ** argv)
+int Main(void)
 {
     SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
     Streaming::TextWriter Console(ConsoleOutStream);

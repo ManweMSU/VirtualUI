@@ -25,7 +25,10 @@
                 "ENGINE_VI_VERSIONMAJOR",
                 "ENGINE_VI_VERSIONMINOR",
                 "ENGINE_VI_SUBVERSION",
-                "ENGINE_VI_BUILD"
+                "ENGINE_VI_BUILD",
+                "ENGINE_VI_APPIDENT",
+                "ENGINE_VI_COMPANYIDENT",
+                "ENGINE_VI_DESCRIPTION"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {

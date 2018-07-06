@@ -15,8 +15,12 @@ struct VersionInfo
     uint32 VersionMinor;
     uint32 Subversion;
     uint32 Build;
+    string AppIdent;
+    string ComIdent;
+    string Description;
 };
 
+handle console_output;
 bool clean = false;
 string rt_path;
 SafePointer<RegistryNode> sys_cfg;
@@ -95,6 +99,12 @@ bool compile(const string & source, const string & object, const string & log, T
         clang_args << L"ENGINE_VI_SUBVERSION=" + string(prj_ver.Subversion);
         clang_args << argdef;
         clang_args << L"ENGINE_VI_BUILD=" + string(prj_ver.Build);
+        clang_args << argdef;
+        clang_args << L"ENGINE_VI_APPIDENT=L\"" + prj_ver.AppIdent.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
+        clang_args << argdef;
+        clang_args << L"ENGINE_VI_COMPANYIDENT=L\"" + prj_ver.ComIdent.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
+        clang_args << argdef;
+        clang_args << L"ENGINE_VI_DESCRIPTION=L\"" + prj_ver.Description.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
     }
     if (compile_system == L"windows") {
         clang_args << argdef;
@@ -139,7 +149,6 @@ bool compile(const string & source, const string & object, const string & log, T
         Shell::OpenFile(log);
         return false;
     }
-    IO::CloseFile(clang_log);
     console << L"Succeed" << IO::NewLineChar;
     return true;
 }
@@ -238,10 +247,38 @@ bool BuildRuntime(TextWriter & console)
     }
     return true;
 }
+bool run_restool(const string & prj, const string & out_path, const string & bundle_path, TextWriter & console)
+{
+    Array<string> rt_args(0x10);
+    rt_args << prj;
+    rt_args << out_path;
+    if (compile_system == L"windows") rt_args << L":winres";
+    else if (compile_system == L"macosx") rt_args << L":macres";
+    if (clean) rt_args << L":clean";
+    if (bundle_path.Length()) {
+        rt_args << L":bundle";
+        rt_args << bundle_path;
+    }
+    console << L"Starting native resource generator..." << IO::NewLineChar << IO::NewLineChar;
+    IO::SetStandartOutput(console_output);
+    IO::SetStandartError(console_output);
+    SafePointer<Process> restool = CreateCommandProcess(sys_cfg->GetValueString(L"ResourceTool"), &rt_args);
+    if (!restool) {
+        console << L"Failed to start resource generator (" + sys_cfg->GetValueString(L"ResourceTool") + L")." << IO::NewLineChar;
+        return false;
+    }
+    restool->Wait();
+    if (restool->GetExitCode()) {
+        console << L"Resource generator failed." << IO::NewLineChar;
+        return false;
+    }
+    console << IO::NewLineChar;
+    return true;
+}
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandartOutput());
+    console_output = IO::CloneHandle(IO::GetStandartOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -294,22 +331,20 @@ int Main(void)
                         return 1;
                     }
                     bootstrapper = IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + sys_cfg->GetValueString(L"Bootstrapper");
-
-                    if (compile_subsystem == L"gui") {
-                        console << L"GUI SUBSYSTEM IS NOT SUPPORTED NOW." << IO::NewLineChar;
-                        return 1;
-                    }
                 }
                 catch (...) {
                     console << L"Failed to open project or runtime configuration." << IO::NewLineChar;
                     return 1;
                 }
+                prj_ver.InternalName = prj_cfg->GetValueString(L"VersionInformation/InternalName");
                 if (prj_cfg->GetValueBoolean(L"UseVersionDefines")) {
                     prj_ver.UseDefines = true;
                     prj_ver.AppName = prj_cfg->GetValueString(L"VersionInformation/ApplicationName");
                     prj_ver.CompanyName = prj_cfg->GetValueString(L"VersionInformation/CompanyName");
                     prj_ver.Copyright = prj_cfg->GetValueString(L"VersionInformation/Copyright");
-                    prj_ver.InternalName = prj_cfg->GetValueString(L"VersionInformation/InternalName");
+                    prj_ver.AppIdent = prj_cfg->GetValueString(L"VersionInformation/ApplicationIdentifier");
+                    prj_ver.ComIdent = prj_cfg->GetValueString(L"VersionInformation/CompanyIdentifier");
+                    prj_ver.Description = prj_cfg->GetValueString(L"VersionInformation/Description");
                     try {
                         auto verind = prj_cfg->GetValueString(L"VersionInformation/Version").Split(L'.');
                         if (verind.Length() > 0) prj_ver.VersionMajor = verind[0].ToUInt32(); else prj_ver.VersionMajor = 0;
@@ -384,6 +419,17 @@ int Main(void)
 					string out_file = out_path + L"/" + prj_cfg->GetValueString(L"OutputName");
 					string exe_ext = sys_cfg->GetValueString(L"ExecutableExtension");
 					if (exe_ext.Length() && string::CompareIgnoreCase(IO::Path::GetExtension(out_file), exe_ext)) out_file += L"." + exe_ext;
+                    if (compile_system == L"windows") {
+                        string project = IO::ExpandPath(args->ElementAt(1));
+                        if (!run_restool(project, out_path + L"/_obj", L"", console)) return 1;
+                        object_list << out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(project) + L".res";
+                    } else if (compile_system == L"macosx" && compile_subsystem == L"gui") {
+                        string project = IO::ExpandPath(args->ElementAt(1));
+                        string bundle = out_file;
+                        if (string::CompareIgnoreCase(IO::Path::GetExtension(out_file), L"app")) out_file += L".app";
+                        if (!run_restool(project, out_path + L"/_obj", out_file, console)) return 1;
+                        out_file += L"/Contents/MacOS/" + prj_ver.InternalName;
+                    }
 					if (!link(object_list, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
 				}
             }

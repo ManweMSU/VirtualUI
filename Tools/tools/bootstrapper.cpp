@@ -12,6 +12,6 @@ int wmain(void) { return Main(); }
 int main(void) { return Main(); }
 #endif
 #ifdef ENGINE_SUBSYSTEM_GUI
-
+int main(void) { return Main(); }
 #endif
 #endif

@@ -27,10 +27,21 @@ SafePointer<RegistryNode> sys_cfg;
 SafePointer<RegistryNode> prj_cfg;
 Time prj_time;
 VersionInfo prj_ver;
+string bundle_path;
 bool clean = false;
 
+void try_create_directory(const string & path)
+{
+    try { IO::CreateDirectory(path); } catch (...) {}
+}
+void copy_file(const string & source, const string & dest)
+{
+    FileStream src(source, AccessRead, OpenExisting);
+    FileStream out(dest, AccessWrite, CreateAlways);
+    src.CopyTo(&out);
+}
 string make_lexem(const string & str) { return str.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\""); }
-bool compile_resource(const string & rc, const string & res, TextWriter & console)
+bool compile_resource(const string & rc, const string & res, const string & log, TextWriter & console)
 {
     try {
         Time src_time = 0;
@@ -43,85 +54,40 @@ bool compile_resource(const string & rc, const string & res, TextWriter & consol
         }
         catch (...) {}
         if (src_time < out_time && !clean) return true;
-
-    console << L"Compiling resource script " << IO::Path::GetFileName(rc) << L"...";
-    Array<string> rc_args(0x80);
-    rc_args << rc;
-    {
-        string out_arg = sys_cfg->GetValueString(L"Compiler/OutputArgument");
-        if (out_arg.FindFirst(L'$') == -1) {
-            rc_args << out_arg;
-            rc_args << res;
-        } else rc_args << out_arg.Replace(L'$', res);
-    }
-    if (prj_ver.UseDefines) {
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_APPNAME=L\"" + prj_ver.AppName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_COMPANY=L\"" + prj_ver.CompanyName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_COPYRIGHT=L\"" + prj_ver.Copyright.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_APPSYSNAME=L\"" + prj_ver.InternalName.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\"") + L"\"";
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_APPSHORTVERSION=L\"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"";
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_APPVERSION=L\"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"." + string(prj_ver.Subversion) + L"." + string(prj_ver.Build) + L"\"";
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_VERSIONMAJOR=" + string(prj_ver.VersionMajor);
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_VERSIONMINOR=" + string(prj_ver.VersionMinor);
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_SUBVERSION=" + string(prj_ver.Subversion);
-        clang_args << argdef;
-        clang_args << L"ENGINE_VI_BUILD=" + string(prj_ver.Build);
-    }
-    if (compile_system == L"windows") {
-        clang_args << argdef;
-        clang_args << L"ENGINE_WINDOWS=1";
-    } else if (compile_system == L"macosx") {
-        clang_args << argdef;
-        clang_args << L"ENGINE_UNIX=1";
-        clang_args << argdef;
-        clang_args << L"ENGINE_MACOSX=1";
-    }
-    if (compile_architecture == L"x64") {
-        clang_args << argdef;
-        clang_args << L"ENGINE_X64=1";
-    }
-    if (compile_subsystem == L"console") {
-        clang_args << argdef;
-        clang_args << L"ENGINE_SUBSYSTEM_CONSOLE=1";
-    } else {
-        clang_args << argdef;
-        clang_args << L"ENGINE_SUBSYSTEM_GUI=1";
-    }
-    {
-        SafePointer<RegistryNode> args_node = sys_cfg->OpenNode(L"Compiler/Arguments");
-        if (args_node) {
-            auto & args_vals = args_node->GetValues();
-            for (int i = 0; i < args_vals.Length(); i++) clang_args << args_node->GetValueString(args_vals[i]);
+        console << L"Compiling resource script " << IO::Path::GetFileName(rc) << L"...";
+        Array<string> rc_args(0x80);
+        rc_args << rc;
+        {
+            string out_arg = sys_cfg->GetValueString(L"Compiler/OutputArgument");
+            if (out_arg.FindFirst(L'$') == -1) {
+                rc_args << out_arg;
+                rc_args << res;
+            } else rc_args << out_arg.Replace(L'$', res);
         }
-    }
-    handle clang_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
-    IO::SetStandartOutput(clang_log);
-    IO::SetStandartError(clang_log);
-    IO::CloseFile(clang_log);
-    SafePointer<Process> compiler = CreateCommandProcess(sys_cfg->GetValueString(L"Compiler/Path"), &clang_args);
-    if (!compiler) {
-        console << L"Failed" << IO::NewLineChar;
-        console << L"Failed to launch the compiler (" + sys_cfg->GetValueString(L"Compiler/Path") + L")." << IO::NewLineChar;
-        return false;
-    }
-    compiler->Wait();
-    if (compiler->GetExitCode()) {
-        console << L"Failed" << IO::NewLineChar;
-        Shell::OpenFile(log);
-        return false;
-    }
-    IO::CloseFile(clang_log);
-    console << L"Succeed" << IO::NewLineChar;
-
+        {
+            SafePointer<RegistryNode> args_node = sys_cfg->OpenNode(L"Compiler/Arguments");
+            if (args_node) {
+                auto & args_vals = args_node->GetValues();
+                for (int i = 0; i < args_vals.Length(); i++) rc_args << args_node->GetValueString(args_vals[i]);
+            }
+        }
+        handle rc_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
+        IO::SetStandartOutput(rc_log);
+        IO::SetStandartError(rc_log);
+        IO::CloseFile(rc_log);
+        SafePointer<Process> compiler = CreateCommandProcess(sys_cfg->GetValueString(L"Compiler/Path"), &rc_args);
+        if (!compiler) {
+            console << L"Failed" << IO::NewLineChar;
+            console << L"Failed to launch the compiler (" + sys_cfg->GetValueString(L"Compiler/Path") + L")." << IO::NewLineChar;
+            return false;
+        }
+        compiler->Wait();
+        if (compiler->GetExitCode()) {
+            console << L"Failed" << IO::NewLineChar;
+            Shell::OpenFile(log);
+            return false;
+        }
+        console << L"Succeed" << IO::NewLineChar;
     }
     catch (...) { return false; }
     return true;
@@ -289,6 +255,90 @@ bool asm_manifest(const string & output, TextWriter & console)
     catch (...) { return false; }
     return true;
 }
+bool asm_plist(const string & output, bool with_icon, TextWriter & console)
+{
+    try {
+        Time list_time = 0;
+        try {
+            FileStream date(output, AccessRead, OpenExisting);
+            list_time = IO::DateTime::GetFileAlterTime(date.Handle());
+        }
+        catch (...) {}
+        if (prj_time < list_time && !clean) return true;
+        console << L"Writing bundle information file " << IO::Path::GetFileName(output) << L"...";
+        try {
+            FileStream list_file(output, AccessWrite, CreateAlways);
+            TextWriter list(&list_file, Encoding::UTF8);
+            list << L"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << IO::NewLineChar;
+            list << L"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" << IO::NewLineChar;
+            list << L"<plist version=\"1.0\">" << IO::NewLineChar;
+            list << L"<dict>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleName</key>" << IO::NewLineChar;
+            list << L"\t<string>" << prj_ver.AppName << L"</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleDisplayName</key>" << IO::NewLineChar;
+            list << L"\t<string>" << prj_ver.AppName << L"</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleIdentifier</key>" << IO::NewLineChar;
+            list << L"\t<string>com." << prj_ver.ComIdent << L"." << prj_ver.AppIdent << L"</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleVersion</key>" << IO::NewLineChar;
+            list << L"\t<string>" << prj_ver.VersionMajor << L"." << prj_ver.VersionMinor << L"." <<
+                prj_ver.Subversion << L"." << prj_ver.Build << L"</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleDevelopmentRegion</key>" << IO::NewLineChar;
+            list << L"\t<string>en</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundlePackageType</key>" << IO::NewLineChar;
+            list << L"\t<string>APPL</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleExecutable</key>" << IO::NewLineChar;
+            list << L"\t<string>" << prj_ver.InternalName << L"</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleShortVersionString</key>" << IO::NewLineChar;
+            list << L"\t<string>" << prj_ver.VersionMajor << L"." << prj_ver.VersionMinor << L"</string>" << IO::NewLineChar;
+            if (with_icon) {
+                list << L"\t<key>CFBundleIconFile</key>" << IO::NewLineChar;
+                list << L"\t<string>AppIcon</string>" << IO::NewLineChar;
+            }
+            list << L"\t<key>NSPrincipalClass</key>" << IO::NewLineChar;
+            list << L"\t<string>NSApplication</string>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleInfoDictionaryVersion</key>" << IO::NewLineChar;
+            list << L"\t<string>6.0</string>" << IO::NewLineChar;
+            list << L"\t<key>NSHumanReadableCopyright</key>" << IO::NewLineChar;
+            list << L"\t<string>" << prj_ver.Copyright << L"</string>" << IO::NewLineChar;
+            list << L"\t<key>NSHighResolutionMagnifyAllowed</key>" << IO::NewLineChar;
+            list << L"\t<false/>" << IO::NewLineChar;
+            list << L"\t<key>LSMinimumSystemVersion</key>" << IO::NewLineChar;
+            list << L"\t<string>10.10</string>" << IO::NewLineChar;
+            list << L"\t<key>NSHighResolutionCapable</key>" << IO::NewLineChar;
+            list << L"\t<true/>" << IO::NewLineChar;
+            list << L"\t<key>CFBundleSupportedPlatforms</key>" << IO::NewLineChar;
+            list << L"\t<array>" << IO::NewLineChar;
+            list << L"\t\t<string>MacOSX</string>" << IO::NewLineChar;
+            list << L"\t</array>" << IO::NewLineChar;
+            list << L"</dict>" << IO::NewLineChar;
+            list << L"</plist>" << IO::NewLineChar;
+        }
+        catch (...) { console << L"Failed" << IO::NewLineChar; throw; }
+        console << L"Succeed" << IO::NewLineChar;
+    }
+    catch (...) { return false; }
+    return true;
+}
+bool build_bundle(const string & plist, const Array<string> & icons, const string & bundle, TextWriter & console)
+{
+    console << L"Building Mac OS X Application Bundle " + IO::Path::GetFileName(bundle) + L"...";
+    try_create_directory(bundle);
+    try_create_directory(bundle + L"/Contents");
+    try_create_directory(bundle + L"/Contents/MacOS");
+    try_create_directory(bundle + L"/Contents/Resources");
+    try {
+        copy_file(plist, bundle + L"/Contents/Info.plist");
+        if (icons.Length()) {
+            copy_file(icons[0], bundle + L"/Contents/Resources/AppIcon.icns");
+            for (int i = 1; i < icons.Length(); i++) {
+                copy_file(icons[i], bundle + L"/Contents/Resources/FileIcon" + string(i) + L".icns");
+            }
+        }
+    }
+    catch (...) { console << L"Failed" << IO::NewLineChar; return false; }
+    console << L"Succeed" << IO::NewLineChar;
+    return true;
+}
 
 int Main(void)
 {
@@ -305,12 +355,15 @@ int Main(void)
     if (args->Length() < 2) {
         console << L"Command line syntax:" << IO::NewLineChar;
         console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> <object path> <:winres|:macres> [:clean]" << IO::NewLineChar;
+        console << L"      [:bundle <bundle path.app>]" << IO::NewLineChar;
         console << L"Where" << IO::NewLineChar;
         console << L"  project config.ini  - project configuration to take data," << IO::NewLineChar;
         console << L"  object path         - path to folder to store intermediate and final output," << IO::NewLineChar;
         console << L"  :winres             - build .ico, .manifest, .rc and .res resources," << IO::NewLineChar;
         console << L"  :macres             - build .icns and info.plist resources," << IO::NewLineChar;
-        console << L"  :clean              - rebuild all outputs." << IO::NewLineChar;
+        console << L"  :clean              - rebuild all outputs," << IO::NewLineChar;
+        console << L"  :bundle             - produce Mac OS X Application Bundle directory (without code)," << IO::NewLineChar;
+        console << L"  bundle path.app     - path to .app bundle folder (bundle name)." << IO::NewLineChar;
         console << IO::NewLineChar;
     } else {
         if (args->Length() < 4) {
@@ -321,9 +374,22 @@ int Main(void)
             if (string::CompareIgnoreCase(args->ElementAt(i), L":winres") == 0) target_system = L"windows";
             else if (string::CompareIgnoreCase(args->ElementAt(i), L":macres") == 0) target_system = L"macosx";
             else if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
+            else if (string::CompareIgnoreCase(args->ElementAt(i), L":bundle") == 0) {
+                bundle_path = (i < args->Length() - 1) ? args->ElementAt(i + 1) : L"";
+                if (!bundle_path.Length()) {
+                    console << L"Used :bundle without bundle name." << IO::NewLineChar;
+                    return 1;
+                }
+            }
+        }
+        if (bundle_path.Length() && target_system != L"macosx") {
+            console << L"Using of :bundle is allowed only with :macres." << IO::NewLineChar;
+            return 1;
         }
         try {
             try {
+                args->ElementAt(1) = IO::ExpandPath(args->ElementAt(1));
+                args->ElementAt(2) = IO::ExpandPath(args->ElementAt(2));
                 FileStream sys_reg_stream(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + string(ENGINE_VI_APPSYSNAME) + L".ini", AccessRead, OpenExisting);
                 FileStream prj_reg_stream(args->ElementAt(1), AccessRead, OpenExisting);
                 SafePointer<RegistryNode> sys_reg = CompileTextRegistry(&sys_reg_stream);
@@ -373,14 +439,24 @@ int Main(void)
                 string rc = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".rc";
                 manifest = IO::Path::GetFileName(manifest);
                 if (!asm_resscript(manifest, icons, rc, console)) return 1;
+                string res = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".res";
+                string res_log = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".log";
+                if (!compile_resource(rc, res, res_log, console)) return 1;
             } else if (target_system == L"macosx") {
-                // make plist
                 string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
+                string plist = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".plist";
+                if (!asm_plist(plist, app_icon.Length(), console)) return 1;
+                Array<string> icons(0x10);
                 if (app_icon.Length()) {
                     app_icon = IO::ExpandPath(IO::Path::GetDirectory(args->ElementAt(1)) + L"/" + app_icon);
                     string conv_icon = IO::Path::GetFileNameWithoutExtension(app_icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
                     conv_icon = args->ElementAt(2) + L"/" + conv_icon;
                     if (!asm_icon(app_icon, conv_icon, console)) return 1;
+                    app_icon = conv_icon;
+                    icons << app_icon;
+                }
+                if (bundle_path.Length()) {
+                    if (!build_bundle(plist, icons, bundle_path, console)) return 1;
                 }
             } else {
                 console << L"Invalid target system." << IO::NewLineChar;
