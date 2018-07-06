@@ -14,13 +14,16 @@ int Main(void)
     console << L"Copyright (C) Engine Software. 2018" << IO::NewLineChar << IO::NewLineChar;
 
     IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
-    SafePointer<Registry> rt_reg;
+    SafePointer<RegistryNode> rt_reg;
     SafePointer<Registry> sync_reg;
     try {
         FileStream rt_stream(L"ertbuild.ini", AccessRead, OpenExisting);
         FileStream sync_stream(L"ertsync.ini", AccessRead, OpenExisting);
         rt_reg = CompileTextRegistry(&rt_stream);
         sync_reg = CompileTextRegistry(&sync_stream);
+        if (!rt_reg) throw Exception();
+        SafePointer<RegistryNode> conf = rt_reg->OpenNode(L"MacOSX-X64");
+        rt_reg.SetRetain(conf);
         if (!rt_reg || !sync_reg) throw Exception();
     }
     catch (...) {

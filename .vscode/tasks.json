@@ -9,9 +9,9 @@
         {
             "label": "build builder tool",
             "type": "shell",
-            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
+            "command": "\"${workspaceRoot}/Tools/tools/ertbuild\"",
             "args": [
-                "\"${workspaceRoot}/Mac OS X Asm/ertbuild.project.ini\""
+                "\"${workspaceRoot}/Tools/ertbuild.project.ini\""
                 //"-shared",
                 //"-dynamiclib",
                 //"-Wl,-install_name,@loader_path/../Frameworks/EngineRuntime.framework/EngineRuntime",
@@ -33,9 +33,9 @@
         {
             "label": "build syncronization tool",
             "type": "shell",
-            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
+            "command": "\"${workspaceRoot}/Tools/tools/ertbuild\"",
             "args": [
-                "\"${workspaceRoot}/Mac OS X Asm/ertsync.project.ini\""
+                "\"${workspaceRoot}/Tools/ertsync.project.ini\""
 
             ],
             "group": "build",
@@ -52,7 +52,7 @@
         {
             "label": "build runtime",
             "type": "shell",
-            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
+            "command": "\"${workspaceRoot}/Tools/tools/ertbuild\"",
             "args": [
                 ":asmrt"
             ],
@@ -70,7 +70,7 @@
         {
             "label": "syncronize runtime",
             "type": "shell",
-            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertsync\"",
+            "command": "\"${workspaceRoot}/Tools/tools/ertsync\"",
             "args": [
             ],
             "group": "build",
@@ -87,7 +87,7 @@
         {
             "label": "build test",
             "type": "shell",
-            "command": "\"${workspaceRoot}/Mac OS X Asm/tools/ertbuild\"",
+            "command": "\"${workspaceRoot}/Tools/tools/ertbuild\"",
             "args": [
                 "\"${workspaceRoot}/Unix Tests/test.project.ini\""
             ],
