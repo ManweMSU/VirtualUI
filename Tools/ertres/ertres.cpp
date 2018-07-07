@@ -34,6 +34,20 @@ void try_create_directory(const string & path)
 {
     try { IO::CreateDirectory(path); } catch (...) {}
 }
+void clear_directory(const string & path)
+{
+    try {
+        SafePointer< Array<string> > files = IO::Search::GetFiles(path + L"/*");
+        for (int i = 0; i < files->Length(); i++) IO::RemoveFile(path + L"/" + files->ElementAt(i));
+        SafePointer< Array<string> > dirs = IO::Search::GetDirectories(path + L"/*");
+        for (int i = 0; i < dirs->Length(); i++) {
+            string p = path + L"/" + dirs->ElementAt(i);
+            clear_directory(p);
+            IO::RemoveDirectory(p);
+        }
+    }
+    catch (...) {}
+}
 void copy_file(const string & source, const string & dest)
 {
     FileStream src(source, AccessRead, OpenExisting);
@@ -56,7 +70,6 @@ bool compile_resource(const string & rc, const string & res, const string & log,
         if (src_time < out_time && !clean) return true;
         console << L"Compiling resource script " << IO::Path::GetFileName(rc) << L"...";
         Array<string> rc_args(0x80);
-        rc_args << rc;
         {
             string out_arg = sys_cfg->GetValueString(L"Compiler/OutputArgument");
             if (out_arg.FindFirst(L'$') == -1) {
@@ -71,6 +84,7 @@ bool compile_resource(const string & rc, const string & res, const string & log,
                 for (int i = 0; i < args_vals.Length(); i++) rc_args << args_node->GetValueString(args_vals[i]);
             }
         }
+        rc_args << rc;
         handle rc_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
         IO::SetStandartOutput(rc_log);
         IO::SetStandartError(rc_log);
@@ -169,36 +183,38 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
                 }
                 script << IO::NewLineChar;
             }
-            script << L"1 VERSIONINFO" << IO::NewLineChar;
-            script << L"FILEVERSION " + string(prj_ver.VersionMajor) + L", " + string(prj_ver.VersionMinor) + L", " +
-                string(prj_ver.Subversion) + L", " + string(prj_ver.Build) << IO::NewLineChar;
-            script << L"PRODUCTVERSION " + string(prj_ver.VersionMajor) + L", " + string(prj_ver.VersionMinor) + L", " +
-                string(prj_ver.Subversion) + L", " + string(prj_ver.Build) << IO::NewLineChar;
-            script << L"FILEFLAGSMASK 0x3fL" << IO::NewLineChar;
-            script << L"FILEFLAGS 0x0L" << IO::NewLineChar;
-            script << L"FILEOS 0x40004L" << IO::NewLineChar;
-            script << L"FILETYPE 0x1L" << IO::NewLineChar;
-            script << L"FILESUBTYPE 0x0L" << IO::NewLineChar;
-            script << L"BEGIN" << IO::NewLineChar;
-            script << L"\tBLOCK \"StringFileInfo\"" << IO::NewLineChar;
-            script << L"\tBEGIN" << IO::NewLineChar;
-            script << L"\t\tBLOCK \"041904b0\"" << IO::NewLineChar;
-            script << L"\t\tBEGIN" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"CompanyName\", \"" + make_lexem(prj_ver.CompanyName) + L"\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"FileDescription\", \"" + make_lexem(prj_ver.AppName) + L"\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"FileVersion\", \"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"InternalName\", \"" + make_lexem(prj_ver.InternalName) + L"\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"LegalCopyright\", \"" + make_lexem(prj_ver.Copyright) + L"\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"OriginalFilename\", \"" + make_lexem(prj_ver.InternalName) + L".exe\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"ProductName\", \"" + make_lexem(prj_ver.AppName) + L"\"" << IO::NewLineChar;
-            script << L"\t\t\tVALUE \"ProductVersion\", \"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"" << IO::NewLineChar;
-            script << L"\t\tEND" << IO::NewLineChar;
-            script << L"\tEND" << IO::NewLineChar;
-            script << L"\tBLOCK \"VarFileInfo\"" << IO::NewLineChar;
-            script << L"\tBEGIN" << IO::NewLineChar;
-            script << L"\t\tVALUE \"Translation\", 0x419, 1200" << IO::NewLineChar;
-            script << L"\tEND" << IO::NewLineChar;
-            script << L"END";
+            if (prj_ver.AppName.Length()) {
+                script << L"1 VERSIONINFO" << IO::NewLineChar;
+                script << L"FILEVERSION " + string(prj_ver.VersionMajor) + L", " + string(prj_ver.VersionMinor) + L", " +
+                    string(prj_ver.Subversion) + L", " + string(prj_ver.Build) << IO::NewLineChar;
+                script << L"PRODUCTVERSION " + string(prj_ver.VersionMajor) + L", " + string(prj_ver.VersionMinor) + L", " +
+                    string(prj_ver.Subversion) + L", " + string(prj_ver.Build) << IO::NewLineChar;
+                script << L"FILEFLAGSMASK 0x3fL" << IO::NewLineChar;
+                script << L"FILEFLAGS 0x0L" << IO::NewLineChar;
+                script << L"FILEOS VOS_NT_WINDOWS32" << IO::NewLineChar;
+                script << L"FILETYPE VFT_APP" << IO::NewLineChar;
+                script << L"FILESUBTYPE VFT2_UNKNOWN" << IO::NewLineChar;
+                script << L"BEGIN" << IO::NewLineChar;
+                script << L"\tBLOCK \"StringFileInfo\"" << IO::NewLineChar;
+                script << L"\tBEGIN" << IO::NewLineChar;
+                script << L"\t\tBLOCK \"040004b0\"" << IO::NewLineChar;
+                script << L"\t\tBEGIN" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"CompanyName\", \"" + make_lexem(prj_ver.CompanyName) + L"\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"FileDescription\", \"" + make_lexem(prj_ver.AppName) + L"\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"FileVersion\", \"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"InternalName\", \"" + make_lexem(prj_ver.InternalName) + L"\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"LegalCopyright\", \"" + make_lexem(prj_ver.Copyright) + L"\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"OriginalFilename\", \"" + make_lexem(prj_ver.InternalName) + L".exe\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"ProductName\", \"" + make_lexem(prj_ver.AppName) + L"\"" << IO::NewLineChar;
+                script << L"\t\t\tVALUE \"ProductVersion\", \"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"" << IO::NewLineChar;
+                script << L"\t\tEND" << IO::NewLineChar;
+                script << L"\tEND" << IO::NewLineChar;
+                script << L"\tBLOCK \"VarFileInfo\"" << IO::NewLineChar;
+                script << L"\tBEGIN" << IO::NewLineChar;
+                script << L"\t\tVALUE \"Translation\", 0x400, 1200" << IO::NewLineChar;
+                script << L"\tEND" << IO::NewLineChar;
+                script << L"END";
+            }
         }
         catch (...) { console << L"Failed" << IO::NewLineChar; throw; }
         console << L"Succeed" << IO::NewLineChar;
@@ -323,6 +339,7 @@ bool build_bundle(const string & plist, const Array<string> & icons, const strin
 {
     console << L"Building Mac OS X Application Bundle " + IO::Path::GetFileName(bundle) + L"...";
     try_create_directory(bundle);
+    clear_directory(bundle);
     try_create_directory(bundle + L"/Contents");
     try_create_directory(bundle + L"/Contents/MacOS");
     try_create_directory(bundle + L"/Contents/Resources");
