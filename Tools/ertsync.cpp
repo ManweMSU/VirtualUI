@@ -9,9 +9,20 @@ int Main(void)
     handle console_output = IO::CloneHandle(IO::GetStandartInput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
-    
-    console << L"Engine Runtime Mac OS X syncronizer" << IO::NewLineChar;
-    console << L"Copyright (C) Engine Software. 2018" << IO::NewLineChar << IO::NewLineChar;
+
+    SafePointer< Array<string> > args = GetCommandLine();
+
+    console << ENGINE_VI_APPNAME << IO::NewLineChar;
+    console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::NewLineChar;
+    console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
+
+    if (args->Length() < 2 || string::CompareIgnoreCase(args->ElementAt(1), L":sync")) {
+        console << L"Command line syntax:" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" :sync" << IO::NewLineChar;
+        console << L"    to syncronize the runtime." << IO::NewLineChar;
+        console << IO::NewLineChar;
+        return 0;
+    }
 
     IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
     SafePointer<RegistryNode> rt_reg;

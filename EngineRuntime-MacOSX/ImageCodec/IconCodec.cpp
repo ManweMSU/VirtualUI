@@ -223,7 +223,7 @@ namespace Engine
 							ZeroMemory(&bhdr, sizeof(bhdr));
 							bhdr.struct_size = sizeof(bhdr);
 							bhdr.width = Conv->GetWidth();
-							bhdr.height = Conv->GetHeight();
+							bhdr.height = Conv->GetHeight() * 2;
 							bhdr.planes = 1;
 							bhdr.bpp = 32;
 							bhdr.data_size = Conv->GetHeight() * Conv->GetScanLineLength();
