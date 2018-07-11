@@ -60,31 +60,6 @@ namespace Engine
 			VerticalScrollBar::~VerticalScrollBar(void) {}
 			void VerticalScrollBar::Render(const Box & at)
 			{
-				if (_period) {
-					uint32 current = GetTimerValue();
-					uint32 delta = current - _lasttime;
-					if (delta >= _period) {
-						int times = delta / _period;
-						_lasttime = current - delta % _period;
-						_period = Keyboard::GetKeyboardSpeed();
-						if (_part == 1) {
-							SetScrollerPosition(Position - times * Line);
-						} else if (_part == 2) {
-							SetScrollerPosition(Position + times * Line);
-						} else if (_part == 0) {
-							if (_sd) {
-								Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
-								Box scroller = GetScrollerBox(my);
-								if (_sd == 1) SetScrollerPosition(Position - times * max(Page, 1));
-								else SetScrollerPosition(Position + times * max(Page, 1));
-								scroller = GetScrollerBox(my);
-								int sl = scroller.Top;
-								int sh = scroller.Bottom;
-								if ((_sd == 1 && _mpos >= sl) || (_sd == 2 && _mpos < sh)) { _sd = 0; _period = 0; }
-							}
-						}
-					}
-				}
 				Box up = Box(at.Left, at.Top, at.Right, at.Top + at.Right - at.Left);
 				Box down = Box(at.Left, at.Bottom - at.Right + at.Left, at.Right, at.Bottom);
 				Box scroller = GetScrollerBox(at);
@@ -227,21 +202,18 @@ namespace Engine
 			}
 			void VerticalScrollBar::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle VerticalScrollBar::GetRectangle(void) { return ControlPosition; }
-			void VerticalScrollBar::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = 0; _period = 0; } }
+			void VerticalScrollBar::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = 0; GetStation()->SetTimer(this, 0); } }
 			void VerticalScrollBar::LeftButtonDown(Point at)
 			{
 				if (_state == 1) {
 					_state = 2;
 					if (_part == 1) {
-						_period = Keyboard::GetKeyboardDelay();
-						_lasttime = GetTimerValue();
+						GetStation()->SetTimer(this, Keyboard::GetKeyboardDelay());
 						SetScrollerPosition(Position - Line);
 					} else if (_part == 2) {
-						_period = Keyboard::GetKeyboardDelay();
-						_lasttime = GetTimerValue();
+						GetStation()->SetTimer(this, Keyboard::GetKeyboardDelay());
 						SetScrollerPosition(Position + Line);
 					} else if (_part == 0) {
-						_lasttime = GetTimerValue();
 						Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
 						Box scroller = GetScrollerBox(my);
 						_mpos = at.y;
@@ -252,7 +224,7 @@ namespace Engine
 						int sl = scroller.Top;
 						int sh = scroller.Bottom;
 						if ((_sd == 1 && (_mpos >= sl)) || (_sd == 2 && (_mpos < sh))) _sd = 0;
-						else _period = Keyboard::GetKeyboardDelay();
+						else GetStation()->SetTimer(this, Keyboard::GetKeyboardDelay());
 					} else if (_part == 3) {
 						_mpos = at.y;
 						_sd = _mpos;
@@ -290,6 +262,26 @@ namespace Engine
 						double unit = Page ? (double(h - w - w) / (RangeMaximal - RangeMinimal + 1)) : (double(h - w - w - w) / (RangeMaximal - RangeMinimal));
 						double hpos = double(_ipos) + double(dx) / unit;
 						SetScrollerPosition(int(hpos + 0.5));
+					}
+				}
+			}
+			void VerticalScrollBar::Timer(void)
+			{
+				GetStation()->SetTimer(this, Keyboard::GetKeyboardSpeed());
+				if (_part == 1) {
+					SetScrollerPosition(Position - Line);
+				} else if (_part == 2) {
+					SetScrollerPosition(Position + Line);
+				} else if (_part == 0) {
+					if (_sd) {
+						Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+						Box scroller = GetScrollerBox(my);
+						if (_sd == 1) SetScrollerPosition(Position - max(Page, 1));
+						else SetScrollerPosition(Position + max(Page, 1));
+						scroller = GetScrollerBox(my);
+						int sl = scroller.Top;
+						int sh = scroller.Bottom;
+						if ((_sd == 1 && _mpos >= sl) || (_sd == 2 && _mpos < sh)) { _sd = 0; GetStation()->SetTimer(this, 0); }
 					}
 				}
 			}
@@ -409,31 +401,6 @@ namespace Engine
 			HorizontalScrollBar::~HorizontalScrollBar(void) {}
 			void HorizontalScrollBar::Render(const Box & at)
 			{
-				if (_period) {
-					uint32 current = GetTimerValue();
-					uint32 delta = current - _lasttime;
-					if (delta >= _period) {
-						int times = delta / _period;
-						_lasttime = current - delta % _period;
-						_period = Keyboard::GetKeyboardSpeed();
-						if (_part == 1) {
-							SetScrollerPosition(Position - times * Line);
-						} else if (_part == 2) {
-							SetScrollerPosition(Position + times * Line);
-						} else if (_part == 0) {
-							if (_sd) {
-								Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
-								Box scroller = GetScrollerBox(my);
-								if (_sd == 1) SetScrollerPosition(Position - times * max(Page, 1));
-								else SetScrollerPosition(Position + times * max(Page, 1));
-								scroller = GetScrollerBox(my);
-								int sl = scroller.Left;
-								int sh = scroller.Right;
-								if ((_sd == 1 && _mpos >= sl) || (_sd == 2 && _mpos < sh)) { _sd = 0; _period = 0; }
-							}
-						}
-					}
-				}
 				Box left = Box(at.Left, at.Top, at.Left + at.Bottom - at.Top, at.Bottom);
 				Box right = Box(at.Right - at.Bottom + at.Top, at.Top, at.Right, at.Bottom);
 				Box scroller = GetScrollerBox(at);
@@ -576,21 +543,18 @@ namespace Engine
 			}
 			void HorizontalScrollBar::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle HorizontalScrollBar::GetRectangle(void) { return ControlPosition; }
-			void HorizontalScrollBar::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = 0; _period = 0; } }
+			void HorizontalScrollBar::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = 0; GetStation()->SetTimer(this, 0); } }
 			void HorizontalScrollBar::LeftButtonDown(Point at)
 			{
 				if (_state == 1) {
 					_state = 2;
 					if (_part == 1) {
-						_period = Keyboard::GetKeyboardDelay();
-						_lasttime = GetTimerValue();
+						GetStation()->SetTimer(this, Keyboard::GetKeyboardDelay());
 						SetScrollerPosition(Position - Line);
 					} else if (_part == 2) {
-						_period = Keyboard::GetKeyboardDelay();
-						_lasttime = GetTimerValue();
+						GetStation()->SetTimer(this, Keyboard::GetKeyboardDelay());
 						SetScrollerPosition(Position + Line);
 					} else if (_part == 0) {
-						_lasttime = GetTimerValue();
 						Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
 						Box scroller = GetScrollerBox(my);
 						_mpos = at.x;
@@ -601,7 +565,7 @@ namespace Engine
 						int sl = scroller.Left;
 						int sh = scroller.Right;
 						if ((_sd == 1 && (_mpos >= sl)) || (_sd == 2 && (_mpos < sh))) _sd = 0;
-						else _period = Keyboard::GetKeyboardDelay();
+						else GetStation()->SetTimer(this, Keyboard::GetKeyboardDelay());
 					} else if (_part == 3) {
 						_mpos = at.x;
 						_sd = _mpos;
@@ -639,6 +603,26 @@ namespace Engine
 						double unit = Page ? (double(w - h - h) / (RangeMaximal - RangeMinimal + 1)) : (double(w - h - h - h) / (RangeMaximal - RangeMinimal));
 						double hpos = double(_ipos) + double(dx) / unit;
 						SetScrollerPosition(int(hpos + 0.5));
+					}
+				}
+			}
+			void HorizontalScrollBar::Timer(void)
+			{
+				GetStation()->SetTimer(this, Keyboard::GetKeyboardSpeed());
+				if (_part == 1) {
+					SetScrollerPosition(Position - Line);
+				} else if (_part == 2) {
+					SetScrollerPosition(Position + Line);
+				} else if (_part == 0) {
+					if (_sd) {
+						Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+						Box scroller = GetScrollerBox(my);
+						if (_sd == 1) SetScrollerPosition(Position - max(Page, 1));
+						else SetScrollerPosition(Position + max(Page, 1));
+						scroller = GetScrollerBox(my);
+						int sl = scroller.Left;
+						int sh = scroller.Right;
+						if ((_sd == 1 && _mpos >= sl) || (_sd == 2 && _mpos < sh)) { _sd = 0; GetStation()->SetTimer(this, 0); }
 					}
 				}
 			}

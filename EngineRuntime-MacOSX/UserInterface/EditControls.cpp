@@ -341,6 +341,7 @@ namespace Engine
 					at.y < WindowPosition.Bottom - WindowPosition.Top - Border) || _state) cursor = SystemCursor::Beam;
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
 			}
+			Window::RefreshPeriod Edit::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
 			void Edit::Undo(void)
 			{
 				if (!ReadOnly && _undo.CanUndo()) {
@@ -824,8 +825,8 @@ namespace Engine
 					ScrollToCaret();
 				}
 			}
-			void MultiLineEdit::ScrollVertically(int delta) { _vscroll->SetScrollerPositionSilent(_vscroll->Position + delta * _vscroll->Line); }
-			void MultiLineEdit::ScrollHorizontally(int delta) { _hscroll->SetScrollerPositionSilent(_hscroll->Position + delta * _hscroll->Line); }
+			void MultiLineEdit::ScrollVertically(double delta) { _vscroll->SetScrollerPositionSilent(_vscroll->Position + int(delta * double(_vscroll->Line))); }
+			void MultiLineEdit::ScrollHorizontally(double delta) { _hscroll->SetScrollerPositionSilent(_hscroll->Position + int(delta * double(_hscroll->Line))); }
 			void MultiLineEdit::KeyDown(int key_code)
 			{
 				if (key_code == KeyCodes::Back && !ReadOnly && (_content.cp != _content.sp || _content.cp > EditorCoord())) {
@@ -955,6 +956,7 @@ namespace Engine
 					at.y < WindowPosition.Bottom - WindowPosition.Top - Border - HorizontalScrollSize) || _state) cursor = SystemCursor::Beam;
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
 			}
+			Window::RefreshPeriod MultiLineEdit::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
 			void MultiLineEdit::Undo(void)
 			{
 				if (!ReadOnly && _undo.CanUndo()) {

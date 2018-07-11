@@ -216,6 +216,7 @@ namespace Engine
 			virtual void BeginLayer(const Box & Rect, double Opacity) = 0;
 			virtual void EndLayer(void) = 0;
 			virtual void SetTimerValue(uint32 time) = 0;
+			virtual uint32 GetCaretBlinkHalfTime(void) = 0;
 			virtual void ClearCache(void) = 0;
 			virtual ~IRenderingDevice(void);
 		};

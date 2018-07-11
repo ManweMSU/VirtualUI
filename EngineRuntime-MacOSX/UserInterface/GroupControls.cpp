@@ -216,8 +216,8 @@ namespace Engine
 					_virtual->SetPosition(Box(Border + dx, Border + dy, Border + dx + vw, Border + dy + vh));
 				} else GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void ScrollBox::ScrollVertically(int delta) { _vertical->SetScrollerPosition(_vertical->Position + delta * _vertical->Line); }
-			void ScrollBox::ScrollHorizontally(int delta) { _horizontal->SetScrollerPosition(_horizontal->Position + delta * _horizontal->Line); }
+			void ScrollBox::ScrollVertically(double delta) { _vertical->SetScrollerPosition(_vertical->Position + int(delta * double(_vertical->Line))); }
+			void ScrollBox::ScrollHorizontally(double delta) { _horizontal->SetScrollerPosition(_horizontal->Position + int(delta * double(_horizontal->Line))); }
 			Window * ScrollBox::HitTest(Point at)
 			{
 				if (Disabled) return this;

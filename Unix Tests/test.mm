@@ -14,19 +14,13 @@ Cocoa::QuartzRenderingDevice device;
 UI::Shape * shape = 0;
 UI::ITexture * tex = 0;
 UI::TextureShape * shape2 = 0;
+UI::IFont * font = 0;
+UI::Shape * button = 0;
+UI::ITextRenderingInfo * tr = 0;
 
 class Loader : public Engine::UI::IResourceLoader
 {
 public:
-    class Font : public UI::IFont
-    {
-    public:
-        Font(void) {}
-        virtual int GetWidth(void) const override { return 1; }
-        virtual int GetHeight(void) const override { return 1; }
-        virtual void Reload(UI::IRenderingDevice * Device) override {}
-    };
-
     virtual UI::ITexture * LoadTexture(Streaming::Stream * Source) override
     {
         return device.LoadTexture(Source);
@@ -38,7 +32,7 @@ public:
     }
     virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
     {
-        return new Font();
+        return device.LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
     }
     virtual void ReloadTexture(UI::ITexture * Texture, Streaming::Stream * Source) override
     {
@@ -71,7 +65,7 @@ public:
     }
     virtual void GetArgument(const string & name, string * value) override
     {
-        *value = L"";
+        *value = L"pidor ыыыы";
     }
     virtual void GetArgument(const string & name, UI::ITexture ** value) override
     {
@@ -79,7 +73,8 @@ public:
     }
     virtual void GetArgument(const string & name, UI::IFont ** value) override
     {
-        *value = 0;
+        font->Retain();
+        *value = font;
     }
 };
 
@@ -87,9 +82,16 @@ public:
 {
 }
 - (void) drawRect : (NSRect) dirtyRect;
+- (void) keyDown: (NSEvent *) event;
+- (void) mouseDown: (NSEvent *) event;
+@property(readonly) BOOL acceptsFirstResponder;
 @end
 
 @implementation TestView
+- (BOOL) acceptsFirstResponder
+{
+    return YES;
+}
 - (void) drawRect : (NSRect) dirtyRect
 {
     auto wnd = [self window];
@@ -102,6 +104,24 @@ public:
 
     shape2->Render(&device, box);
     shape->Render(&device, UI::Box(50, 50, 550, 110));
+    button->Render(&device, UI::Box(600, 50, 900, 110));
+    device.RenderText(tr, UI::Box(50, 130, 550, 200), true);
+}
+- (void) mouseDown: (NSEvent *) event
+{
+    SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+    Streaming::TextWriter Console(ConsoleOutStream);
+    Console << string(L"Left button down") + IO::NewLineChar;
+
+    [self lockFocusIfCanDraw];
+}
+- (void) keyDown: (NSEvent *) event
+{
+    SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+    Streaming::TextWriter Console(ConsoleOutStream);
+
+    uint32 key = [event keyCode];
+    Console << L"Key Down: " + string(key, L"0123456789ABCDEF") + IO::NewLineChar;
 }
 @end
 
@@ -116,7 +136,7 @@ int Main(void)
     Cocoa::CreateAppleCodec();
 
     string src = IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(
-        IO::Path::GetDirectory(IO::GetExecutablePath()))))) + L"/Tests/test.eui";
+        IO::Path::GetDirectory(IO::GetExecutablePath()))))) + L"/../Tests/test.eui";
     Console << src << IO::NewLineChar;
     Streaming::FileStream source(src, Streaming::AccessRead, Streaming::OpenExisting);
     Loader loader;
@@ -124,8 +144,29 @@ int Main(void)
     tex = interface.Texture[L"Wallpaper"];
     Arguments args;
     auto temp = interface.Application[L"Progress"];
+    auto temp2 = interface.Application[L"ButtonFocused"];
+    font = device.LoadFont(L"Tahoma", 38, 400, false, true, false);
+    tr = device.CreateTextRenderingInfo(font, L"Пидор 🍄🍄🍄 ыыыы", 1, 1, UI::Color(32, 32, 128, 196));
+    tr->SetHighlightColor(UI::Color(255, 160, 160, 128));
+    tr->HighlightText(1, 4);
+    {
+        Array<UI::Color> hl;
+        hl << UI::Color(255, 0, 0);
+        hl << UI::Color(0, 0, 255);
+        tr->SetCharPalette(hl);
+        Array<uint8> ind;
+        ind.SetLength(14);
+        ZeroMemory(ind.GetBuffer(), 14);
+        ind[0] = 1;
+        ind[1] = 2;
+        ind[2] = 1;
+        ind[3] = 2;
+        ind[4] = 1;
+        tr->SetCharColors(ind);
+    }
     Console << L"Template = " << string(reinterpret_cast<void *>(temp)) << IO::NewLineChar;
     shape = temp->Initialize(&args);
+    button = temp2->Initialize(&args);
     shape2 = new UI::TextureShape(UI::Rectangle::Entire(), tex, UI::Rectangle::Entire(), UI::TextureShape::TextureRenderMode::Fit);
 
     Console << L"Shape = " << string(reinterpret_cast<void *>(shape)) << IO::NewLineChar;
@@ -179,6 +220,8 @@ int Main(void)
     [window setTitle: @"Test Window"];
     [window orderFrontRegardless];
     [window display];
+    [window makeKeyWindow];
+    [view lockFocus];
     Console << L"Window: " << string((__bridge void*) window) << IO::NewLineChar;
     [view release];
     [NSApp run];
