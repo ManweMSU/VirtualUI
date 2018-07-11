@@ -952,6 +952,7 @@ namespace Engine
 			Layers.RemoveLast();
 		}
 		void D2DRenderDevice::SetTimerValue(uint32 time) { AnimationTimer = time; }
+		uint32 D2DRenderDevice::GetCaretBlinkHalfTime(void) { return HalfBlinkPeriod; }
 		void D2DRenderDevice::ClearCache(void) { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
 
 		void TextRenderingInfo::FillAdvances(void)

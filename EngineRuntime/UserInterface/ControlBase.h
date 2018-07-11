@@ -41,6 +41,7 @@ namespace Engine
 		public:
 			enum class DepthOrder { SetFirst = 0, SetLast = 1, MoveUp = 2, MoveDown = 3 };
 			enum class Event { Command = 0, AcceleratorCommand = 1, MenuCommand = 2, DoubleClick = 3, ContextClick = 4, ValueChange = 5 };
+			enum class RefreshPeriod { None = 0, CaretBlink = 1, Cinematic = 2 };
 		private:
 			ObjectArray<Window> Children;
 			SafePointer<Window> Parent;
@@ -79,15 +80,17 @@ namespace Engine
 			virtual void RightButtonUp(Point at);
 			virtual void RightButtonDoubleClick(Point at);
 			virtual void MouseMove(Point at);
-			virtual void ScrollVertically(int delta);
-			virtual void ScrollHorizontally(int delta);
+			virtual void ScrollVertically(double delta);
+			virtual void ScrollHorizontally(double delta);
 			virtual void KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
 			virtual bool TranslateAccelerators(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual void PopupMenuCancelled(void);
+			virtual void Timer(void);
 			virtual Window * HitTest(Point at);
 			virtual void SetCursor(Point at);
+			virtual RefreshPeriod FocusedRefreshPeriod(void);
 
 			Window * GetParent(void);
 			WindowStation * GetStation(void);
@@ -221,6 +224,7 @@ namespace Engine
 				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
 			void AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration,
 				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
+			bool IsPlayingAnimation(void) const;
 
 			virtual void SetFocus(Window * window);
 			virtual Window * GetFocus(void);
@@ -239,8 +243,8 @@ namespace Engine
 			virtual void RightButtonUp(Point at);
 			virtual void RightButtonDoubleClick(Point at);
 			virtual void MouseMove(Point at);
-			virtual void ScrollVertically(int delta);
-			virtual void ScrollHorizontally(int delta);
+			virtual void ScrollVertically(double delta);
+			virtual void ScrollHorizontally(double delta);
 			virtual void KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
 			virtual void CharDown(uint32 ucs_code);
@@ -251,8 +255,13 @@ namespace Engine
 			virtual ICursor * GetSystemCursor(SystemCursor cursor);
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor);
 			virtual void SetCursor(ICursor * cursor);
+			virtual void SetTimer(Window * window, uint32 period);
 			virtual bool IsNativeStationWrapper(void) const;
 			virtual void OnDesktopDestroy(void);
+			virtual void RequireRefreshRate(Window::RefreshPeriod period);
+			virtual Window::RefreshPeriod GetRefreshRate(void);
+			virtual void AnimationStateChanged(void);
+			virtual void FocusWindowChanged(void);
 
 			VisualStyles & GetVisualStyles(void);
 		};

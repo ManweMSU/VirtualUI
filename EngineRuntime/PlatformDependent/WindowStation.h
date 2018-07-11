@@ -27,6 +27,7 @@ namespace Engine
 			SafePointer<ICursor> _size_left_down_right_up;
 			SafePointer<ICursor> _size_all;
 			uint32 _surrogate = 0;
+			Array<Window *> _timers;
 		public:
 			HandleWindowStation(HWND window);
 			~HandleWindowStation(void) override;
@@ -46,6 +47,7 @@ namespace Engine
 			virtual ICursor * GetSystemCursor(SystemCursor cursor) override;
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor) override;
 			virtual void SetCursor(ICursor * cursor) override;
+			virtual void SetTimer(Window * window, uint32 period) override;
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};

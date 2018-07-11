@@ -69,6 +69,7 @@ namespace Engine
 			virtual void EndLayer(void) override;
 
 			virtual void SetTimerValue(uint32 time) override;
+			virtual uint32 GetCaretBlinkHalfTime(void) override;
 			virtual void ClearCache(void) override;
 		};
 	}

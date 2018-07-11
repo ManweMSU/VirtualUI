@@ -90,8 +90,8 @@ namespace Engine
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetPosition(const Box & box) override;
 				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
-				virtual void ScrollVertically(int delta) override;
-				virtual void ScrollHorizontally(int delta) override;
+				virtual void ScrollVertically(double delta) override;
+				virtual void ScrollHorizontally(double delta) override;
 				virtual Window * HitTest(Point at) override;
 
 				Window * GetVirtualGroup(void);

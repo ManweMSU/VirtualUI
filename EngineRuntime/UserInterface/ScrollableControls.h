@@ -26,7 +26,6 @@ namespace Engine
 				SafePointer<Shape> _bar_normal;
 				SafePointer<Shape> _bar_disabled;
 				int _state = 0, _part = 0, _mpos = 0, _ipos = 0, _sd = 0;
-				uint32 _lasttime, _period;
 				Box GetScrollerBox(const Box & at);
 			public:
 				VerticalScrollBar(Window * Parent, WindowStation * Station);
@@ -50,6 +49,7 @@ namespace Engine
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
+				virtual void Timer(void) override;
 
 				void SetScrollerPosition(int position);
 				void SetPage(int page);
@@ -75,7 +75,6 @@ namespace Engine
 				SafePointer<Shape> _bar_normal;
 				SafePointer<Shape> _bar_disabled;
 				int _state = 0, _part = 0, _mpos = 0, _ipos = 0, _sd = 0;
-				uint32 _lasttime, _period;
 				Box GetScrollerBox(const Box & at);
 			public:
 				HorizontalScrollBar(Window * Parent, WindowStation * Station);
@@ -98,6 +97,7 @@ namespace Engine
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
+				virtual void Timer(void) override;
 
 				void SetScrollerPosition(int position);
 				void SetPage(int page);

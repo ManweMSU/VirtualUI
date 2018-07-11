@@ -61,9 +61,9 @@ namespace Engine
 				Cls.lpfnWndProc = WindowCallbackProc;
 				Cls.cbWndExtra = sizeof(void*);
 				Cls.hInstance = GetModuleHandleW(0);
-				Cls.hIcon = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCE(1), IMAGE_ICON,
+				Cls.hIcon = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCEW(1), IMAGE_ICON,
 					GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0));
-				Cls.hIconSm = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCE(1), IMAGE_ICON,
+				Cls.hIconSm = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCEW(1), IMAGE_ICON,
 					GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
 				Cls.lpszClassName = L"engine_runtime_main_class";
 				RegisterClassExW(&Cls);
@@ -77,6 +77,7 @@ namespace Engine
 			SafePointer<ID2D1DeviceContext> DeviceContext;
 			SafePointer<Direct2D::D2DRenderDevice> RenderingDevice;
 			int MinWidth = 0, MinHeight = 0;
+			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
 
 			class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
 			{
@@ -102,6 +103,27 @@ namespace Engine
 				::DestroyWindow(_window);
 				DestroyStation();
 			}
+			virtual void RequireRefreshRate(Window::RefreshPeriod period) override
+			{
+				InternalRate = period;
+				AnimationStateChanged();
+			}
+			virtual Window::RefreshPeriod GetRefreshRate(void) override { return InternalRate; }
+			virtual void AnimationStateChanged(void) override
+			{
+				int fr = int(GetFocus() ? GetFocus()->FocusedRefreshPeriod() : Window::RefreshPeriod::None);
+				int ar = int(IsPlayingAnimation() ? Window::RefreshPeriod::Cinematic : Window::RefreshPeriod::None);
+				int ur = int(InternalRate);
+				int mr = max(max(fr, ar), ur);
+				if (!mr) KillTimer(GetHandle(), 1); else {
+					if (mr == 1) ::SetTimer(GetHandle(), 1, GetRenderingDevice()->GetCaretBlinkHalfTime(), 0);
+					else if (mr == 2) {
+						if (::GetActiveWindow() == GetHandle()) ::SetTimer(GetHandle(), 1, 25, 0);
+						else ::SetTimer(GetHandle(), 1, 100, 0);
+					}
+				}
+			}
+			virtual void FocusWindowChanged(void) override { InvalidateRect(GetHandle(), 0, 0); AnimationStateChanged(); }
 
 			void RenderContent(void)
 			{
@@ -298,12 +320,14 @@ namespace Engine
 					Result = DefWindowProcW(Wnd, Msg, WParam, LParam);
 				}
 			} else if (Msg == WM_TIMER) {
-				if (WParam == 1) InvalidateRect(Wnd, 0, FALSE);
+				Result = station->ProcessWindowEvents(Msg, WParam, LParam);
+				InvalidateRect(Wnd, 0, FALSE);
+				return Result;
 			} else if (Msg == WM_ACTIVATE) {
 				if (WParam == WA_INACTIVE) {
-					SetTimer(Wnd, 1, 100, 0);
+					station->AnimationStateChanged();
 				} else {
-					SetTimer(Wnd, 1, 25, 0);
+					station->AnimationStateChanged();
 				}
 			} else if (Msg == WM_PAINT) {
 				if (station && ::IsWindowVisible(Wnd)) {

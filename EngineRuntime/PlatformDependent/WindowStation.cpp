@@ -20,7 +20,7 @@ namespace Engine
 				~WindowsCursor(void) override { if (Owned) DestroyCursor(Handle); }
 			};
 		}
-		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory), _window(window)
+		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory), _window(window), _timers(0x10)
 		{
 			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
 			_beam.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_IBEAM)));
@@ -31,7 +31,7 @@ namespace Engine
 			_size_left_down_right_up.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENESW)));
 			_size_all.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZEALL)));
 		}
-		HandleWindowStation::HandleWindowStation(HWND window) : _window(window)
+		HandleWindowStation::HandleWindowStation(HWND window) : _window(window), _timers(0x10)
 		{
 			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
 			_beam.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_IBEAM)));
@@ -133,6 +133,34 @@ namespace Engine
 			else if (entity == SystemCursor::SizeAll) _size_all.SetRetain(cursor);
 		}
 		void HandleWindowStation::SetCursor(ICursor * cursor) { if (cursor) ::SetCursor(static_cast<HandleWindowStationHelper::WindowsCursor *>(cursor)->Handle); }
+		void HandleWindowStation::SetTimer(Window * window, uint32 period)
+		{
+			if (period) {
+				int entry = -1;
+				for (int i = 0; i < _timers.Length(); i++) {
+					if (_timers[i] == window) { entry = i; break; }
+					else if (!_timers[i]) { entry = i; _timers[i] = window; break; }
+				}
+				if (entry == -1) {
+					entry = _timers.Length();
+					_timers << window;
+				}
+				::SetTimer(_window, entry + 2, period, 0);
+			} else {
+				int max_valid = -1;
+				int entry = -1;
+				for (int i = 0; i < _timers.Length(); i++) {
+					if (_timers[i]) max_valid = i;
+					if (_timers[i] == window) { entry = i; break; }
+				}
+				if (entry != -1) {
+					::KillTimer(_window, entry + 2);
+					_timers[entry] = 0;
+					if (entry == _timers.Length() - 1) _timers.SetLength(max_valid + 1);
+				}
+			}
+			
+		}
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
@@ -191,9 +219,9 @@ namespace Engine
 				POINTS p = MAKEPOINTS(LParam);
 				RightButtonDoubleClick(Point(p.x, p.y));
 			} else if (Msg == WM_MOUSEWHEEL) {
-				ScrollVertically(-GET_WHEEL_DELTA_WPARAM(WParam) * 3 / WHEEL_DELTA);
+				ScrollVertically(-double(GET_WHEEL_DELTA_WPARAM(WParam)) * 3.0 / double(WHEEL_DELTA));
 			} else if (Msg == WM_MOUSEHWHEEL) {
-				ScrollHorizontally(GET_WHEEL_DELTA_WPARAM(WParam) * 3 / WHEEL_DELTA);
+				ScrollHorizontally(double(GET_WHEEL_DELTA_WPARAM(WParam)) * 3.0 / double(WHEEL_DELTA));
 			} else if (Msg == WM_SIZE) {
 				RECT Rect;
 				GetClientRect(_window, &Rect);
@@ -205,6 +233,9 @@ namespace Engine
 			} else if (Msg == WM_CAPTURECHANGED) {
 				if (reinterpret_cast<HWND>(LParam) != _window) CaptureChanged(false);
 				else CaptureChanged(true);
+			} else if (Msg == WM_TIMER) {
+				int index = WParam - 2;
+				if (index >= 0 && index < _timers.Length() && _timers[index]) _timers[index]->Timer();
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);
 		}

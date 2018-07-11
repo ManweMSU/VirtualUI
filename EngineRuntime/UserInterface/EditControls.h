@@ -76,6 +76,7 @@ namespace Engine
 				virtual void KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void SetCursor(Point at) override;
+				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
 
 				void Undo(void);
 				void Redo(void);
@@ -191,12 +192,13 @@ namespace Engine
 				virtual void RightButtonDown(Point at) override;
 				virtual void RightButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
-				virtual void ScrollVertically(int delta) override;
-				virtual void ScrollHorizontally(int delta) override;
+				virtual void ScrollVertically(double delta) override;
+				virtual void ScrollHorizontally(double delta) override;
 				virtual void KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
+				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
 
 				void Undo(void);
 				void Redo(void);

@@ -35,15 +35,17 @@ namespace Engine
 		void Window::RightButtonUp(Point at) {}
 		void Window::RightButtonDoubleClick(Point at) {}
 		void Window::MouseMove(Point at) {}
-		void Window::ScrollVertically(int delta) { if (Parent) Parent->ScrollVertically(delta); }
-		void Window::ScrollHorizontally(int delta) { if (Parent) Parent->ScrollHorizontally(delta); }
+		void Window::ScrollVertically(double delta) { if (Parent) Parent->ScrollVertically(delta); }
+		void Window::ScrollHorizontally(double delta) { if (Parent) Parent->ScrollHorizontally(delta); }
 		void Window::KeyDown(int key_code) {}
 		void Window::KeyUp(int key_code) {}
 		bool Window::TranslateAccelerators(int key_code) { return false; }
 		void Window::CharDown(uint32 ucs_code) {}
 		void Window::PopupMenuCancelled(void) {}
+		void Window::Timer(void) {}
 		Window * Window::HitTest(Point at) { return this; }
 		void Window::SetCursor(Point at) { Station->SetCursor(Station->GetSystemCursor(SystemCursor::Arrow)); }
+		Window::RefreshPeriod Window::FocusedRefreshPeriod(void) { return RefreshPeriod::None; }
 		Window * Window::GetParent(void) { return Parent; }
 		WindowStation * Window::GetStation(void) { return Station; }
 		void Window::SetOrder(DepthOrder order)
@@ -235,6 +237,7 @@ namespace Engine
 		WindowStation::~WindowStation(void) {}
 		void WindowStation::DestroyWindow(Window * window)
 		{
+			SetTimer(window, 0);
 			if (!window->Parent) {
 				if (window == TopLevelWindow.Inner()) OnDesktopDestroy();
 				return;
@@ -265,6 +268,7 @@ namespace Engine
 						if (Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) Animations[i].Target->SetRectangle(Animations[i].BeginState);
 					}
 					Animations.Remove(i); i--;
+					if (Animations.Length() == 0) AnimationStateChanged();
 				} else {
 					Animations[i].Target->SetRectangle(Animations[i].GetFrame(time));
 				}
@@ -318,6 +322,7 @@ namespace Engine
 			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
 			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
 				begin_class, end_class, action);
+			if (Animations.Length() == 1) AnimationStateChanged();
 		}
 		void WindowStation::AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
 		{
@@ -326,13 +331,16 @@ namespace Engine
 			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
 			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
 				begin_class, end_class, action);
+			if (Animations.Length() == 1) AnimationStateChanged();
 		}
+		bool WindowStation::IsPlayingAnimation(void) const { return Animations.Length() != 0; }
 		void WindowStation::SetFocus(Window * window)
 		{
 			if (window == FocusedWindow.Inner()) return;
 			if (FocusedWindow.Inner()) FocusedWindow->FocusChanged(false);
 			FocusedWindow.SetRetain(window);
 			if (FocusedWindow.Inner()) FocusedWindow->FocusChanged(true);
+			FocusWindowChanged();
 		}
 		Window * WindowStation::GetFocus(void)
 		{
@@ -357,6 +365,7 @@ namespace Engine
 			if (!got_focus) {
 				if (FocusedWindow.Inner()) FocusedWindow->FocusChanged(false);
 				FocusedWindow.SetReference(0);
+				FocusWindowChanged();
 			}
 		}
 		void WindowStation::CaptureChanged(bool got_capture)
@@ -470,7 +479,7 @@ namespace Engine
 				Target->MouseMove(At);
 			}
 		}
-		void WindowStation::ScrollVertically(int delta)
+		void WindowStation::ScrollVertically(double delta)
 		{
 			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->ScrollVertically(delta);
@@ -479,7 +488,7 @@ namespace Engine
 				if (Target) Target->ScrollVertically(delta);
 			}
 		}
-		void WindowStation::ScrollHorizontally(int delta)
+		void WindowStation::ScrollHorizontally(double delta)
 		{
 			if (CaptureWindow && !CaptureWindow->IsAvailable()) SetCapture(0);
 			if (CaptureWindow) CaptureWindow->ScrollHorizontally(delta);
@@ -504,8 +513,13 @@ namespace Engine
 		ICursor * WindowStation::GetSystemCursor(SystemCursor cursor) { return 0; }
 		void WindowStation::SetSystemCursor(SystemCursor entity, ICursor * cursor) {}
 		void WindowStation::SetCursor(ICursor * cursor) {}
+		void WindowStation::SetTimer(Window * window, uint32 period) {}
 		bool WindowStation::IsNativeStationWrapper(void) const { return false; }
 		void WindowStation::OnDesktopDestroy(void) {}
+		void WindowStation::RequireRefreshRate(Window::RefreshPeriod period) {}
+		Window::RefreshPeriod WindowStation::GetRefreshRate(void) { return Window::RefreshPeriod::None; }
+		void WindowStation::AnimationStateChanged(void) {}
+		void WindowStation::FocusWindowChanged(void) {}
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}

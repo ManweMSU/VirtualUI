@@ -576,7 +576,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_TIMER:
 		InvalidateRect(hWnd, 0, FALSE);
-		break;
+		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
+		return DefWindowProc(hWnd, message, wParam, lParam);
     case WM_PAINT:
         {
 			RECT Rect;
