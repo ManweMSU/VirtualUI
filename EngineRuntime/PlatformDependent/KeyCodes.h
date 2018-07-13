@@ -132,6 +132,9 @@ namespace Engine
 			OemComma = 0xBC,
 			OemMinus = 0xBD,
 			OemPeriod = 0xBE,
+			VolumeMute = 0xAD,
+			VolumeDown = 0xAE,
+			VolumeUp = 0xAF,
 			Oem1 = 0xBA,
 			Oem2 = 0xBF,
 			Oem3 = 0xC0,
@@ -139,6 +142,7 @@ namespace Engine
 			Oem5 = 0xDC,
 			Oem6 = 0xDD,
 			Oem7 = 0xDE,
+			OemClear = 0xFE,
 			Oem8 = 0xFF,
 		};
 	}

@@ -1,5 +1,6 @@
 #include <EngineRuntime.h>
 #include <PlatformDependent/CocoaInterop.h>
+#include <PlatformDependent/KeyCodes.h>
 
 using namespace Engine;
 
@@ -182,6 +183,9 @@ int Main(void)
     [keys release];
     [dict release];
     [def release];
+
+    Console << L"Keyboard delay " + string(Keyboard::GetKeyboardDelay()) + L" ms" + IO::NewLineChar;
+    Console << L"Keyboard speed " + string(Keyboard::GetKeyboardSpeed()) + L" ms" + IO::NewLineChar;
     
     [NSApplication sharedApplication];
 
