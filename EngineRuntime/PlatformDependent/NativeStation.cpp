@@ -10,8 +10,6 @@
 
 #undef ZeroMemory
 
-extern Engine::SafePointer<Engine::Streaming::TextWriter> conout;
-
 using namespace Engine::UI;
 
 namespace Engine

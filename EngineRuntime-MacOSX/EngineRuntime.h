@@ -16,6 +16,7 @@
 #include "Miscellaneous/UndoBuffer.h"
 #include "PlatformDependent/AppleCodec.h"
 #include "PlatformDependent/Clipboard.h"
+#include "PlatformDependent/NativeStation.h"
 #include "PlatformDependent/QuartzDevice.h"
 #include "Processes/Process.h"
 #include "Processes/Threading.h"

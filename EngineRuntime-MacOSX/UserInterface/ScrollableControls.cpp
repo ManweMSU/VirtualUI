@@ -70,24 +70,28 @@ namespace Engine
 				if (Disabled) {
 					if (_up_disabled) up_shape = _up_disabled;
 					else if (ViewUpButtonDisabled) {
-						_up_disabled.SetReference(ViewUpButtonDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_up_disabled.SetReference(ViewUpButtonDisabled->Initialize(&provider));
 						up_shape = _up_disabled;
 					}
 					if (_down_disabled) down_shape = _down_disabled;
 					else if (ViewDownButtonDisabled) {
-						_down_disabled.SetReference(ViewDownButtonDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_down_disabled.SetReference(ViewDownButtonDisabled->Initialize(&provider));
 						down_shape = _down_disabled;
 					}
 					if (Position > RangeMinimal || Position + max(Page, 1) - 1 < RangeMaximal) {
 						if (_scroller_disabled) scroller_shape = _scroller_disabled;
 						else if (ViewScrollerDisabled) {
-							_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&ZeroArgumentProvider()));
+							auto provider = ZeroArgumentProvider();
+							_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&provider));
 							scroller_shape = _scroller_disabled;
 						}
 					}
 					if (_bar_disabled) bar_shape = _bar_disabled;
 					else if (ViewBarDisabled) {
-						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&provider));
 						bar_shape = _bar_disabled;
 					}
 				} else {
@@ -110,7 +114,8 @@ namespace Engine
 						}
 						if (*storage) up_shape = *storage;
 						else if (source) {
-							*storage = source->Initialize(&ZeroArgumentProvider());
+							auto provider = ZeroArgumentProvider();
+							*storage = source->Initialize(&provider);
 							up_shape = *storage;
 						}
 					}
@@ -133,7 +138,8 @@ namespace Engine
 						}
 						if (*storage) down_shape = *storage;
 						else if (source) {
-							*storage = source->Initialize(&ZeroArgumentProvider());
+							auto provider = ZeroArgumentProvider();
+							*storage = source->Initialize(&provider);
 							down_shape = *storage;
 						}
 					}
@@ -156,13 +162,15 @@ namespace Engine
 						}
 						if (*storage) scroller_shape = *storage;
 						else if (source) {
-							*storage = source->Initialize(&ZeroArgumentProvider());
+							auto provider = ZeroArgumentProvider();
+							*storage = source->Initialize(&provider);
 							scroller_shape = *storage;
 						}
 					}
 					if (_bar_normal) bar_shape = _bar_normal;
 					else if (ViewBarNormal) {
-						_bar_normal.SetReference(ViewBarNormal->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_normal.SetReference(ViewBarNormal->Initialize(&provider));
 						bar_shape = _bar_normal;
 					}
 				}
@@ -411,24 +419,28 @@ namespace Engine
 				if (Disabled) {
 					if (_left_disabled) left_shape = _left_disabled;
 					else if (ViewLeftButtonDisabled) {
-						_left_disabled.SetReference(ViewLeftButtonDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_left_disabled.SetReference(ViewLeftButtonDisabled->Initialize(&provider));
 						left_shape = _left_disabled;
 					}
 					if (_right_disabled) right_shape = _right_disabled;
 					else if (ViewRightButtonDisabled) {
-						_right_disabled.SetReference(ViewRightButtonDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_right_disabled.SetReference(ViewRightButtonDisabled->Initialize(&provider));
 						right_shape = _right_disabled;
 					}
 					if (Position > RangeMinimal || Position + max(Page, 1) - 1 < RangeMaximal) {
 						if (_scroller_disabled) scroller_shape = _scroller_disabled;
 						else if (ViewScrollerDisabled) {
-							_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&ZeroArgumentProvider()));
+							auto provider = ZeroArgumentProvider();
+							_scroller_disabled.SetReference(ViewScrollerDisabled->Initialize(&provider));
 							scroller_shape = _scroller_disabled;
 						}
 					}
 					if (_bar_disabled) bar_shape = _bar_disabled;
 					else if (ViewBarDisabled) {
-						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&provider));
 						bar_shape = _bar_disabled;
 					}
 				} else {
@@ -451,7 +463,8 @@ namespace Engine
 						}
 						if (*storage) left_shape = *storage;
 						else if (source) {
-							*storage = source->Initialize(&ZeroArgumentProvider());
+							auto provider = ZeroArgumentProvider();
+							*storage = source->Initialize(&provider);
 							left_shape = *storage;
 						}
 					}
@@ -474,7 +487,8 @@ namespace Engine
 						}
 						if (*storage) right_shape = *storage;
 						else if (source) {
-							*storage = source->Initialize(&ZeroArgumentProvider());
+							auto provider = ZeroArgumentProvider();
+							*storage = source->Initialize(&provider);
 							right_shape = *storage;
 						}
 					}
@@ -497,13 +511,15 @@ namespace Engine
 						}
 						if (*storage) scroller_shape = *storage;
 						else if (source) {
-							*storage = source->Initialize(&ZeroArgumentProvider());
+							auto provider = ZeroArgumentProvider();
+							*storage = source->Initialize(&provider);
 							scroller_shape = *storage;
 						}
 					}
 					if (_bar_normal) bar_shape = _bar_normal;
 					else if (ViewBarNormal) {
-						_bar_normal.SetReference(ViewBarNormal->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_normal.SetReference(ViewBarNormal->Initialize(&provider));
 						bar_shape = _bar_normal;
 					}
 				}
@@ -727,12 +743,14 @@ namespace Engine
 				if (Disabled) {
 					if (_tracker_disabled) tracker = _tracker_disabled;
 					else if (ViewTrackerDisabled) {
-						_tracker_disabled.SetReference(ViewTrackerDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_tracker_disabled.SetReference(ViewTrackerDisabled->Initialize(&provider));
 						tracker = _tracker_disabled;
 					}
 					if (_bar_disabled) bar = _bar_disabled;
 					else if (ViewBarDisabled) {
-						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&provider));
 						bar = _bar_disabled;
 					}
 				} else {
@@ -754,12 +772,14 @@ namespace Engine
 					}
 					if (*storage) tracker = *storage;
 					else if (source) {
-						*storage = source->Initialize(&ZeroArgumentProvider());
+						auto provider = ZeroArgumentProvider();
+						*storage = source->Initialize(&provider);
 						tracker = *storage;
 					}
 					if (_bar_normal) bar = _bar_normal;
 					else if (ViewBarNormal) {
-						_bar_normal.SetReference(ViewBarNormal->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_normal.SetReference(ViewBarNormal->Initialize(&provider));
 						bar = _bar_normal;
 					}
 				}
@@ -887,12 +907,14 @@ namespace Engine
 				if (Disabled) {
 					if (_tracker_disabled) tracker = _tracker_disabled;
 					else if (ViewTrackerDisabled) {
-						_tracker_disabled.SetReference(ViewTrackerDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_tracker_disabled.SetReference(ViewTrackerDisabled->Initialize(&provider));
 						tracker = _tracker_disabled;
 					}
 					if (_bar_disabled) bar = _bar_disabled;
 					else if (ViewBarDisabled) {
-						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_disabled.SetReference(ViewBarDisabled->Initialize(&provider));
 						bar = _bar_disabled;
 					}
 				} else {
@@ -914,12 +936,14 @@ namespace Engine
 					}
 					if (*storage) tracker = *storage;
 					else if (source) {
-						*storage = source->Initialize(&ZeroArgumentProvider());
+						auto provider = ZeroArgumentProvider();
+						*storage = source->Initialize(&provider);
 						tracker = *storage;
 					}
 					if (_bar_normal) bar = _bar_normal;
 					else if (ViewBarNormal) {
-						_bar_normal.SetReference(ViewBarNormal->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_bar_normal.SetReference(ViewBarNormal->Initialize(&provider));
 						bar = _bar_normal;
 					}
 				}

@@ -82,7 +82,8 @@ namespace Engine
 						temp = _inner->ToolWindow ? GetStation()->GetVisualStyles().WindowSmallInactiveView : GetStation()->GetVisualStyles().WindowInactiveView;
 					}
 					if (!(*shape) && temp) {
-						*shape = temp->Initialize(&ArgumentService::OverlappedWindowArgumentProvider(this));
+						auto provider = ArgumentService::OverlappedWindowArgumentProvider(this);
+						*shape = temp->Initialize(&provider);
 					}
 					if (*shape) (*shape)->Render(GetStation()->GetRenderingDevice(), at);
 				}
@@ -340,12 +341,14 @@ namespace Engine
 			{
 				if (Background) {
 					if (!_background) {
-						_background.SetReference(Background->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_background.SetReference(Background->Initialize(&provider));
 						_background->Render(GetStation()->GetRenderingDevice(), at);
 					} else _background->Render(GetStation()->GetRenderingDevice(), at);
 				} else if (DefaultBackground) {
 					if (!_background && GetStation()->GetVisualStyles().WindowDefaultBackground) {
-						_background.SetReference(GetStation()->GetVisualStyles().WindowDefaultBackground->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_background.SetReference(GetStation()->GetVisualStyles().WindowDefaultBackground->Initialize(&provider));
 					}
 					if (_background) _background->Render(GetStation()->GetRenderingDevice(), at);
 				} else {
@@ -442,6 +445,7 @@ namespace Engine
 					window = new_native->GetDesktop()->As<Controls::OverlappedWindow>();
 					window->_visible = true;
 					window->_initialized = true;
+					window->ArrangeChildren();
 				} else {
 					window = Station->CreateWindow<Controls::OverlappedWindow>(0, Template);
 					window->_mode = 1;

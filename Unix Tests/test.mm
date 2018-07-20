@@ -3,6 +3,7 @@
 #include <PlatformDependent/KeyCodes.h>
 
 using namespace Engine;
+using namespace Engine::UI;
 
 #include <stdio.h>
 #include <unistd.h>
@@ -126,6 +127,52 @@ public:
 }
 @end
 
+class _cb2 : public Windows::IWindowEventCallback
+{
+public:
+    virtual void OnInitialized(UI::Window * window) override {}
+    virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
+    {
+        if (ID == 1) {
+            auto group1 = window->FindChild(101);
+            auto group2 = window->FindChild(102);
+            if (group1->IsVisible()) {
+                group1->HideAnimated(Animation::SlideSide::Left, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+                group2->ShowAnimated(Animation::SlideSide::Right, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+            } else {
+                group2->HideAnimated(Animation::SlideSide::Left, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+                group1->ShowAnimated(Animation::SlideSide::Right, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+            }
+        } else if (ID == 2) {
+            auto group1 = window->FindChild(101);
+            auto group2 = window->FindChild(102);
+            if (group1->IsVisible()) {
+                group1->HideAnimated(Animation::SlideSide::Right, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+                group2->ShowAnimated(Animation::SlideSide::Left, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+            } else {
+                group2->HideAnimated(Animation::SlideSide::Right, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+                group1->ShowAnimated(Animation::SlideSide::Left, 500,
+                    Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+            }
+        }
+    }
+    virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
+    {
+        // SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+        // Streaming::TextWriter Console(ConsoleOutStream);
+        // if (event == Windows::FrameEvent::Close) Console << string(L"Close window") + IO::NewLineChar;
+        // else if (event == Windows::FrameEvent::Move) Console << string(L"Move window") + IO::NewLineChar;
+        if (event == Windows::FrameEvent::Close) window->Destroy();
+    }
+};
+
 int Main(void)
 {
     SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
@@ -135,12 +182,13 @@ int Main(void)
 
     Codec::CreateIconCodec();
     Cocoa::CreateAppleCodec();
+    UI::Zoom = NativeWindows::GetScreenScale();
 
     string src = IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(
         IO::Path::GetDirectory(IO::GetExecutablePath()))))) + L"/../Tests/test.eui";
     Console << src << IO::NewLineChar;
     Streaming::FileStream source(src, Streaming::AccessRead, Streaming::OpenExisting);
-    Loader loader;
+    ::Loader loader;
     UI::Loader::LoadUserInterfaceFromBinary(interface, &source, &loader, 0);
     tex = interface.Texture[L"Wallpaper"];
     Arguments args;
@@ -186,31 +234,12 @@ int Main(void)
 
     Console << L"Keyboard delay " + string(Keyboard::GetKeyboardDelay()) + L" ms" + IO::NewLineChar;
     Console << L"Keyboard speed " + string(Keyboard::GetKeyboardSpeed()) + L" ms" + IO::NewLineChar;
+
+    auto sbox = NativeWindows::GetScreenDimensions();
+    Console << L"Screen " + string(sbox.Left) + L", " + string(sbox.Top) + L", " + string(sbox.Right) + L", " + string(sbox.Bottom) + IO::NewLineChar;
+    Console << L"Scale  " + string(NativeWindows::GetScreenScale()) + IO::NewLineChar;
     
-    [NSApplication sharedApplication];
-
-    NSMenu * menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
-    NSMenuItem * main_item = [[NSMenuItem alloc] initWithTitle: @"Test Application Menu" action: NULL keyEquivalent: @""];
-    NSMenu * main_menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
-    [main_item setSubmenu: main_menu];
-    [main_menu addItem: [[NSMenuItem alloc] initWithTitle: @"О программе" action: @selector(orderFrontStandardAboutPanel:) keyEquivalent: @""]];
-    [main_menu addItem: [NSMenuItem separatorItem]];
-    NSMenuItem * services_items = [[NSMenuItem alloc] initWithTitle: @"Службы" action: NULL keyEquivalent: @""];
-    NSMenu * services_menu = [[NSMenu alloc] initWithTitle: @"Services Menu"];
-    [services_items setSubmenu: services_menu];
-    [main_menu addItem: services_items];
-    [main_menu addItem: [NSMenuItem separatorItem]];
-    [main_menu addItem: [[NSMenuItem alloc] initWithTitle: @"Скрыть программу" action: @selector(hide:) keyEquivalent: @"h"]];
-    NSMenuItem * hide_others;
-    [main_menu addItem: hide_others = [[NSMenuItem alloc] initWithTitle: @"Скрыть другие программы" action: @selector(hideOtherApplications:) keyEquivalent: @"h"]];
-    [hide_others setKeyEquivalentModifierMask: NSEventModifierFlagOption | NSEventModifierFlagCommand];
-    [main_menu addItem: [[NSMenuItem alloc] initWithTitle: @"Показать все" action: @selector(unhideAllApplications:) keyEquivalent: @""]];
-    [main_menu addItem: [NSMenuItem separatorItem]];
-    [main_menu addItem: [[NSMenuItem alloc] initWithTitle: @"Выход" action: @selector(terminate:) keyEquivalent: @"q"]];
-
-    [menu addItem: main_item];
-    [NSApp setMainMenu: menu];
-    [NSApp setServicesMenu: services_menu];
+    NativeWindows::InitializeWindowSystem();
 
     NSView * view = [[TestView alloc] init];
 
@@ -228,7 +257,12 @@ int Main(void)
     [view lockFocus];
     Console << L"Window: " << string((__bridge void*) window) << IO::NewLineChar;
     [view release];
-    [NSApp run];
+
+    auto Callback2 = new _cb2;
+    auto w4 = Windows::CreateFramedDialog(interface.Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
+    if (w4) w4->Show(true);
+    
+    NativeWindows::RunMainMessageLoop();
 
     return 0;
 }

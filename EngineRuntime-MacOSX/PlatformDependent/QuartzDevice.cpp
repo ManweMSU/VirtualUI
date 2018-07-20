@@ -520,7 +520,7 @@ namespace Engine
                     source = Source->Frames[i].ConvertFormat(Codec::FrameFormat(
                         Codec::PixelFormat::R8G8B8A8, Source->Frames[i].GetAlphaFormat(), Codec::LineDirection::TopDown));
                 }
-                int data_len = 4 * source->GetScanLineLength() * source->GetHeight();
+                int data_len = source->GetScanLineLength() * source->GetHeight();
                 uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));
                 if (!data) throw OutOfMemoryException();
                 MemoryCopy(data, source->GetData(), data_len);

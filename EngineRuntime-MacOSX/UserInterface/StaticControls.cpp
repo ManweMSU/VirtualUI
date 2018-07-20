@@ -85,7 +85,8 @@ namespace Engine
 			{
 				if (!shape) {
 					if (View) {
-						shape.SetReference(View->Initialize(&ArgumentService::StaticArgumentProvider(this)));
+						auto provider = ArgumentService::StaticArgumentProvider(this);
+						shape.SetReference(View->Initialize(&provider));
 						shape->Render(GetStation()->GetRenderingDevice(), at);
 					}
 				} else shape->Render(GetStation()->GetRenderingDevice(), at);
@@ -124,7 +125,8 @@ namespace Engine
 			{
 				if (!shape) {
 					if (View) {
-						shape.SetReference(View->Initialize(&ArgumentService::ProgressBarArgumentProvider(this)));
+						auto provider = ArgumentService::ProgressBarArgumentProvider(this);
+						shape.SetReference(View->Initialize(&provider));
 						shape->Render(GetStation()->GetRenderingDevice(), at);
 					}
 				} else shape->Render(GetStation()->GetRenderingDevice(), at);
@@ -161,7 +163,8 @@ namespace Engine
 			{
 				if (!shape) {
 					if (View) {
-						shape.SetReference(View->Initialize(&ArgumentService::ColorViewArgumentProvider(this)));
+						auto provider = ArgumentService::ColorViewArgumentProvider(this);
+						shape.SetReference(View->Initialize(&provider));
 						shape->Render(GetStation()->GetRenderingDevice(), at);
 					}
 				} else shape->Render(GetStation()->GetRenderingDevice(), at);

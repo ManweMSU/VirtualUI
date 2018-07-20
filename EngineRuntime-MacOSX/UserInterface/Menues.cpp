@@ -117,7 +117,8 @@ namespace Engine
 					{
 						auto Device = GetStation()->GetRenderingDevice();
 						if (!_background && GetStation()->GetVisualStyles().MenuBackground) {
-							_background.SetReference(GetStation()->GetVisualStyles().MenuBackground->Initialize(&ZeroArgumentProvider()));
+							auto provider = ZeroArgumentProvider();
+							_background.SetReference(GetStation()->GetVisualStyles().MenuBackground->Initialize(&provider));
 						}
 						if (_background) _background->Render(Device, at);
 						int y = 0;
@@ -129,7 +130,8 @@ namespace Engine
 							if (!element->IsSeparator()) {
 								if (static_cast<MenuItem *>(element)->Children.Length()) {
 									if (!_arrow && GetStation()->GetVisualStyles().MenuArrow) {
-										_arrow.SetReference(GetStation()->GetVisualStyles().MenuArrow->Initialize(&ZeroArgumentProvider()));
+										auto provider = ZeroArgumentProvider();
+										_arrow.SetReference(GetStation()->GetVisualStyles().MenuArrow->Initialize(&provider));
 									}
 									if (_arrow) _arrow->Render(Device, item);
 								}
@@ -292,7 +294,8 @@ namespace Engine
 				}
 				if (!(*_view)) {
 					if (View) {
-						*_view = View->Initialize(&ArgumentService::MenuArgumentProvider(this));
+						auto provider = ArgumentService::MenuArgumentProvider(this);
+						*_view = View->Initialize(&provider);
 						(*_view)->Render(_device, at);
 					}
 				} else (*_view)->Render(_device, at);
@@ -350,7 +353,8 @@ namespace Engine
 			{
 				if (!_view) {
 					if (View) {
-						_view.SetReference(View->Initialize(&ZeroArgumentProvider()));
+						auto provider = ZeroArgumentProvider();
+						_view.SetReference(View->Initialize(&provider));
 						_view->Render(_device, at);
 					}
 				} else _view->Render(_device, at);
