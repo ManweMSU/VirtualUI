@@ -1,6 +1,8 @@
 #include <EngineRuntime.h>
 #include <PlatformDependent/CocoaInterop.h>
 #include <PlatformDependent/KeyCodes.h>
+#include <PlatformDependent/QuartzDevice.h>
+#include <PlatformDependent/AppleCodec.h>
 
 using namespace Engine;
 using namespace Engine::UI;
