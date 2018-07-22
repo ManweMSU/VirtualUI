@@ -8,7 +8,7 @@ namespace Engine
 		string ParserSyntaxException::ToString(void) const { return L"ParserSyntaxException: " + Comments + L" at token " + string(Position); }
 
 		Grammar::GrammarRule::GrammarRule(void) : Rules(0x20), CanBeginWith(0x10) {}
-		Grammar::GrammarRule::GrammarRule(const GrammarRule & src) : Class(src.Class), Rules(src.Rules), Reference(src.Reference), TokenClass(src.TokenClass), MinRepeat(src.MinRepeat), MaxRepeat(src.MaxRepeat), Label(src.Label) {}
+		Grammar::GrammarRule::GrammarRule(const GrammarRule & src) : Class(src.Class), Rules(src.Rules), CanBeginWith(0x10), Reference(src.Reference), TokenClass(src.TokenClass), MinRepeat(src.MinRepeat), MaxRepeat(src.MaxRepeat), Label(src.Label) {}
 		Grammar::GrammarRule Grammar::GrammarRule::VariantRule(const string & label, int min_repeat, int max_repeat)
 		{
 			GrammarRule result;
@@ -54,15 +54,15 @@ namespace Engine
 		}
 		bool Grammar::GrammarRule::IsPossibleBeginning(const Token & token) const
 		{
-			for (int i = 0; i < CanBeginWith.Length(); i++) if (CanBeginWith[i].IsSimilar(token)) return true;
+			for (int i = 0; i < CanBeginWith.Length(); i++) {
+				if (CanBeginWith[i].IsVoid()) return true;
+				if (CanBeginWith[i].IsSimilar(token)) return true;
+			}
 			return false;
 		}
 		void Grammar::GrammarRule::BuildBeginnings(Grammar & grammar)
 		{
 			CanBeginWith.Clear();
-			if (MinRepeat == 0) {
-				CanBeginWith << Token::VoidToken();
-			}
 			_sinal = true;
 			if (Class == RuleClass::Variant) {
 				for (int i = 0; i < Rules.Length(); i++) {
@@ -86,8 +86,8 @@ namespace Engine
 					}
 					bool CanBeEmpty = false;
 					for (int j = 0; j < Rules[i].CanBeginWith.Length(); j++) {
-						if (Rules[i].CanBeginWith[j].IsVoid()) CanBeEmpty = true;
-						if (!Rules[i].CanBeginWith[j].IsVoid() || i == Rules[i].CanBeginWith.Length() - 1) {
+						if (Rules[i].CanBeginWith[j].IsVoid() || Rules[i].MinRepeat == 0) CanBeEmpty = true;
+						if (!Rules[i].CanBeginWith[j].IsVoid() || j == Rules[i].CanBeginWith.Length() - 1) {
 							bool present = false;
 							for (int k = 0; k < CanBeginWith.Length(); k++) {
 								if (CanBeginWith[k] == Rules[i].CanBeginWith[j]) { present = true; break; }
@@ -96,6 +96,13 @@ namespace Engine
 						}
 					}
 					if (!CanBeEmpty) break;
+					if (i == Rules.Length() - 1) {
+						bool present = false;
+						for (int k = 0; k < CanBeginWith.Length(); k++) {
+							if (CanBeginWith[k].IsVoid()) { present = true; break; }
+						}
+						if (!present) CanBeginWith << Token::VoidToken();
+					}
 				}
 			} else if (Class == RuleClass::Reference) {
 				if (!grammar.Rules.ElementPresent(Reference)) throw Exception();

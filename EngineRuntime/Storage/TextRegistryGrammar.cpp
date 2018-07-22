@@ -10,8 +10,8 @@ namespace Engine
 			spelling.BooleanTrueLiteral = L"true";
 			spelling.InfinityLiteral = L"float_infinity";
 			spelling.NonNumberLiteral = L"float_nan";
-			spelling.CommentBlockClosingWord = L"/*";
-			spelling.CommentBlockOpeningWord = L"*/";
+			spelling.CommentBlockClosingWord = L"*/";
+			spelling.CommentBlockOpeningWord = L"/*";
 			spelling.CommentEndOfLineWord = L"//";
 			spelling.IsolatedChars << L'{';
 			spelling.IsolatedChars << L'}';
