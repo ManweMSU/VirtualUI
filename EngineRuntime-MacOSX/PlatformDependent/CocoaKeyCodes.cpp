@@ -6,8 +6,9 @@ namespace Engine
 {
     namespace Cocoa
     {
-        uint32 EngineKeyCode(uint32 key)
+        uint32 EngineKeyCode(uint32 key, bool & dead)
         {
+            dead = false;
             switch (key) {
                 case 0x00: return KeyCodes::A;
                 case 0x01: return KeyCodes::S;
@@ -19,6 +20,7 @@ namespace Engine
                 case 0x07: return KeyCodes::X;
                 case 0x08: return KeyCodes::C;
                 case 0x09: return KeyCodes::V;
+                case 0x0A: return KeyCodes::Oem8;
                 case 0x0B: return KeyCodes::B;
                 case 0x0C: return KeyCodes::Q;
                 case 0x0D: return KeyCodes::W;
@@ -79,9 +81,12 @@ namespace Engine
                 case 0x5B: return KeyCodes::Num8;
                 case 0x5C: return KeyCodes::Num9;
 
-                case 0x24: return KeyCodes::Return;
                 case 0x30: return KeyCodes::Tab;
                 case 0x31: return KeyCodes::Space;
+            }
+            dead = true;
+            switch (key) {
+                case 0x24: return KeyCodes::Return;
                 case 0x33: return KeyCodes::Back;
                 case 0x35: return KeyCodes::Escape;
                 case 0x37: return KeyCodes::LeftSystem;

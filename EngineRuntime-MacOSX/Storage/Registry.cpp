@@ -861,17 +861,19 @@ namespace Engine
 		Registry * CreateRegistry(void) { return new RegistryImplementation; }
 		Registry * LoadRegistry(Streaming::Stream * source)
 		{
-			EngineRegistryHeader hdr;
-			source->Read(&hdr, sizeof(hdr));
-			if (MemoryCompare(hdr.Signature, "ecs.1.0", 8) != 0 || hdr.SignatureEx != 0x80000004 || hdr.Version != 0)
-				throw InvalidFormatException();
-			Array<uint8> data(hdr.DataSize);
-			data.SetLength(hdr.DataSize);
-			source->Seek(hdr.DataOffset, Streaming::Begin);
-			source->Read(data.GetBuffer(), hdr.DataSize);
-			RegistryNodeImplementation * root = new RegistryNodeImplementation;
-			root->FillFromMemoryData(data.GetBuffer(), data.Length(), hdr.RootOffset);
-			return new RegistryImplementation(root);
+			try {
+				EngineRegistryHeader hdr;
+				source->Read(&hdr, sizeof(hdr));
+				if (MemoryCompare(hdr.Signature, "ecs.1.0", 8) != 0 || hdr.SignatureEx != 0x80000004 || hdr.Version != 0)
+					throw InvalidFormatException();
+				Array<uint8> data(hdr.DataSize);
+				data.SetLength(hdr.DataSize);
+				source->Seek(hdr.DataOffset, Streaming::Begin);
+				source->Read(data.GetBuffer(), hdr.DataSize);
+				RegistryNodeImplementation * root = new RegistryNodeImplementation;
+				root->FillFromMemoryData(data.GetBuffer(), data.Length(), hdr.RootOffset);
+				return new RegistryImplementation(root);
+			} catch (...) { return 0; }
 		}
 		Registry * CreateRegistryFromNode(const RegistryNode * node)
 		{

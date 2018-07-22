@@ -5,21 +5,46 @@
 
 #include "CocoaInterop.h"
 #include "QuartzDevice.h"
+#include "CocoaKeyCodes.h"
+#include "KeyCodes.h"
 
 using namespace Engine::UI;
 
 static void RenderStationContent(Engine::UI::WindowStation * station);
 static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
+static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy)
+{
+    double scale = [[view window] backingScaleFactor];
+    CGRect rect = NSMakeRect(sx, sy, 0.0, 0.0);
+    CGRect frame = [view frame];
+    rect = [view convertRect: [[view window] convertRectFromScreen: rect] fromView: nil];
+    ox = int(rect.origin.x * scale);
+    oy = int((frame.size.height - rect.origin.y) * scale);
+}
 
+@interface EngineRuntimeTimerTarget : NSObject
+{
+@public
+    Engine::UI::Window * target;
+    NSTimer * timer;
+}
+- (instancetype) init;
+@end
 @interface EngineRuntimeContentView : NSView
 {
     Engine::UI::WindowStation * station;
+    uint32 last_ldown;
+    uint32 last_rdown;
+    uint32 dbl;
+    int last_x, last_y, fkeys;
+    bool lwas, rwas, mwas;
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
 - (void) drawRect : (NSRect) dirtyRect;
 - (BOOL) acceptsFirstMouse: (NSEvent *) event;
 - (void) setFrame : (NSRect) frame;
 - (void) setFrameSize: (NSSize) newSize;
+- (void) keyboardStateInactivate;
 
 - (void) mouseMoved: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;
@@ -28,8 +53,11 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
 - (void) rightMouseDragged: (NSEvent *) event;
 - (void) rightMouseDown: (NSEvent *) event;
 - (void) rightMouseUp: (NSEvent *) event;
-//- (void) keyDown: (NSEvent *) event;
-// wheel and keyboard !
+- (void) keyDown: (NSEvent *) event;
+- (void) keyUp: (NSEvent *) event;
+- (void) flagsChanged: (NSEvent *) event;
+- (void) scrollWheel: (NSEvent *) event;
+- (void) timerFireMethod: (NSTimer *) timer;
 @property(readonly) BOOL acceptsFirstResponder;
 @end
 @interface EngineRuntimeWindowDelegate : NSObject<NSWindowDelegate>
@@ -42,11 +70,29 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
 - (void) windowDidResignKey: (NSNotification *) notification;
 @end
 
+@implementation EngineRuntimeTimerTarget : NSObject
+- (instancetype) init
+{
+    [super init];
+    target = 0;
+    timer = 0;
+    return self;
+}
+@end
 @implementation EngineRuntimeContentView
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station
 {
     [self init];
     station = _station;
+    last_ldown = 0;
+    last_rdown = 0;
+    last_x = 0;
+    last_y = 0;
+    fkeys = 0;
+    lwas = false;
+    rwas = false;
+    mwas = false;
+    dbl = uint32([NSEvent doubleClickInterval] * 1000.0);
     return self;
 }
 - (void) drawRect : (NSRect) dirtyRect
@@ -75,54 +121,188 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
     station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Move);
     [self setNeedsDisplay: YES];
 }
+- (void) keyboardStateInactivate
+{
+    fkeys = 0;
+}
 - (void) mouseMoved: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"MOUSE MOVE: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        if (x != last_x || y != last_y || !mwas) {
+            last_x = x;
+            last_y = y;
+            mwas = true;
+            station->MouseMove(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        }
+    }
 }
 - (void) mouseDragged: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"MOUSE DRAG: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        if (x != last_x || y != last_y || !mwas) {
+            last_x = x;
+            last_y = y;
+            mwas = true;
+            station->MouseMove(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        }
+    }
 }
 - (void) mouseDown: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"MOUSE DOWN: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        auto time = Engine::GetTimerValue();
+        if (lwas && (time - last_ldown) < dbl) {
+            lwas = false;
+            station->LeftButtonDoubleClick(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        } else {
+            lwas = true;
+            last_ldown = time;
+            station->LeftButtonDown(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        }
+    }
 }
 - (void) mouseUp: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"MOUSE UP: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        station->LeftButtonUp(Engine::UI::Point(x, y));
+        [self setNeedsDisplay: YES];
+    }
 }
 - (void) rightMouseDragged: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"RIGHT MOUSE DRAG: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        if (x != last_x || y != last_y || !mwas) {
+            last_x = x;
+            last_y = y;
+            mwas = true;
+            station->MouseMove(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        }
+    }
 }
 - (void) rightMouseDown: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"RIGHT MOUSE DOWN: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        auto time = Engine::GetTimerValue();
+        if (rwas && (time - last_rdown) < dbl) {
+            rwas = false;
+            station->RightButtonDoubleClick(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        } else {
+            rwas = true;
+            last_rdown = time;
+            station->RightButtonDown(Engine::UI::Point(x, y));
+            [self setNeedsDisplay: YES];
+        }
+    }
 }
 - (void) rightMouseUp: (NSEvent *) event
 {
-    auto pos = [NSEvent mouseLocation];
-    Engine::SafePointer<Engine::Streaming::FileStream> ConsoleOutStream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
-    Engine::Streaming::TextWriter Console(ConsoleOutStream);
-    Console << Engine::string(L"RIGHT MOUSE UP: ") + Engine::string(pos.x) + L" : " + Engine::string(pos.y) + Engine::IO::NewLineChar;
+    if ([[self window] isKeyWindow]) {
+        auto pos = [NSEvent mouseLocation];
+        int x, y;
+        ScreenToView(pos.x, pos.y, self, x, y);
+        station->RightButtonUp(Engine::UI::Point(x, y));
+        [self setNeedsDisplay: YES];
+    }
+}
+- (void) keyDown: (NSEvent *) event
+{
+    bool dead;
+    uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
+    if (Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Control) || Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Alternative) ||
+        Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::System)) dead = true;
+    if (key) {
+        station->KeyDown(key);
+        if (!dead) {
+            Engine::string etext;
+            if (key == Engine::KeyCodes::Tab) {
+                etext = L"\t";
+            } else if (key == Engine::KeyCodes::Space) {
+                etext = L" ";
+            } else {
+                NSString * text = [event characters];
+                etext = Engine::Cocoa::EngineString(text);
+            }        
+            for (int i = 0; i < etext.Length(); i++) station->CharDown(etext[i]);
+        }
+        [self setNeedsDisplay: YES];
+    }
+}
+- (void) keyUp: (NSEvent *) event
+{
+    bool dead;
+    uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
+    if (key) {
+        station->KeyUp(key);
+        [self setNeedsDisplay: YES];
+    }
+}
+- (void) flagsChanged: (NSEvent *) event
+{
+    bool shift = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Shift);
+    bool control = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Control);
+    bool alternative = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Alternative);
+    bool system = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::System);
+    bool redraw = false;
+    if ((shift && !(fkeys & 1)) || (!shift && (fkeys & 1))) {
+        redraw = true;
+        if (shift) station->KeyDown(Engine::KeyCodes::Shift);
+        else station->KeyUp(Engine::KeyCodes::Shift);
+    }
+    if ((control && !(fkeys & 2)) || (!control && (fkeys & 2))) {
+        redraw = true;
+        if (control) station->KeyDown(Engine::KeyCodes::Control);
+        else station->KeyUp(Engine::KeyCodes::Control);
+    }
+    if ((alternative && !(fkeys & 4)) || (!alternative && (fkeys & 4))) {
+        redraw = true;
+        if (alternative) station->KeyDown(Engine::KeyCodes::Alternative);
+        else station->KeyUp(Engine::KeyCodes::Alternative);
+    }
+    if ((system && !(fkeys & 8)) || (!system && (fkeys & 8))) {
+        redraw = true;
+        if (system) station->KeyDown(Engine::KeyCodes::System);
+        else station->KeyUp(Engine::KeyCodes::System);
+    }
+    fkeys = (shift ? 1 : 0) | (control ? 2 : 0) | (alternative ? 4 : 0) | (system ? 8 : 0);
+    if (redraw) { [self setNeedsDisplay: YES]; }
+}
+- (void) scrollWheel: (NSEvent *) event
+{
+    double dx = [event deltaX];
+    double dy = [event deltaY];
+    station->ScrollHorizontally(-dx);
+    station->ScrollVertically(-dy);
+    [self setNeedsDisplay: YES];
+}
+- (void) timerFireMethod: (NSTimer *) timer
+{
+    auto target = ((EngineRuntimeTimerTarget *) [timer userInfo])->target;
+    if (target) target->Timer();
+    [self setNeedsDisplay: YES];
 }
 - (BOOL) acceptsFirstResponder
 {
@@ -151,121 +331,10 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
 {
     station->FocusChanged(false);
     station->CaptureChanged(false);
+    [[GetStationWindow(station) contentView] keyboardStateInactivate];
     [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
 }
 @end
-
-// LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
-// {
-//     NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));
-//     LRESULT Result = 0;
-//     if (Msg == WM_TIMER) {
-//         Result = station->ProcessWindowEvents(Msg, WParam, LParam);
-//         InvalidateRect(Wnd, 0, FALSE);
-//         return Result;
-//     } else if (Msg == WM_MEASUREITEM) {
-//         LPMEASUREITEMSTRUCT mis = reinterpret_cast<LPMEASUREITEMSTRUCT>(LParam);
-//         if (mis->CtlType == ODT_MENU) {
-//             auto item = reinterpret_cast<Menues::MenuElement *>(mis->itemData);
-//             mis->itemWidth = item->GetWidth();
-//             mis->itemHeight = item->GetHeight();
-//         }
-//         Result = 1;
-//     } else if (Msg == WM_DRAWITEM) {
-//         LPDRAWITEMSTRUCT dis = reinterpret_cast<LPDRAWITEMSTRUCT>(LParam);
-//         if (dis->CtlType == ODT_MENU) {
-//             auto item = reinterpret_cast<Menues::MenuElement *>(dis->itemData);
-//             auto box = Box(0, 0, dis->rcItem.right - dis->rcItem.left, dis->rcItem.bottom - dis->rcItem.top);
-//             auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderDevice *>(item->GetRenderingDevice())->GetRenderTarget());
-//             target->BindDC(dis->hDC, &dis->rcItem);
-//             target->BeginDraw();
-//             if (dis->itemState & ODS_SELECTED) {
-//                 item->Render(box, true);
-//             } else {
-//                 item->Render(box, false);
-//             }
-//             target->EndDraw();
-//         }
-//         Result = 1;
-//     } else {
-//         if (station) Result = station->ProcessWindowEvents(Msg, WParam, LParam);
-//         else Result = DefWindowProcW(Wnd, Msg, WParam, LParam);
-//     }
-//     if (Msg == WM_MOUSEMOVE || Msg == WM_LBUTTONDOWN || Msg == WM_LBUTTONUP || Msg == WM_LBUTTONDBLCLK ||
-//         Msg == WM_RBUTTONDOWN || Msg == WM_RBUTTONUP || Msg == WM_RBUTTONDBLCLK ||
-//         Msg == WM_MOUSEWHEEL || Msg == WM_MOUSEHWHEEL || Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN ||
-//         Msg == WM_KEYUP || Msg == WM_SYSKEYUP || Msg == WM_CHAR) {
-//         InvalidateRect(Wnd, 0, FALSE);
-//     }
-//     return Result;
-// }
-// eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
-// {
-//     if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
-//         if (WParam == VK_SHIFT) {
-//             if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyDown(KeyCodes::LeftShift);
-//             else KeyDown(KeyCodes::RightShift);
-//         } else if (WParam == VK_CONTROL) {
-//             if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyDown(KeyCodes::LeftControl);
-//             else KeyDown(KeyCodes::RightControl);
-//         } else if (WParam == VK_MENU) {
-//             if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyDown(KeyCodes::LeftAlternative);
-//             else KeyDown(KeyCodes::RightAlternative);
-//         } else KeyDown(int32(WParam));
-//     } else if (Msg == WM_KEYUP || Msg == WM_SYSKEYUP) {
-//         if (WParam == VK_SHIFT) {
-//             if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftShift);
-//             else KeyUp(KeyCodes::RightShift);
-//         } else if (WParam == VK_CONTROL) {
-//             if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftControl);
-//             else KeyUp(KeyCodes::RightControl);
-//         } else if (WParam == VK_MENU) {
-//             if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftAlternative);
-//             else KeyUp(KeyCodes::RightAlternative);
-//         } else KeyUp(int32(WParam));
-//     } else if (Msg == WM_CHAR) {
-//         if ((WParam & 0xFC00) == 0xD800) {
-//             _surrogate = ((WParam & 0x3FF) << 10) + 0x10000;
-//         } else if ((WParam & 0xFC00) == 0xDC00) {
-//             _surrogate |= (WParam & 0x3FF) + 0x10000;
-//             CharDown(_surrogate);
-//             _surrogate = 0;
-//         } else {
-//             _surrogate = 0;
-//             CharDown(uint32(WParam));
-//         }
-//         return FALSE;
-//     } else if (Msg == WM_MOUSEMOVE) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         MouseMove(Point(p.x, p.y));
-//     } else if (Msg == WM_LBUTTONDOWN) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         LeftButtonDown(Point(p.x, p.y));
-//     } else if (Msg == WM_LBUTTONUP) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         LeftButtonUp(Point(p.x, p.y));
-//     } else if (Msg == WM_LBUTTONDBLCLK) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         LeftButtonDoubleClick(Point(p.x, p.y));
-//     } else if (Msg == WM_RBUTTONDOWN) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         RightButtonDown(Point(p.x, p.y));
-//     } else if (Msg == WM_RBUTTONUP) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         RightButtonUp(Point(p.x, p.y));
-//     } else if (Msg == WM_RBUTTONDBLCLK) {
-//         POINTS p = MAKEPOINTS(LParam);
-//         RightButtonDoubleClick(Point(p.x, p.y));
-//     } else if (Msg == WM_MOUSEWHEEL) {
-//         ScrollVertically(-double(GET_WHEEL_DELTA_WPARAM(WParam)) * 3.0 / double(WHEEL_DELTA));
-//     } else if (Msg == WM_MOUSEHWHEEL) {
-//         ScrollHorizontally(double(GET_WHEEL_DELTA_WPARAM(WParam)) * 3.0 / double(WHEEL_DELTA));
-//     } else if (Msg == WM_TIMER) {
-//         int index = WParam - 2;
-//         if (index >= 0 && index < _timers.Length() && _timers[index]) _timers[index]->Timer();
-//     }
-//     return DefWindowProcW(_window, Msg, WParam, LParam);
-// }
 
 namespace Engine
 {
@@ -283,7 +352,7 @@ namespace Engine
 			SafePointer<ICursor> _size_left_up_right_down;
 			SafePointer<ICursor> _size_left_down_right_up;
 			SafePointer<ICursor> _size_all;
-			Array<Window *> _timers;
+			Array<EngineRuntimeTimerTarget *> _timers;
 			SafePointer<Cocoa::QuartzRenderingDevice> RenderingDevice;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
         public:
@@ -297,16 +366,36 @@ namespace Engine
 					return new Controls::OverlappedWindow(0, Station, _template);
 				}
 			};
+            class CocoaCursor : public ICursor
+            {
+                NSCursor * _cursor;
+                bool _release;
+            public:
+                CocoaCursor(NSCursor * cursor, bool take_control) : _cursor(cursor), _release(take_control) {}
+                ~CocoaCursor(void) override { if (_release) { [_cursor release]; } }
+                void Set(void) { [_cursor set]; }
+            };
+            static void FreeDataCallback(void * info, const void * data, size_t size) { free(info); }
 		
             NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory) : _window(window), WindowStation(factory)
             {
                 RenderingDevice = new Cocoa::QuartzRenderingDevice;
                 SetRenderingDevice(RenderingDevice);
-                // cursors and another shit
+                _arrow.SetReference(new CocoaCursor([NSCursor arrowCursor], false));
+                _beam.SetReference(new CocoaCursor([NSCursor IBeamCursor], false));
+                _link.SetReference(new CocoaCursor([NSCursor pointingHandCursor], false));
+                _size_left_right.SetReference(new CocoaCursor([NSCursor resizeLeftRightCursor], false));
+                _size_up_down.SetReference(new CocoaCursor([NSCursor resizeUpDownCursor], false));
+                _size_left_up_right_down.SetReference(new CocoaCursor([NSCursor resizeLeftRightCursor], false));
+                _size_left_down_right_up.SetReference(new CocoaCursor([NSCursor resizeLeftRightCursor], false));
+                _size_all.SetReference(new CocoaCursor([NSCursor openHandCursor], false));
             }
 			virtual ~NativeStation(void) override
             {
-                // release cocoa objects
+                for (int i = 0; i < _timers.Length(); i++) {
+                    [_timers[i]->timer invalidate];
+                    [_timers[i] release];
+                }
             }
 			virtual bool IsNativeStationWrapper(void) const override { return true; }
 			virtual void SetFocus(Window * window) override { if ([_window isKeyWindow]) WindowStation::SetFocus(window); }
@@ -318,60 +407,124 @@ namespace Engine
 			virtual Window * GetExclusiveWindow(void) override { if ([_window isKeyWindow]) return WindowStation::GetExclusiveWindow(); else return 0; }
 			virtual UI::Point GetCursorPos(void) override
             {
-                return UI::Point(0, 0);
+                auto pos = [NSEvent mouseLocation];
+                int x, y;
+                ScreenToView(pos.x, pos.y, [_window contentView], x, y);
+                return UI::Point(x, y);
             }
 			virtual bool NativeHitTest(const UI::Point & at) override
             {
+                auto box = GetBox();
+                if ([_window isKeyWindow] && at.x >= 0 && at.y >= 0 && at.x < box.Right && at.y < box.Bottom) return true;
                 return false;
             }
 			virtual ICursor * LoadCursor(Streaming::Stream * Source) override
             {
-                return 0;
+                SafePointer<Codec::Image> Image = Codec::DecodeImage(Source);
+			    if (Image) { return LoadCursor(Image); } else throw InvalidArgumentException();
             }
-			virtual ICursor * LoadCursor(Codec::Image * Source) override
-            {
-                return 0;
-            }
+			virtual ICursor * LoadCursor(Codec::Image * Source) override { return LoadCursor(Source->GetFrameBestDpiFit(UI::Zoom)); }
 			virtual ICursor * LoadCursor(Codec::Frame * Source) override
             {
-                return 0;
+                SafePointer<Codec::Frame> conv = Source->ConvertFormat(Engine::Codec::FrameFormat(
+					Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaFormat::Normal, Engine::Codec::LineDirection::TopDown));
+                CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+                uint len = conv->GetScanLineLength() * conv->GetHeight();
+                void * data = malloc(len);
+                MemoryCopy(data, conv->GetData(), len);
+                if (!data) throw OutOfMemoryException();
+                CGDataProviderRef provider = CGDataProviderCreateWithData(data, data, len, FreeDataCallback);
+                CGImageRef frame = CGImageCreate(conv->GetWidth(), conv->GetHeight(), 8, 32, conv->GetScanLineLength(),
+                    rgb, kCGImageAlphaLast, provider, 0, false, kCGRenderingIntentDefault);
+                CGColorSpaceRelease(rgb);
+                CGDataProviderRelease(provider);
+                NSScreen * screen = [NSScreen mainScreen];
+                double scale = [screen backingScaleFactor];
+                NSImage * image = [[NSImage alloc] initWithCGImage: frame
+                    size: NSMakeSize(double(Source->GetWidth()) / scale, double(Source->GetHeight()) / scale)];
+                CGImageRelease(frame);
+                CocoaCursor * cursor = new CocoaCursor([[NSCursor alloc] initWithImage: image
+                    hotSpot: NSMakePoint(double(Source->HotPointX) / scale, double(Source->HotPointY) / scale)], true);
+                [image release];
+                return cursor;
             }
 			virtual ICursor * GetSystemCursor(SystemCursor cursor) override
             {
-                return 0;
+                if (cursor == SystemCursor::Null) return _null;
+                else if (cursor == SystemCursor::Arrow) return _arrow;
+                else if (cursor == SystemCursor::Beam) return _beam;
+                else if (cursor == SystemCursor::Link) return _link;
+                else if (cursor == SystemCursor::SizeLeftRight) return _size_left_right;
+                else if (cursor == SystemCursor::SizeUpDown) return _size_up_down;
+                else if (cursor == SystemCursor::SizeLeftUpRightDown) return _size_left_up_right_down;
+                else if (cursor == SystemCursor::SizeLeftDownRightUp) return _size_left_down_right_up;
+                else if (cursor == SystemCursor::SizeAll) return _size_all;
+                else return 0;
             }
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor) override
             {
-
+                if (entity == SystemCursor::Null) _null.SetRetain(cursor);
+                else if (entity == SystemCursor::Arrow) _arrow.SetRetain(cursor);
+                else if (entity == SystemCursor::Beam) _beam.SetRetain(cursor);
+                else if (entity == SystemCursor::Link) _link.SetRetain(cursor);
+                else if (entity == SystemCursor::SizeLeftRight) _size_left_right.SetRetain(cursor);
+                else if (entity == SystemCursor::SizeUpDown) _size_up_down.SetRetain(cursor);
+                else if (entity == SystemCursor::SizeLeftUpRightDown) _size_left_up_right_down.SetRetain(cursor);
+                else if (entity == SystemCursor::SizeLeftDownRightUp) _size_left_down_right_up.SetRetain(cursor);
+                else if (entity == SystemCursor::SizeAll) _size_all.SetRetain(cursor);
             }
-			virtual void SetCursor(ICursor * cursor) override
-            {
-
-            }
-			virtual void SetTimer(Window * window, uint32 period) override
-            {
-                
-            }
+			virtual void SetCursor(ICursor * cursor) override { static_cast<CocoaCursor *>(cursor)->Set(); }
+			virtual void SetTimer(Window * window, uint32 period) override { LowLevelSetTimer(window, period); }
 
 			virtual void OnDesktopDestroy(void) override { [_window close]; DestroyStation(); }
 			virtual void RequireRefreshRate(Window::RefreshPeriod period) override { InternalRate = period; AnimationStateChanged(); }
 			virtual Window::RefreshPeriod GetRefreshRate(void) override { return InternalRate; }
 			virtual void AnimationStateChanged(void) override
 			{
-				// int fr = int(GetFocus() ? GetFocus()->FocusedRefreshPeriod() : Window::RefreshPeriod::None);
-				// int ar = int(IsPlayingAnimation() ? Window::RefreshPeriod::Cinematic : Window::RefreshPeriod::None);
-				// int ur = int(InternalRate);
-				// int mr = max(max(fr, ar), ur);
-				// if (!mr) KillTimer(GetHandle(), 1); else {
-				// 	if (mr == 1) ::SetTimer(GetHandle(), 1, GetRenderingDevice()->GetCaretBlinkHalfTime(), 0);
-				// 	else if (mr == 2) {
-				// 		if (::GetActiveWindow() == GetHandle()) ::SetTimer(GetHandle(), 1, 25, 0);
-				// 		else ::SetTimer(GetHandle(), 1, 100, 0);
-				// 	}
-				// }
+				int fr = int(GetFocus() ? GetFocus()->FocusedRefreshPeriod() : Window::RefreshPeriod::None);
+				int ar = int(IsPlayingAnimation() ? Window::RefreshPeriod::Cinematic : Window::RefreshPeriod::None);
+				int ur = int(InternalRate);
+				int mr = max(max(fr, ar), ur);
+				if (!mr) LowLevelSetTimer(0, 0); else {
+					if (mr == 1) LowLevelSetTimer(0, GetRenderingDevice()->GetCaretBlinkHalfTime());
+					else if (mr == 2) {
+						if ([_window isKeyWindow]) LowLevelSetTimer(0, 25);
+						else LowLevelSetTimer(0, 100);
+					}
+				}
 			}
 			virtual void FocusWindowChanged(void) override { [[_window contentView] setNeedsDisplay: YES]; AnimationStateChanged(); }
 
+            void LowLevelSetTimer(Window * window, uint32 period)
+            {
+                if (period) {
+                    EngineRuntimeTimerTarget * timer = 0;
+                    for (int i = 0; i < _timers.Length(); i++) {
+                        if (_timers[i]->target == window) { timer = _timers[i]; break; }
+                    }
+                    if (!timer) {
+                        timer = [[EngineRuntimeTimerTarget alloc] init];
+                        timer->target = window;
+                        _timers << timer;
+                    }
+                    if (timer->timer) {
+                        [timer->timer invalidate];
+                        timer->timer = 0;
+                    }
+                    NSTimer * sys_timer = [NSTimer timerWithTimeInterval: double(period) / 1000.0
+                        target: [_window contentView] selector: @selector(timerFireMethod:) userInfo: timer repeats: YES];
+                    timer->timer = sys_timer;
+                    [[NSRunLoop currentRunLoop] addTimer: sys_timer forMode: NSDefaultRunLoopMode];
+                } else {
+                    for (int i = _timers.Length() - 1; i >= 0; i--) {
+                        if (_timers[i]->target == window) {
+                            [_timers[i]->timer invalidate];
+                            [_timers[i] release];
+                            _timers.Remove(i);
+                        }
+                    }
+                }
+            }
 			void RenderContent(void)
 			{
 				if (RenderingDevice) {
@@ -418,9 +571,29 @@ namespace Engine
                 [main_menu addItem: show_sep];
                 [main_menu addItem: item_exit];
 
+                NSMenuItem * window_menu_item = [[NSMenuItem alloc] initWithTitle: @"Window" action: NULL keyEquivalent: @""];
+                NSMenu * window_menu = [[NSMenu alloc] initWithTitle: @"Window"];
+                [window_menu_item setSubmenu: window_menu];
+                NSMenuItem * window_minimize = [[NSMenuItem alloc] initWithTitle: @"Minimize" action: @selector(performMiniaturize:) keyEquivalent: @"m"];
+                NSMenuItem * window_maximize = [[NSMenuItem alloc] initWithTitle: @"Zoom" action: @selector(performZoom:) keyEquivalent: @""];
+                NSMenuItem * window_sep = [NSMenuItem separatorItem];
+                NSMenuItem * window_bring = [[NSMenuItem alloc] initWithTitle: @"Bring All to Front" action: @selector(arrangeInFront:) keyEquivalent: @""];
+                [window_menu addItem: window_minimize];
+                [window_menu addItem: window_maximize];
+                [window_menu addItem: window_sep];
+                [window_menu addItem: window_bring];
+
+                NSMenuItem * help_menu_item = [[NSMenuItem alloc] initWithTitle: @"Help" action: NULL keyEquivalent: @""];
+                NSMenu * help_menu = [[NSMenu alloc] initWithTitle: @"Help"];
+                [help_menu_item setSubmenu: help_menu];
+
                 [menu addItem: main_item];
+                [menu addItem: window_menu_item];
+                [menu addItem: help_menu_item];
                 [NSApp setMainMenu: menu];
                 [NSApp setServicesMenu: services_menu];
+                [NSApp setWindowsMenu: window_menu];
+                [NSApp setHelpMenu: help_menu];
 
                 [menu release];
                 [main_item release];
@@ -435,6 +608,14 @@ namespace Engine
                 [show_all release];
                 [show_sep release];
                 [item_exit release];
+                [window_menu_item release];
+                [window_menu release];
+                [window_minimize release];
+                [window_maximize release];
+                [window_sep release];
+                [window_bring release];
+                [help_menu_item release];
+                [help_menu release];
 
                 _Initialized = true;
             }
@@ -539,7 +720,7 @@ namespace Engine
         }
 		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at)
         {
-            return 0;
+			return 0;
         }
 		UI::Box GetScreenDimensions(void)
         {

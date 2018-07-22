@@ -101,11 +101,8 @@ namespace Engine
 	{
 		if (letter >= 0x10000) return false;
 		bool result = false;
-		@autoreleasepool {
-			NSCharacterSet * letters = [NSCharacterSet letterCharacterSet];
-			[letters autorelease];
-			if ([letters characterIsMember: unichar(letter)]) result = true;
-		}
+		NSCharacterSet * letters = [NSCharacterSet letterCharacterSet];
+		if ([letters characterIsMember: unichar(letter)]) result = true;
 		return result;
 	}
 	bool IsPlatformAvailable(Platform platform)

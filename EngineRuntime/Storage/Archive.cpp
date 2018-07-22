@@ -479,7 +479,7 @@ namespace Engine
 			};
 		}
 		Archive * OpenArchive(Streaming::Stream * at) { return OpenArchive(at, ArchiveMetadataUsage::LoadMetadata); }
-		Archive * OpenArchive(Streaming::Stream * at, ArchiveMetadataUsage metadata_usage) { return new Archives::Archive(at, metadata_usage); }
+		Archive * OpenArchive(Streaming::Stream * at, ArchiveMetadataUsage metadata_usage) { try { return new Archives::Archive(at, metadata_usage); } catch (...) { return 0; } }
 		NewArchive * CreateArchive(Streaming::Stream * at, int num_files, uint flags)
 		{
 			if (num_files < 0 || !at) throw InvalidArgumentException();

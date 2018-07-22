@@ -261,6 +261,18 @@ int Main(void)
     auto Callback2 = new _cb2;
     auto w4 = Windows::CreateFramedDialog(interface.Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
     if (w4) w4->Show(true);
+
+    {
+        Codec::Frame frame(64, 64, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) {
+            frame.SetPixel(x, y, (y == 20 || x == 20) ? 0xFF444488 : 0x22FFFFFF);
+        }
+        frame.HotPointX = 20;
+        frame.HotPointY = 20;
+        ICursor * cursor = w4->GetStation()->LoadCursor(&frame);
+        w4->GetStation()->SetSystemCursor(SystemCursor::Arrow, cursor);
+        cursor->Release();
+    }
     
     NativeWindows::RunMainMessageLoop();
 

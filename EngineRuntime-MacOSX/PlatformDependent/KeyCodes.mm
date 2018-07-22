@@ -12,10 +12,13 @@ namespace Engine
             if (key_code == KeyCodes::LeftControl || key_code == KeyCodes::RightControl || key_code == KeyCodes::Control) return [NSEvent modifierFlags] & NSEventModifierFlagControl;
             if (key_code == KeyCodes::LeftAlternative || key_code == KeyCodes::RightAlternative || key_code == KeyCodes::Alternative) return [NSEvent modifierFlags] & NSEventModifierFlagOption;
             if (key_code == KeyCodes::LeftSystem || key_code == KeyCodes::RightSystem || key_code == KeyCodes::System) return [NSEvent modifierFlags] & NSEventModifierFlagCommand;
+            return false;
+        }
+		bool IsKeyToggled(uint key_code)
+        {
             if (key_code == KeyCodes::CapsLock) return [NSEvent modifierFlags] & NSEventModifierFlagCapsLock;
             return false;
         }
-		bool IsKeyToggled(uint key_code) { return false; }
 		int GetKeyboardDelay(void) { return int([NSEvent keyRepeatDelay] * 1000.0); }
 		int GetKeyboardSpeed(void) { return int([NSEvent keyRepeatInterval] * 1000.0); }
     }

@@ -860,19 +860,19 @@ namespace Engine
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::Left && _content.cp > EditorCoord()) {
 					_save = true;
-					if (_content.sp.x > 0) {
-						_content.cp = EditorCoord(_content.sp.x - 1, _content.sp.y);
-					} else if (_content.sp.y > 0) {
-						_content.cp = EditorCoord(_content.lines[_content.sp.y - 1].text.Length(), _content.sp.y - 1);
+					if (_content.cp.x > 0) {
+						_content.cp = EditorCoord(_content.cp.x - 1, _content.cp.y);
+					} else if (_content.cp.y > 0) {
+						_content.cp = EditorCoord(_content.lines[_content.cp.y - 1].text.Length(), _content.cp.y - 1);
 					}
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::Right && _content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1)) {
 					_save = true;
-					if (_content.sp.x < _content.lines[_content.sp.y].text.Length()) {
-						_content.cp = EditorCoord(_content.sp.x + 1, _content.sp.y);
-					} else if (_content.sp.y < _content.lines.Length() - 1) {
-						_content.cp = EditorCoord(0, _content.sp.y + 1);
+					if (_content.cp.x < _content.lines[_content.cp.y].text.Length()) {
+						_content.cp = EditorCoord(_content.cp.x + 1, _content.cp.y);
+					} else if (_content.cp.y < _content.lines.Length() - 1) {
+						_content.cp = EditorCoord(0, _content.cp.y + 1);
 					}
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
@@ -1106,7 +1106,6 @@ namespace Engine
 			}
 			void MultiLineEdit::Print(const string & text)
 			{
-				if (!text.Length()) return;
 				Array<uint32> utf32(0x100);
 				utf32.SetLength(text.GetEncodedLength(Encoding::UTF32));
 				text.Encode(utf32.GetBuffer(), Encoding::UTF32, false);

@@ -17,14 +17,12 @@ namespace Engine
                 if ([types[i] isEqualToString: NSPasteboardTypeString] && format == Format::Text) result = true;
             }
             [types release];
-            [pasteboard release];
             return result;
         }
 		bool GetData(string & value)
         {
             NSPasteboard * pasteboard = [NSPasteboard generalPasteboard];
             NSString * text = [pasteboard stringForType: NSPasteboardTypeString];
-            [pasteboard release];
             if (text) {
                 value = Cocoa::EngineString(text);
                 [text release];
@@ -38,7 +36,6 @@ namespace Engine
             [pasteboard clearContents];
             bool result = [pasteboard setString: text forType: NSPasteboardTypeString];
             [text release];
-            [pasteboard release];
             return result;
         }
 	}
