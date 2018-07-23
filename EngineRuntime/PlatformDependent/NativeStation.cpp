@@ -5,6 +5,8 @@
 #include "WindowStation.h"
 #include "../UserInterface/OverlappedWindows.h"
 #include "../Miscellaneous/DynamicString.h"
+#include "../ImageCodec/IconCodec.h"
+#include "../Storage/ImageVolume.h"
 
 #include <Windows.h>
 
@@ -52,6 +54,8 @@ namespace Engine
 		void InitializeWindowSystem(void)
 		{
 			if (!SystemInitialized) {
+				InitializeCodecCollection();
+				Direct3D::CreateDevices();
 				WNDCLASSEXW Cls;
 				ZeroMemory(&Cls, sizeof(Cls));
 				Cls.cbSize = sizeof(Cls);
@@ -67,6 +71,37 @@ namespace Engine
 				RegisterClassExW(&Cls);
 				SystemInitialized = true;
 			}
+		}
+		void InitializeCodecCollection(void)
+		{
+			Direct2D::CreateWicCodec();
+			Codec::CreateIconCodec();
+			Storage::CreateVolumeCodec();
+		}
+		class NativeResourceLoader : public IResourceLoader
+		{
+		public:
+			NativeResourceLoader(void) {}
+			~NativeResourceLoader(void) override {}
+
+			virtual ITexture * LoadTexture(Streaming::Stream * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
+			virtual ITexture * LoadTexture(const string & Name) override
+			{
+				try {
+					Streaming::FileStream source(Name, Streaming::AccessRead, Streaming::OpenExisting);
+					return LoadTexture(&source);
+				}
+				catch (...) { return 0; }
+			}
+			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return Direct2D::StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
+			virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) override {}
+			virtual void ReloadTexture(ITexture * Texture, const string & Name) override {}
+			virtual void ReloadFont(UI::IFont * Font) override {}
+		};
+		IResourceLoader * CreateCompatibleResourceLoader(void)
+		{
+			InitializeCodecCollection();
+			return new NativeResourceLoader();
 		}
 		class NativeStation : public HandleWindowStation
 		{
@@ -150,6 +185,7 @@ namespace Engine
 			Box ParentBox(pRect.left, pRect.top, pRect.right, pRect.bottom);
 			if (Position.IsValid()) ParentBox = Box(Position, ParentBox);
 			Box ClientBox(Template->Properties->ControlPosition, ParentBox);
+			Box ClientArea(0, 0, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top);
 			DWORD ExStyle = WS_EX_DLGMODALFRAME;
 			DWORD Style = WS_OVERLAPPED | WS_SYSMENU;
 			auto props = static_cast<Template::Controls::DialogFrame *>(Template->Properties);
@@ -194,6 +230,7 @@ namespace Engine
 				Background->Gradient << Template::GradientPoint(Template::ColorTemplate(BackgroundColor), 0.0);
 				Desktop->SetBackground(Background);
 			}
+			Station->SetBox(ClientArea);
 			Station->Retain();
 			return Station;
 		}

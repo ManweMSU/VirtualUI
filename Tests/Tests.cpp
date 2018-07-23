@@ -174,11 +174,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		int t = 666;
 	}*/
 
-	Engine::Direct2D::InitializeFactory();
-	Engine::Direct3D::CreateDevices();
-	Engine::Codec::CreateIconCodec();
-	Engine::Direct2D::CreateWicCodec();
-	Engine::Storage::CreateVolumeCodec();
+	SafePointer<IResourceLoader> resource_loader = Engine::NativeWindows::CreateCompatibleResourceLoader();
 
     // TODO: разместите код здесь.
 
@@ -194,6 +190,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     }
 
 	// Starting D3D
+	Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 	{
@@ -202,36 +199,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
 			{
 				SafePointer<Streaming::Stream> Source = new Streaming::FileStream(L"Test.eui", Streaming::AccessRead, Streaming::OpenExisting);
-				struct _loader : public IResourceLoader
-				{
-					virtual ITexture * LoadTexture(Streaming::Stream * Source) override
-					{
-						return Device->LoadTexture(Source);
-					}
-					virtual ITexture * LoadTexture(const string & Name) override
-					{
-						SafePointer<Streaming::Stream> Source = new Streaming::FileStream(Name, Streaming::AccessRead, Streaming::OpenExisting);
-						return Device->LoadTexture(Source);
-					}
-					virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
-					{
-						return Device->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
-					}
-					virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) override
-					{
-						Texture->Reload(Device, Source);
-					}
-					virtual void ReloadTexture(ITexture * Texture, const string & Name) override
-					{
-						SafePointer<Streaming::Stream> Source = new Streaming::FileStream(Name, Streaming::AccessRead, Streaming::OpenExisting);
-						Texture->Reload(Device, Source);
-					}
-					virtual void ReloadFont(UI::IFont * Font) override
-					{
-						Font->Reload(Device);
-					}
-				} loader;
-				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, &loader, 0);
+				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, resource_loader, 0);
 			}
 			station = new HandleWindowStation(::Window);
 			station->SetRenderingDevice(Device);

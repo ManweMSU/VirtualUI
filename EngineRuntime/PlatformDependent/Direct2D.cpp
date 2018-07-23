@@ -21,6 +21,7 @@ namespace Engine
 		using namespace Streaming;
 
 		class D2DTexture;
+		class D2DTextureDD;
 		class D2DFont;
 		class D2DRenderDevice;
 
@@ -217,7 +218,7 @@ namespace Engine
 		};
 
 		Engine::Codec::Codec * _WicCodec = 0;
-		Engine::Codec::Codec * CreateWicCodec(void) { if (!_WicCodec) { _WicCodec = new WicCodec(); _WicCodec->Release(); } return _WicCodec; }
+		Engine::Codec::Codec * CreateWicCodec(void) { if (!_WicCodec) { InitializeFactory(); _WicCodec = new WicCodec(); _WicCodec->Release(); } return _WicCodec; }
 
 		struct BarRenderingInfo : public IBarRenderingInfo
 		{
@@ -228,7 +229,7 @@ namespace Engine
 		};
 		struct TextureRenderingInfo : public ITextureRenderingInfo
 		{
-			D2DTexture * Texture;
+			SafePointer<D2DTextureDD> Texture;
 			Box From;
 			Array<ID2D1BitmapBrush *> Brushes;
 			bool Fill;
@@ -355,7 +356,7 @@ namespace Engine
 		class D2DTexture : public ITexture
 		{
 		public:
-			Array<ID2D1Bitmap *> Frames;
+			Array<IWICBitmap *> Frames;
 			Array<uint32> FrameDuration;
 			uint32 TotalDuration;
 			int w, h;
@@ -403,7 +404,24 @@ namespace Engine
 				New->Frames.Clear();
 				New->Release();
 			}
-			virtual string ToString(void) const override { return L"D2DTexture"; }
+			virtual string ToString(void) const override { return L"D2DTextureDeviceIndependent"; }
+		};
+		class D2DTextureDD : public ITexture
+		{
+		public:
+			Array<ID2D1Bitmap *> Frames;
+			Array<uint32> FrameDuration;
+			uint32 TotalDuration;
+			int w, h;
+			D2DTextureDD(void) : Frames(0x20) {}
+			virtual ~D2DTextureDD(void) { for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release(); }
+			virtual int GetWidth(void) const override { return w; }
+			virtual int GetHeight(void) const override { return h; }
+			virtual bool IsDynamic(void) const override { return false; }
+			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override {}
+			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Image * Source) override {}
+			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Frame * Source) override {}
+			virtual string ToString(void) const override { return L"D2DTextureDeviceDependent"; }
 		};
 		class D2DFont : public IFont
 		{
@@ -442,11 +460,142 @@ namespace Engine
 			virtual string ToString(void) const override { return L"D2DFont"; }
 		};
 
+		namespace StandaloneDevice
+		{
+			ITexture * LoadTexture(Streaming::Stream * Source)
+			{
+				SafePointer<Image> image = Engine::Codec::DecodeImage(Source);
+				if (!image) throw InvalidFormatException();
+				return LoadTexture(image);
+			}
+			ITexture * LoadTexture(Engine::Codec::Image * Source)
+			{
+				if (!Source->Frames.Length()) throw InvalidArgumentException();
+				int32 w = Source->Frames[0].GetWidth();
+				int32 h = Source->Frames[0].GetHeight();
+				for (int i = 1; i < Source->Frames.Length(); i++) {
+					if (Source->Frames[i].GetWidth() != w || Source->Frames[i].GetHeight() != h) throw InvalidArgumentException();
+				}
+				D2DTexture * Texture = new (std::nothrow) D2DTexture;
+				if (!Texture) { throw OutOfMemoryException(); }
+				try {
+					Texture->w = w; Texture->h = h;
+					for (int i = 0; i < Source->Frames.Length(); i++) {
+						SafePointer<IWICBitmap> Bitmap;
+						if (WICFactory->CreateBitmap(w, h, GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) throw Exception();
+						SafePointer<Frame> conv = Source->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
+						IWICBitmapLock * Lock;
+						Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock);
+						UINT len;
+						uint8 * data;
+						Lock->GetDataPointer(&len, &data);
+						MemoryCopy(data, conv->GetData(), conv->GetScanLineLength() * conv->GetHeight());
+						Lock->Release();
+						Bitmap->AddRef();
+						Texture->Frames << Bitmap;
+						Texture->FrameDuration << Source->Frames[i].Duration;
+					}
+				} catch (...) {
+					if (Texture) Texture->Release();
+					throw;
+				}
+				Texture->TotalDuration = Texture->FrameDuration[0];
+				for (int i = 1; i < Texture->FrameDuration.Length(); i++) {
+					auto v = Texture->FrameDuration[i];
+					Texture->FrameDuration[i] = Texture->TotalDuration;
+					Texture->TotalDuration += v;
+				}
+				return Texture;
+			}
+			ITexture * LoadTexture(Engine::Codec::Frame * Source)
+			{
+				SafePointer<IWICBitmap> Bitmap;
+				if (WICFactory->CreateBitmap(Source->GetWidth(), Source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) throw Exception();
+				SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
+				IWICBitmapLock * Lock;
+				Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock);
+				UINT len;
+				uint8 * data;
+				Lock->GetDataPointer(&len, &data);
+				MemoryCopy(data, conv->GetData(), conv->GetScanLineLength() * conv->GetHeight());
+				Lock->Release();
+				D2DTexture * Texture = new (std::nothrow) D2DTexture;
+				if (!Texture) { throw OutOfMemoryException(); }
+				try {
+					Texture->Frames.Append(Bitmap);
+					Bitmap->AddRef();
+					Texture->FrameDuration << Source->Duration;
+					Texture->TotalDuration = Source->Duration;
+					Texture->w = Source->GetWidth();
+					Texture->h = Source->GetHeight();
+				} catch (...) {
+					if (Texture) Texture->Release();
+					throw;
+				}
+				return Texture;
+			}
+			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
+			{
+				D2DFont * Font = new D2DFont;
+				Font->FontFace = 0;
+				Font->FontName = FaceName;
+				Font->ActualHeight = Height;
+				Font->Height = int(float(Height) * 72.0f / 96.0f);
+				Font->Weight = Weight;
+				Font->Italic = IsItalic;
+				Font->Underline = IsUnderline;
+				Font->Strikeout = IsStrikeout;
+				IDWriteFontCollection * Collection = 0;
+				IDWriteFontFamily * FontFamily = 0;
+				IDWriteFont * FontSource = 0;
+				try {
+					if (DWriteFactory->GetSystemFontCollection(&Collection) != S_OK) throw Exception();
+					uint32 Index;
+					BOOL Exists;
+					if (Collection->FindFamilyName(FaceName, &Index, &Exists) != S_OK) throw Exception();
+					if (!Exists) throw Exception();
+					if (Collection->GetFontFamily(Index, &FontFamily) != S_OK) throw Exception();
+					if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(Weight), DWRITE_FONT_STRETCH_NORMAL, IsItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) != S_OK) throw Exception();
+					if (FontSource->CreateFontFace(&Font->FontFace) != S_OK) throw Exception();
+					if (Font->FontFace->GetGdiCompatibleMetrics(float(Height), 1.0f, 0, &Font->FontMetrics) != S_OK) throw Exception();
+					FontSource->Release();
+					FontSource = 0;
+					FontFamily->Release();
+					FontFamily = 0;
+					if (Collection->FindFamilyName(L"Segoe UI Emoji", &Index, &Exists) == S_OK) {
+						if (Exists) {
+							if (Collection->GetFontFamily(Index, &FontFamily) == S_OK) {
+								if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(Weight), DWRITE_FONT_STRETCH_NORMAL, IsItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) == S_OK) {
+									FontSource->CreateFontFace(&Font->AlternativeFace);
+									if (Font->AlternativeFace) Font->AlternativeFace->GetGdiCompatibleMetrics(float(Height), 1.0f, 0, &Font->AltMetrics);
+									FontSource->Release();
+									FontSource = 0;
+								}
+								FontFamily->Release();
+								FontFamily = 0;
+							}
+						}
+					}
+					Collection->Release();
+					Collection = 0;
+				} catch (...) {
+					Font->Release();
+					if (Collection) Collection->Release();
+					if (FontFamily) FontFamily->Release();
+					if (FontSource) FontSource->Release();
+					throw;
+				}
+				return Font;
+			}
+		}
+
 		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
-			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
+			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) :
-			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
+			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
@@ -538,7 +687,25 @@ namespace Engine
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern)
 		{
 			auto * Info = new (std::nothrow) TextureRenderingInfo;
-			Info->Texture = static_cast<D2DTexture *>(texture);
+			auto CachedTexture = TextureCache.ElementByKey(texture);
+			if (CachedTexture) {
+				Info->Texture.SetRetain(static_cast<D2DTextureDD *>(CachedTexture));
+			} else {
+				D2DTexture * src = static_cast<D2DTexture *>(texture);
+				D2DTextureDD * dd = new (std::nothrow) D2DTextureDD;
+				if (!dd) throw OutOfMemoryException();
+				dd->w = src->w; dd->h = src->h;
+				dd->TotalDuration = src->TotalDuration;
+				dd->FrameDuration = src->FrameDuration;
+				for (int i = 0; i < src->Frames.Length(); i++) {
+					SafePointer<ID2D1Bitmap> d2d_texture;
+					if (Target->CreateBitmapFromWicBitmap(src->Frames[i], d2d_texture.InnerRef()) != S_OK) { delete dd; throw Exception(); }
+					d2d_texture->AddRef();
+					dd->Frames.Append(d2d_texture);
+				}
+				Info->Texture.SetReference(dd);
+				TextureCache.Append(texture, dd);
+			}
 			Info->From = take_area;
 			Info->Fill = fill_pattern;
 			if (fill_pattern && !texture->IsDynamic()) {
@@ -649,128 +816,10 @@ namespace Engine
 			}
 			return Info;
 		}
-		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source)
-		{
-			SafePointer<Image> image = Engine::Codec::DecodeImage(Source);
-			if (!image) throw InvalidFormatException();
-			return LoadTexture(image);
-		}
-		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source)
-		{
-			if (!Source->Frames.Length()) throw InvalidArgumentException();
-			int32 w = Source->Frames[0].GetWidth();
-			int32 h = Source->Frames[0].GetHeight();
-			for (int i = 1; i < Source->Frames.Length(); i++) {
-				if (Source->Frames[i].GetWidth() != w || Source->Frames[i].GetHeight() != h) throw InvalidArgumentException();
-			}
-			D2DTexture * Texture = new (std::nothrow) D2DTexture;
-			if (!Texture) { throw OutOfMemoryException(); }
-			try {
-				Texture->w = w; Texture->h = h;
-				for (int i = 0; i < Source->Frames.Length(); i++) {
-					SafePointer<ID2D1Bitmap> Bitmap;
-					if (Target->CreateBitmap(D2D1::SizeU(w, h), D2D1::BitmapProperties(
-						D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)), Bitmap.InnerRef()) != S_OK) {
-						throw Exception();
-					}
-					SafePointer<Frame> conv = Source->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
-					Bitmap->CopyFromMemory(&D2D1::RectU(0, 0, w, h), conv->GetData(), conv->GetScanLineLength());
-					Bitmap->AddRef();
-					Texture->Frames << Bitmap;
-					Texture->FrameDuration << Source->Frames[i].Duration;
-				}
-			}
-			catch (...) {
-				if (Texture) Texture->Release();
-				throw;
-			}
-			Texture->TotalDuration = Texture->FrameDuration[0];
-			for (int i = 1; i < Texture->FrameDuration.Length(); i++) {
-				auto v = Texture->FrameDuration[i];
-				Texture->FrameDuration[i] = Texture->TotalDuration;
-				Texture->TotalDuration += v;
-			}
-			return Texture;
-		}
-		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source)
-		{
-			SafePointer<ID2D1Bitmap> Bitmap;
-			if (Target->CreateBitmap(D2D1::SizeU(Source->GetWidth(), Source->GetHeight()),
-				D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)), Bitmap.InnerRef()) != S_OK) {
-				throw Exception();
-			}
-			SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
-			Bitmap->CopyFromMemory(&D2D1::RectU(0, 0, Source->GetWidth(), Source->GetHeight()), conv->GetData(), conv->GetScanLineLength());
-			D2DTexture * Texture = new (std::nothrow) D2DTexture;
-			if (!Texture) { throw OutOfMemoryException(); }
-			try {
-				Texture->Frames.Append(Bitmap);
-				Bitmap->AddRef();
-				Texture->FrameDuration << Source->Duration;
-				Texture->TotalDuration = Source->Duration;
-				Texture->w = Source->GetWidth();
-				Texture->h = Source->GetHeight();
-			}
-			catch (...) {
-				if (Texture) Texture->Release();
-				throw;
-			}
-			return Texture;
-		}
-		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
-		{
-			D2DFont * Font = new D2DFont;
-			Font->FontFace = 0;
-			Font->FontName = FaceName;
-			Font->ActualHeight = Height;
-			Font->Height = int(float(Height) * 72.0f / 96.0f);
-			Font->Weight = Weight;
-			Font->Italic = IsItalic;
-			Font->Underline = IsUnderline;
-			Font->Strikeout = IsStrikeout;
-			IDWriteFontCollection * Collection = 0;
-			IDWriteFontFamily * FontFamily = 0;
-			IDWriteFont * FontSource = 0;
-			try {
-				if (DWriteFactory->GetSystemFontCollection(&Collection) != S_OK) throw Exception();
-				uint32 Index;
-				BOOL Exists;
-				if (Collection->FindFamilyName(FaceName, &Index, &Exists) != S_OK) throw Exception();
-				if (!Exists) throw Exception();
-				if (Collection->GetFontFamily(Index, &FontFamily) != S_OK) throw Exception();
-				if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(Weight), DWRITE_FONT_STRETCH_NORMAL, IsItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) != S_OK) throw Exception();
-				if (FontSource->CreateFontFace(&Font->FontFace) != S_OK) throw Exception();
-				if (Font->FontFace->GetGdiCompatibleMetrics(float(Height), 1.0f, 0, &Font->FontMetrics) != S_OK) throw Exception();
-				FontSource->Release();
-				FontSource = 0;
-				FontFamily->Release();
-				FontFamily = 0;
-				if (Collection->FindFamilyName(L"Segoe UI Emoji", &Index, &Exists) == S_OK) {
-					if (Exists) {
-						if (Collection->GetFontFamily(Index, &FontFamily) == S_OK) {
-							if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(Weight), DWRITE_FONT_STRETCH_NORMAL, IsItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) == S_OK) {
-								FontSource->CreateFontFace(&Font->AlternativeFace);
-								if (Font->AlternativeFace) Font->AlternativeFace->GetGdiCompatibleMetrics(float(Height), 1.0f, 0, &Font->AltMetrics);
-								FontSource->Release();
-								FontSource = 0;
-							}
-							FontFamily->Release();
-							FontFamily = 0;
-						}
-					}
-				}
-				Collection->Release();
-				Collection = 0;
-			}
-			catch (...) {
-				Font->Release();
-				if (Collection) Collection->Release();
-				if (FontFamily) FontFamily->Release();
-				if (FontSource) FontSource->Release();
-				throw;
-			}
-			return Font;
-		}
+		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source) { return StandaloneDevice::LoadTexture(Source); }
+		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source) { return StandaloneDevice::LoadTexture(Source); }
+		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source) { return StandaloneDevice::LoadTexture(Source); }
+		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At)
 		{
 			auto info = reinterpret_cast<BarRenderingInfo *>(Info);

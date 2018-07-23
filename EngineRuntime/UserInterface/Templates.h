@@ -249,7 +249,7 @@ namespace Engine
 			};
 		}
 
-		class IResourceLoader
+		class IResourceLoader : public Object
 		{
 		public:
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
@@ -259,7 +259,7 @@ namespace Engine
 			virtual void ReloadTexture(ITexture * Texture, const string & Name) = 0;
 			virtual void ReloadFont(IFont * Font) = 0;
 		};
-		class IResourceResolver
+		class IResourceResolver : public Object
 		{
 		public:
 			virtual ITexture * GetTexture(const string & Name) = 0;

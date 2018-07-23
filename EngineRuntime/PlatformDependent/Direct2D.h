@@ -23,6 +23,14 @@ namespace Engine
 
 		Engine::Codec::Codec * CreateWicCodec(void);
 
+		namespace StandaloneDevice
+		{
+			ITexture * LoadTexture(Streaming::Stream * Source);
+			ITexture * LoadTexture(Engine::Codec::Image * Source);
+			ITexture * LoadTexture(Engine::Codec::Frame * Source);
+			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout);
+		}
+
 		class D2DRenderDevice : public IRenderingDevice
 		{
 			ID2D1DeviceContext * ExtendedTarget;
@@ -34,6 +42,7 @@ namespace Engine
 			uint32 HalfBlinkPeriod;
 			Dictionary::ObjectCache<Color, IBarRenderingInfo> BrushCache;
 			Dictionary::ObjectCache<double, IBlurEffectRenderingInfo> BlurCache;
+			Dictionary::ObjectCache<ITexture *, ITexture> TextureCache;
 			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
 		public:
 			D2DRenderDevice(ID2D1DeviceContext * target);
