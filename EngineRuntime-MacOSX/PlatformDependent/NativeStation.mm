@@ -7,6 +7,9 @@
 #include "QuartzDevice.h"
 #include "CocoaKeyCodes.h"
 #include "KeyCodes.h"
+#include "AppleCodec.h"
+#include "../ImageCodec/IconCodec.h"
+#include "../Storage/ImageVolume.h"
 
 using namespace Engine::UI;
 
@@ -544,6 +547,7 @@ namespace Engine
 		void InitializeWindowSystem(void)
         {
             if (!_Initialized) {
+                InitializeCodecCollection();
                 [NSApplication sharedApplication];
                 NSMenu * menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
                 NSMenuItem * main_item = [[NSMenuItem alloc] initWithTitle: @"Application Menu" action: NULL keyEquivalent: @""];
@@ -620,7 +624,43 @@ namespace Engine
                 _Initialized = true;
             }
         }
+        void InitializeCodecCollection(void)
+        {
+            Cocoa::CreateAppleCodec();
+            Codec::CreateIconCodec();
+            Storage::CreateVolumeCodec();
+        }
+        class NativeResourceLoader : public Engine::UI::IResourceLoader
+        {
+            SafePointer<IRenderingDevice> _device;
+        public:
+            NativeResourceLoader(IRenderingDevice * device) { _device.SetRetain(device); }
+            ~NativeResourceLoader(void) override {}
 
+            virtual UI::ITexture * LoadTexture(Streaming::Stream * Source) override { return _device->LoadTexture(Source); }
+            virtual UI::ITexture * LoadTexture(const string & Name) override
+            {
+                Streaming::FileStream source(Name, Streaming::AccessRead, Streaming::OpenExisting);
+                return LoadTexture(&source);
+            }
+            virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
+            {
+                return _device->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
+            }
+            virtual void ReloadTexture(UI::ITexture * Texture, Streaming::Stream * Source) override { Texture->Reload(_device, Source); }
+            virtual void ReloadTexture(UI::ITexture * Texture, const string & Name) override
+            {
+                Streaming::FileStream source(Name, Streaming::AccessRead, Streaming::OpenExisting);
+                Texture->Reload(_device, &source);
+            }
+            virtual void ReloadFont(UI::IFont * Font) override { Font->Reload(_device); }
+        };
+		UI::IResourceLoader * CreateCompatibleResourceLoader(void)
+        {
+            InitializeCodecCollection();
+            SafePointer<Cocoa::QuartzRenderingDevice> device = new Cocoa::QuartzRenderingDevice;
+            return new NativeResourceLoader(device);
+        }
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
         {
             InitializeWindowSystem();
