@@ -533,6 +533,12 @@ namespace Engine
 				if (Callback) Callback->OnInitialized(window);
 				return window;
 			}
+			void InitializeCodecCollection(void) { NativeWindows::InitializeCodecCollection(); }
+			IResourceLoader * CreateNativeCompatibleResourceLoader(void) { return NativeWindows::CreateCompatibleResourceLoader(); }
+			Box GetScreenDimensions(void) { return NativeWindows::GetScreenDimensions(); }
+			double GetScreenScale(void) { return NativeWindows::GetScreenScale(); }
+			void RunMessageLoop(void) { NativeWindows::RunMainMessageLoop(); }
+			void ExitMessageLoop(void) { NativeWindows::ExitMainLoop(); }
 		}
 	}
 }
