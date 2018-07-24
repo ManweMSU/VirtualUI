@@ -42,6 +42,13 @@ namespace Engine
 			};
 			Controls::OverlappedWindow * CreateFramelessDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+
+			void InitializeCodecCollection(void);
+			IResourceLoader * CreateNativeCompatibleResourceLoader(void);
+			Box GetScreenDimensions(void);
+			double GetScreenScale(void);
+			void RunMessageLoop(void);
+			void ExitMessageLoop(void);
 		}
 		namespace Controls
 		{
