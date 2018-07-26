@@ -145,9 +145,6 @@
     <ClInclude Include="PlatformDependent\NativeStation.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
-    <ClInclude Include="Network\InternetRequest.h">
-      <Filter>Network</Filter>
-    </ClInclude>
     <ClInclude Include="Network\Socket.h">
       <Filter>Network</Filter>
     </ClInclude>
@@ -186,6 +183,9 @@
     </ClInclude>
     <ClInclude Include="EngineRuntime.h">
       <Filter>EngineBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\HTTP.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -294,9 +294,6 @@
     <ClCompile Include="PlatformDependent\NativeStation.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
-    <ClCompile Include="Network\InternetRequest.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
     <ClCompile Include="Network\Socket.cpp">
       <Filter>Network</Filter>
     </ClCompile>
@@ -332,6 +329,9 @@
     </ClCompile>
     <ClCompile Include="Storage\ImageVolume.cpp">
       <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\HTTP.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

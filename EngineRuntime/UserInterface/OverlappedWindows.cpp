@@ -442,6 +442,7 @@ namespace Engine
 				Controls::OverlappedWindow * window = 0;
 				if (!Station || Station->IsNativeStationWrapper()) {
 					WindowStation * new_native = NativeWindows::CreateOverlappedWindow(Template, Position, Station);
+					new_native->GetVisualStyles().CaretWidth = int(Zoom);
 					window = new_native->GetDesktop()->As<Controls::OverlappedWindow>();
 					window->_visible = true;
 					window->_initialized = true;

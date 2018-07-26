@@ -51,6 +51,7 @@ namespace Engine
 			virtual void Listen(void) = 0;
 			virtual Socket * Accept() = 0;
 			virtual Socket * Accept(Address & address, uint16 & port) = 0;
+			virtual void Shutdown(bool close_read, bool close_write) = 0;
 		};
 		Socket * CreateSocket(SocketAddressDomain domain, SocketProtocol protocol);
 		uint32 InverseEndianess(uint32 value);

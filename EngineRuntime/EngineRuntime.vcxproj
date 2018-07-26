@@ -29,7 +29,7 @@
     <ClInclude Include="Miscellaneous\ThreadPool.h" />
     <ClInclude Include="Miscellaneous\Time.h" />
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
-    <ClInclude Include="Network\InternetRequest.h" />
+    <ClInclude Include="Network\HTTP.h" />
     <ClInclude Include="Network\Punycode.h" />
     <ClInclude Include="Network\Socket.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
@@ -80,7 +80,7 @@
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="Miscellaneous\ThreadPool.cpp" />
     <ClCompile Include="Miscellaneous\Time.cpp" />
-    <ClCompile Include="Network\InternetRequest.cpp" />
+    <ClCompile Include="Network\HTTP.cpp" />
     <ClCompile Include="Network\Punycode.cpp" />
     <ClCompile Include="Network\Socket.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />

@@ -28,7 +28,7 @@
 #include <PlatformDependent/NativeStation.h>
 #include <ImageCodec/IconCodec.h>
 #include <Processes/Shell.h>
-#include <Network/InternetRequest.h>
+#include <Network/HTTP.h>
 #include <Network/Socket.h>
 #include <Network/Punycode.h>
 #include <Storage/Registry.h>

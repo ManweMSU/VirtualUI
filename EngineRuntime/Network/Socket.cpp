@@ -145,6 +145,15 @@ namespace Engine
 				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
+			virtual void Shutdown(bool close_read, bool close_write)
+			{
+				int sd = 0;
+				if (close_read && !close_write) sd = SD_RECEIVE;
+				else if (!close_read && close_write) sd = SD_SEND;
+				else if (close_read && close_write) sd = SD_BOTH;
+				else return;
+				shutdown(handle, sd);
+			}
 		};
 		Socket * CreateSocket(SocketAddressDomain domain, SocketProtocol protocol)
 		{
