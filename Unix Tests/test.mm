@@ -1,8 +1,6 @@
 #include <EngineRuntime.h>
 #include <PlatformDependent/CocoaInterop.h>
 #include <PlatformDependent/KeyCodes.h>
-#include <PlatformDependent/QuartzDevice.h>
-#include <PlatformDependent/AppleCodec.h>
 
 using namespace Engine;
 using namespace Engine::UI;
@@ -68,13 +66,13 @@ int Main(void)
     SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandartInput());
     Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
 
-    UI::Zoom = NativeWindows::GetScreenScale();
+    UI::Zoom = Windows::GetScreenScale();
 
     string src = IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(
         IO::Path::GetDirectory(IO::GetExecutablePath()))))) + L"/../Tests/test.eui";
     Console << src << IO::NewLineChar;
     Streaming::FileStream source(src, Streaming::AccessRead, Streaming::OpenExisting);
-    SafePointer<UI::IResourceLoader> loader = NativeWindows::CreateCompatibleResourceLoader();
+    SafePointer<UI::IResourceLoader> loader = Windows::CreateNativeCompatibleResourceLoader();
     UI::Loader::LoadUserInterfaceFromBinary(interface, &source, loader, 0);
 
     NSUserDefaults * def = [[NSUserDefaults alloc] init];
@@ -92,15 +90,15 @@ int Main(void)
     Console << L"Keyboard delay " + string(Keyboard::GetKeyboardDelay()) + L" ms" + IO::NewLineChar;
     Console << L"Keyboard speed " + string(Keyboard::GetKeyboardSpeed()) + L" ms" + IO::NewLineChar;
 
-    auto sbox = NativeWindows::GetScreenDimensions();
+    auto sbox = Windows::GetScreenDimensions();
     Console << L"Screen " + string(sbox.Left) + L", " + string(sbox.Top) + L", " + string(sbox.Right) + L", " + string(sbox.Bottom) + IO::NewLineChar;
-    Console << L"Scale  " + string(NativeWindows::GetScreenScale()) + IO::NewLineChar;
+    Console << L"Scale  " + string(Windows::GetScreenScale()) + IO::NewLineChar;
 
     auto Callback2 = new _cb2;
     auto w4 = Windows::CreateFramedDialog(interface.Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
     if (w4) w4->Show(true);
     
-    NativeWindows::RunMainMessageLoop();
+    Windows::RunMessageLoop();
 
     return 0;
 }

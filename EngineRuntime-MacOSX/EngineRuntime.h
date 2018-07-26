@@ -1,13 +1,8 @@
 #pragma once
 
-#define ENGINE_X64
-#define ENGINE_UNIX
-#define ENGINE_MACOSX
-
 #include "EngineBase.h"
 #include "Streaming.h"
 #include "ImageCodec/CodecBase.h"
-#include "ImageCodec/IconCodec.h"
 #include "Miscellaneous/Dictionary.h"
 #include "Miscellaneous/DynamicString.h"
 #include "Miscellaneous/Reflection.h"
@@ -15,12 +10,10 @@
 #include "Miscellaneous/Time.h"
 #include "Miscellaneous/UndoBuffer.h"
 #include "PlatformDependent/Clipboard.h"
-#include "PlatformDependent/NativeStation.h"
 #include "Processes/Process.h"
 #include "Processes/Threading.h"
 #include "Processes/Shell.h"
 #include "Storage/Archive.h"
-#include "Storage/ImageVolume.h"
 #include "Storage/Registry.h"
 #include "Storage/TextRegistry.h"
 #include "Syntax/Grammar.h"
