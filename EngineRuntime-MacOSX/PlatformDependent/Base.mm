@@ -57,16 +57,14 @@ namespace Engine
 	int MemoryCompare(const void * A, const void * B, intptr Length) { return memcmp(A, B, Length); }
 	int StringCompareCaseInsensitive(const widechar * A, const widechar * B)
     {
-		@autoreleasepool {
-			NSString * a = [[NSString alloc] initWithBytes: A length: StringLength(A) * sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
-			NSString * b = [[NSString alloc] initWithBytes: B length: StringLength(B) * sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
-			[a autorelease];
-			[b autorelease];
-			NSComparisonResult result = [a localizedCaseInsensitiveCompare: b];
-			if (result == NSOrderedAscending) return -1;
-			else if (result == NSOrderedDescending) return 1;
-			else return 0;
-		}
+		NSString * a = [[NSString alloc] initWithBytes: A length: StringLength(A) * sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+		NSString * b = [[NSString alloc] initWithBytes: B length: StringLength(B) * sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+		NSComparisonResult result = [a localizedCaseInsensitiveCompare: b];
+		[a release];
+		[b release];
+		if (result == NSOrderedAscending) return -1;
+		else if (result == NSOrderedDescending) return 1;
+		else return 0;
     }
 	int StringLength(const widechar * str) { int l = 0; while (str[l]) l++; return l; }
 	void StringAppend(widechar * str, widechar letter) { auto len = StringLength(str); str[len + 1] = 0; str[len] = letter; }
@@ -74,14 +72,12 @@ namespace Engine
 	void StringLower(widechar * str, int length)
 	{
 		for (int i = 0; i < length; i++) {
-			@autoreleasepool {
-				NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
-				NSString * c = [s lowercaseStringWithLocale: [NSLocale currentLocale]];
-				[s autorelease];
-				[c autorelease];
-				[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
-					options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
-			}
+			NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+			NSString * c = [s lowercaseStringWithLocale: [NSLocale currentLocale]];
+			[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
+				options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
+			[s release];
+			[c release];
 		}
 	}
 	void StringUpper(widechar * str, int length)

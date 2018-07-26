@@ -560,6 +560,10 @@ namespace Engine
 				int caret_x = -1;
 				int caret_y = - _fh - _fh;
 				if (Font) {
+					if (_deferred_update) {
+						_vscroll->SetPageSilent(field.Bottom - field.Top);
+						_hscroll->SetPageSilent(field.Right - field.Left);
+					}
 					int vpl = _vscroll->Position / _fh;
 					int vph = (_vscroll->Position + _vscroll->Page) / _fh + 1;
 					for (int i = max(vpl, 0); i < min(vph, _content.lines.Length()); i++) {
@@ -581,13 +585,11 @@ namespace Engine
 					if (_deferred_update) {
 						int mw = 0;
 						for (int i = 0; i < _content.lines.Length(); i++) if (_content.lines[i].width > mw) mw = _content.lines[i].width;
-						_vscroll->SetRangeSilent(0, _fh * _content.lines.Length());
-						_vscroll->SetPageSilent(field.Bottom - field.Top);
+						_vscroll->SetRangeSilent(0, _fh * _content.lines.Length());	
 						if (!Disabled) {
 							_vscroll->Enable(true);
 						} else _vscroll->Enable(false);
-						_hscroll->SetRangeSilent(0, mw - 1 + _caret_width);
-						_hscroll->SetPageSilent(field.Right - field.Left);
+						_hscroll->SetRangeSilent(0, mw - 1 + _caret_width);	
 						if (!Disabled) {
 							_hscroll->Enable(true);
 						} else _hscroll->Enable(false);
@@ -682,14 +684,17 @@ namespace Engine
 			void MultiLineEdit::SetText(const string & text)
 			{
 				_undo.RemoveAllVersions();
+				_content.lines.Clear();
 				_save = true;
 				Array<uint32> chars(0x100);
 				chars.SetLength(text.GetEncodedLength(Encoding::UTF32));
 				text.Encode(chars.GetBuffer(), Encoding::UTF32, false);
 				int sp = 0;
+				bool nle = false;
 				while (sp < chars.Length()) {
 					int ep = sp;
 					while (ep < chars.Length() && chars[ep] != L'\n') ep++;
+					nle = chars[ep] == L'\n';
 					int vcc = 0;
 					for (int i = sp; i < ep; i++) if (chars[i] >= 0x20 || chars[i] == L'\t') vcc++;
 					_content.lines << EditorLine();
@@ -698,6 +703,7 @@ namespace Engine
 					for (int i = sp; i < ep; i++) if (chars[i] >= 0x20 || chars[i] == L'\t') { _content.lines.LastElement().text[wp] = chars[i]; wp++; }
 					sp = ep + 1;
 				}
+				if (nle) _content.lines << EditorLine();
 				_text_info.Clear();
 				for (int i = 0; i < _content.lines.Length(); i++) _text_info.Append(0);
 				_content.cp = _content.sp = EditorCoord();

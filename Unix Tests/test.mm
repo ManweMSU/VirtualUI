@@ -68,6 +68,19 @@ int Main(void)
 
     UI::Zoom = Windows::GetScreenScale();
 
+    DynamicString req;
+    try {
+        SafePointer<Network::HttpSession> session = Network::OpenHttpSession(L"pidor");
+        SafePointer<Network::HttpConnection> connection = session->Connect(L"yandex.ru");
+        SafePointer<Network::HttpRequest> request = connection->CreateRequest(L"/favicon.ico");
+        request->Send();
+        req += string(request->GetStatus()) + string(IO::NewLineChar);
+        SafePointer< Array<string> > hdrs = request->GetHeaders();
+        for (int i = 0; i < hdrs->Length(); i++) {
+            req += hdrs->ElementAt(i) + L": " + request->GetHeader(hdrs->ElementAt(i)) + IO::NewLineChar;
+        }
+    } catch (...) { req += L"kornevgen pidor"; }
+
     string src = IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(
         IO::Path::GetDirectory(IO::GetExecutablePath()))))) + L"/../Tests/test.eui";
     Console << src << IO::NewLineChar;
@@ -96,6 +109,7 @@ int Main(void)
 
     auto Callback2 = new _cb2;
     auto w4 = Windows::CreateFramedDialog(interface.Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
+    w4->FindChild(212121)->SetText(req.ToString());
     if (w4) w4->Show(true);
     
     Windows::RunMessageLoop();

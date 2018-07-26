@@ -111,7 +111,7 @@ namespace Engine
 				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
-			virtual Socket * Accept(Address & address, uint16 & port)
+			virtual Socket * Accept(Address & address, uint16 & port) override
 			{
 				SOCKET new_socket = INVALID_SOCKET;
 				if (ipv6) {
@@ -145,7 +145,7 @@ namespace Engine
 				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
-			virtual void Shutdown(bool close_read, bool close_write)
+			virtual void Shutdown(bool close_read, bool close_write) override
 			{
 				int sd = 0;
 				if (close_read && !close_write) sd = SD_RECEIVE;
@@ -284,6 +284,7 @@ namespace Engine
 				}
 				freeaddrinfo(info);
 				result->Retain();
+				WSACleanup();
 				return result;
 			}
 			catch (...) {
