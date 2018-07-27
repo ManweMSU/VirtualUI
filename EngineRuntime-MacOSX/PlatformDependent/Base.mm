@@ -83,14 +83,12 @@ namespace Engine
 	void StringUpper(widechar * str, int length)
 	{
 		for (int i = 0; i < length; i++) {
-			@autoreleasepool {
-				NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
-				NSString * c = [s uppercaseStringWithLocale: [NSLocale currentLocale]];
-				[s autorelease];
-				[c autorelease];
-				[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
-					options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
-			}
+			NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+			NSString * c = [s uppercaseStringWithLocale: [NSLocale currentLocale]];
+			[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
+				options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
+			[s release];
+			[c release];
 		}
 	}
 	bool IsAlphabetical(uint32 letter)

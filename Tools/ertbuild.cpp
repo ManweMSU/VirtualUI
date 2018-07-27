@@ -389,6 +389,11 @@ int Main(void)
                         console << L"Invalid application version notation." << IO::NewLineChar;
                         return 1;
                     }
+                    if (!prj_ver.InternalName.Length()) {
+                        prj_ver.InternalName = IO::Path::GetFileNameWithoutExtension(args->ElementAt(1));
+                        int dot = prj_ver.InternalName.FindFirst(L'.');
+                        if (dot != -1) prj_ver.InternalName = prj_ver.InternalName.Fragment(0, dot);
+                    }
                 } else prj_ver.UseDefines = false;
                 Array<string> object_list(0x80);
                 Array<string> source_list(0x80);
@@ -448,16 +453,31 @@ int Main(void)
                     string out_file = out_path + L"/" + prj_cfg->GetValueString(L"OutputName");
                     string exe_ext = sys_cfg->GetValueString(L"ExecutableExtension");
                     if (exe_ext.Length() && string::CompareIgnoreCase(IO::Path::GetExtension(out_file), exe_ext)) out_file += L"." + exe_ext;
-                    if (sys_cfg->GetValueString(L"ResourceTool").Length()) if (compile_system == L"windows") {
-                        string project = IO::ExpandPath(args->ElementAt(1));
-                        if (!run_restool(project, out_path + L"/_obj", L"", console)) return 1;
-                        object_list << out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(project) + L".res";
-                    } else if (compile_system == L"macosx" && compile_subsystem == L"gui") {
-                        string project = IO::ExpandPath(args->ElementAt(1));
-                        string bundle = out_file;
-                        if (string::CompareIgnoreCase(IO::Path::GetExtension(out_file), L"app")) out_file += L".app";
-                        if (!run_restool(project, out_path + L"/_obj", out_file, console)) return 1;
-                        out_file += L"/Contents/MacOS/" + prj_ver.InternalName;
+                    if (sys_cfg->GetValueString(L"ResourceTool").Length()) {
+                        if (compile_system == L"windows") {
+                            string project = IO::ExpandPath(args->ElementAt(1));
+                            if (!run_restool(project, out_path + L"/_obj", L"", console)) return 1;
+                            object_list << out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(project) + L".res";
+                        } else if (compile_system == L"macosx" && compile_subsystem == L"gui") {
+                            string project = IO::ExpandPath(args->ElementAt(1));
+                            string bundle = out_file;
+                            if (string::CompareIgnoreCase(IO::Path::GetExtension(out_file), L"app")) out_file += L".app";
+                            if (!run_restool(project, out_path + L"/_obj", out_file, console)) return 1;
+                            out_file += L"/Contents/MacOS/" + prj_ver.InternalName;
+                        } else if (compile_system == L"macosx" && compile_subsystem == L"console") {
+                            SafePointer<RegistryNode> res = prj_cfg->OpenNode(L"Resources");
+                            if (res) {
+                                console << L"NOTE: Assembly Resources are not supported on console Unix applications!" << IO::NewLineChar;
+                            }
+                        }
+                    } else {
+                        SafePointer<RegistryNode> res = prj_cfg->OpenNode(L"Resources");
+                        if (res) {
+                            console << L"NOTE: Assembly Resources are not available without Resource Tool!" << IO::NewLineChar;
+                        }
+                        if (compile_system == L"macosx" && compile_subsystem == L"gui") {
+                            console << L"NOTE: Can't build Mac OS X Application Bundle without Resource Tool!" << IO::NewLineChar;
+                        }
                     }
                     if (!link(object_list, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
                 }

@@ -1,5 +1,4 @@
 #include <EngineRuntime.h>
-#include "ertrescodec.h"
 
 using namespace Engine;
 using namespace Engine::Streaming;
@@ -21,6 +20,12 @@ struct VersionInfo
     string ComIdent;
     string Description;
 };
+struct Resource
+{
+    string SourcePath;
+    string Name;
+    string Locale;
+};
 
 string target_system;
 SafePointer<RegistryNode> sys_cfg;
@@ -28,6 +33,7 @@ SafePointer<RegistryNode> prj_cfg;
 Time prj_time;
 VersionInfo prj_ver;
 string bundle_path;
+Array<Resource> reslist(0x10);
 bool clean = false;
 
 void try_create_directory(const string & path)
@@ -199,11 +205,11 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
                 script << L"\tBEGIN" << IO::NewLineChar;
                 script << L"\t\tBLOCK \"040004b0\"" << IO::NewLineChar;
                 script << L"\t\tBEGIN" << IO::NewLineChar;
-                script << L"\t\t\tVALUE \"CompanyName\", \"" + make_lexem(prj_ver.CompanyName) + L"\"" << IO::NewLineChar;
+                if (prj_ver.CompanyName.Length()) script << L"\t\t\tVALUE \"CompanyName\", \"" + make_lexem(prj_ver.CompanyName) + L"\"" << IO::NewLineChar;
                 script << L"\t\t\tVALUE \"FileDescription\", \"" + make_lexem(prj_ver.AppName) + L"\"" << IO::NewLineChar;
                 script << L"\t\t\tVALUE \"FileVersion\", \"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"" << IO::NewLineChar;
                 script << L"\t\t\tVALUE \"InternalName\", \"" + make_lexem(prj_ver.InternalName) + L"\"" << IO::NewLineChar;
-                script << L"\t\t\tVALUE \"LegalCopyright\", \"" + make_lexem(prj_ver.Copyright) + L"\"" << IO::NewLineChar;
+                if (prj_ver.Copyright.Length()) script << L"\t\t\tVALUE \"LegalCopyright\", \"" + make_lexem(prj_ver.Copyright) + L"\"" << IO::NewLineChar;
                 script << L"\t\t\tVALUE \"OriginalFilename\", \"" + make_lexem(prj_ver.InternalName) + L".exe\"" << IO::NewLineChar;
                 script << L"\t\t\tVALUE \"ProductName\", \"" + make_lexem(prj_ver.AppName) + L"\"" << IO::NewLineChar;
                 script << L"\t\t\tVALUE \"ProductVersion\", \"" + string(prj_ver.VersionMajor) + L"." + string(prj_ver.VersionMinor) + L"\"" << IO::NewLineChar;
@@ -289,10 +295,17 @@ bool asm_plist(const string & output, bool with_icon, TextWriter & console)
             list << L"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" << IO::NewLineChar;
             list << L"<plist version=\"1.0\">" << IO::NewLineChar;
             list << L"<dict>" << IO::NewLineChar;
-            list << L"\t<key>CFBundleName</key>" << IO::NewLineChar;
-            list << L"\t<string>" << prj_ver.AppName << L"</string>" << IO::NewLineChar;
-            list << L"\t<key>CFBundleDisplayName</key>" << IO::NewLineChar;
-            list << L"\t<string>" << prj_ver.AppName << L"</string>" << IO::NewLineChar;
+            if (prj_ver.AppName.Length()) {
+                list << L"\t<key>CFBundleName</key>" << IO::NewLineChar;
+                list << L"\t<string>" << prj_ver.AppName << L"</string>" << IO::NewLineChar;
+                list << L"\t<key>CFBundleDisplayName</key>" << IO::NewLineChar;
+                list << L"\t<string>" << prj_ver.AppName << L"</string>" << IO::NewLineChar;
+            } else {
+                list << L"\t<key>CFBundleName</key>" << IO::NewLineChar;
+                list << L"\t<string>" << prj_ver.InternalName << L"</string>" << IO::NewLineChar;
+                list << L"\t<key>CFBundleDisplayName</key>" << IO::NewLineChar;
+                list << L"\t<string>" << prj_ver.InternalName << L"</string>" << IO::NewLineChar;
+            }
             list << L"\t<key>CFBundleIdentifier</key>" << IO::NewLineChar;
             list << L"\t<string>com." << prj_ver.ComIdent << L"." << prj_ver.AppIdent << L"</string>" << IO::NewLineChar;
             list << L"\t<key>CFBundleVersion</key>" << IO::NewLineChar;
@@ -356,10 +369,32 @@ bool build_bundle(const string & plist, const Array<string> & icons, const strin
     console << L"Succeed" << IO::NewLineChar;
     return true;
 }
+void index_resources(const string & base_path, RegistryNode * node, const string & locale)
+{
+    if (!node) return;
+    auto & values = node->GetValues();
+    for (int i = 0; i < values.Length(); i++) {
+        string path = IO::ExpandPath(base_path + L"/" + node->GetValueString(values[i]));
+        reslist << Resource{ path, values[i], locale };
+    }
+    auto & divs = node->GetSubnodes();
+    for (int i = 0; i < divs.Length(); i++) {
+        auto tags = divs[i].Split(L'-');
+        string local_locale;
+        bool skip = false;
+        for (int j = 0; j < tags.Length(); j++) {
+            if (tags[j].Length() == 2) local_locale = tags[j].LowerCase();
+            else if (string::CompareIgnoreCase(tags[j], target_system) != 0) skip = true;
+        }
+        if (skip) continue;
+        SafePointer<RegistryNode> resnode = node->OpenNode(divs[i]);
+        index_resources(base_path, resnode, local_locale);
+    }
+}
 
 int Main(void)
 {
-    InitializeCodecs();
+    UI::Windows::InitializeCodecCollection();
     handle console_output = IO::CloneHandle(IO::GetStandartOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
@@ -434,6 +469,17 @@ int Main(void)
                         console << L"Invalid application version notation." << IO::NewLineChar;
                         return 1;
                     }
+                    if (!prj_ver.AppIdent.Length()) {
+                        prj_ver.AppIdent = IO::Path::GetFileNameWithoutExtension(args->ElementAt(1));
+                        int dot = prj_ver.AppIdent.FindFirst(L'.');
+                        if (dot != -1) prj_ver.AppIdent = prj_ver.AppIdent.Fragment(0, dot);
+                    }
+                    if (!prj_ver.ComIdent.Length()) prj_ver.ComIdent = L"unknown";
+                    if (!prj_ver.InternalName.Length()) {
+                        prj_ver.InternalName = IO::Path::GetFileNameWithoutExtension(args->ElementAt(1));
+                        int dot = prj_ver.InternalName.FindFirst(L'.');
+                        if (dot != -1) prj_ver.InternalName = prj_ver.InternalName.Fragment(0, dot);
+                    }
                 }
             }
             catch (...) {
@@ -441,6 +487,10 @@ int Main(void)
                 return 1;
             }
             if (target_system == L"windows") {
+                {
+                    SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
+                    index_resources(IO::Path::GetDirectory(args->ElementAt(1)), resdir, L"");
+                }
                 string manifest = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".manifest";
                 if (!asm_manifest(manifest, console)) return 1;
                 Array<string> icons(0x10);
@@ -460,6 +510,10 @@ int Main(void)
                 string res_log = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".log";
                 if (!compile_resource(rc, res, res_log, console)) return 1;
             } else if (target_system == L"macosx") {
+                {
+                    SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
+                    index_resources(IO::Path::GetDirectory(args->ElementAt(1)), resdir, L"");
+                }
                 string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
                 string plist = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".plist";
                 if (!asm_plist(plist, app_icon.Length(), console)) return 1;
