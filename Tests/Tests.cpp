@@ -39,6 +39,7 @@
 #include <Miscellaneous/ThreadPool.h>
 #include <Storage/Archive.h>
 #include <Storage/ImageVolume.h>
+#include <PlatformDependent/Assembly.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -142,7 +143,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
-	(*conout) << L"Scale          : " << NativeWindows::GetScreenScale() << IO::NewLineChar;
+	(*conout) << L"Scale          : " << UI::Windows::GetScreenScale() << IO::NewLineChar;
+	(*conout) << L"Locale         : " << Assembly::GetCurrentUserLocale() << IO::NewLineChar;
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 
@@ -198,7 +200,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			UI::Zoom = 2.0;
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
 			{
-				SafePointer<Streaming::Stream> Source = new Streaming::FileStream(L"Test.eui", Streaming::AccessRead, Streaming::OpenExisting);
+				//SafePointer<Streaming::Stream> Source = new Streaming::FileStream(L"Test.eui", Streaming::AccessRead, Streaming::OpenExisting);
+				SafePointer<Streaming::Stream> Source = Assembly::QueryResource(L"GUI");
 				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, resource_loader, 0);
 			}
 			station = new HandleWindowStation(::Window);

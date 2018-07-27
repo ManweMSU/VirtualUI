@@ -234,7 +234,7 @@ namespace Engine
 				if (reinterpret_cast<HWND>(LParam) != _window) CaptureChanged(false);
 				else CaptureChanged(true);
 			} else if (Msg == WM_TIMER) {
-				int index = WParam - 2;
+				int index = int(WParam) - 2;
 				if (index >= 0 && index < _timers.Length() && _timers[index]) _timers[index]->Timer();
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);
