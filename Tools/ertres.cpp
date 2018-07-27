@@ -60,6 +60,29 @@ void copy_file(const string & source, const string & dest)
     FileStream out(dest, AccessWrite, CreateAlways);
     src.CopyTo(&out);
 }
+bool copy_file_nothrow(const string & source, const string & dest)
+{
+    try {
+        FileStream src(source, AccessRead, OpenExisting);
+        FileStream out(dest, AccessWrite, CreateAlways);
+        src.CopyTo(&out);
+    }
+    catch (...) { return false; }
+    return true;
+}
+bool validate_resources(TextWriter & console)
+{
+    for (int i = 0; i < reslist.Length(); i++) {
+        for (int j = 0; j < reslist[i].Name.Length(); j++) {
+            widechar c = reslist[i].Name[j];
+            if ((c < L'a' || c > L'z') && (c < L'A' || c > L'Z') && (c < L'0' || c > L'9') && c != L'_') {
+                console << L"Invalid resource name: " << reslist[i].Name << IO::NewLineChar;
+                return false;
+            }
+        }
+    }
+    return true;
+}
 string make_lexem(const string & str) { return str.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\""); }
 bool compile_resource(const string & rc, const string & res, const string & log, TextWriter & console)
 {
@@ -171,6 +194,11 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
                 Time it = IO::DateTime::GetFileAlterTime(icon.Handle());
                 if (it > max_time) max_time = it;
             }
+            for (int i = 0; i < reslist.Length(); i++) {
+                FileStream res(reslist[i].SourcePath, AccessRead, OpenExisting);
+                Time rt = IO::DateTime::GetFileAlterTime(res.Handle());
+                if (rt > max_time) max_time = rt;
+            }
             if (prj_time > max_time) max_time = prj_time;
             rc_time = IO::DateTime::GetFileAlterTime(rcs.Handle());
         }
@@ -186,6 +214,13 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
             if (icons.Length()) {
                 for (int i = 0; i < icons.Length(); i++) {
                     script << string(i + 1) + L" ICON \"" + icons[i] + L"\"" << IO::NewLineChar;
+                }
+                script << IO::NewLineChar;
+            }
+            if (reslist.Length()) {
+                for (int i = 0; i < reslist.Length(); i++) {
+                    string inner_name = reslist[i].Locale.Length() ? (reslist[i].Name + L"-" + reslist[i].Locale) : reslist[i].Name;
+                    script << L"\"" + inner_name + L"\" RCDATA \"" + make_lexem(reslist[i].SourcePath) + L"\"" << IO::NewLineChar;
                 }
                 script << IO::NewLineChar;
             }
@@ -364,6 +399,14 @@ bool build_bundle(const string & plist, const Array<string> & icons, const strin
                 copy_file(icons[i], bundle + L"/Contents/Resources/FileIcon" + string(i) + L".icns");
             }
         }
+        for (int i = 0; i < reslist.Length(); i++) {
+            string inner_name = reslist[i].Locale.Length() ? (reslist[i].Name + L"-" + reslist[i].Locale) : reslist[i].Name;
+            if (!copy_file_nothrow(reslist[i].SourcePath, bundle + L"/Contents/Resources/" + inner_name)) {
+                console << L"Failed" << IO::NewLineChar;
+                console << L"Failed to import resource file \"" << reslist[i].SourcePath << L"\"" << IO::NewLineChar;
+                return false;
+            }
+        }
     }
     catch (...) { console << L"Failed" << IO::NewLineChar; return false; }
     console << L"Succeed" << IO::NewLineChar;
@@ -490,6 +533,7 @@ int Main(void)
                 {
                     SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
                     index_resources(IO::Path::GetDirectory(args->ElementAt(1)), resdir, L"");
+                    if (!validate_resources(console)) return 1;
                 }
                 string manifest = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".manifest";
                 if (!asm_manifest(manifest, console)) return 1;
@@ -513,6 +557,7 @@ int Main(void)
                 {
                     SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
                     index_resources(IO::Path::GetDirectory(args->ElementAt(1)), resdir, L"");
+                    if (!validate_resources(console)) return 1;
                 }
                 string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
                 string plist = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".plist";
