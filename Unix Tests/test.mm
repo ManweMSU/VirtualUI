@@ -69,10 +69,14 @@ int Main(void)
     UI::Zoom = Windows::GetScreenScale();
 
     DynamicString req;
+    req += Assembly::GetCurrentUserLocale() + IO::NewLineChar;
     try {
         SafePointer<Network::HttpSession> session = Network::OpenHttpSession(L"pidor");
+        if (!session) throw Exception();
         SafePointer<Network::HttpConnection> connection = session->Connect(L"yandex.ru");
+        if (!connection) throw Exception();
         SafePointer<Network::HttpRequest> request = connection->CreateRequest(L"/favicon.ico");
+        if (!request) throw Exception();
         request->Send();
         req += string(request->GetStatus()) + string(IO::NewLineChar);
         SafePointer< Array<string> > hdrs = request->GetHeaders();
@@ -81,12 +85,11 @@ int Main(void)
         }
     } catch (...) { req += L"kornevgen pidor"; }
 
-    string src = IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(IO::Path::GetDirectory(
-        IO::Path::GetDirectory(IO::GetExecutablePath()))))) + L"/../Tests/test.eui";
-    Console << src << IO::NewLineChar;
-    Streaming::FileStream source(src, Streaming::AccessRead, Streaming::OpenExisting);
+    Streaming::Stream * source = Assembly::QueryResource(L"GUI");
+    Console << string((void*) source) << IO::NewLineChar;
     SafePointer<UI::IResourceLoader> loader = Windows::CreateNativeCompatibleResourceLoader();
-    UI::Loader::LoadUserInterfaceFromBinary(interface, &source, loader, 0);
+    UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
+    source->Release();
 
     NSUserDefaults * def = [[NSUserDefaults alloc] init];
     NSDictionary<NSString *,id> * dict = [def dictionaryRepresentation];

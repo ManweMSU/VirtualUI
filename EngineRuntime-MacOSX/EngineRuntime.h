@@ -11,6 +11,7 @@
 #include "Miscellaneous/UndoBuffer.h"
 #include "Network/HTTP.h"
 #include "Network/Socket.h"
+#include "PlatformDependent/Assembly.h"
 #include "PlatformDependent/Clipboard.h"
 #include "Processes/Process.h"
 #include "Processes/Threading.h"
