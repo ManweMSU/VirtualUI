@@ -42,7 +42,7 @@ namespace Engine
 					uint32 current = 0;
 				public:
 					ReaderStream(Socket * connection, uint32 limit_len) : max_length(limit_len) { target.SetRetain(connection); }
-					virtual ~ReaderStream(void) override { uint8 r; while (current < max_length) Read(&r, 1); }
+					virtual ~ReaderStream(void) override { try { uint8 r; while (current < max_length) Read(&r, 1); } catch (...) { target->Shutdown(true, true); } }
 					virtual void Read(void * buffer, uint32 length) override
 					{
 						uint32 avail = max_length - current;
