@@ -1,15 +1,7 @@
 #include <EngineRuntime.h>
-#include <PlatformDependent/CocoaInterop.h>
-#include <PlatformDependent/KeyCodes.h>
 
 using namespace Engine;
 using namespace Engine::UI;
-
-#include <stdio.h>
-#include <unistd.h>
-
-@import Foundation;
-@import AppKit;
 
 UI::InterfaceTemplate interface;
 
@@ -55,7 +47,10 @@ public:
         // Streaming::TextWriter Console(ConsoleOutStream);
         // if (event == Windows::FrameEvent::Close) Console << string(L"Close window") + IO::NewLineChar;
         // else if (event == Windows::FrameEvent::Move) Console << string(L"Move window") + IO::NewLineChar;
-        if (event == Windows::FrameEvent::Close) window->Destroy();
+        if (event == Windows::FrameEvent::Close) {
+            window->Destroy();
+            Windows::ExitMessageLoop();
+        }
     }
 };
 
@@ -90,25 +85,6 @@ int Main(void)
     SafePointer<UI::IResourceLoader> loader = Windows::CreateNativeCompatibleResourceLoader();
     UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
     source->Release();
-
-    NSUserDefaults * def = [[NSUserDefaults alloc] init];
-    NSDictionary<NSString *,id> * dict = [def dictionaryRepresentation];
-    NSArray<NSString *> * keys = [dict allKeys];
-    int c = [keys count];
-    Console << L"Dictionary length: " << c << IO::NewLineChar;
-    for (int i = 0; i < c; i++) {
-        Console << L"   - " << Cocoa::EngineString([keys objectAtIndex: i]) << IO::NewLineChar;
-    }
-    [keys release];
-    [dict release];
-    [def release];
-
-    Console << L"Keyboard delay " + string(Keyboard::GetKeyboardDelay()) + L" ms" + IO::NewLineChar;
-    Console << L"Keyboard speed " + string(Keyboard::GetKeyboardSpeed()) + L" ms" + IO::NewLineChar;
-
-    auto sbox = Windows::GetScreenDimensions();
-    Console << L"Screen " + string(sbox.Left) + L", " + string(sbox.Top) + L", " + string(sbox.Right) + L", " + string(sbox.Bottom) + IO::NewLineChar;
-    Console << L"Scale  " + string(Windows::GetScreenScale()) + IO::NewLineChar;
 
     auto Callback2 = new _cb2;
     auto w4 = Windows::CreateFramedDialog(interface.Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);

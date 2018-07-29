@@ -72,6 +72,9 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (void) windowDidBecomeKey: (NSNotification *) notification;
 - (void) windowDidResignKey: (NSNotification *) notification;
 @end
+@interface EngineRuntimeApplicationDelegate : NSObject<NSApplicationDelegate>
+- (void) close_all: (id) sender;
+@end
 
 @implementation EngineRuntimeTimerTarget : NSObject
 - (instancetype) init
@@ -338,6 +341,18 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
 }
 @end
+@implementation EngineRuntimeApplicationDelegate
+- (void) close_all: (id) sender
+{
+    NSRunLoop * loop = [NSRunLoop currentRunLoop];
+    NSArray<NSWindow *> * windows = [NSApp windows];
+    NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+    for (int i = 0; i < [windows count]; i++) {
+        [loop performSelector: @selector(performClose:) target: [windows objectAtIndex: i] argument: self order: 0 modes: modes];
+    }
+    [modes release];
+}
+@end
 
 namespace Engine
 {
@@ -549,6 +564,8 @@ namespace Engine
             if (!_Initialized) {
                 InitializeCodecCollection();
                 [NSApplication sharedApplication];
+                EngineRuntimeApplicationDelegate * delegate = [[EngineRuntimeApplicationDelegate alloc] init];
+                [NSApp setDelegate: delegate];
                 NSMenu * menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
                 NSMenuItem * main_item = [[NSMenuItem alloc] initWithTitle: @"Application Menu" action: NULL keyEquivalent: @""];
                 NSMenu * main_menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
@@ -570,7 +587,7 @@ namespace Engine
                 [hide_others setKeyEquivalentModifierMask: NSEventModifierFlagOption | NSEventModifierFlagCommand];
                 NSMenuItem * show_all = [[NSMenuItem alloc] initWithTitle: @"Show all" action: @selector(unhideAllApplications:) keyEquivalent: @""];
                 NSMenuItem * show_sep = [NSMenuItem separatorItem];
-                NSMenuItem * item_exit = [[NSMenuItem alloc] initWithTitle: @"Exit" action: @selector(terminate:) keyEquivalent: @"q"]; // another selector?
+                NSMenuItem * item_exit = [[NSMenuItem alloc] initWithTitle: @"Exit" action: @selector(close_all:) keyEquivalent: @"q"];
                 [main_menu addItem: show_all];
                 [main_menu addItem: show_sep];
                 [main_menu addItem: item_exit];
