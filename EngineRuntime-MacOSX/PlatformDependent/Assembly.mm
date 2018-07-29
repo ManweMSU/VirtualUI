@@ -17,6 +17,7 @@ namespace Engine
 		Streaming::Stream * QueryResource(const widechar * identifier)
 		{
 			NSBundle * bundle = [NSBundle mainBundle];
+			if (!bundle) return 0;
 			NSString * name = Cocoa::CocoaString(identifier);
 			NSURL * url = [bundle URLForResource: name withExtension: nil];
 			if (!url) {
@@ -25,9 +26,16 @@ namespace Engine
 					name = Cocoa::CocoaString(string(identifier) + L"-" + CurrentLocale);
 					url = [bundle URLForResource: name withExtension: nil];
 					[name release];
+					[bundle release];
 					if (!url) return 0;
-				} else return 0;
-			} else [name release];
+				} else {
+					[bundle release];
+					return 0;
+				}
+			} else {
+				[name release];
+				[bundle release];
+			}
 			string path = Cocoa::EngineString([url path]);
 			[url release];
 			try {

@@ -16,7 +16,6 @@ namespace Engine
             for (int i = 0; i < [types count]; i++) {
                 if ([types[i] isEqualToString: NSPasteboardTypeString] && format == Format::Text) result = true;
             }
-            [types release];
             return result;
         }
 		bool GetData(string & value)
@@ -25,7 +24,6 @@ namespace Engine
             NSString * text = [pasteboard stringForType: NSPasteboardTypeString];
             if (text) {
                 value = Cocoa::EngineString(text);
-                [text release];
                 return true;
             } else return false;
         }
