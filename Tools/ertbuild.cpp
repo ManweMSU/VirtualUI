@@ -179,9 +179,9 @@ bool compile(const string & source, const string & object, const string & log, T
     console << L"Succeed" << IO::NewLineChar;
     return true;
 }
-bool link(const Array<string> & objs, const string & exe, const string & log, TextWriter & console)
+bool link(const Array<string> & objs, const string & exe, const string & real_exe, const string & log, TextWriter & console)
 {
-    console << L"Linking " << IO::Path::GetFileName(exe) << L"...";
+    console << L"Linking " << IO::Path::GetFileName(real_exe) << L"...";
     Array<string> clang_args(0x80);
     clang_args << objs;
     {
@@ -479,7 +479,16 @@ int Main(void)
                             console << L"NOTE: Can't build Mac OS X Application Bundle without Resource Tool!" << IO::NewLineChar;
                         }
                     }
-                    if (!link(object_list, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
+                    string out_internal = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".tmp";
+                    if (!link(object_list, out_internal, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
+                    try {
+                        FileStream src(out_internal, AccessRead, OpenExisting);
+                        FileStream out(out_file, AccessReadWrite, CreateAlways);
+                        src.CopyTo(&out);
+                    } catch (...) {
+                        console << L"Failed to substitute the executable." << IO::NewLineChar;
+                        return 1;
+                    }
                 }
             }
             catch (Exception & ex) {

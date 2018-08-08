@@ -45,17 +45,17 @@ namespace Engine
 		year += uint32(cycles * 400);
 		while (true) {
 			uint32 len = IsYearOdd(year) ? 366 : 365;
-			if (days <= len) break;
+			if (days < len) break;
 			year++;
 			days -= len;
 		}
 		if (IsYearOdd(year)) {
-			while (days > OddMonthLength[month - 1]) {
+			while (days + 1 > OddMonthLength[month - 1]) {
 				days -= OddMonthLength[month - 1];
 				month++;
 			}
 		} else {
-			while (days > RegularMonthLength[month - 1]) {
+			while (days + 1 > RegularMonthLength[month - 1]) {
 				days -= RegularMonthLength[month - 1];
 				month++;
 			}
