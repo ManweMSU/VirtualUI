@@ -347,10 +347,11 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     NSRunLoop * loop = [NSRunLoop currentRunLoop];
     NSArray<NSWindow *> * windows = [NSApp windows];
     NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
-    for (int i = 0; i < [windows count]; i++) {
-        [loop performSelector: @selector(performClose:) target: [windows objectAtIndex: i] argument: self order: 0 modes: modes];
+    Engine::Array<NSWindow *> to_close(0x10);
+    for (int i = 0; i < [windows count]; i++) to_close << [windows objectAtIndex: i];
+    for (int i = 0; i < to_close.Length(); i++) {
+        [loop performSelector: @selector(performClose:) target: to_close[i] argument: self order: 0 modes: modes];
     }
-    [modes release];
 }
 @end
 

@@ -282,7 +282,10 @@ namespace Engine
         UI::IBlurEffectRenderingInfo * QuartzRenderingDevice::CreateBlurEffectRenderingInfo(double power) { return 0; }
         UI::IInversionEffectRenderingInfo * QuartzRenderingDevice::CreateInversionEffectRenderingInfo(void)
         {
-            if (InversionCache) return InversionCache;
+            if (InversionCache) {
+                InversionCache->Retain();
+                return InversionCache;
+            }
             SafePointer<QuartzInversionRenderingInfo> info = new QuartzInversionRenderingInfo;
             CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
             CGDataProviderRef data = CGDataProviderCreateWithData(0, &info->pixel, 4, 0);
