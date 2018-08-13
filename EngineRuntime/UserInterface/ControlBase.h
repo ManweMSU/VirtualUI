@@ -301,5 +301,18 @@ namespace Engine
 			virtual void GetArgument(const string & name, ITexture ** value) override;
 			virtual void GetArgument(const string & name, IFont ** value) override;
 		};
+		class ReflectorArgumentProvider : public IArgumentProvider
+		{
+			Reflection::Reflected * Source;
+		public:
+			ReflectorArgumentProvider(Reflection::Reflected * source);
+
+			virtual void GetArgument(const string & name, int * value) override;
+			virtual void GetArgument(const string & name, double * value) override;
+			virtual void GetArgument(const string & name, Color * value) override;
+			virtual void GetArgument(const string & name, string * value) override;
+			virtual void GetArgument(const string & name, ITexture ** value) override;
+			virtual void GetArgument(const string & name, IFont ** value) override;
+		};
 	}
 }

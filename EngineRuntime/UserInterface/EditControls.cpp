@@ -218,7 +218,7 @@ namespace Engine
 				_sp = _cp;
 				int len = _text.Length();
 				while (_sp > 0 && ((IsAlphabetical(_text[_sp - 1]) || (_text[_sp - 1] >= L'0' && _text[_sp - 1] <= L'9') || (_text[_sp - 1] == L'_')))) _sp--;
-				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp - 1] >= L'0' && _text[_cp - 1] <= L'9') || (_text[_cp] == L'_')))) _cp++;
+				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp] >= L'0' && _text[_cp] <= L'9') || (_text[_cp] == L'_')))) _cp++;
 			}
 			void Edit::RightButtonDown(Point at)
 			{
@@ -452,24 +452,22 @@ namespace Engine
 				string conv = input;
 				if (LowerCase) conv = conv.LowerCase();
 				else if (UpperCase) conv = conv.UpperCase();
-				if (_chars_enabled.Length()) {
-					Array<uint32> utf32(0x100);
-					utf32.SetLength(conv.GetEncodedLength(Encoding::UTF32));
-					conv.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
-					for (int i = 0; i < utf32.Length(); i++) {
-						bool enabled = false;
-						if (utf32[i] >= 0x20) {
-							for (int j = 0; j < _chars_enabled.Length(); j++) {
-								if (utf32[i] == _chars_enabled[j]) { enabled = true; break; }
-							}
-						}
-						if (!enabled) {
-							utf32.Remove(i);
-							i--;
-						}
+				Array<uint32> utf32(0x100);
+				utf32.SetLength(conv.GetEncodedLength(Encoding::UTF32));
+				conv.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
+				for (int i = 0; i < utf32.Length(); i++) {
+					bool enabled = false;
+					if (utf32[i] >= 0x20) {
+						if (_chars_enabled.Length()) for (int j = 0; j < _chars_enabled.Length(); j++) {
+							if (utf32[i] == _chars_enabled[j]) { enabled = true; break; }
+						} else enabled = true;
 					}
-					conv = string(utf32.GetBuffer(), utf32.Length(), Encoding::UTF32);
+					if (!enabled) {
+						utf32.Remove(i);
+						i--;
+					}
 				}
+				conv = string(utf32.GetBuffer(), utf32.Length(), Encoding::UTF32);
 				if (_hook) conv = _hook->Filter(this, conv);
 				return conv;
 			}
@@ -771,7 +769,7 @@ namespace Engine
 				auto & _cp = _content.cp.x;
 				auto & _text = _content.lines[_content.cp.y].text;
 				while (_sp > 0 && ((IsAlphabetical(_text[_sp - 1]) || (_text[_sp - 1] >= L'0' && _text[_sp - 1] <= L'9') || (_text[_sp - 1] == L'_')))) _sp--;
-				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp - 1] >= L'0' && _text[_cp - 1] <= L'9') || (_text[_cp] == L'_')))) _cp++;
+				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp] >= L'0' && _text[_cp] <= L'9') || (_text[_cp] == L'_')))) _cp++;
 			}
 			void MultiLineEdit::RightButtonDown(Point at)
 			{
@@ -1088,24 +1086,22 @@ namespace Engine
 				string conv = input;
 				if (LowerCase) conv = conv.LowerCase();
 				else if (UpperCase) conv = conv.UpperCase();
-				if (_chars_enabled.Length()) {
-					Array<uint32> utf32(0x100);
-					utf32.SetLength(conv.GetEncodedLength(Encoding::UTF32));
-					conv.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
-					for (int i = 0; i < utf32.Length(); i++) {
-						bool enabled = false;
-						if (utf32[i] >= 0x20) {
-							for (int j = 0; j < _chars_enabled.Length(); j++) {
-								if (utf32[i] == _chars_enabled[j]) { enabled = true; break; }
-							}
-						}
-						if (!enabled) {
-							utf32.Remove(i);
-							i--;
-						}
+				Array<uint32> utf32(0x100);
+				utf32.SetLength(conv.GetEncodedLength(Encoding::UTF32));
+				conv.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
+				for (int i = 0; i < utf32.Length(); i++) {
+					bool enabled = false;
+					if (utf32[i] >= 0x20 || utf32[i] == L'\t' || utf32[i] == L'\n') {
+						if (_chars_enabled.Length()) for (int j = 0; j < _chars_enabled.Length(); j++) {
+							if (utf32[i] == _chars_enabled[j]) { enabled = true; break; }
+						} else enabled = true;
 					}
-					conv = string(utf32.GetBuffer(), utf32.Length(), Encoding::UTF32);
+					if (!enabled) {
+						utf32.Remove(i);
+						i--;
+					}
 				}
+				conv = string(utf32.GetBuffer(), utf32.Length(), Encoding::UTF32);
 				if (!conv.Length()) return conv;
 				if (_hook) conv = _hook->Filter(this, conv, Point(_content.cp.x, _content.cp.y));
 				return conv;

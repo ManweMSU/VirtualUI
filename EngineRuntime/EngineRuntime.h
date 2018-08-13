@@ -28,6 +28,7 @@
 #include "UserInterface/ControlClasses.h"
 #include "UserInterface/EditControls.h"
 #include "UserInterface/GroupControls.h"
+#include "UserInterface/ListControls.h"
 #include "UserInterface/Menues.h"
 #include "UserInterface/OverlappedWindows.h"
 #include "UserInterface/ScrollableControls.h"

@@ -5,6 +5,7 @@
 #include "StaticControls.h"
 #include "ScrollableControls.h"
 #include "EditControls.h"
+#include "ListControls.h"
 
 #include "../PlatformDependent/NativeStation.h"
 #include "../PlatformDependent/KeyCodes.h"
@@ -391,13 +392,14 @@ namespace Engine
 						// Edit controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"Edit") on->GetStation()->CreateWindow<Edit>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"MultiLineEdit") on->GetStation()->CreateWindow<MultiLineEdit>(on, &source->Children[i]);
+						// List controls
+						else if (source->Children[i].Properties->GetTemplateClass() == L"ListBox") on->GetStation()->CreateWindow<ListBox>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
 						/*
 						NOT IMPLEMENTED:
 
-						ListBox
 						TreeView
 						ListView
 						ListViewColumn		

@@ -190,6 +190,9 @@
     <ClInclude Include="PlatformDependent\Assembly.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\ListControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -338,6 +341,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\Assembly.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\ListControls.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

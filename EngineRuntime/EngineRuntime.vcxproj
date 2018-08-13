@@ -66,6 +66,7 @@
     <ClInclude Include="UserInterface\ControlClasses.h" />
     <ClInclude Include="UserInterface\EditControls.h" />
     <ClInclude Include="UserInterface\GroupControls.h" />
+    <ClInclude Include="UserInterface\ListControls.h" />
     <ClInclude Include="UserInterface\Menues.h" />
     <ClInclude Include="UserInterface\OverlappedWindows.h" />
     <ClInclude Include="UserInterface\ScrollableControls.h" />
@@ -117,6 +118,7 @@
     <ClCompile Include="UserInterface\ControlClasses.cpp" />
     <ClCompile Include="UserInterface\EditControls.cpp" />
     <ClCompile Include="UserInterface\GroupControls.cpp" />
+    <ClCompile Include="UserInterface\ListControls.cpp" />
     <ClCompile Include="UserInterface\Menues.cpp" />
     <ClCompile Include="UserInterface\OverlappedWindows.cpp" />
     <ClCompile Include="UserInterface\ScrollableControls.cpp" />

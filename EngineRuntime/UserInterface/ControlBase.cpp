@@ -594,5 +594,52 @@ namespace Engine
 		void ZeroArgumentProvider::GetArgument(const string & name, string * value) { *value = L""; }
 		void ZeroArgumentProvider::GetArgument(const string & name, ITexture ** value) { *value = 0; }
 		void ZeroArgumentProvider::GetArgument(const string & name, IFont ** value) { *value = 0; }
+		ReflectorArgumentProvider::ReflectorArgumentProvider(Reflection::Reflected * source) : Source(source) {}
+		void ReflectorArgumentProvider::GetArgument(const string & name, int * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Integer) *value = prop.Get<int>();
+			else if (prop.Type == Reflection::PropertyType::Double) *value = int(prop.Get<double>());
+			*value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, double * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Integer) *value = double(prop.Get<int>());
+			else if (prop.Type == Reflection::PropertyType::Double) *value = prop.Get<double>();
+			else *value = 0.0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, Color * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Color) *value = prop.Get<Color>();
+			else *value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, string * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::String) *value = prop.Get<string>();
+			else *value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, ITexture ** value)
+		{
+			ITexture * object = 0;
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Texture) object = prop.Get<SafePointer<ITexture>>();
+			if (object) {
+				*value = object;
+				object->Retain();
+			} else *value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, IFont ** value)
+		{
+			IFont * object = 0;
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Font) object = prop.Get<SafePointer<IFont>>();
+			if (object) {
+				*value = object;
+				object->Retain();
+			} else *value = 0;
+		}
 	}
 }
