@@ -376,24 +376,32 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					list->AddItem(L"List Box Item 9");
 					list->AddItem(L"List Box Item 10");
 					list->MultiChoose = true;
-					auto list2 = window->FindChild(353535)->As<Controls::ListBox>();
-					list2->AddItem(L"1");
-					list2->AddItem(L"2");
-					list2->AddItem(L"3");
-					list2->AddItem(L"4");
-					list2->AddItem(L"5");
-					list2->AddItem(L"6");
-					list2->AddItem(L"7");
-					list2->AddItem(L"8");
-					list2->AddItem(L"9");
-					list2->AddItem(L"10");
-					list2->MultiChoose = true;
+					auto list2 = window->FindChild(353535)->As<Controls::TreeView>();
+					auto rt = list2->GetRootItem();
+					auto i1 = rt->AddItem(L"Tree View Item 1");
+					i1->AddItem(L"Tree View Item 1.1");
+					i1->AddItem(L"Tree View Item 1.2");
+					auto i13 = i1->AddItem(L"Tree View Item 1.3");
+					i1->AddItem(L"Tree View Item 1.4");
+					i13->AddItem(L"Tree View Item 1.3.1");
+					i13->AddItem(L"Tree View Item 1.3.2");
+					auto i2 = rt->AddItem(L"Tree View Item 2");
+					i2->AddItem(L"Tree View Item 2.1");
+					i2->AddItem(L"Tree View Item 2.2");
+					rt->AddItem(L"Tree View Item 3");
+					auto i4 = rt->AddItem(L"Tree View Item 4");
+					i4->AddItem(L"§ ыыыы §");
+					i1->Expand(true);
 				}
 				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 				{
-					if (ID == 343434 || ID == 353535) {
+					if (ID == 343434) {
 						if (event == Window::Event::DoubleClick) {
 							sender->As<Controls::ListBox>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
+						}
+					} else if (ID == 353535) {
+						if (event == Window::Event::DoubleClick) {
+							sender->As<Controls::TreeView>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
 						}
 					} else if (ID == 1) {
 						auto group1 = window->FindChild(101);

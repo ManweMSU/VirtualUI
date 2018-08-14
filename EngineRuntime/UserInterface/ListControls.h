@@ -90,6 +90,127 @@ namespace Engine
 				Window * GetEmbeddedEditor(void);
 				void CloseEmbeddedEditor(void);
 			};
+			class TreeView : public ParentWindow, public Template::Controls::TreeView
+			{
+				friend class TreeViewItem;
+			public:
+				class TreeViewItem
+				{
+					friend class TreeView;
+				private:
+					SafeArray<TreeViewItem> Children;
+					TreeViewItem * Parent;
+					TreeView * View;
+					bool Expanded;
+					SafePointer<Shape> ViewNormal;
+					SafePointer<Shape> ViewDisabled;
+
+					int get_height(void) const;
+					void reset_cache(void);
+					int render(IRenderingDevice * device, int left_offset, int & y, const Box & outer, bool enabled);
+					bool is_generalized_children(TreeViewItem * node) const;
+					TreeViewItem * hit_test(const Point & p, const Box & outer, int left_offset, int & y, bool & node);
+					TreeViewItem * get_topmost(void);
+					TreeViewItem * get_bottommost(void);
+					TreeViewItem * get_previous(void);
+					TreeViewItem * get_next(void);
+
+					TreeViewItem(TreeView * view, TreeViewItem * parent);
+				public:
+					TreeViewItem(void);
+					~TreeViewItem(void);
+
+					void * User;
+
+					bool IsExpanded(void) const;
+					bool IsParent(void) const;
+					bool IsAccessible(void) const;
+					void Expand(bool expand);
+					Box GetBounds(void) const;
+					TreeView * GetView(void) const;
+					TreeViewItem * GetParent(void) const;
+					int GetIndexAtParent(void) const;
+					int GetChildrenCount(void) const;
+					const TreeViewItem * GetChild(int index) const;
+					TreeViewItem * GetChild(int index);
+					TreeViewItem * AddItem(const string & text, void * user = 0);
+					TreeViewItem * AddItem(const string & text, ITexture * image_normal, ITexture * image_grayed, void * user = 0);
+					TreeViewItem * AddItem(IArgumentProvider * provider, void * user = 0);
+					TreeViewItem * AddItem(Reflection::Reflected & object, void * user = 0);
+					TreeViewItem * InsertItem(const string & text, int at, void * user = 0);
+					TreeViewItem * InsertItem(const string & text, ITexture * image_normal, ITexture * image_grayed, int at, void * user = 0);
+					TreeViewItem * InsertItem(IArgumentProvider * provider, int at, void * user = 0);
+					TreeViewItem * InsertItem(Reflection::Reflected & object, int at, void * user = 0);
+					void Reset(const string & text);
+					void Reset(const string & text, ITexture * image_normal, ITexture * image_grayed);
+					void Reset(IArgumentProvider * provider);
+					void Reset(Reflection::Reflected & object);
+					void SwapItems(int i, int j);
+					void Remove(void);	
+				};
+			private:
+				VerticalScrollBar * _scroll = 0;
+				ControlGroup * _editor = 0;
+				bool _svisible = false;
+				TreeViewItem _root;
+				TreeViewItem * _current = 0;
+				TreeViewItem * _hot = 0;
+				bool _is_arrow_hot = false;
+				SafePointer<Shape> _view_normal;
+				SafePointer<Shape> _view_disabled;
+				SafePointer<Shape> _view_focused;
+				SafePointer<Shape> _view_element_hot;
+				SafePointer<Shape> _view_element_selected;
+				SafePointer<Shape> _view_node_collapsed_normal;
+				SafePointer<Shape> _view_node_collapsed_disabled;
+				SafePointer<Shape> _view_node_collapsed_hot;
+				SafePointer<Shape> _view_node_expanded_normal;
+				SafePointer<Shape> _view_node_expanded_disabled;
+				SafePointer<Shape> _view_node_expanded_hot;
+				SafePointer<ILineRenderingInfo> _line_normal;
+				SafePointer<ILineRenderingInfo> _line_disabled;
+
+				void reset_scroll_ranges(void);
+				void scroll_to_current(void);
+				void select(TreeViewItem * item);
+				void move_selection(TreeViewItem * to);
+			public:
+				TreeView(Window * Parent, WindowStation * Station);
+				TreeView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				~TreeView(void) override;
+
+				virtual void Render(const Box & at) override;
+				virtual void ResetCache(void) override;
+				virtual void ArrangeChildren(void) override;
+				virtual void Enable(bool enable) override;
+				virtual bool IsEnabled(void) override;
+				virtual void Show(bool visible) override;
+				virtual bool IsVisible(void) override;
+				virtual bool IsTabStop(void) override;
+				virtual void SetID(int ID) override;
+				virtual int GetID(void) override;
+				virtual void SetRectangle(const Rectangle & rect) override;
+				virtual Rectangle GetRectangle(void) override;
+				virtual void SetPosition(const Box & box) override;
+				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void CaptureChanged(bool got_capture) override;
+				virtual void LeftButtonDown(Point at) override;
+				virtual void LeftButtonDoubleClick(Point at) override;
+				virtual void RightButtonDown(Point at) override;
+				virtual void RightButtonUp(Point at) override;
+				virtual void MouseMove(Point at) override;
+				virtual void ScrollVertically(double delta) override;
+				virtual void KeyDown(int key_code) override;
+				virtual Window * HitTest(Point at) override;
+
+				TreeViewItem * GetRootItem(void);
+				void ClearItems(void);
+				TreeViewItem * GetSelectedItem(void);
+				void SetSelectedItem(TreeViewItem * item, bool scroll_to_view = false);
+				Window * CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position = Rectangle::Entire());
+				Window * GetEmbeddedEditor(void);
+				void CloseEmbeddedEditor(void);
+			};
 		}
 	}
 }

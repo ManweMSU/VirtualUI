@@ -313,7 +313,7 @@ namespace Engine
 		SafeArray(const SafeArray & src) : count(src.count), allocated(0), data(0), block(src.block)
 		{
 			require(count); int i = 0;
-			try { for (i = 0; i < count; i++) data[i] = new V(src.data[i]); } catch (...) {
+			try { for (i = 0; i < count; i++) data[i] = new V(*src.data[i]); } catch (...) {
 				for (int j = i - 1; j >= 0; j--) delete data[i];
 				free(data); throw;
 			}
@@ -327,7 +327,7 @@ namespace Engine
 			if (this == &src) return *this;
 			SafeArray Copy(src.block);
 			Copy.require(src.count);
-			for (int i = 0; i < src.count; i++) Copy.append(src.data[i]);
+			for (int i = 0; i < src.count; i++) Copy.append(*src.data[i]);
 			for (int i = 0; i < count; i++) delete data[i];
 			free(data);
 			data = Copy.data; count = Copy.count; allocated = Copy.allocated; block = Copy.block;
