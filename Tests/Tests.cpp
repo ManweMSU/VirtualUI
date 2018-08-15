@@ -125,6 +125,12 @@ void CreateBlangSpelling(Syntax::Spelling & spelling)
 	spelling.ContinuousCharCombos << L"%";
 }
 
+ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
+	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text1)
+	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text2)
+	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text3)
+ENGINE_END_REFLECTED_CLASS
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
@@ -364,17 +370,15 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			public:
 				virtual void OnInitialized(UI::Window * window) override
 				{
-					auto list = window->FindChild(343434)->As<Controls::ListBox>();
-					list->AddItem(L"List Box Item 1");
-					list->AddItem(L"List Box Item 2");
-					list->AddItem(L"List Box Item 3");
-					list->AddItem(L"List Box Item 4");
-					list->AddItem(L"List Box Item 5");
-					list->AddItem(L"List Box Item 6");
-					list->AddItem(L"List Box Item 7");
-					list->AddItem(L"List Box Item 8");
-					list->AddItem(L"List Box Item 9");
-					list->AddItem(L"List Box Item 10");
+					auto list = window->FindChild(343434)->As<Controls::ListView>();
+					for (int i = 1; i <= 10; i++) {
+						lv_item item;
+						item.Text1 = L"Item " + string(i) + L".1";
+						item.Text2 = L"Item " + string(i) + L".2";
+						item.Text3 = L"Item " + string(i) + L".3";
+						list->AddItem(item);
+					}
+					list->OrderColumn(2, 0);
 					list->MultiChoose = true;
 					auto list2 = window->FindChild(353535)->As<Controls::TreeView>();
 					auto rt = list2->GetRootItem();
@@ -397,7 +401,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				{
 					if (ID == 343434) {
 						if (event == Window::Event::DoubleClick) {
-							sender->As<Controls::ListBox>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
+							sender->As<Controls::ListView>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"],
+								sender->As<Controls::ListView>()->GetLastCellID(),
+								Rectangle::Entire())->FindChild(888888)->SetFocus();
 						}
 					} else if (ID == 353535) {
 						if (event == Window::Event::DoubleClick) {

@@ -395,14 +395,12 @@ namespace Engine
 						// List controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ListBox") on->GetStation()->CreateWindow<ListBox>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"TreeView") on->GetStation()->CreateWindow<TreeView>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"ListView") on->GetStation()->CreateWindow<ListView>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
 						/*
-						NOT IMPLEMENTED:
-
-						ListView
-						ListViewColumn		
+						NOT IMPLEMENTED:	
 
 						ComboBox
 						TextComboBox

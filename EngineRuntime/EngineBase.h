@@ -161,6 +161,7 @@ namespace Engine
 
 	double sgn(double x);
 	float sgn(float x);
+	int sgn(int x);
 	double saturate(double x);
 	float saturate(float x);
 
