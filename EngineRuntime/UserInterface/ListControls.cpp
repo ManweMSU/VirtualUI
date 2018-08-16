@@ -1334,10 +1334,22 @@ namespace Engine
 				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border;
 				int vspace = ElementHeight * _elements.Length();
 				int hspace = (_col_reorder.Length()) ? (_col_reorder.LastElement()->_position_limit + _col_reorder.LastElement()->_width) : 0;
+				bool ovv = _vsvisible;
+				bool ohv = _hsvisible;
 				_hsvisible = (hspace > hpage || (hspace > hpage - VerticalScrollSize && vspace > vpage));
 				_vsvisible = (vspace > vpage || (vspace > vpage - HorizontalScrollSize && hspace > hpage));
 				_vscroll->SetRange(0, vspace - 1);
 				_hscroll->SetRange(0, hspace - 1);
+				if (ovv != _vsvisible || ohv != _hsvisible) {
+					if (_vsvisible) hpage -= VerticalScrollSize;
+					if (_hsvisible) vpage -= HorizontalScrollSize;
+					_vscroll->SetPage(vpage);
+					_hscroll->SetPage(hpage);
+					_vscroll->SetRectangle(Rectangle(Coordinate::Right() - VerticalScrollSize - Border, Border,
+						Coordinate::Right() - Border, Coordinate::Bottom() - Border - (_hsvisible ? HorizontalScrollSize : 0)));
+					_hscroll->SetRectangle(Rectangle(Border, Coordinate::Bottom() - HorizontalScrollSize - Border,
+						Coordinate::Right() - Border - (_vsvisible ? VerticalScrollSize : 0), Coordinate::Bottom() - Border));
+				}
 				_vscroll->Show(_vsvisible);
 				_hscroll->Show(_hsvisible);
 			}

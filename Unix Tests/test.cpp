@@ -5,41 +5,55 @@ using namespace Engine::UI;
 
 UI::InterfaceTemplate interface;
 
+ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
+	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text1)
+	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text2)
+	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text3)
+ENGINE_END_REFLECTED_CLASS
+
 class _cb2 : public Windows::IWindowEventCallback
 {
 public:
     virtual void OnInitialized(UI::Window * window) override
     {
-        auto list = window->FindChild(343434)->As<Controls::ListBox>();
-        list->AddItem(L"List Box Item 1");
-        list->AddItem(L"List Box Item 2");
-        list->AddItem(L"List Box Item 3");
-        list->AddItem(L"List Box Item 4");
-        list->AddItem(L"List Box Item 5");
-        list->AddItem(L"List Box Item 6");
-        list->AddItem(L"List Box Item 7");
-        list->AddItem(L"List Box Item 8");
-        list->AddItem(L"List Box Item 9");
-        list->AddItem(L"List Box Item 10");
+        auto list = window->FindChild(343434)->As<Controls::ListView>();
+        for (int i = 1; i <= 10; i++) {
+            lv_item item;
+            item.Text1 = L"Item " + string(i) + L".1";
+            item.Text2 = L"Item " + string(i) + L".2";
+            item.Text3 = L"Item " + string(i) + L".3";
+            list->AddItem(item);
+        }
+        list->OrderColumn(2, 0);
         list->MultiChoose = true;
-        auto list2 = window->FindChild(353535)->As<Controls::ListBox>();
-        list2->AddItem(L"1");
-        list2->AddItem(L"2");
-        list2->AddItem(L"3");
-        list2->AddItem(L"4");
-        list2->AddItem(L"5");
-        list2->AddItem(L"6");
-        list2->AddItem(L"7");
-        list2->AddItem(L"8");
-        list2->AddItem(L"9");
-        list2->AddItem(L"10");
-        list2->MultiChoose = true;
+        auto list2 = window->FindChild(353535)->As<Controls::TreeView>();
+        auto rt = list2->GetRootItem();
+        auto i1 = rt->AddItem(L"Tree View Item 1");
+        i1->AddItem(L"Tree View Item 1.1");
+        i1->AddItem(L"Tree View Item 1.2");
+        auto i13 = i1->AddItem(L"Tree View Item 1.3");
+        i1->AddItem(L"Tree View Item 1.4");
+        i13->AddItem(L"Tree View Item 1.3.1");
+        i13->AddItem(L"Tree View Item 1.3.2");
+        auto i2 = rt->AddItem(L"Tree View Item 2");
+        i2->AddItem(L"Tree View Item 2.1");
+        i2->AddItem(L"Tree View Item 2.2");
+        rt->AddItem(L"Tree View Item 3");
+        auto i4 = rt->AddItem(L"Tree View Item 4");
+        i4->AddItem(L"§ ыыыы §");
+        i1->Expand(true);
     }
     virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
     {
-        if (ID == 343434 || ID == 353535) {
+        if (ID == 343434) {
             if (event == Window::Event::DoubleClick) {
-                sender->As<Controls::ListBox>()->CreateEmbeddedEditor(interface.Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
+                sender->As<Controls::ListView>()->CreateEmbeddedEditor(interface.Dialog[L"editor"],
+                    sender->As<Controls::ListView>()->GetLastCellID(),
+                    Rectangle::Entire())->FindChild(888888)->SetFocus();
+            }
+        } else if (ID == 353535) {
+            if (event == Window::Event::DoubleClick) {
+                sender->As<Controls::TreeView>()->CreateEmbeddedEditor(interface.Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
             }
         } else if (ID == 1) {
             auto group1 = window->FindChild(101);

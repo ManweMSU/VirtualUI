@@ -32,6 +32,11 @@ namespace Engine
 			int ControlGroup::GetID(void) { return ID; }
 			void ControlGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle ControlGroup::GetRectangle(void) { return ControlPosition; }
+			void ControlGroup::SetInnerControls(Template::ControlTemplate * Template)
+			{
+				while (ChildrenCount()) Child(0)->Destroy();
+				if (Template) Constructor::ConstructChildren(this, Template);
+			}
 
 			RadioButtonGroup::RadioButtonGroup(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			RadioButtonGroup::RadioButtonGroup(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)

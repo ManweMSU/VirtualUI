@@ -598,10 +598,13 @@ namespace Engine
                 [window_menu_item setSubmenu: window_menu];
                 NSMenuItem * window_minimize = [[NSMenuItem alloc] initWithTitle: @"Minimize" action: @selector(performMiniaturize:) keyEquivalent: @"m"];
                 NSMenuItem * window_maximize = [[NSMenuItem alloc] initWithTitle: @"Zoom" action: @selector(performZoom:) keyEquivalent: @""];
+                NSMenuItem * window_fullscreen = [[NSMenuItem alloc] initWithTitle: @"Toggle Full Screen" action: @selector(toggleFullScreen:) keyEquivalent: @"f"];
+                [window_fullscreen setKeyEquivalentModifierMask: NSEventModifierFlagControl | NSEventModifierFlagCommand];
                 NSMenuItem * window_sep = [NSMenuItem separatorItem];
                 NSMenuItem * window_bring = [[NSMenuItem alloc] initWithTitle: @"Bring All to Front" action: @selector(arrangeInFront:) keyEquivalent: @""];
                 [window_menu addItem: window_minimize];
                 [window_menu addItem: window_maximize];
+                [window_menu addItem: window_fullscreen];
                 [window_menu addItem: window_sep];
                 [window_menu addItem: window_bring];
 
@@ -634,6 +637,7 @@ namespace Engine
                 [window_menu release];
                 [window_minimize release];
                 [window_maximize release];
+                [window_fullscreen release];
                 [window_sep release];
                 [window_bring release];
                 [help_menu_item release];
@@ -712,6 +716,7 @@ namespace Engine
             EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
             EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
             [window setAcceptsMouseMovedEvents: YES];
+            [window setTabbingMode: NSWindowTabbingModeDisallowed];
             [window setDelegate: delegate];
             [window setContentView: view];
             [view release];

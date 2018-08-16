@@ -65,6 +65,16 @@ void clear_directory(const string & path)
     }
     catch (...) {}
 }
+bool copy_file_nothrow(const string & source, const string & dest)
+{
+    try {
+        FileStream src(source, AccessRead, OpenExisting);
+        FileStream out(dest, AccessWrite, CreateAlways);
+        src.CopyTo(&out);
+    }
+    catch (...) { return false; }
+    return true;
+}
 bool compile(const string & source, const string & object, const string & log, TextWriter & console)
 {
     bool vcheck = true;
@@ -309,6 +319,115 @@ bool run_restool(const string & prj, const string & out_path, const string & bun
     console << IO::NewLineChar;
     return true;
 }
+bool copy_attachments(const string & out_path, const string & base_path, const string & obj_path, TextWriter & console, RegistryNode * node)
+{
+    auto & res = node->GetSubnodes();
+    for (int i = 0; i < res.Length(); i++) {
+        string src = node->GetValueString(res[i] + L"/From");
+        string dest = node->GetValueString(res[i] + L"/To");
+        if (string::CompareIgnoreCase(src.Fragment(0, 9), L"<objpath>") == 0) {
+            src = IO::ExpandPath(obj_path + src.Fragment(9, -1));
+        } else {
+            src = IO::ExpandPath(base_path + L"/" + src);
+        }
+        string view = dest;
+        dest = IO::ExpandPath(out_path + L"/" + dest);
+        console << L"Copying attachment \"" + view + L"\"...";
+        try_create_directory_full(IO::Path::GetDirectory(dest));
+        if (!copy_file_nothrow(src, dest)) {
+            console << L"Failed" << IO::NewLineChar;
+            return false;
+        }
+        console << L"Succeed" << IO::NewLineChar;
+    }
+    return true;
+}
+bool copy_attachments(const string & out_path, const string & base_path, const string & obj_path, TextWriter & console)
+{
+    SafePointer<RegistryNode> node = prj_cfg->OpenNode(L"Attachments");
+    SafePointer<RegistryNode> node_os_local = prj_cfg->OpenNode(L"Attachments-" + compile_system);
+    SafePointer<RegistryNode> node_os_arc_local = prj_cfg->OpenNode(L"Attachments-" + compile_system + L"-" + compile_architecture);
+    SafePointer<RegistryNode> node_arc_local = prj_cfg->OpenNode(L"Attachments-" + compile_architecture);
+    if (node) {
+        if (!copy_attachments(out_path, base_path, obj_path, console, node)) return false;
+    }
+    if (node_os_local) {
+        if (!copy_attachments(out_path, base_path, obj_path, console, node_os_local)) return false;
+    }
+    if (node_os_arc_local) {
+        if (!copy_attachments(out_path, base_path, obj_path, console, node_os_arc_local)) return false;
+    }
+    if (node_arc_local) {
+        if (!copy_attachments(out_path, base_path, obj_path, console, node_arc_local)) return false;
+    }
+    return true;
+}
+bool invoke(RegistryNode * node, const string & base_path, const string & obj_path, TextWriter & console)
+{
+    Array<string> args(0x10);
+    string source = node->GetValueString(L"Source");
+    string dest = node->GetValueString(L"Dest");
+    string verb = node->GetValueString(L"Verb");
+    auto & vals = node->GetValues();
+    for (int i = 0; i < vals.Length(); i++) if (vals[i][0] == L'_') args << node->GetValueString(vals[i]);
+    handle manifest;
+    try {
+        manifest = IO::CreateFile(base_path + L"/" + verb + L".command.ini", IO::AccessRead, IO::OpenExisting);
+    }
+    catch (...) {
+        try {
+            manifest = IO::CreateFile(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + verb + L".command.ini", IO::AccessRead, IO::OpenExisting);
+        }
+        catch (...) { return false; }
+    }
+    FileStream manifest_stream(manifest, true);
+    SafePointer<Registry> manifest_reg = CompileTextRegistry(&manifest_stream);
+    if (!manifest_reg) {
+        console << L"Unrecognized command \"" << verb << L"\"." << IO::NewLineChar;
+        return false;
+    }
+    Array<string> command_line(0x10);
+    string server = manifest_reg->GetValueString(L"Server");
+    SafePointer<RegistryNode> cmdl = manifest_reg->OpenNode(L"CommandLine");
+    if (cmdl) {
+        auto & cmdla = cmdl->GetValues();
+        for (int i = 0; i < cmdla.Length(); i++) {
+            string val = cmdl->GetValueString(cmdla[i]);
+            if (val == L"$args$") command_line << args;
+            else {
+                val = val.Replace(L"$source$", source);
+                val = val.Replace(L"$dest$", dest);
+                command_line << val;
+            }
+        }
+    }
+    IO::SetStandartOutput(console_output);
+    IO::SetStandartError(console_output);
+    SafePointer<Process> process = CreateCommandProcess(server, &command_line);
+    if (!process) {
+        process.SetReference(CreateProcess(base_path + L"/" + server, &command_line));
+    }
+    if (!process) {
+        console << L"Failed to launch the server \"" << server << L"\"." << IO::NewLineChar;
+        return false;
+    }
+    process->Wait();
+    return true;
+}
+bool do_invokations(const string & base_path, const string & obj_path, TextWriter & console)
+{
+    SafePointer<RegistryNode> base = prj_cfg->OpenNode(L"Invoke");
+    if (base) {
+        auto & cmds = base->GetSubnodes();
+        for (int i = 0; i < cmds.Length(); i++) {
+            SafePointer<RegistryNode> cmd = base->OpenNode(cmds[i]);
+            if (cmd) {
+                if (!invoke(cmd, base_path, obj_path, console)) return false;
+            }
+        }
+    }
+    return true;
+}
 
 int Main(void)
 {
@@ -450,6 +569,7 @@ int Main(void)
                     object_list << obj;
                 }
                 if (compile_subsystem != L"object") {
+                    if (!do_invokations(prj_path, out_path + L"/_obj", console)) return 1;
                     string out_file = out_path + L"/" + prj_cfg->GetValueString(L"OutputName");
                     string exe_ext = sys_cfg->GetValueString(L"ExecutableExtension");
                     if (exe_ext.Length() && string::CompareIgnoreCase(IO::Path::GetExtension(out_file), exe_ext)) out_file += L"." + exe_ext;
@@ -480,6 +600,7 @@ int Main(void)
                         }
                     }
                     string out_internal = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".tmp";
+                    if (!copy_attachments(IO::Path::GetDirectory(out_file), prj_path, out_path + L"/_obj", console)) return 1;
                     if (!link(object_list, out_internal, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
                     try {
                         FileStream src(out_internal, AccessRead, OpenExisting);

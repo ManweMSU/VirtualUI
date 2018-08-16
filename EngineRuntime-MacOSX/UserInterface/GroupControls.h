@@ -30,6 +30,8 @@ namespace Engine
 				virtual int GetID(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+
+				void SetInnerControls(Template::ControlTemplate * Template);
 			};
 			class RadioButtonGroup : public ParentWindow, public Template::Controls::RadioButtonGroup
 			{

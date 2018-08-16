@@ -394,21 +394,19 @@ namespace Engine
 						else if (source->Children[i].Properties->GetTemplateClass() == L"MultiLineEdit") on->GetStation()->CreateWindow<MultiLineEdit>(on, &source->Children[i]);
 						// List controls
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ListBox") on->GetStation()->CreateWindow<ListBox>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"TreeView") on->GetStation()->CreateWindow<TreeView>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"ListView") on->GetStation()->CreateWindow<ListView>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
 						/*
-						NOT IMPLEMENTED:
-
-						TreeView
-						ListView
-						ListViewColumn		
+						NOT IMPLEMENTED:	
 
 						ComboBox
 						TextComboBox
 						CustomControl
 
-						FUTUTE CONTROLS:
+						FUTURE CONTROLS:
 
 						MenuBar
 						RichTextView

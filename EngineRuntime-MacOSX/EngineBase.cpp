@@ -753,6 +753,7 @@ namespace Engine
 	ImmutableString operator+(const ImmutableString & a, const widechar * b) { return a + ImmutableString(b); }
 	double sgn(double x) { return (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0); }
 	float sgn(float x) { return (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f); }
+	int sgn(int x) { return (x > 0) ? 1 : ((x < 0) ? -1 : 0); }
 	double saturate(double x) { if (x < 0.0) return 0.0; else if (x > 1.0) return 1.0; else return x; }
 	float saturate(float x) { if (x < 0.0f) return 0.0f; else if (x > 1.0f) return 1.0f; else return x; }
 }

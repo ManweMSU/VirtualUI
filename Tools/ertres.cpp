@@ -412,12 +412,18 @@ bool build_bundle(const string & plist, const Array<string> & icons, const strin
     console << L"Succeed" << IO::NewLineChar;
     return true;
 }
-void index_resources(const string & base_path, RegistryNode * node, const string & locale)
+void index_resources(const string & base_path, const string & obj_path, RegistryNode * node, const string & locale)
 {
     if (!node) return;
     auto & values = node->GetValues();
     for (int i = 0; i < values.Length(); i++) {
-        string path = IO::ExpandPath(base_path + L"/" + node->GetValueString(values[i]));
+        string src = node->GetValueString(values[i]);
+        string path;
+        if (string::CompareIgnoreCase(src.Fragment(0, 9), L"<objpath>") == 0) {
+            path = IO::ExpandPath(obj_path + src.Fragment(9, -1));
+        } else {
+            path = IO::ExpandPath(base_path + L"/" + src);
+        }
         reslist << Resource{ path, values[i], locale };
     }
     auto & divs = node->GetSubnodes();
@@ -431,7 +437,7 @@ void index_resources(const string & base_path, RegistryNode * node, const string
         }
         if (skip) continue;
         SafePointer<RegistryNode> resnode = node->OpenNode(divs[i]);
-        index_resources(base_path, resnode, local_locale);
+        index_resources(base_path, obj_path, resnode, local_locale);
     }
 }
 
@@ -532,7 +538,7 @@ int Main(void)
             if (target_system == L"windows") {
                 {
                     SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
-                    index_resources(IO::Path::GetDirectory(args->ElementAt(1)), resdir, L"");
+                    index_resources(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), resdir, L"");
                     if (!validate_resources(console)) return 1;
                 }
                 string manifest = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".manifest";
@@ -556,7 +562,7 @@ int Main(void)
             } else if (target_system == L"macosx") {
                 {
                     SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
-                    index_resources(IO::Path::GetDirectory(args->ElementAt(1)), resdir, L"");
+                    index_resources(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), resdir, L"");
                     if (!validate_resources(console)) return 1;
                 }
                 string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
