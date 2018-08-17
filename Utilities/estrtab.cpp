@@ -1,11 +1,58 @@
 #include <EngineRuntime.h>
-#include <Storage/TextRegistryGrammar.h>
 
 using namespace Engine;
 using namespace Engine::Streaming;
 using namespace Engine::Storage;
 
 enum class Operation { View, ToText, ToBinary };
+
+StringTable * compile_string_table(Stream * stream)
+{
+    SafePointer<StringTable> table = new StringTable;
+    try {
+        stream->Seek(0, Begin);
+        TextReader reader(stream);
+        Syntax::Spelling spelling;
+        spelling.CommentEndOfLineWord = L"//";
+        spelling.CommentBlockOpeningWord = L"/*";
+        spelling.CommentBlockClosingWord = L"*/";
+        SafePointer< Array<Syntax::Token> > notation = Syntax::ParseText(reader.ReadAll(), spelling);
+        int pos = 0;
+        do {
+            if (notation->ElementAt(pos).Class == Syntax::TokenClass::EndOfStream) break;
+            if (notation->ElementAt(pos).Class != Syntax::TokenClass::Constant ||
+                notation->ElementAt(pos).ValueClass != Syntax::TokenConstantClass::Numeric ||
+                notation->ElementAt(pos).NumericClass() != Syntax::NumericTokenClass::Integer) throw Exception();
+            int ID = int(notation->ElementAt(pos).AsInteger());
+            pos++;
+            DynamicString content;
+            while (notation->ElementAt(pos).Class == Syntax::TokenClass::Constant &&
+                notation->ElementAt(pos).ValueClass == Syntax::TokenConstantClass::String) {
+                content += notation->ElementAt(pos).Content;
+                pos++;
+            }
+            table->AddString(content, ID);
+        } while (true);
+    }
+    catch (...) { return 0; }
+    table->Retain();
+    return table;
+}
+void string_table_to_text(StringTable * table, TextWriter & output)
+{
+    SafePointer< Array<int> > index = table->GetIndex();
+    int mid = 0;
+    for (int i = 0; i < index->Length(); i++) if (index->ElementAt(i) > mid) mid = index->ElementAt(i);
+    int padding_barrier = string(mid).Length() + 1;
+    for (int i = 0; i < index->Length(); i++) {
+        int ID = index->ElementAt(i);
+        const string & Text = table->GetString(ID);
+        int padding = padding_barrier - string(ID).Length();
+        output << ID;
+        for (int j = 0; j < padding; j++) output << L" ";
+        output << L"\"" << Syntax::FormatStringToken(Text) << L"\"" << IO::NewLineChar;
+    }
+}
 
 int Main(void)
 {
@@ -21,20 +68,20 @@ int Main(void)
     
     if (args->Length() < 2) {
         console << L"Command line syntax:" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" <registry> [:text <text file> [:enc <encoding>] | :binary <binary file>]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" <table> [:text <text file> [:enc <encoding>] | :binary <binary file>]" << IO::NewLineChar;
         console << L"Where" << IO::NewLineChar;
-        console << L"  registry    - source binary or text registry file," << IO::NewLineChar;
-        console << L"  :text       - produce text registry notation," << IO::NewLineChar;
-        console << L"  :binary     - produce binary registry file," << IO::NewLineChar;
-        console << L"  text file   - output text registry file (.txt, .ini, .eini)," << IO::NewLineChar;
-        console << L"  binary file - output binary registry file (.ecs, .ecsr)," << IO::NewLineChar;
+        console << L"  table       - source binary or text string table file," << IO::NewLineChar;
+        console << L"  :text       - produce text string table notation," << IO::NewLineChar;
+        console << L"  :binary     - produce binary string table file," << IO::NewLineChar;
+        console << L"  text file   - output text string table file (.txt)," << IO::NewLineChar;
+        console << L"  binary file - output binary string table file (.ecs, .ecst)," << IO::NewLineChar;
         console << L"  :enc        - specify text file encoding," << IO::NewLineChar;
         console << L"  encoding    - the required encoding, one of the following:" << IO::NewLineChar;
         console << L"    ascii     - basic 1-byte text encoding," << IO::NewLineChar;
         console << L"    utf8      - Unicode 1-byte surrogate notation, the default one," << IO::NewLineChar;
         console << L"    utf16     - Unicode 2-byte surrogate notation," << IO::NewLineChar;
         console << L"    utf32     - pure Unicode 4-byte notation." << IO::NewLineChar;
-        console << L"Started only with the source registry name, writes it on the standart output." << IO::NewLineChar;
+        console << L"Started only with the source string table name, writes it on the standart output." << IO::NewLineChar;
         console << IO::NewLineChar;
     } else {
         string source = args->ElementAt(1);
@@ -69,92 +116,37 @@ int Main(void)
                 return 1;
             }
         }
-        SafePointer<Registry> reg;
-        SafePointer< Array<Syntax::Token> > tokens;
-        string inner;
+        SafePointer<StringTable> table;
         try {
             FileStream file(source, AccessRead, OpenExisting);
-            reg = LoadRegistry(&file);
-            if (!reg) {
-                file.Seek(0, Begin);
-                reg = CompileTextRegistry(&file);
-                if (!reg) {
-                    file.Seek(0, Begin);
-                    TextReader reader(&file);
-                    inner = reader.ReadAll();
-                    Syntax::Spelling spelling;
-                    Syntax::Grammar grammar;
-                    CreateTextRegistryGrammar(grammar);
-                    CreateTextRegistrySpelling(spelling);
-                    tokens = Syntax::ParseText(inner, spelling);
-                    SafePointer< Syntax::SyntaxTree > tree = new Syntax::SyntaxTree(*tokens, grammar);
-                    throw InvalidFormatException();
-                }
+            try {
+                table = new StringTable(&file);
+            }
+            catch (...) { table.SetReference(0); }
+            if (!table) table.SetReference(compile_string_table(&file));
+            if (!table) {
+                console << L"Invalid input file format." << IO::NewLineChar;
+                return 1;
             }
         }
-        catch (Syntax::ParserSpellingException & e) {
-            console << L"Syntax error: " << e.Comments << IO::NewLineChar;
-            int line = 1;
-            int lbegin = 0;
-            for (int i = 0; i < e.Position; i++) if (inner[i] == L'\n') { line++; lbegin = i + 1; }
-            int lend = e.Position;
-            while (lend < inner.Length() && inner[lend] != L'\n') lend++;
-            if (lend < inner.Length()) lend--;
-            string errstr = inner.Fragment(lbegin, lend - lbegin).Replace(L'\t', L' ');
-            console << errstr << IO::NewLineChar;
-            int posrel = e.Position - lbegin;
-            for (int i = 0; i < posrel; i++) console << L" ";
-            console << L"^" << IO::NewLineChar;
-            console << L"At line #" << line << IO::NewLineChar;
-            return 1;
-        }
-        catch (Syntax::ParserSyntaxException & e) {
-            console << L"Syntax error: " << e.Comments << IO::NewLineChar;
-            int token_begin = tokens->ElementAt(e.Position).SourcePosition;
-            int token_end = inner.Length();
-            if (e.Position < tokens->Length() - 1) token_end = tokens->ElementAt(e.Position + 1).SourcePosition;
-            int line = 1;
-            int lbegin = 0;
-            for (int i = 0; i < token_begin; i++) if (inner[i] == L'\n') { line++; lbegin = i + 1; }
-            int lend = token_begin;
-            while (lend < inner.Length() && inner[lend] != L'\n') lend++;
-            if (lend < inner.Length()) lend--;
-            string errstr = inner.Fragment(lbegin, lend - lbegin).Replace(L'\t', L' ');
-            console << errstr << IO::NewLineChar;
-            int posrel = token_begin - lbegin;
-            for (int i = 0; i < posrel; i++) console << L" ";
-            console << L"^";
-            for (int i = 0; i < token_end - token_begin - 1; i++) console << L"~";
-            console << IO::NewLineChar;
-            console << L"At line #" << line << IO::NewLineChar;
-            return 1;
-        }
-        catch (InvalidFormatException & e) {
-            console << L"Invalid input file format." << IO::NewLineChar;
-            return 1;
-        }
-        catch (IO::FileAccessException & e) {
-            console << L"Error accessing the input file." << IO::NewLineChar;
-            return 1;
-        }
         catch (...) {
-            console << L"Internal application error." << IO::NewLineChar;
+            console << L"Error accessing the input file." << IO::NewLineChar;
             return 1;
         }
         try {
             if (operation == Operation::View) {
-                RegistryToText(reg, &console);
+                string_table_to_text(table, console);
             } else if (operation == Operation::ToText) {
-                console << L"Writing text registry...";
+                console << L"Writing text string table...";
                 FileStream file(output, AccessReadWrite, CreateAlways);
                 TextWriter writer(&file, encoding);
                 writer.WriteEncodingSignature();
-                RegistryToText(reg, &writer);
+                string_table_to_text(table, writer);
                 console << L"Succeed" << IO::NewLineChar;
             } else if (operation == Operation::ToBinary) {
-                console << L"Writing binary registry...";
+                console << L"Writing binary string table...";
                 FileStream file(output, AccessReadWrite, CreateAlways);
-                reg->Save(&file);
+                table->Save(&file);
                 console << L"Succeed" << IO::NewLineChar;
             }
         }
