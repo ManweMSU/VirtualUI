@@ -193,6 +193,9 @@
     <ClInclude Include="UserInterface\ListControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="Storage\StringTable.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -344,6 +347,9 @@
     </ClCompile>
     <ClCompile Include="UserInterface\ListControls.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\StringTable.cpp">
+      <Filter>Storage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

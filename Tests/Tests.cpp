@@ -41,6 +41,7 @@
 #include <Storage/Archive.h>
 #include <Storage/ImageVolume.h>
 #include <PlatformDependent/Assembly.h>
+#include <Storage/StringTable.h>
 
 #include "stdafx.h"
 #include "Tests.h"
