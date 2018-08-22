@@ -103,7 +103,6 @@ namespace Engine
 							_text_info->SetHighlightColor(SelectionColor);
 							if (sp != ep && focused) _text_info->HighlightText(sp, ep); else _text_info->HighlightText(-1, -1);
 							field.Left += _shift;
-							field.Right += _shift;
 							if (_cp > 0) caret = _text_info->EndOfChar(_cp - 1);
 							caret += _shift;
 							device->RenderText(_text_info, field, false);

@@ -1676,6 +1676,8 @@ namespace Engine
 				if (_editor) _editor->ResetCache();
 				if (_vscroll) _vscroll->Destroy();
 				if (_hscroll) _hscroll->Destroy();
+				_vscroll = 0;
+				_hscroll = 0;
 				int vpage = WindowPosition.Bottom - WindowPosition.Top - Border - Border - HeaderHeight;
 				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border;
 				int vspace = ElementHeight * _elements.Length();

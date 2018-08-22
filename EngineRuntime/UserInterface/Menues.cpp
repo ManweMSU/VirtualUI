@@ -216,7 +216,7 @@ namespace Engine
 							child.Render(rect);
 						}
 					}
-					virtual void LostExclusiveMode(void) override { if (!Final) { GetStation()->SetFocus(Focus); Destroy(); Owner->PopupMenuCancelled(); } }
+					virtual void LostExclusiveMode(void) override { if (!Final) { GetStation()->SetFocus(Focus); Window * owner = Owner; Destroy(); owner->PopupMenuCancelled(); } }
 					virtual void LeftButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void RightButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void ResetCache(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].WakeUp(GetStation()->GetRenderingDevice()); Window::ResetCache(); }

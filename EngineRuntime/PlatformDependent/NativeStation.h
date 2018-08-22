@@ -13,6 +13,7 @@ namespace Engine
 		void InitializeCodecCollection(void);
 		UI::IResourceLoader * CreateCompatibleResourceLoader(void);
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation);
+		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation);
 		void ShowWindow(UI::WindowStation * Station, bool Show);
 		void EnableWindow(UI::WindowStation * Station, bool Enable);
 		void SetWindowTitle(UI::WindowStation * Station, const string & Title);

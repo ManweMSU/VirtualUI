@@ -196,6 +196,9 @@
     <ClInclude Include="Storage\StringTable.h">
       <Filter>Storage</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\CombinedControls.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -350,6 +353,9 @@
     </ClCompile>
     <ClCompile Include="Storage\StringTable.cpp">
       <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\CombinedControls.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -69,6 +69,11 @@ namespace Engine
 					GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
 				Cls.lpszClassName = L"engine_runtime_main_class";
 				RegisterClassExW(&Cls);
+				Cls.style = CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS | CS_GLOBALCLASS | CS_DROPSHADOW;
+				Cls.hIcon = 0;
+				Cls.hIconSm = 0;
+				Cls.lpszClassName = L"engine_runtime_popup_class";
+				RegisterClassExW(&Cls);
 				SystemInitialized = true;
 			}
 		}
@@ -119,7 +124,8 @@ namespace Engine
 				DesktopWindowFactory(Template::ControlTemplate * Template) : _template(Template) {}
 				virtual Window * CreateDesktopWindow(WindowStation * Station) override
 				{
-					return new Controls::OverlappedWindow(0, Station, _template);
+					return _template ? new Controls::OverlappedWindow(0, Station, _template) :
+						new Controls::OverlappedWindow(0, Station);
 				}
 			};
 		public:
@@ -157,6 +163,16 @@ namespace Engine
 				}
 			}
 			virtual void FocusWindowChanged(void) override { InvalidateRect(GetHandle(), 0, 0); AnimationStateChanged(); }
+			virtual Box GetDesktopBox(void) override { return GetScreenDimensions(); }
+			virtual Box GetAbsoluteDesktopBox(const Box & box) override
+			{
+				POINT a = POINT{ box.Left, box.Top };
+				POINT b = POINT{ box.Right, box.Bottom };
+				ClientToScreen(GetHandle(), &a);
+				ClientToScreen(GetHandle(), &b);
+				return Box(a.x, a.y, b.x, b.y);
+			}
+			virtual void RequireRedraw(void) override { InvalidateRect(GetHandle(), 0, 0); }
 
 			void RenderContent(void)
 			{
@@ -234,9 +250,41 @@ namespace Engine
 			Station->Retain();
 			return Station;
 		}
+		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
+		{
+			InitializeWindowSystem();
+			Box ClientBox(Position, GetScreenDimensions());
+			Box ClientArea(0, 0, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top);
+			DWORD ExStyle = WS_EX_NOACTIVATE | WS_EX_TOPMOST;
+			DWORD Style = WS_POPUP;
+			RECT wRect = { 0, 0, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top };
+			AdjustWindowRectEx(&wRect, Style, 0, ExStyle);
+			ClientBox.Left = ClientBox.Left + wRect.left;
+			ClientBox.Right = ClientBox.Left + wRect.right;
+			ClientBox.Top = ClientBox.Top + wRect.top;
+			ClientBox.Bottom = ClientBox.Top + wRect.bottom;
+			HWND Handle = CreateWindowExW(ExStyle, L"engine_runtime_popup_class", L"", Style,
+				ClientBox.Left, ClientBox.Top, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top,
+				0, 0, 0, 0);
+			SafePointer<NativeStation> Station = new NativeStation(Handle, Template);
+			SetWindowLongPtrW(Handle, 0, reinterpret_cast<LONG_PTR>(Station.Inner()));
+			Controls::OverlappedWindow * Desktop = Station->GetDesktop()->As<Controls::OverlappedWindow>();
+			Desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
+			{
+				Color BackgroundColor = 0xFF000000;
+				SafePointer<Template::BarShape> Background = new Template::BarShape;
+				Background->Position = UI::Rectangle::Entire();
+				Background->Gradient << Template::GradientPoint(Template::ColorTemplate(BackgroundColor), 0.0);
+				Desktop->SetBackground(Background);
+			}
+			Station->SetBox(ClientArea);
+			Station->Retain();
+			return Station;
+		}
 		void ShowWindow(UI::WindowStation * Station, bool Show)
 		{
-			ShowWindow(reinterpret_cast<NativeStation *>(Station)->GetHandle(), Show ? SW_SHOW : SW_HIDE);
+			HWND handle = reinterpret_cast<NativeStation *>(Station)->GetHandle();
+			ShowWindow(handle, Show ? ((GetWindowLongPtr(handle, GWL_EXSTYLE) & WS_EX_NOACTIVATE) ? SW_SHOWNOACTIVATE : SW_SHOW) : SW_HIDE);
 		}
 		void EnableWindow(UI::WindowStation * Station, bool Enable)
 		{
@@ -369,6 +417,9 @@ namespace Engine
 					station->RenderContent();
 					ValidateRect(Wnd, 0);
 				}
+			} else if (Msg == WM_MOUSEACTIVATE) {
+				if (GetWindowLongPtr(Wnd, GWL_EXSTYLE) & WS_EX_NOACTIVATE) return MA_NOACTIVATE;
+				else return MA_ACTIVATE;
 			} else if (Msg == WM_MEASUREITEM) {
 				LPMEASUREITEMSTRUCT mis = reinterpret_cast<LPMEASUREITEMSTRUCT>(LParam);
 				if (mis->CtlType == ODT_MENU) {

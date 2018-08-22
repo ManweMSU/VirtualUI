@@ -227,6 +227,7 @@ namespace Engine
 			Rectangle Position;
 			virtual void Render(IRenderingDevice * Device, const Box & Outer) const = 0;
 			virtual void ClearCache(void) = 0;
+			virtual Shape * Clone(void) const = 0;
 		};
 		class FrameShape : public Shape
 		{
@@ -240,6 +241,7 @@ namespace Engine
 			~FrameShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 		class BarShape : public Shape
@@ -253,6 +255,7 @@ namespace Engine
 			~BarShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 		class BlurEffectShape : public Shape
@@ -264,6 +267,7 @@ namespace Engine
 			~BlurEffectShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 		class InversionEffectShape : public Shape
@@ -274,6 +278,7 @@ namespace Engine
 			~InversionEffectShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 		class TextureShape : public Shape
@@ -291,6 +296,7 @@ namespace Engine
 			~TextureShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 		class TextShape : public Shape
@@ -310,6 +316,7 @@ namespace Engine
 			~TextShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 		class LineShape : public Shape
@@ -323,6 +330,7 @@ namespace Engine
 			~LineShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const override;
 			void ClearCache(void) override;
+			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
 	}

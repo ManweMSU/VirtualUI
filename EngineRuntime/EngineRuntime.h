@@ -25,6 +25,8 @@
 #include "Syntax/Regular.h"
 #include "Syntax/Tokenization.h"
 #include "UserInterface/BinaryLoader.h"
+#include "UserInterface/ButtonControls.h"
+#include "UserInterface/CombinedControls.h"
 #include "UserInterface/ControlBase.h"
 #include "UserInterface/ControlClasses.h"
 #include "UserInterface/EditControls.h"

@@ -48,6 +48,8 @@ namespace Engine
 			virtual void SetSystemCursor(SystemCursor entity, ICursor * cursor) override;
 			virtual void SetCursor(ICursor * cursor) override;
 			virtual void SetTimer(Window * window, uint32 period) override;
+			virtual void DeployedDestroy(Window * window) override;
+			virtual void DeployedRaiseEvent(Window * window, int ID) override;
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};

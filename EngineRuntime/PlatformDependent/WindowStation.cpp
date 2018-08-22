@@ -5,6 +5,9 @@
 
 #undef ZeroMemory
 
+#define ERT_DESTROYWINDOW	(WM_USER + 0x001)
+#define ERT_RAISEEVENT		(WM_USER + 0x002)
+
 namespace Engine
 {
 	namespace UI
@@ -159,8 +162,9 @@ namespace Engine
 					if (entry == _timers.Length() - 1) _timers.SetLength(max_valid + 1);
 				}
 			}
-			
 		}
+		void HandleWindowStation::DeployedDestroy(Window * window) { PostMessageW(_window, ERT_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
+		void HandleWindowStation::DeployedRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERT_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
@@ -236,6 +240,15 @@ namespace Engine
 			} else if (Msg == WM_TIMER) {
 				int index = int(WParam) - 2;
 				if (index >= 0 && index < _timers.Length() && _timers[index]) _timers[index]->Timer();
+			} else if (Msg == ERT_DESTROYWINDOW) {
+				Window * window = reinterpret_cast<Window *>(WParam);
+				if (window) window->Destroy();
+			} else if (Msg == ERT_RAISEEVENT) {
+				Window * window = reinterpret_cast<Window *>(WParam);
+				if (window) {
+					window->RaiseEvent(int(LParam), Window::Event::Deployed, 0);
+					window->RequireRedraw();
+				}
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);
 		}

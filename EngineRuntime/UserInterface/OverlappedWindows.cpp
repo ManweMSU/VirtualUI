@@ -6,6 +6,7 @@
 #include "ScrollableControls.h"
 #include "EditControls.h"
 #include "ListControls.h"
+#include "CombinedControls.h"
 
 #include "../PlatformDependent/NativeStation.h"
 #include "../PlatformDependent/KeyCodes.h"
@@ -128,7 +129,7 @@ namespace Engine
 					return _visible;
 				}
 			}
-			bool OverlappedWindow::IsOverlapped(void) { return true; }
+			bool OverlappedWindow::IsOverlapped(void) { return _overlaps; }
 			void OverlappedWindow::SetPosition(const Box & box)
 			{
 				if (GetStation()->IsNativeStationWrapper()) {
@@ -396,15 +397,16 @@ namespace Engine
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ListBox") on->GetStation()->CreateWindow<ListBox>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"TreeView") on->GetStation()->CreateWindow<TreeView>(on, &source->Children[i]);
 						else if (source->Children[i].Properties->GetTemplateClass() == L"ListView") on->GetStation()->CreateWindow<ListView>(on, &source->Children[i]);
+						// Combined controls
+						else if (source->Children[i].Properties->GetTemplateClass() == L"ComboBox") on->GetStation()->CreateWindow<ComboBox>(on, &source->Children[i]);
+						else if (source->Children[i].Properties->GetTemplateClass() == L"TextComboBox") on->GetStation()->CreateWindow<TextComboBox>(on, &source->Children[i]);
 #pragma message("REALIZE ALL CONTROLS")
 						else throw InvalidArgumentException();
 
 						/*
 						NOT IMPLEMENTED:	
 
-						ComboBox
-						TextComboBox
-						CustomControl
+						CustomControl ???
 
 						FUTURE CONTROLS:
 
@@ -529,6 +531,36 @@ namespace Engine
 					window->_initialized = true;
 					window->SetPosition(Box((outer.Right - outer.Left - sizes.Right) / 2 + outer.Left, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top,
 						(outer.Right - outer.Left - sizes.Right) / 2 + outer.Left + sizes.Right, (outer.Bottom - outer.Top - sizes.Bottom) / 2 + outer.Top + sizes.Bottom));
+				}
+				window->SetCallback(Callback);
+				if (Callback) Callback->OnInitialized(window);
+				return window;
+			}
+			Controls::OverlappedWindow * CreatePopupDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station)
+			{
+				Controls::OverlappedWindow * window = 0;
+				if (!Station || Station->IsNativeStationWrapper()) {
+					WindowStation * new_native = NativeWindows::CreatePopupWindow(Template, Position, Station);
+					new_native->GetVisualStyles().CaretWidth = int(Zoom);
+					window = new_native->GetDesktop()->As<Controls::OverlappedWindow>();
+					window->_visible = true;
+					window->_initialized = true;
+					window->ArrangeChildren();
+				} else {
+					window = Template ? Station->CreateWindow<Controls::OverlappedWindow>(0, Template) :
+						Station->CreateWindow<Controls::OverlappedWindow>(0);
+					window->_overlaps = false;
+					Rectangle sizes = Template ? Template->Properties->ControlPosition : Rectangle::Entire();
+					sizes.Right -= sizes.Left;
+					sizes.Bottom -= sizes.Top;
+					window->GetContentFrame()->SetRectangle(Rectangle::Entire());
+					window->_initialized = true;
+					if (Position.IsValid()) {
+						window->SetRectangle(Position);
+					} else {
+						window->SetRectangle(Rectangle(Coordinate(0, 0.0, 0.5) - sizes.Right / 2.0, Coordinate(0, 0.0, 0.5) - sizes.Bottom / 2.0,
+							Coordinate(0, 0.0, 0.5) - sizes.Right / 2.0 + sizes.Right, Coordinate(0, 0.0, 0.5) - sizes.Bottom / 2.0 + sizes.Bottom));
+					}
 				}
 				window->SetCallback(Callback);
 				if (Callback) Callback->OnInitialized(window);

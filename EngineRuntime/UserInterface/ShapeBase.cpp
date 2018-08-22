@@ -94,6 +94,16 @@ namespace Engine
 			}
 		}
 		void FrameShape::ClearCache(void) { for (int i = Children.Length() - 1; i >= 0; i--) Children[i].ClearCache(); }
+		Shape * FrameShape::Clone(void) const
+		{
+			SafePointer<FrameShape> clone = new FrameShape(Position, RenderMode, Opacity);
+			for (int i = 0; i < Children.Length(); i++) {
+				SafePointer<Shape> child = Children[i].Clone();
+				clone->Children.Append(child);
+			}
+			clone->Retain();
+			return clone;
+		}
 		string FrameShape::ToString(void) const { return L"FrameShape"; }
 		GradientPoint::GradientPoint(void) {}
 		GradientPoint::GradientPoint(const UI::Color & color) : Color(color), Position(0.0) {}
@@ -109,6 +119,7 @@ namespace Engine
 			Device->RenderBar(Info, my);
 		}
 		void BarShape::ClearCache(void) { Info.SetReference(0); }
+		Shape * BarShape::Clone(void) const { return new BarShape(Position, Gradient, GradientAngle); }
 		string BarShape::ToString(void) const { return L"BarShape"; }
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
@@ -123,6 +134,7 @@ namespace Engine
 			Device->ApplyBlur(Info, my);
 		}
 		void BlurEffectShape::ClearCache(void) { Info.SetReference(0); }
+		Shape * BlurEffectShape::Clone(void) const { return new BlurEffectShape(Position, BlurPower); }
 		string BlurEffectShape::ToString(void) const { return L"BlurEffectShape"; }
 		ITextureRenderingInfo::~ITextureRenderingInfo(void) {}
 		TextureShape::TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode) : Texture(texture), From(take_from), Mode(mode) { Position = position; if (Texture) Texture->Retain(); }
@@ -164,6 +176,7 @@ namespace Engine
 			}
 		}
 		void TextureShape::ClearCache(void) { Info.SetReference(0); }
+		Shape * TextureShape::Clone(void) const { return new TextureShape(Position, Texture, From, Mode); }
 		string TextureShape::ToString(void) const { return L"TextureShape"; }
 		ITextRenderingInfo::~ITextRenderingInfo(void) {}
 		TextShape::TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align) :
@@ -177,6 +190,7 @@ namespace Engine
 			Device->RenderText(Info, my, true);
 		}
 		void TextShape::ClearCache(void) { Info.SetReference(0); }
+		Shape * TextShape::Clone(void) const { return new TextShape(Position, Text, Font, TextColor, halign, valign); }
 		string TextShape::ToString(void) const { return L"TextShape"; }
 		ILineRenderingInfo::~ILineRenderingInfo(void) {}
 		LineShape::LineShape(const Rectangle & position, const Color & color, bool dotted) : LineColor(color), Dotted(dotted) { Position = position; }
@@ -188,6 +202,7 @@ namespace Engine
 			Device->RenderLine(Info, my);
 		}
 		void LineShape::ClearCache(void) { Info.SetReference(0); }
+		Shape * LineShape::Clone(void) const { return new LineShape(Position, LineColor, Dotted); }
 		string LineShape::ToString(void) const { return L"LineShape"; }
 		IInversionEffectRenderingInfo::~IInversionEffectRenderingInfo(void) {}
 		InversionEffectShape::InversionEffectShape(const Rectangle & position) { Position = position; }
@@ -200,6 +215,7 @@ namespace Engine
 			Device->ApplyInversion(Info, my, false);
 		}
 		void InversionEffectShape::ClearCache(void) { Info.SetReference(0); }
+		Shape * InversionEffectShape::Clone(void) const { return new InversionEffectShape(Position); }
 		string InversionEffectShape::ToString(void) const { return L"InversionEffectShape"; }
 	}
 }

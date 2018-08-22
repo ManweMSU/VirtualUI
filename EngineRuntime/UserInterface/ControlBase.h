@@ -40,7 +40,7 @@ namespace Engine
 			friend class ParentWindow;
 		public:
 			enum class DepthOrder { SetFirst = 0, SetLast = 1, MoveUp = 2, MoveDown = 3 };
-			enum class Event { Command = 0, AcceleratorCommand = 1, MenuCommand = 2, DoubleClick = 3, ContextClick = 4, ValueChange = 5 };
+			enum class Event { Command = 0, AcceleratorCommand = 1, MenuCommand = 2, DoubleClick = 3, ContextClick = 4, ValueChange = 5, Deployed = 6 };
 			enum class RefreshPeriod { None = 0, CaretBlink = 1, Cinematic = 2 };
 		private:
 			ObjectArray<Window> Children;
@@ -114,6 +114,10 @@ namespace Engine
 			Window * GetNextTabStopControl(void);
 			Window * GetPreviousTabStopControl(void);
 			int GetIndexAtParent(void);
+			void RequireRedraw(void);
+			void DeployedDestroy(void);
+			void DeployedRaiseEvent(int ID);
+			void PostEvent(int ID);
 			template <class W> W * As(void) { return static_cast<W *>(this); }
 		};
 		class ICursor : public Object {};
@@ -165,6 +169,7 @@ namespace Engine
 			Box Position;
 			VisualStyles Styles;
 			Array<WindowAnimationState> Animations;
+			bool Works = true;
 			void DeconstructChain(Window * window);
 		public:
 			WindowStation(void);
@@ -262,6 +267,11 @@ namespace Engine
 			virtual Window::RefreshPeriod GetRefreshRate(void);
 			virtual void AnimationStateChanged(void);
 			virtual void FocusWindowChanged(void);
+			virtual Box GetDesktopBox(void);
+			virtual Box GetAbsoluteDesktopBox(const Box & box);
+			virtual void RequireRedraw(void);
+			virtual void DeployedDestroy(Window * window);
+			virtual void DeployedRaiseEvent(Window * window, int ID);
 
 			VisualStyles & GetVisualStyles(void);
 		};

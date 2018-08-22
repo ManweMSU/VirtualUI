@@ -21,6 +21,7 @@
 #include <UserInterface/OverlappedWindows.h>
 #include <UserInterface/EditControls.h>
 #include <UserInterface/ListControls.h>
+#include <UserInterface/CombinedControls.h>
 #include <Syntax/Tokenization.h>
 #include <Syntax/Grammar.h>
 #include <Syntax/MathExpression.h>
@@ -397,6 +398,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					auto i4 = rt->AddItem(L"Tree View Item 4");
 					i4->AddItem(L"§ ыыыы §");
 					i1->Expand(true);
+					auto combo = window->FindChild(565656)->As<Controls::ComboBox>();
+					for (int i = 0; i < 100; i++) combo->AddItem(L"Combo Box Item " + string(i + 1));
+					auto box = window->FindChild(575757)->As<Controls::TextComboBox>();
+					for (int i = 0; i < 100; i++) box->AddItem(L"Text Combo Box Item " + string(i + 1));
+					box->AddItem(L"kornevgen pidor");
 				}
 				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 				{
@@ -405,6 +411,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 							sender->As<Controls::ListView>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"],
 								sender->As<Controls::ListView>()->GetLastCellID(),
 								Rectangle::Entire())->FindChild(888888)->SetFocus();
+						} else if (event == Window::Event::ContextClick) {
+							auto p = sender->GetStation()->GetCursorPos();
+							auto b = sender->GetStation()->GetAbsoluteDesktopBox(Box(p.x, p.y, p.x, p.y));
+							Windows::CreatePopupDialog(::Template->Dialog[L"Test3"], this, UI::Rectangle(b.Left, b.Top, b.Left + 500, b.Top + 400), sender->GetStation())->Show(true);
 						}
 					} else if (ID == 353535) {
 						if (event == Window::Event::DoubleClick) {
