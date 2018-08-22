@@ -388,6 +388,15 @@ bool invoke(RegistryNode * node, const string & base_path, const string & obj_pa
     }
     Array<string> command_line(0x10);
     string server = manifest_reg->GetValueString(L"Server");
+    bool control = (clean) ? false : manifest_reg->GetValueBoolean(L"VersionControl");
+    if (control) {
+        try {
+            FileStream source_stream(source, AccessRead, OpenExisting);
+            FileStream dest_stream(dest, AccessRead, OpenExisting);
+            if (IO::DateTime::GetFileAlterTime(source_stream.Handle()) < IO::DateTime::GetFileAlterTime(dest_stream.Handle())) return true;
+        }
+        catch (...) {}
+    }
     SafePointer<RegistryNode> cmdl = manifest_reg->OpenNode(L"CommandLine");
     if (cmdl) {
         auto & cmdla = cmdl->GetValues();

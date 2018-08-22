@@ -18,6 +18,7 @@
 #include "Processes/Shell.h"
 #include "Storage/Archive.h"
 #include "Storage/Registry.h"
+#include "Storage/StringTable.h"
 #include "Storage/TextRegistry.h"
 #include "Syntax/Grammar.h"
 #include "Syntax/MathExpression.h"
