@@ -16,82 +16,82 @@ namespace Engine
 			double Anchor, Zoom;
 			int Absolute;
 
-			Coordinate(void);
-			Coordinate(int shift);
-			Coordinate(int shift, double zoom, double anchor);
+			Coordinate(void) noexcept;
+			Coordinate(int shift) noexcept;
+			Coordinate(int shift, double zoom, double anchor) noexcept;
 
-			Coordinate friend operator + (const Coordinate & a, const Coordinate & b);
-			Coordinate friend operator - (const Coordinate & a, const Coordinate & b);
-			Coordinate friend operator * (const Coordinate & a, double b);
-			Coordinate friend operator * (double b, const Coordinate & a);
-			Coordinate friend operator / (const Coordinate & a, double b);
+			Coordinate friend operator + (const Coordinate & a, const Coordinate & b) noexcept;
+			Coordinate friend operator - (const Coordinate & a, const Coordinate & b) noexcept;
+			Coordinate friend operator * (const Coordinate & a, double b) noexcept;
+			Coordinate friend operator * (double b, const Coordinate & a) noexcept;
+			Coordinate friend operator / (const Coordinate & a, double b) noexcept;
 
-			Coordinate & operator += (const Coordinate & a);
-			Coordinate & operator -= (const Coordinate & a);
-			Coordinate & operator *= (double a);
-			Coordinate & operator /= (double a);
-			Coordinate operator - (void) const;
+			Coordinate & operator += (const Coordinate & a) noexcept;
+			Coordinate & operator -= (const Coordinate & a) noexcept;
+			Coordinate & operator *= (double a) noexcept;
+			Coordinate & operator /= (double a) noexcept;
+			Coordinate operator - (void) const noexcept;
 
-			bool friend operator == (const Coordinate & a, const Coordinate & b);
-			bool friend operator != (const Coordinate & a, const Coordinate & b);
+			bool friend operator == (const Coordinate & a, const Coordinate & b) noexcept;
+			bool friend operator != (const Coordinate & a, const Coordinate & b) noexcept;
 
-			static Coordinate Right();
-			static Coordinate Bottom();
+			static Coordinate Right() noexcept;
+			static Coordinate Bottom() noexcept;
 		};
 		class Rectangle
 		{
 		public:
 			Coordinate Left, Top, Right, Bottom;
 
-			Rectangle(void);
-			Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom);
+			Rectangle(void) noexcept;
+			Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) noexcept;
 
-			Rectangle friend operator + (const Rectangle & a, const Rectangle & b);
-			Rectangle friend operator - (const Rectangle & a, const Rectangle & b);
-			Rectangle friend operator * (const Rectangle & a, double b);
-			Rectangle friend operator * (double b, const Rectangle & a);
-			Rectangle friend operator / (const Rectangle & a, double b);
+			Rectangle friend operator + (const Rectangle & a, const Rectangle & b) noexcept;
+			Rectangle friend operator - (const Rectangle & a, const Rectangle & b) noexcept;
+			Rectangle friend operator * (const Rectangle & a, double b) noexcept;
+			Rectangle friend operator * (double b, const Rectangle & a) noexcept;
+			Rectangle friend operator / (const Rectangle & a, double b) noexcept;
 
-			Rectangle & operator += (const Rectangle & a);
-			Rectangle & operator -= (const Rectangle & a);
-			Rectangle & operator *= (double a);
-			Rectangle & operator /= (double a);
-			Rectangle operator - (void) const;
+			Rectangle & operator += (const Rectangle & a) noexcept;
+			Rectangle & operator -= (const Rectangle & a) noexcept;
+			Rectangle & operator *= (double a) noexcept;
+			Rectangle & operator /= (double a) noexcept;
+			Rectangle operator - (void) const noexcept;
 
-			bool friend operator == (const Rectangle & a, const Rectangle & b);
-			bool friend operator != (const Rectangle & a, const Rectangle & b);
+			bool friend operator == (const Rectangle & a, const Rectangle & b) noexcept;
+			bool friend operator != (const Rectangle & a, const Rectangle & b) noexcept;
 
-			bool IsValid(void) const;
+			bool IsValid(void) const noexcept;
 
-			static Rectangle Entire();
-			static Rectangle Invalid();
+			static Rectangle Entire() noexcept;
+			static Rectangle Invalid() noexcept;
 		};
 		class Point
 		{
 		public:
 			int x, y;
 
-			Point(void);
-			Point(int X, int Y);
+			Point(void) noexcept;
+			Point(int X, int Y) noexcept;
 
-			bool friend operator == (const Point & a, const Point & b);
-			bool friend operator != (const Point & a, const Point & b);
+			bool friend operator == (const Point & a, const Point & b) noexcept;
+			bool friend operator != (const Point & a, const Point & b) noexcept;
 		};
 		class Box
 		{
 		public:
 			int Left, Top, Right, Bottom;
 
-			Box(void);
-			Box(const Rectangle & source, const Box & outer);
-			Box(int left, int top, int right, int bottom);
+			Box(void) noexcept;
+			Box(const Rectangle & source, const Box & outer) noexcept;
+			Box(int left, int top, int right, int bottom) noexcept;
 
-			bool friend operator == (const Box & a, const Box & b);
-			bool friend operator != (const Box & a, const Box & b);
+			bool friend operator == (const Box & a, const Box & b) noexcept;
+			bool friend operator != (const Box & a, const Box & b) noexcept;
 
-			bool IsInside(const Point & p) const;
+			bool IsInside(const Point & p) const noexcept;
 
-			static Box Intersect(const Box & a, const Box & b);
+			static Box Intersect(const Box & a, const Box & b) noexcept;
 		};
 		class Color
 		{
@@ -101,17 +101,17 @@ namespace Engine
 				uint32 Value;
 			};
 
-			Color(void);
-			Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa = 0xFF);
-			Color(int sr, int sg, int sb, int sa = 0xFF);
-			Color(float sr, float sg, float sb, float sa = 1.0);
-			Color(double sr, double sg, double sb, double sa = 1.0);
-			Color(uint32 code);
+			Color(void) noexcept;
+			Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa = 0xFF) noexcept;
+			Color(int sr, int sg, int sb, int sa = 0xFF) noexcept;
+			Color(float sr, float sg, float sb, float sa = 1.0) noexcept;
+			Color(double sr, double sg, double sb, double sa = 1.0) noexcept;
+			Color(uint32 code) noexcept;
 
-			operator uint32 (void) const;
+			operator uint32 (void) const noexcept;
 
-			bool friend operator == (const Color & a, const Color & b);
-			bool friend operator != (const Color & a, const Color & b);
+			bool friend operator == (const Color & a, const Color & b) noexcept;
+			bool friend operator != (const Color & a, const Color & b) noexcept;
 		};
 		class GradientPoint
 		{
@@ -119,12 +119,12 @@ namespace Engine
 			Color Color;
 			double Position;
 
-			GradientPoint(void);
-			GradientPoint(const UI::Color & color);
-			GradientPoint(const UI::Color & color, double position);
+			GradientPoint(void) noexcept;
+			GradientPoint(const UI::Color & color) noexcept;
+			GradientPoint(const UI::Color & color, double position) noexcept;
 
-			bool friend operator == (const GradientPoint & a, const GradientPoint & b);
-			bool friend operator != (const GradientPoint & a, const GradientPoint & b);
+			bool friend operator == (const GradientPoint & a, const GradientPoint & b) noexcept;
+			bool friend operator != (const GradientPoint & a, const GradientPoint & b) noexcept;
 		};
 
 		class IRenderingDevice;
@@ -154,11 +154,11 @@ namespace Engine
 		class ITextRenderingInfo : public Object
 		{
 		public:
-			virtual void GetExtent(int & width, int & height) = 0;
-			virtual void SetHighlightColor(const Color & color) = 0;
-			virtual void HighlightText(int Start, int End) = 0;
-			virtual int TestPosition(int point) = 0;
-			virtual int EndOfChar(int Index) = 0;
+			virtual void GetExtent(int & width, int & height) noexcept = 0;
+			virtual void SetHighlightColor(const Color & color) noexcept = 0;
+			virtual void HighlightText(int Start, int End) noexcept = 0;
+			virtual int TestPosition(int point) noexcept = 0;
+			virtual int EndOfChar(int Index) noexcept = 0;
 			virtual void SetCharPalette(const Array<Color> & colors) = 0;
 			virtual void SetCharColors(const Array<uint8> & indicies) = 0;
 			virtual ~ITextRenderingInfo(void);
@@ -172,9 +172,9 @@ namespace Engine
 		class ITexture : public Object
 		{
 		public:
-			virtual int GetWidth(void) const = 0;
-			virtual int GetHeight(void) const = 0;
-			virtual bool IsDynamic(void) const = 0;
+			virtual int GetWidth(void) const noexcept = 0;
+			virtual int GetHeight(void) const noexcept = 0;
+			virtual bool IsDynamic(void) const noexcept = 0;
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) = 0;
 			virtual void Reload(IRenderingDevice * Device, Codec::Image * Source) = 0;
 			virtual void Reload(IRenderingDevice * Device, Codec::Frame * Source) = 0;
@@ -182,42 +182,42 @@ namespace Engine
 		class IFont : public Object
 		{
 		public:
-			virtual int GetWidth(void) const = 0;
-			virtual int GetHeight(void) const = 0;
+			virtual int GetWidth(void) const noexcept = 0;
+			virtual int GetHeight(void) const noexcept = 0;
 			virtual void Reload(IRenderingDevice * Device) = 0;
 		};
 
 		class IRenderingDevice : public Object
 		{
 		public:
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) = 0;
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) = 0;
-			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) = 0;
-			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) = 0;
-			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) = 0;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) = 0;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) = 0;
-			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) = 0;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) noexcept = 0;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept = 0;
+			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept = 0;
+			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept = 0;
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept = 0;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept  = 0;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept = 0;
+			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept = 0;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
 			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
 			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
 
-			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) = 0;
-			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) = 0;
-			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) = 0;
-			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) = 0;
-			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) = 0;
-			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) = 0;
+			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept = 0;
+			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept = 0;
+			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept = 0;
+			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) noexcept = 0;
+			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept = 0;
+			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept = 0;
 
-			virtual void PushClip(const Box & Rect) = 0;
-			virtual void PopClip(void) = 0;
-			virtual void BeginLayer(const Box & Rect, double Opacity) = 0;
-			virtual void EndLayer(void) = 0;
-			virtual void SetTimerValue(uint32 time) = 0;
-			virtual uint32 GetCaretBlinkHalfTime(void) = 0;
-			virtual void ClearCache(void) = 0;
+			virtual void PushClip(const Box & Rect) noexcept = 0;
+			virtual void PopClip(void) noexcept = 0;
+			virtual void BeginLayer(const Box & Rect, double Opacity) noexcept = 0;
+			virtual void EndLayer(void) noexcept = 0;
+			virtual void SetTimerValue(uint32 time) noexcept = 0;
+			virtual uint32 GetCaretBlinkHalfTime(void) noexcept = 0;
+			virtual void ClearCache(void) noexcept = 0;
 			virtual ~IRenderingDevice(void);
 		};
 
@@ -225,8 +225,8 @@ namespace Engine
 		{
 		public:
 			Rectangle Position;
-			virtual void Render(IRenderingDevice * Device, const Box & Outer) const = 0;
-			virtual void ClearCache(void) = 0;
+			virtual void Render(IRenderingDevice * Device, const Box & Outer) const noexcept = 0;
+			virtual void ClearCache(void) noexcept = 0;
 			virtual Shape * Clone(void) const = 0;
 		};
 		class FrameShape : public Shape
@@ -239,8 +239,8 @@ namespace Engine
 			FrameShape(const Rectangle & position);
 			FrameShape(const Rectangle & position, FrameRenderMode mode, double opacity = 1.0);
 			~FrameShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
@@ -253,8 +253,8 @@ namespace Engine
 			BarShape(const Rectangle & position, const Color & color);
 			BarShape(const Rectangle & position, const Array<GradientPoint> & gradient, double angle);
 			~BarShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
@@ -265,8 +265,8 @@ namespace Engine
 		public:
 			BlurEffectShape(const Rectangle & position, double power);
 			~BlurEffectShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
@@ -276,8 +276,8 @@ namespace Engine
 		public:
 			InversionEffectShape(const Rectangle & position);
 			~InversionEffectShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
@@ -294,8 +294,8 @@ namespace Engine
 		public:
 			TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode);
 			~TextureShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
@@ -314,8 +314,8 @@ namespace Engine
 		public:
 			TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align);
 			~TextShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};
@@ -328,8 +328,8 @@ namespace Engine
 		public:
 			LineShape(const Rectangle & position, const Color & color, bool dotted);
 			~LineShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const override;
-			void ClearCache(void) override;
+			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
+			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;
 			string ToString(void) const override;
 		};

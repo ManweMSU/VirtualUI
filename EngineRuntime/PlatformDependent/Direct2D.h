@@ -49,37 +49,37 @@ namespace Engine
 			D2DRenderDevice(ID2D1RenderTarget * target);
 			~D2DRenderDevice(void) override;
 
-			ID2D1RenderTarget * GetRenderTarget(void) const;
+			ID2D1RenderTarget * GetRenderTarget(void) const noexcept;
 
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) override;
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) override;
-			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) override;
-			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) override;
-			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) override;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) override;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) override;
-			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) override;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept override;
+			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override;
+			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept override;
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept override;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
+			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept override;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) override;
 			virtual ITexture * LoadTexture(Engine::Codec::Image * Source) override;
 			virtual ITexture * LoadTexture(Engine::Codec::Frame * Source) override;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
 
-			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) override;
-			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) override;
-			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) override;
-			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) override;
-			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) override;
-			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) override;
+			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override;
+			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept override;
+			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept override;
+			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) noexcept override;
+			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept override;
+			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept override;
 
-			virtual void PushClip(const Box & Rect) override;
-			virtual void PopClip(void) override;
-			virtual void BeginLayer(const Box & Rect, double Opacity) override;
-			virtual void EndLayer(void) override;
+			virtual void PushClip(const Box & Rect) noexcept override;
+			virtual void PopClip(void) noexcept override;
+			virtual void BeginLayer(const Box & Rect, double Opacity) noexcept override;
+			virtual void EndLayer(void) noexcept override;
 
-			virtual void SetTimerValue(uint32 time) override;
-			virtual uint32 GetCaretBlinkHalfTime(void) override;
-			virtual void ClearCache(void) override;
+			virtual void SetTimerValue(uint32 time) noexcept override;
+			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override;
+			virtual void ClearCache(void) noexcept override;
 		};
 	}
 }

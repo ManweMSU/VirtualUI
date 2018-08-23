@@ -277,14 +277,14 @@ namespace Engine
 			float FontUnitsToDIP(int units);
 			float AltFontUnitsToDIP(int units);
 
-			virtual void GetExtent(int & width, int & height) override;
-			virtual void SetHighlightColor(const Color & color) override
+			virtual void GetExtent(int & width, int & height) noexcept override;
+			virtual void SetHighlightColor(const Color & color) noexcept override
 			{
 				if (HighlightBrush) { HighlightBrush->Release(); HighlightBrush = 0; }
 				RenderTarget->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &HighlightBrush);
 			}
-			virtual void HighlightText(int Start, int End) override { hls = Start; hle = End; }
-			virtual int TestPosition(int point) override
+			virtual void HighlightText(int Start, int End) noexcept override { hls = Start; hle = End; }
+			virtual int TestPosition(int point) noexcept override
 			{
 				if (point < 0) return 0;
 				if (point > run_length) return CharString.Length();
@@ -300,7 +300,7 @@ namespace Engine
 				}
 				return CharString.Length();
 			}
-			virtual int EndOfChar(int Index) override
+			virtual int EndOfChar(int Index) noexcept override
 			{
 				if (Index < 0) return 0;
 				float summ = 0.0f;
@@ -365,9 +365,9 @@ namespace Engine
 			{
 				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
 			}
-			virtual int GetWidth(void) const override { return w; }
-			virtual int GetHeight(void) const override { return h; }
-			virtual bool IsDynamic(void) const override { return false; }
+			virtual int GetWidth(void) const noexcept override { return w; }
+			virtual int GetHeight(void) const noexcept override { return h; }
+			virtual bool IsDynamic(void) const noexcept override { return false; }
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override
 			{
 				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
@@ -415,9 +415,9 @@ namespace Engine
 			int w, h;
 			D2DTextureDD(void) : Frames(0x20) {}
 			virtual ~D2DTextureDD(void) { for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release(); }
-			virtual int GetWidth(void) const override { return w; }
-			virtual int GetHeight(void) const override { return h; }
-			virtual bool IsDynamic(void) const override { return false; }
+			virtual int GetWidth(void) const noexcept override { return w; }
+			virtual int GetHeight(void) const noexcept override { return h; }
+			virtual bool IsDynamic(void) const noexcept override { return false; }
 			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override {}
 			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Image * Source) override {}
 			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Frame * Source) override {}
@@ -435,7 +435,7 @@ namespace Engine
 			DWRITE_FONT_METRICS FontMetrics;
 			DWRITE_FONT_METRICS AltMetrics;
 			virtual ~D2DFont(void) override { if (FontFace) FontFace->Release(); if (AlternativeFace) AlternativeFace->Release(); }
-			virtual int GetWidth(void) const override
+			virtual int GetWidth(void) const noexcept override
 			{
 				uint16 SpaceGlyph;
 				uint32 Space = 0x20;
@@ -444,7 +444,7 @@ namespace Engine
 				FontFace->GetGdiCompatibleGlyphMetrics(float(Height), 1.0f, 0, TRUE, &SpaceGlyph, 1, &SpaceMetrics);
 				return int(float(SpaceMetrics.advanceWidth) * float(Height) / float(FontMetrics.designUnitsPerEm));
 			}
-			virtual int GetHeight(void) const override { return ActualHeight; }
+			virtual int GetHeight(void) const noexcept override { return ActualHeight; }
 			virtual void Reload(IRenderingDevice * Device) override
 			{
 				if (FontFace) FontFace->Release();
@@ -598,79 +598,85 @@ namespace Engine
 			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
-		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const { return Target; }
-		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle)
+		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const noexcept { return Target; }
+		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept
 		{
-			if (gradient.Length() > 1) {
-				D2D1_GRADIENT_STOP * stop = new (std::nothrow) D2D1_GRADIENT_STOP[gradient.Length()];
-				if (!stop) { throw OutOfMemoryException(); }
-				for (int i = 0; i < gradient.Length(); i++) {
-					stop[i].color = D2D1::ColorF(gradient[i].Color.r / 255.0f, gradient[i].Color.g / 255.0f, gradient[i].Color.b / 255.0f, gradient[i].Color.a / 255.0f);
-					stop[i].position = float(gradient[i].Position);
+			try {
+				if (gradient.Length() > 1) {
+					D2D1_GRADIENT_STOP * stop = new (std::nothrow) D2D1_GRADIENT_STOP[gradient.Length()];
+					if (!stop) { return 0; }
+					for (int i = 0; i < gradient.Length(); i++) {
+						stop[i].color = D2D1::ColorF(gradient[i].Color.r / 255.0f, gradient[i].Color.g / 255.0f, gradient[i].Color.b / 255.0f, gradient[i].Color.a / 255.0f);
+						stop[i].position = float(gradient[i].Position);
+					}
+					ID2D1GradientStopCollection * Collection;
+					if (Target->CreateGradientStopCollection(stop, gradient.Length(), &Collection) != S_OK) { delete[] stop; return 0; }
+					BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
+					if (!Info) { delete[] stop; Collection->Release(); return 0; }
+					Info->Collection = Collection;
+					Info->prop_w = cos(angle), Info->prop_h = sin(angle);
+					delete[] stop;
+					return Info;
+				} else {
+					auto CachedInfo = BrushCache.ElementByKey(gradient[0].Color);
+					if (CachedInfo) {
+						CachedInfo->Retain();
+						return CachedInfo;
+					}
+					BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
+					if (!Info) { return 0; }
+					ID2D1SolidColorBrush * Brush;
+					if (Target->CreateSolidColorBrush(D2D1::ColorF(gradient[0].Color.r / 255.0f, gradient[0].Color.g / 255.0f, gradient[0].Color.b / 255.0f, gradient[0].Color.a / 255.0f), &Brush) != S_OK) { Info->Release(); return 0; }
+					Info->Brush = Brush;
+					BrushCache.Append(gradient[0].Color, Info);
+					return Info;
 				}
-				ID2D1GradientStopCollection * Collection;
-				if (Target->CreateGradientStopCollection(stop, gradient.Length(), &Collection) != S_OK) { delete[] stop; throw Exception(); }
-				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
-				if (!Info) { delete[] stop; Collection->Release(); throw OutOfMemoryException(); }
-				Info->Collection = Collection;
-				Info->prop_w = cos(angle), Info->prop_h = sin(angle);
-				delete[] stop;
-				return Info;
-			} else {
-				auto CachedInfo = BrushCache.ElementByKey(gradient[0].Color);
+			} catch (...) { return 0; }
+		}
+		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(Color color) noexcept
+		{
+			try {
+				auto CachedInfo = BrushCache.ElementByKey(color);
 				if (CachedInfo) {
 					CachedInfo->Retain();
 					return CachedInfo;
 				}
 				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
-				if (!Info) { throw OutOfMemoryException(); }
+				if (!Info) { return 0; }
 				ID2D1SolidColorBrush * Brush;
-				if (Target->CreateSolidColorBrush(D2D1::ColorF(gradient[0].Color.r / 255.0f, gradient[0].Color.g / 255.0f, gradient[0].Color.b / 255.0f, gradient[0].Color.a / 255.0f), &Brush) != S_OK) { Info->Release(); throw Exception(); }
+				if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Brush) != S_OK) { Info->Release(); return 0; }
 				Info->Brush = Brush;
-				BrushCache.Append(gradient[0].Color, Info);
+				BrushCache.Append(color, Info);
 				return Info;
-			}
+			} catch (...) { return 0; }
 		}
-		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(Color color)
+		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power) noexcept
 		{
-			auto CachedInfo = BrushCache.ElementByKey(color);
-			if (CachedInfo) {
-				CachedInfo->Retain();
-				return CachedInfo;
-			}
-			BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
-			if (!Info) { throw OutOfMemoryException(); }
-			ID2D1SolidColorBrush * Brush;
-			if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Brush) != S_OK) { Info->Release(); throw Exception(); }
-			Info->Brush = Brush;
-			BrushCache.Append(color, Info);
-			return Info;
+			try {
+				auto CachedInfo = BlurCache.ElementByKey(power);
+				if (CachedInfo) {
+					CachedInfo->Retain();
+					return CachedInfo;
+				}
+				auto Info = new (std::nothrow) BlurEffectRenderingInfo;
+				if (!Info) return 0;
+				if (ExtendedTarget) {
+					if (ExtendedTarget->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { Info->Release(); return 0; }
+					Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
+					Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
+					Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+				}
+				BlurCache.Append(power, Info);
+				return Info;
+			} catch (...) { return 0; }
 		}
-		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power)
-		{
-			auto CachedInfo = BlurCache.ElementByKey(power);
-			if (CachedInfo) {
-				CachedInfo->Retain();
-				return CachedInfo;
-			}
-			auto Info = new (std::nothrow) BlurEffectRenderingInfo;
-			if (!Info) throw OutOfMemoryException();
-			if (ExtendedTarget) {
-				if (ExtendedTarget->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
-				Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
-				Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
-				Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
-			}
-			BlurCache.Append(power, Info);
-			return Info;
-		}
-		IInversionEffectRenderingInfo * D2DRenderDevice::CreateInversionEffectRenderingInfo(void)
+		IInversionEffectRenderingInfo * D2DRenderDevice::CreateInversionEffectRenderingInfo(void) noexcept
 		{
 			if (!InversionInfo.Inner()) {
 				auto Info = new (std::nothrow) InversionEffectRenderingInfo;
-				if (!Info) throw OutOfMemoryException();
+				if (!Info) return 0;
 				if (ExtendedTarget) {
-					if (ExtendedTarget->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { Info->Release(); throw Exception(); }
+					if (ExtendedTarget->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { Info->Release(); return 0; }
 					Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
 						-1.0f, 0.0f, 0.0f, 0.0f,
 						0.0f, -1.0f, 0.0f, 0.0f,
@@ -684,62 +690,60 @@ namespace Engine
 			InversionInfo->Retain();
 			return InversionInfo;
 		}
-		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern)
+		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept
 		{
-			auto * Info = new (std::nothrow) TextureRenderingInfo;
-			auto CachedTexture = TextureCache.ElementByKey(texture);
-			if (CachedTexture) {
-				Info->Texture.SetRetain(static_cast<D2DTextureDD *>(CachedTexture));
-			} else {
-				D2DTexture * src = static_cast<D2DTexture *>(texture);
-				D2DTextureDD * dd = new (std::nothrow) D2DTextureDD;
-				if (!dd) throw OutOfMemoryException();
-				dd->w = src->w; dd->h = src->h;
-				dd->TotalDuration = src->TotalDuration;
-				dd->FrameDuration = src->FrameDuration;
-				for (int i = 0; i < src->Frames.Length(); i++) {
-					SafePointer<ID2D1Bitmap> d2d_texture;
-					if (Target->CreateBitmapFromWicBitmap(src->Frames[i], d2d_texture.InnerRef()) != S_OK) { delete dd; throw Exception(); }
-					d2d_texture->AddRef();
-					dd->Frames.Append(d2d_texture);
-				}
-				Info->Texture.SetReference(dd);
-				TextureCache.Append(texture, dd);
-			}
-			Info->From = take_area;
-			Info->Fill = fill_pattern;
-			if (fill_pattern && !texture->IsDynamic()) {
-				for (int i = 0; i < Info->Texture->Frames.Length(); i++) {
-					ID2D1Bitmap * Fragment;
-					if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
-						Fragment = Info->Texture->Frames[i];
-						Fragment->AddRef();
-					} else {
-						if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
-							D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) != S_OK) {
-							Info->Release(); throw Exception();
-						}
-						if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->Frames[i], &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
-						{
-							Fragment->Release(); Info->Release(); throw Exception();
-						}
-					}
-					ID2D1BitmapBrush * Brush;
-					if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
-					{
-						Fragment->Release(); Info->Release(); throw Exception();
-					}
-					Fragment->Release();
-					try { Info->Brushes << Brush; }
-					catch (...) { Brush->Release(); Info->Release(); throw; }
-				}
-			}
-			return Info;
-		}
-		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color)
-		{
-			auto Info = new TextRenderingInfo;
 			try {
+				auto * Info = new (std::nothrow) TextureRenderingInfo;
+				auto CachedTexture = TextureCache.ElementByKey(texture);
+				if (CachedTexture) {
+					Info->Texture.SetRetain(static_cast<D2DTextureDD *>(CachedTexture));
+				} else {
+					D2DTexture * src = static_cast<D2DTexture *>(texture);
+					D2DTextureDD * dd = new (std::nothrow) D2DTextureDD;
+					if (!dd) throw OutOfMemoryException();
+					dd->w = src->w; dd->h = src->h;
+					dd->TotalDuration = src->TotalDuration;
+					dd->FrameDuration = src->FrameDuration;
+					for (int i = 0; i < src->Frames.Length(); i++) {
+						SafePointer<ID2D1Bitmap> d2d_texture;
+						if (Target->CreateBitmapFromWicBitmap(src->Frames[i], d2d_texture.InnerRef()) != S_OK) { delete dd; throw Exception(); }
+						d2d_texture->AddRef();
+						dd->Frames.Append(d2d_texture);
+					}
+					Info->Texture.SetReference(dd);
+					TextureCache.Append(texture, dd);
+				}
+				Info->From = take_area;
+				Info->Fill = fill_pattern;
+				if (fill_pattern && !texture->IsDynamic()) {
+					for (int i = 0; i < Info->Texture->Frames.Length(); i++) {
+						ID2D1Bitmap * Fragment;
+						if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
+							Fragment = Info->Texture->Frames[i];
+							Fragment->AddRef();
+						} else {
+							if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
+								D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) != S_OK) {
+								Info->Release(); throw Exception();
+							}
+							if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->Frames[i], &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
+							{ Fragment->Release(); Info->Release(); throw Exception(); }
+						}
+						ID2D1BitmapBrush * Brush;
+						if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
+						{ Fragment->Release(); Info->Release(); throw Exception(); }
+						Fragment->Release();
+						try { Info->Brushes << Brush; } catch (...) { Brush->Release(); Info->Release(); throw; }
+					}
+				}
+				return Info;
+			} catch (...) { return 0; }
+		}
+		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept
+		{
+			TextRenderingInfo * Info = 0;
+			try {
+				Info = new TextRenderingInfo;
 				Array<GradientPoint> array(1);
 				array << GradientPoint(color, 0.0);
 				Info->halign = horizontal_align;
@@ -765,13 +769,15 @@ namespace Engine
 			}
 			catch (...) {
 				Info->Release();
+				return 0;
 			}
 			return Info;
 		}
-		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const Array<uint32>& text, int horizontal_align, int vertical_align, const Color & color)
+		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const Array<uint32>& text, int horizontal_align, int vertical_align, const Color & color) noexcept
 		{
-			auto Info = new TextRenderingInfo;
+			TextRenderingInfo * Info = 0; 
 			try {
+				Info = new TextRenderingInfo;
 				Array<GradientPoint> array(1);
 				array << GradientPoint(color, 0.0);
 				Info->halign = horizontal_align;
@@ -795,33 +801,37 @@ namespace Engine
 				}
 			} catch (...) {
 				Info->Release();
+				return 0;
 			}
 			return Info;
 		}
-		ILineRenderingInfo * D2DRenderDevice::CreateLineRenderingInfo(const Color & color, bool dotted)
+		ILineRenderingInfo * D2DRenderDevice::CreateLineRenderingInfo(const Color & color, bool dotted) noexcept
 		{
-			Array<GradientPoint> array(1);
-			array << GradientPoint(color, 0.0f);
-			SafePointer<BarRenderingInfo> BarInfo = static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0));
-			LineRenderingInfo * Info = new (std::nothrow) LineRenderingInfo;
-			if (!Info) throw OutOfMemoryException();
-			Info->Stroke = 0;
-			Info->BrushInfo.SetReference(BarInfo);
-			Info->BrushInfo->Retain();
-			Info->Brush = Info->BrushInfo->Brush;
-			Info->Brush->AddRef();
-			if (dotted) {
-				float len[] = { 1.0f, 1.0f };
-				D2DFactory->CreateStrokeStyle(D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_LINE_JOIN_MITER, 10.0f, D2D1_DASH_STYLE_CUSTOM, 0.5f), len, 2, &Info->Stroke);
-			}
-			return Info;
+			try {
+				Array<GradientPoint> array(1);
+				array << GradientPoint(color, 0.0f);
+				SafePointer<BarRenderingInfo> BarInfo = static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0));
+				LineRenderingInfo * Info = new (std::nothrow) LineRenderingInfo;
+				if (!Info) throw OutOfMemoryException();
+				Info->Stroke = 0;
+				Info->BrushInfo.SetReference(BarInfo);
+				Info->BrushInfo->Retain();
+				Info->Brush = Info->BrushInfo->Brush;
+				Info->Brush->AddRef();
+				if (dotted) {
+					float len[] = { 1.0f, 1.0f };
+					D2DFactory->CreateStrokeStyle(D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_LINE_JOIN_MITER, 10.0f, D2D1_DASH_STYLE_CUSTOM, 0.5f), len, 2, &Info->Stroke);
+				}
+				return Info;
+			} catch (...) { return 0; }
 		}
 		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source) { return StandaloneDevice::LoadTexture(Source); }
 		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source) { return StandaloneDevice::LoadTexture(Source); }
 		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source) { return StandaloneDevice::LoadTexture(Source); }
 		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
-		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At)
+		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
 		{
+			if (!Info) return;
 			auto info = reinterpret_cast<BarRenderingInfo *>(Info);
 			if (info->Brush) {
 				Target->FillRectangle(D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom)), info->Brush);
@@ -867,8 +877,9 @@ namespace Engine
 				}
 			}
 		}
-		void D2DRenderDevice::RenderTexture(ITextureRenderingInfo * Info, const Box & At)
+		void D2DRenderDevice::RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept
 		{
+			if (!Info) return;
 			auto info = static_cast<TextureRenderingInfo *>(Info);
 			int frame = 0;
 			if (info->Texture->Frames.Length() > 1) frame = max(BinarySearchLE(info->Texture->FrameDuration, AnimationTimer % info->Texture->TotalDuration), 0);
@@ -880,8 +891,9 @@ namespace Engine
 				Target->DrawBitmap(info->Texture->Frames[frame], To, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, From);
 			}
 		}
-		void D2DRenderDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip)
+		void D2DRenderDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept
 		{
+			if (!Info) return;
 			auto info = static_cast<TextRenderingInfo *>(Info);
 			if (!info->GlyphAdvances.Length()) return;
 			if (Clip) PushClip(At);
@@ -922,8 +934,9 @@ namespace Engine
 			Target->SetTransform(Transform);
 			if (Clip) PopClip();
 		}
-		void D2DRenderDevice::RenderLine(ILineRenderingInfo * Info, const Box & At)
+		void D2DRenderDevice::RenderLine(ILineRenderingInfo * Info, const Box & At) noexcept
 		{
+			if (!Info) return;
 			auto info = reinterpret_cast<LineRenderingInfo *>(Info);
 			if (info->Brush) {
 				D2D1_POINT_2F Start = D2D1::Point2F(float(At.Left) + 0.5f, float(At.Top) + 0.5f);
@@ -931,9 +944,9 @@ namespace Engine
 				Target->DrawLine(Start, End, info->Brush, 1.0f, info->Stroke);
 			}
 		}
-		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At)
+		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept
 		{
-			if (Layers.Length()) return;
+			if (Layers.Length() || !Info) return;
 			auto info = static_cast<BlurEffectRenderingInfo *>(Info);
 			if (info->Effect) {
 				SafePointer<ID2D1Bitmap> Fragment;
@@ -949,9 +962,9 @@ namespace Engine
 				}
 			}
 		}
-		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink)
+		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept
 		{
-			if (Layers.Length()) return;
+			if (Layers.Length() || !Info) return;
 			if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
 				auto info = static_cast<InversionEffectRenderingInfo *>(Info);
 				if (info->Effect) {
@@ -969,40 +982,44 @@ namespace Engine
 				}
 			}
 		}
-		void D2DRenderDevice::PushClip(const Box & Rect)
+		void D2DRenderDevice::PushClip(const Box & Rect) noexcept
 		{
-			Clipping << Rect;
-			Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
+			try {
+				Clipping << Rect;
+				Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
+			} catch (...) {}
 		}
-		void D2DRenderDevice::PopClip(void)
+		void D2DRenderDevice::PopClip(void) noexcept
 		{
 			Clipping.RemoveLast();
 			Target->PopAxisAlignedClip();
 		}
-		void D2DRenderDevice::BeginLayer(const Box & Rect, double Opacity)
+		void D2DRenderDevice::BeginLayer(const Box & Rect, double Opacity) noexcept
 		{
-			ID2D1Layer * Layer;
-			if (Target->CreateLayer(0, &Layer) != S_OK) throw Exception();
-			Layers << Layer;
-			D2D1_LAYER_PARAMETERS lp;
-			lp.contentBounds = D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom));
-			lp.geometricMask = 0;
-			lp.maskAntialiasMode = D2D1_ANTIALIAS_MODE_ALIASED;
-			lp.maskTransform = D2D1::IdentityMatrix();
-			lp.opacity = float(Opacity);
-			lp.opacityBrush = 0;
-			lp.layerOptions = D2D1_LAYER_OPTIONS_NONE;
-			Target->PushLayer(&lp, Layer);
+			try {
+				ID2D1Layer * Layer;
+				if (Target->CreateLayer(0, &Layer) != S_OK) throw Exception();
+				Layers << Layer;
+				D2D1_LAYER_PARAMETERS lp;
+				lp.contentBounds = D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom));
+				lp.geometricMask = 0;
+				lp.maskAntialiasMode = D2D1_ANTIALIAS_MODE_ALIASED;
+				lp.maskTransform = D2D1::IdentityMatrix();
+				lp.opacity = float(Opacity);
+				lp.opacityBrush = 0;
+				lp.layerOptions = D2D1_LAYER_OPTIONS_NONE;
+				Target->PushLayer(&lp, Layer);
+			} catch (...) {}
 		}
-		void D2DRenderDevice::EndLayer(void)
+		void D2DRenderDevice::EndLayer(void) noexcept
 		{
 			Target->PopLayer();
 			Layers.LastElement()->Release();
 			Layers.RemoveLast();
 		}
-		void D2DRenderDevice::SetTimerValue(uint32 time) { AnimationTimer = time; }
-		uint32 D2DRenderDevice::GetCaretBlinkHalfTime(void) { return HalfBlinkPeriod; }
-		void D2DRenderDevice::ClearCache(void) { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
+		void D2DRenderDevice::SetTimerValue(uint32 time) noexcept { AnimationTimer = time; }
+		uint32 D2DRenderDevice::GetCaretBlinkHalfTime(void) noexcept { return HalfBlinkPeriod; }
+		void D2DRenderDevice::ClearCache(void) noexcept { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
 
 		void TextRenderingInfo::FillAdvances(void)
 		{
@@ -1073,7 +1090,7 @@ namespace Engine
 		}
 		float TextRenderingInfo::FontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->FontMetrics.designUnitsPerEm); }
 		float TextRenderingInfo::AltFontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->AltMetrics.designUnitsPerEm); }
-		void TextRenderingInfo::GetExtent(int & width, int & height) { width = run_length; height = Font->ActualHeight; }
+		void TextRenderingInfo::GetExtent(int & width, int & height) noexcept { width = run_length; height = Font->ActualHeight; }
 	}
 }
 
