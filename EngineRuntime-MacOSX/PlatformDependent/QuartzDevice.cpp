@@ -37,9 +37,9 @@ namespace Engine
                 object->frames.Clear();
             }
 
-            virtual int GetWidth(void) const override { return w; }
-			virtual int GetHeight(void) const override { return h; }
-			virtual bool IsDynamic(void) const override { return false; }
+            virtual int GetWidth(void) const noexcept override { return w; }
+			virtual int GetHeight(void) const noexcept override { return h; }
+			virtual bool IsDynamic(void) const noexcept override { return false; }
 			virtual void Reload(UI::IRenderingDevice * Device, Streaming::Stream * Source) override
             {
                 Replace(static_cast<QuartzTexture *>(Device->LoadTexture(Source)));
@@ -98,8 +98,8 @@ namespace Engine
                 CFRelease(alt_font);
             }
 
-            virtual int GetWidth(void) const override { return width; }
-			virtual int GetHeight(void) const override { return int(height * scale); }
+            virtual int GetWidth(void) const noexcept override { return width; }
+			virtual int GetHeight(void) const noexcept override { return int(height * scale); }
 			virtual void Reload(UI::IRenderingDevice * Device) override {}
         };
         
@@ -141,16 +141,16 @@ namespace Engine
                 if (alt_font) CGFontRelease(alt_font);
             }
 
-            virtual void GetExtent(int & width, int & height) override { width = run_length; height = int(font->height); }
-			virtual void SetHighlightColor(const UI::Color & color) override
+            virtual void GetExtent(int & width, int & height) noexcept override { width = run_length; height = int(font->height); }
+			virtual void SetHighlightColor(const UI::Color & color) noexcept override
 			{
                 BackColor.r = double(color.r) / 255.0;
                 BackColor.g = double(color.g) / 255.0;
                 BackColor.b = double(color.b) / 255.0;
                 BackColor.a = double(color.a) / 255.0;
 			}
-			virtual void HighlightText(int Start, int End) override { hls = Start; hle = End; }
-			virtual int TestPosition(int point) override
+			virtual void HighlightText(int Start, int End) noexcept override { hls = Start; hle = End; }
+			virtual int TestPosition(int point) noexcept override
 			{
 				if (point < 0) return 0;
 				if (point > run_length) return GlyphString.Length();
@@ -166,7 +166,7 @@ namespace Engine
 				}
 				return GlyphString.Length();
 			}
-			virtual int EndOfChar(int Index) override
+			virtual int EndOfChar(int Index) noexcept override
 			{
 				if (Index < 0) return 0;
 				double summ = 0.0;
@@ -232,16 +232,16 @@ namespace Engine
         QuartzRenderingDevice::QuartzRenderingDevice(void) : BrushCache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), Clipping(0x10), _animation(0) {}
         QuartzRenderingDevice::~QuartzRenderingDevice(void) {}
 
-        void * QuartzRenderingDevice::GetContext(void) const { return _context; }
-        void QuartzRenderingDevice::SetContext(void * context, int width, int height, int scale)
+        void * QuartzRenderingDevice::GetContext(void) const noexcept { return _context; }
+        void QuartzRenderingDevice::SetContext(void * context, int width, int height, int scale) noexcept
         {
             _context = context; _width = width; _height = height; _scale = scale;
             CGContextSetInterpolationQuality(reinterpret_cast<CGContextRef>(_context), kCGInterpolationNone);
         }
 
-        UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(const Array<UI::GradientPoint>& gradient, double angle)
+        UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(const Array<UI::GradientPoint>& gradient, double angle) noexcept
         {
-            if (!gradient.Length()) throw InvalidArgumentException();
+            if (!gradient.Length()) return 0;
             if (gradient.Length() == 1) return CreateBarRenderingInfo(gradient[0].Color);
             SafePointer<QuartzBarRenderingInfo> info = new QuartzBarRenderingInfo;
             CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
@@ -263,7 +263,7 @@ namespace Engine
             info->Retain();
             return info;
         }
-        UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(UI::Color color)
+        UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(UI::Color color) noexcept
         {
             auto CachedInfo = BrushCache.ElementByKey(color);
 			if (CachedInfo) {
@@ -279,8 +279,8 @@ namespace Engine
             info->Retain();
             return info;
         }
-        UI::IBlurEffectRenderingInfo * QuartzRenderingDevice::CreateBlurEffectRenderingInfo(double power) { return 0; }
-        UI::IInversionEffectRenderingInfo * QuartzRenderingDevice::CreateInversionEffectRenderingInfo(void)
+        UI::IBlurEffectRenderingInfo * QuartzRenderingDevice::CreateBlurEffectRenderingInfo(double power) noexcept { return 0; }
+        UI::IInversionEffectRenderingInfo * QuartzRenderingDevice::CreateInversionEffectRenderingInfo(void) noexcept
         {
             if (InversionCache) {
                 InversionCache->Retain();
@@ -296,7 +296,7 @@ namespace Engine
             info->Retain();
             return info;
         }
-        UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(UI::ITexture * texture, const UI::Box & take_area, bool fill_pattern)
+        UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(UI::ITexture * texture, const UI::Box & take_area, bool fill_pattern) noexcept
         {
             auto tex = static_cast<QuartzTexture *>(texture);
             SafePointer<QuartzTextureRenderingInfo> info = new QuartzTextureRenderingInfo;
@@ -318,7 +318,7 @@ namespace Engine
             info->Retain();
             return info;
         }
-        UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color)
+        UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
         {
             SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
             if (!text.Length()) {
@@ -412,7 +412,7 @@ namespace Engine
             info->Retain();
             return info;
         }
-        UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color)
+        UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
         {
             SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
             if (!text.Length()) {
@@ -506,7 +506,7 @@ namespace Engine
             info->Retain();
             return info;
         }
-        UI::ILineRenderingInfo * QuartzRenderingDevice::CreateLineRenderingInfo(const UI::Color & color, bool dotted)
+        UI::ILineRenderingInfo * QuartzRenderingDevice::CreateLineRenderingInfo(const UI::Color & color, bool dotted) noexcept
         {
             SafePointer<QuartzLineRenderingInfo> info = new QuartzLineRenderingInfo;
             info->r = double(color.r) / 255.0;
@@ -578,8 +578,9 @@ namespace Engine
             } catch (...) { return 0; }
         }
 
-        void QuartzRenderingDevice::RenderBar(UI::IBarRenderingInfo * Info, const UI::Box & At)
+        void QuartzRenderingDevice::RenderBar(UI::IBarRenderingInfo * Info, const UI::Box & At) noexcept
         {
+            if (!Info) return;
             auto info = static_cast<QuartzBarRenderingInfo *>(Info);
             if (info->gradient) {
                 int w = At.Right - At.Left, h = At.Bottom - At.Top;
@@ -629,8 +630,9 @@ namespace Engine
                 CGContextFillRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(At, _width, _height, _scale));
             }
         }
-        void QuartzRenderingDevice::RenderTexture(UI::ITextureRenderingInfo * Info, const UI::Box & At)
+        void QuartzRenderingDevice::RenderTexture(UI::ITextureRenderingInfo * Info, const UI::Box & At) noexcept
         {
+            if (!Info) return;
             auto info = static_cast<QuartzTextureRenderingInfo *>(Info);
 			int frame = 0;
 			if (info->fragment->frames.Length() > 1) frame = max(BinarySearchLE(info->fragment->duration, _animation % info->fragment->total_duration), 0);
@@ -643,10 +645,10 @@ namespace Engine
                 CGContextDrawImage(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(At, _width, _height, _scale), info->fragment->frames[frame]);
             }
         }
-        void QuartzRenderingDevice::RenderText(UI::ITextRenderingInfo * Info, const UI::Box & At, bool Clip)
+        void QuartzRenderingDevice::RenderText(UI::ITextRenderingInfo * Info, const UI::Box & At, bool Clip) noexcept
         {
             auto info = reinterpret_cast<CoreTextRenderingInfo *>(Info);
-            if (!info->GlyphAdvances.Length()) return;
+            if (!info->GlyphAdvances.Length() || !Info) return;
             if (!info->base_font) return;
             CGRect at = QuartzMakeRect(At, _width, _height, _scale);
             if (Clip) {
@@ -696,8 +698,9 @@ namespace Engine
 			}
             if (Clip) CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
         }
-        void QuartzRenderingDevice::RenderLine(UI::ILineRenderingInfo * Info, const UI::Box & At)
+        void QuartzRenderingDevice::RenderLine(UI::ILineRenderingInfo * Info, const UI::Box & At) noexcept
         {
+            if (!Info) return;
             auto info = static_cast<QuartzLineRenderingInfo *>(Info);
             double s = double(_scale);
             CGPoint p[2];
@@ -715,9 +718,10 @@ namespace Engine
             CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), 1.0 / s);
             CGContextStrokeLineSegments(reinterpret_cast<CGContextRef>(_context), p, 2);
         }
-        void QuartzRenderingDevice::ApplyBlur(UI::IBlurEffectRenderingInfo * Info, const UI::Box & At) {}
-        void QuartzRenderingDevice::ApplyInversion(UI::IInversionEffectRenderingInfo * Info, const UI::Box & At, bool Blink)
+        void QuartzRenderingDevice::ApplyBlur(UI::IBlurEffectRenderingInfo * Info, const UI::Box & At) noexcept {}
+        void QuartzRenderingDevice::ApplyInversion(UI::IInversionEffectRenderingInfo * Info, const UI::Box & At, bool Blink) noexcept
         {
+            if (!Info) return;
             auto info = static_cast<QuartzInversionRenderingInfo *>(Info);
             if (!Blink || (_animation % 1000 < 500)) {
                 CGContextSetBlendMode(reinterpret_cast<CGContextRef>(_context), kCGBlendModeDifference);
@@ -726,34 +730,34 @@ namespace Engine
             }
         }
 
-        void QuartzRenderingDevice::PushClip(const UI::Box & Rect)
+        void QuartzRenderingDevice::PushClip(const UI::Box & Rect) noexcept
         {
             UI::Box clip = Clipping.Length() ? UI::Box::Intersect(Rect, Clipping.LastElement()) : Rect;
             Clipping << clip;
             CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
             CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(Rect, _width, _height, _scale));
         }
-        void QuartzRenderingDevice::PopClip(void)
+        void QuartzRenderingDevice::PopClip(void) noexcept
         {
             Clipping.RemoveLast();
             CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
         }
-        void QuartzRenderingDevice::BeginLayer(const UI::Box & Rect, double Opacity)
+        void QuartzRenderingDevice::BeginLayer(const UI::Box & Rect, double Opacity) noexcept
         {
             CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
             CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(Rect, _width, _height, _scale));
             CGContextSetAlpha(reinterpret_cast<CGContextRef>(_context), CGFloat(Opacity));
             CGContextBeginTransparencyLayer(reinterpret_cast<CGContextRef>(_context), 0);
         }
-        void QuartzRenderingDevice::EndLayer(void)
+        void QuartzRenderingDevice::EndLayer(void) noexcept
         {
             CGContextEndTransparencyLayer(reinterpret_cast<CGContextRef>(_context));
             CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
         }
 
-        void QuartzRenderingDevice::SetTimerValue(uint32 time) { _animation = time; }
-        uint32 QuartzRenderingDevice::GetCaretBlinkHalfTime(void) { return 500; }
-        void QuartzRenderingDevice::ClearCache(void)
+        void QuartzRenderingDevice::SetTimerValue(uint32 time) noexcept { _animation = time; }
+        uint32 QuartzRenderingDevice::GetCaretBlinkHalfTime(void) noexcept { return 500; }
+        void QuartzRenderingDevice::ClearCache(void) noexcept
         {
             BrushCache.Clear();
             InversionCache.SetReference(0);

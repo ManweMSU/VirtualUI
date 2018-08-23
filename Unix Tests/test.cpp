@@ -42,6 +42,11 @@ public:
         auto i4 = rt->AddItem(L"Tree View Item 4");
         i4->AddItem(L"§ ыыыы §");
         i1->Expand(true);
+        auto combo = window->FindChild(565656)->As<Controls::ComboBox>();
+        for (int i = 0; i < 100; i++) combo->AddItem(L"Combo Box Item " + string(i + 1));
+        auto box = window->FindChild(575757)->As<Controls::TextComboBox>();
+        for (int i = 0; i < 100; i++) box->AddItem(L"Text Combo Box Item " + string(i + 1));
+        box->AddItem(L"kornevgen pidor");
     }
     virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
     {
@@ -125,7 +130,6 @@ int Main(void)
     } catch (...) { req += L"kornevgen pidor"; }
 
     Streaming::Stream * source = Assembly::QueryResource(L"GUI");
-    Console << string((void*) source) << IO::NewLineChar;
     SafePointer<UI::IResourceLoader> loader = Windows::CreateNativeCompatibleResourceLoader();
     UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
     source->Release();

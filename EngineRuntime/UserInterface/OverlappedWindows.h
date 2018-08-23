@@ -57,7 +57,7 @@ namespace Engine
 			{
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramelessDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramedDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
-				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreatePopupDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreatePopupDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 				friend class ContentFrame;
 			private:
 				struct size

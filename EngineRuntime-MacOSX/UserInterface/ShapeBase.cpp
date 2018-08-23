@@ -7,52 +7,52 @@ namespace Engine
 	{
 		double Zoom = 1.0;
 
-		Coordinate::Coordinate(void) {}
-		Coordinate::Coordinate(int shift) : Absolute(shift), Anchor(0.0), Zoom(0.0) {}
-		Coordinate::Coordinate(int shift, double zoom, double anchor) : Absolute(shift), Anchor(anchor), Zoom(zoom) {}
-		Coordinate & Coordinate::operator+=(const Coordinate & a) { *this = *this + a; return *this; }
-		Coordinate & Coordinate::operator-=(const Coordinate & a) { *this = *this - a; return *this; }
-		Coordinate & Coordinate::operator*=(double a) { *this = *this * a; return *this; }
-		Coordinate & Coordinate::operator/=(double a) { *this = *this / a; return *this; }
-		Coordinate Coordinate::operator-(void) const { return Coordinate(-Absolute, -Zoom, -Anchor); }
-		Coordinate Coordinate::Right() { return Coordinate(0, 0.0, 1.0); }
-		Coordinate Coordinate::Bottom() { return Coordinate(0, 0.0, 1.0); }
-		Coordinate operator+(const Coordinate & a, const Coordinate & b) { return Coordinate(a.Absolute + b.Absolute, a.Zoom + b.Zoom, a.Anchor + b.Anchor); }
-		Coordinate operator-(const Coordinate & a, const Coordinate & b) { return Coordinate(a.Absolute - b.Absolute, a.Zoom - b.Zoom, a.Anchor - b.Anchor); }
-		Coordinate operator*(const Coordinate & a, double b) { return Coordinate(int(a.Absolute * b), a.Zoom * b, a.Anchor * b); }
-		Coordinate operator*(double b, const Coordinate & a) { return Coordinate(int(a.Absolute * b), a.Zoom * b, a.Anchor * b); }
-		Coordinate operator/(const Coordinate & a, double b) { return Coordinate(int(a.Absolute / b), a.Zoom / b, a.Anchor / b); }
-		bool operator==(const Coordinate & a, const Coordinate & b) { return a.Absolute == b.Absolute && a.Zoom == b.Zoom && a.Anchor == b.Anchor; }
-		bool operator!=(const Coordinate & a, const Coordinate & b) { return a.Absolute != b.Absolute || a.Zoom != b.Zoom || a.Anchor != b.Anchor; }
-		Rectangle operator+(const Rectangle & a, const Rectangle & b) { Rectangle Result = a; Result += b; return Result; }
-		Rectangle operator-(const Rectangle & a, const Rectangle & b) { Rectangle Result = a; Result -= b; return Result; }
-		Rectangle operator*(const Rectangle & a, double b) { Rectangle Result = a; Result *= b; return Result; }
-		Rectangle operator*(double b, const Rectangle & a) { Rectangle Result = a; Result *= b; return Result; }
-		Rectangle operator/(const Rectangle & a, double b) { Rectangle Result = a; Result /= b; return Result; }
-		bool operator==(const Rectangle & a, const Rectangle & b) { return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom; }
-		bool operator!=(const Rectangle & a, const Rectangle & b) { return a.Left != b.Left || a.Top != b.Top || a.Right != b.Right || a.Bottom != b.Bottom; }
-		bool operator==(const Point & a, const Point & b) { return a.x == b.x && a.y == b.y; }
-		bool operator!=(const Point & a, const Point & b) { return a.x != b.x || a.y != b.y; }
-		bool operator==(const Box & a, const Box & b) { return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom; }
-		bool operator!=(const Box & a, const Box & b) { return a.Left != b.Left || a.Top != b.Top || a.Right != b.Right || a.Bottom != b.Bottom; }
-		bool operator==(const Color & a, const Color & b) { return a.Value == b.Value; }
-		bool operator!=(const Color & a, const Color & b) { return a.Value != b.Value; }
-		bool operator==(const GradientPoint & a, const GradientPoint & b) { return a.Color == b.Color && a.Position == b.Position; }
-		bool operator!=(const GradientPoint & a, const GradientPoint & b) { return a.Color != b.Color || a.Position != b.Position; }
-		Rectangle::Rectangle(void) {}
-		Rectangle::Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) : Left(left), Top(top), Right(right), Bottom(bottom) {}
-		Rectangle & Rectangle::operator+=(const Rectangle & a) { Left += a.Left; Top += a.Top; Right += a.Right; Bottom += a.Bottom; return *this; }
-		Rectangle & Rectangle::operator-=(const Rectangle & a) { Left -= a.Left; Top -= a.Top; Right -= a.Right; Bottom -= a.Bottom; return *this; }
-		Rectangle & Rectangle::operator*=(double a) { Left *= a; Top *= a; Right *= a; Bottom *= a; return *this; }
-		Rectangle & Rectangle::operator/=(double a) { Left /= a; Top /= a; Right /= a; Bottom /= a; return *this; }
-		Rectangle Rectangle::operator-(void) const { return Rectangle(-Left, -Top, -Right, -Bottom); }
-		bool Rectangle::IsValid(void) const { return Left.Anchor == Left.Anchor; }
-		Rectangle Rectangle::Entire() { return Rectangle(0, 0, Coordinate::Right(), Coordinate::Bottom()); }
-		Rectangle Rectangle::Invalid() { double z = 0.0, nan = z / z; return Rectangle(Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan)); }
-		Point::Point(void) {}
-		Point::Point(int X, int Y) : x(X), y(Y) {}
-		Box::Box(void) {}
-		Box::Box(const Rectangle & source, const Box & outer)
+		Coordinate::Coordinate(void) noexcept {}
+		Coordinate::Coordinate(int shift) noexcept : Absolute(shift), Anchor(0.0), Zoom(0.0) {}
+		Coordinate::Coordinate(int shift, double zoom, double anchor) noexcept : Absolute(shift), Anchor(anchor), Zoom(zoom) {}
+		Coordinate & Coordinate::operator+=(const Coordinate & a) noexcept { *this = *this + a; return *this; }
+		Coordinate & Coordinate::operator-=(const Coordinate & a) noexcept { *this = *this - a; return *this; }
+		Coordinate & Coordinate::operator*=(double a) noexcept { *this = *this * a; return *this; }
+		Coordinate & Coordinate::operator/=(double a) noexcept { *this = *this / a; return *this; }
+		Coordinate Coordinate::operator-(void) const noexcept  { return Coordinate(-Absolute, -Zoom, -Anchor); }
+		Coordinate Coordinate::Right() noexcept { return Coordinate(0, 0.0, 1.0); }
+		Coordinate Coordinate::Bottom() noexcept { return Coordinate(0, 0.0, 1.0); }
+		Coordinate operator+(const Coordinate & a, const Coordinate & b) noexcept { return Coordinate(a.Absolute + b.Absolute, a.Zoom + b.Zoom, a.Anchor + b.Anchor); }
+		Coordinate operator-(const Coordinate & a, const Coordinate & b) noexcept { return Coordinate(a.Absolute - b.Absolute, a.Zoom - b.Zoom, a.Anchor - b.Anchor); }
+		Coordinate operator*(const Coordinate & a, double b) noexcept { return Coordinate(int(a.Absolute * b), a.Zoom * b, a.Anchor * b); }
+		Coordinate operator*(double b, const Coordinate & a) noexcept { return Coordinate(int(a.Absolute * b), a.Zoom * b, a.Anchor * b); }
+		Coordinate operator/(const Coordinate & a, double b) noexcept { return Coordinate(int(a.Absolute / b), a.Zoom / b, a.Anchor / b); }
+		bool operator==(const Coordinate & a, const Coordinate & b) noexcept { return a.Absolute == b.Absolute && a.Zoom == b.Zoom && a.Anchor == b.Anchor; }
+		bool operator!=(const Coordinate & a, const Coordinate & b) noexcept { return a.Absolute != b.Absolute || a.Zoom != b.Zoom || a.Anchor != b.Anchor; }
+		Rectangle operator+(const Rectangle & a, const Rectangle & b) noexcept { Rectangle Result = a; Result += b; return Result; }
+		Rectangle operator-(const Rectangle & a, const Rectangle & b) noexcept { Rectangle Result = a; Result -= b; return Result; }
+		Rectangle operator*(const Rectangle & a, double b) noexcept { Rectangle Result = a; Result *= b; return Result; }
+		Rectangle operator*(double b, const Rectangle & a) noexcept { Rectangle Result = a; Result *= b; return Result; }
+		Rectangle operator/(const Rectangle & a, double b) noexcept { Rectangle Result = a; Result /= b; return Result; }
+		bool operator==(const Rectangle & a, const Rectangle & b) noexcept { return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom; }
+		bool operator!=(const Rectangle & a, const Rectangle & b) noexcept { return a.Left != b.Left || a.Top != b.Top || a.Right != b.Right || a.Bottom != b.Bottom; }
+		bool operator==(const Point & a, const Point & b) noexcept { return a.x == b.x && a.y == b.y; }
+		bool operator!=(const Point & a, const Point & b) noexcept { return a.x != b.x || a.y != b.y; }
+		bool operator==(const Box & a, const Box & b) noexcept { return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom; }
+		bool operator!=(const Box & a, const Box & b) noexcept { return a.Left != b.Left || a.Top != b.Top || a.Right != b.Right || a.Bottom != b.Bottom; }
+		bool operator==(const Color & a, const Color & b) noexcept { return a.Value == b.Value; }
+		bool operator!=(const Color & a, const Color & b) noexcept { return a.Value != b.Value; }
+		bool operator==(const GradientPoint & a, const GradientPoint & b) noexcept { return a.Color == b.Color && a.Position == b.Position; }
+		bool operator!=(const GradientPoint & a, const GradientPoint & b) noexcept { return a.Color != b.Color || a.Position != b.Position; }
+		Rectangle::Rectangle(void) noexcept {}
+		Rectangle::Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) noexcept : Left(left), Top(top), Right(right), Bottom(bottom) {}
+		Rectangle & Rectangle::operator+=(const Rectangle & a) noexcept { Left += a.Left; Top += a.Top; Right += a.Right; Bottom += a.Bottom; return *this; }
+		Rectangle & Rectangle::operator-=(const Rectangle & a) noexcept { Left -= a.Left; Top -= a.Top; Right -= a.Right; Bottom -= a.Bottom; return *this; }
+		Rectangle & Rectangle::operator*=(double a) noexcept { Left *= a; Top *= a; Right *= a; Bottom *= a; return *this; }
+		Rectangle & Rectangle::operator/=(double a) noexcept { Left /= a; Top /= a; Right /= a; Bottom /= a; return *this; }
+		Rectangle Rectangle::operator-(void) const noexcept { return Rectangle(-Left, -Top, -Right, -Bottom); }
+		bool Rectangle::IsValid(void) const noexcept { return Left.Anchor == Left.Anchor; }
+		Rectangle Rectangle::Entire() noexcept { return Rectangle(0, 0, Coordinate::Right(), Coordinate::Bottom()); }
+		Rectangle Rectangle::Invalid() noexcept { double z = 0.0, nan = z / z; return Rectangle(Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan), Coordinate(0, 0.0, nan)); }
+		Point::Point(void) noexcept {}
+		Point::Point(int X, int Y) noexcept : x(X), y(Y) {}
+		Box::Box(void) noexcept {}
+		Box::Box(const Rectangle & source, const Box & outer) noexcept
 		{
 			double Width = outer.Right - outer.Left;
 			double Height = outer.Bottom - outer.Top;
@@ -61,23 +61,23 @@ namespace Engine
 			Top = outer.Top + source.Top.Absolute + int(source.Top.Anchor * Height) + int(source.Top.Zoom * Zoom);
 			Bottom = outer.Top + source.Bottom.Absolute + int(source.Bottom.Anchor * Height) + int(source.Bottom.Zoom * Zoom);
 		}
-		Box::Box(int left, int top, int right, int bottom) : Left(left), Top(top), Right(right), Bottom(bottom) {}
-		bool Box::IsInside(const Point & p) const { return p.x >= Left && p.x < Right && p.y >= Top && p.y < Bottom; }
-		Box Box::Intersect(const Box & a, const Box & b)
+		Box::Box(int left, int top, int right, int bottom) noexcept : Left(left), Top(top), Right(right), Bottom(bottom) {}
+		bool Box::IsInside(const Point & p) const noexcept { return p.x >= Left && p.x < Right && p.y >= Top && p.y < Bottom; }
+		Box Box::Intersect(const Box & a, const Box & b) noexcept
 		{
 			return Box(max(a.Left, b.Left), max(a.Top, b.Top), min(a.Right, b.Right), min(a.Bottom, b.Bottom));
 		}
-		Color::Color(void) {}
-		Color::Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa) : r(sr), g(sg), b(sb), a(sa) {}
-		Color::Color(int sr, int sg, int sb, int sa) : r(sr), g(sg), b(sb), a(sa) {}
-		Color::Color(float sr, float sg, float sb, float sa) : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 0), 0)), a(max(min(int(sa * 255.0f), 0), 0)) {}
-		Color::Color(double sr, double sg, double sb, double sa) : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 0), 0)), a(max(min(int(sa * 255.0), 0), 0)) {}
-		Color::Color(uint32 code) : Value(code) {}
-		Color::operator uint32(void) const { return Value; }
+		Color::Color(void) noexcept {}
+		Color::Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa) noexcept : r(sr), g(sg), b(sb), a(sa) {}
+		Color::Color(int sr, int sg, int sb, int sa) noexcept : r(sr), g(sg), b(sb), a(sa) {}
+		Color::Color(float sr, float sg, float sb, float sa) noexcept : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 0), 0)), a(max(min(int(sa * 255.0f), 0), 0)) {}
+		Color::Color(double sr, double sg, double sb, double sa) noexcept : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 0), 0)), a(max(min(int(sa * 255.0), 0), 0)) {}
+		Color::Color(uint32 code) noexcept : Value(code) {}
+		Color::operator uint32(void) const noexcept { return Value; }
 		FrameShape::FrameShape(const Rectangle & position) : Children(0x10), RenderMode(FrameRenderMode::Normal), Opacity(1.0) { Position = position; }
 		FrameShape::FrameShape(const Rectangle & position, FrameRenderMode mode, double opacity) : Children(0x10), RenderMode(mode), Opacity(opacity) { Position = position; }
 		FrameShape::~FrameShape(void) {}
-		void FrameShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void FrameShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
@@ -93,41 +93,53 @@ namespace Engine
 				Device->EndLayer();
 			}
 		}
-		void FrameShape::ClearCache(void) { for (int i = Children.Length() - 1; i >= 0; i--) Children[i].ClearCache(); }
+		void FrameShape::ClearCache(void) noexcept { for (int i = Children.Length() - 1; i >= 0; i--) Children[i].ClearCache(); }
+		Shape * FrameShape::Clone(void) const
+		{
+			SafePointer<FrameShape> clone = new FrameShape(Position, RenderMode, Opacity);
+			for (int i = 0; i < Children.Length(); i++) {
+				SafePointer<Shape> child = Children[i].Clone();
+				clone->Children.Append(child);
+			}
+			clone->Retain();
+			return clone;
+		}
 		string FrameShape::ToString(void) const { return L"FrameShape"; }
-		GradientPoint::GradientPoint(void) {}
-		GradientPoint::GradientPoint(const UI::Color & color) : Color(color), Position(0.0) {}
-		GradientPoint::GradientPoint(const UI::Color & color, double position) : Color(color), Position(position) {}
+		GradientPoint::GradientPoint(void) noexcept {}
+		GradientPoint::GradientPoint(const UI::Color & color) noexcept : Color(color), Position(0.0) {}
+		GradientPoint::GradientPoint(const UI::Color & color, double position) noexcept : Color(color), Position(position) {}
 		BarShape::BarShape(const Rectangle & position, const Color & color) : GradientAngle(0.0) { Position = position; Gradient << GradientPoint(color); }
 		BarShape::BarShape(const Rectangle & position, const Array<GradientPoint>& gradient, double angle) : Gradient(gradient), GradientAngle(angle) { Position = position; }
 		BarShape::~BarShape(void) {}
-		void BarShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void BarShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			if (!Info) Info.SetReference(Device->CreateBarRenderingInfo(Gradient, GradientAngle));
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->RenderBar(Info, my);
 		}
-		void BarShape::ClearCache(void) { Info.SetReference(0); }
+		void BarShape::ClearCache(void) noexcept { Info.SetReference(0); }
+		Shape * BarShape::Clone(void) const { return new BarShape(Position, Gradient, GradientAngle); }
 		string BarShape::ToString(void) const { return L"BarShape"; }
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
 		IBlurEffectRenderingInfo::~IBlurEffectRenderingInfo(void) {}
 		BlurEffectShape::BlurEffectShape(const Rectangle & position, double power) : BlurPower(power) { Position = position; }
 		BlurEffectShape::~BlurEffectShape(void) {}
-		void BlurEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void BlurEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			if (!Info) Info.SetReference(Device->CreateBlurEffectRenderingInfo(BlurPower));
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->ApplyBlur(Info, my);
 		}
-		void BlurEffectShape::ClearCache(void) { Info.SetReference(0); }
+		void BlurEffectShape::ClearCache(void) noexcept { Info.SetReference(0); }
+		Shape * BlurEffectShape::Clone(void) const { return new BlurEffectShape(Position, BlurPower); }
 		string BlurEffectShape::ToString(void) const { return L"BlurEffectShape"; }
 		ITextureRenderingInfo::~ITextureRenderingInfo(void) {}
 		TextureShape::TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode) : Texture(texture), From(take_from), Mode(mode) { Position = position; if (Texture) Texture->Retain(); }
 		TextureShape::~TextureShape(void) { if (Texture) Texture->Release(); }
-		void TextureShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void TextureShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			if (Texture) {
 				if (!Info) {
@@ -163,43 +175,47 @@ namespace Engine
 				Device->RenderTexture(Info, to);
 			}
 		}
-		void TextureShape::ClearCache(void) { Info.SetReference(0); }
+		void TextureShape::ClearCache(void) noexcept { Info.SetReference(0); }
+		Shape * TextureShape::Clone(void) const { return new TextureShape(Position, Texture, From, Mode); }
 		string TextureShape::ToString(void) const { return L"TextureShape"; }
 		ITextRenderingInfo::~ITextRenderingInfo(void) {}
 		TextShape::TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align) :
 			Text(text), Font(font), TextColor(color), halign(horizontal_align), valign(vertical_align) { Position = position; if (Font) Font->Retain(); }
 		TextShape::~TextShape(void) { if (Font) Font->Release(); }
-		void TextShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void TextShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			if (!Info) Info.SetReference(Device->CreateTextRenderingInfo(Font, Text, int(halign), int(valign), TextColor));
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->RenderText(Info, my, true);
 		}
-		void TextShape::ClearCache(void) { Info.SetReference(0); }
+		void TextShape::ClearCache(void) noexcept { Info.SetReference(0); }
+		Shape * TextShape::Clone(void) const { return new TextShape(Position, Text, Font, TextColor, halign, valign); }
 		string TextShape::ToString(void) const { return L"TextShape"; }
 		ILineRenderingInfo::~ILineRenderingInfo(void) {}
 		LineShape::LineShape(const Rectangle & position, const Color & color, bool dotted) : LineColor(color), Dotted(dotted) { Position = position; }
 		LineShape::~LineShape(void) {}
-		void LineShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void LineShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			if (!Info) Info.SetReference(Device->CreateLineRenderingInfo(LineColor, Dotted));
 			Box my(Position, Outer);
 			Device->RenderLine(Info, my);
 		}
-		void LineShape::ClearCache(void) { Info.SetReference(0); }
+		void LineShape::ClearCache(void) noexcept { Info.SetReference(0); }
+		Shape * LineShape::Clone(void) const { return new LineShape(Position, LineColor, Dotted); }
 		string LineShape::ToString(void) const { return L"LineShape"; }
 		IInversionEffectRenderingInfo::~IInversionEffectRenderingInfo(void) {}
 		InversionEffectShape::InversionEffectShape(const Rectangle & position) { Position = position; }
 		InversionEffectShape::~InversionEffectShape(void) {}
-		void InversionEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const
+		void InversionEffectShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
 		{
 			if (!Info) Info.SetReference(Device->CreateInversionEffectRenderingInfo());
 			Box my(Position, Outer);
 			if (my.Right < my.Left || my.Bottom < my.Top) return;
 			Device->ApplyInversion(Info, my, false);
 		}
-		void InversionEffectShape::ClearCache(void) { Info.SetReference(0); }
+		void InversionEffectShape::ClearCache(void) noexcept { Info.SetReference(0); }
+		Shape * InversionEffectShape::Clone(void) const { return new InversionEffectShape(Position); }
 		string InversionEffectShape::ToString(void) const { return L"InversionEffectShape"; }
 	}
 }

@@ -25,6 +25,10 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     oy = int((frame.size.height - rect.origin.y) * scale);
 }
 
+@interface PopupWindow : NSPanel
+@property(readonly) BOOL canBecomeKeyWindow;
+- (void) resignKeyWindow;
+@end
 @interface EngineRuntimeTimerTarget : NSObject
 {
 @public
@@ -33,9 +37,19 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (instancetype) init;
 @end
+@interface EngineRuntimeEvent : NSObject
+{
+@public
+    Engine::UI::Window * target;
+    int operation;
+    int identifier;
+}
+@end
 @interface EngineRuntimeContentView : NSView
 {
+@public
     Engine::UI::WindowStation * station;
+    id<NSWindowDelegate> window_delegate;
     uint32 last_ldown;
     uint32 last_rdown;
     uint32 dbl;
@@ -43,6 +57,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     bool lwas, rwas, mwas;
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
+- (void) dealloc;
 - (void) drawRect : (NSRect) dirtyRect;
 - (BOOL) acceptsFirstMouse: (NSEvent *) event;
 - (void) setFrame : (NSRect) frame;
@@ -61,6 +76,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (void) flagsChanged: (NSEvent *) event;
 - (void) scrollWheel: (NSEvent *) event;
 - (void) timerFireMethod: (NSTimer *) timer;
+
+- (void) engineEvent: (EngineRuntimeEvent *) event;
 @property(readonly) BOOL acceptsFirstResponder;
 @end
 @interface EngineRuntimeWindowDelegate : NSObject<NSWindowDelegate>
@@ -76,6 +93,16 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (void) close_all: (id) sender;
 @end
 
+@implementation PopupWindow : NSPanel
+- (BOOL) canBecomeKeyWindow
+{
+    return YES;
+}
+- (void) resignKeyWindow
+{
+    [((EngineRuntimeContentView *) [self contentView])->window_delegate windowDidResignKey: nil];
+}
+@end
 @implementation EngineRuntimeTimerTarget : NSObject
 - (instancetype) init
 {
@@ -100,6 +127,11 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     mwas = false;
     dbl = uint32([NSEvent doubleClickInterval] * 1000.0);
     return self;
+}
+- (void) dealloc
+{
+    [window_delegate release];
+    [super dealloc];
 }
 - (void) drawRect : (NSRect) dirtyRect
 {
@@ -310,6 +342,14 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     if (target) target->Timer();
     [self setNeedsDisplay: YES];
 }
+- (void) engineEvent: (EngineRuntimeEvent *) event
+{
+    if (event->operation == 0) {
+        if (event->target) event->target->Destroy();
+    } else if (event->operation == 1) {
+        if (event->target) event->target->RaiseEvent(event->identifier, Engine::UI::Window::Event::Deferred, 0);
+    }
+}
 - (BOOL) acceptsFirstResponder
 {
     return YES;
@@ -331,6 +371,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 {
     station->FocusChanged(true);
     station->CaptureChanged(true);
+    [GetStationWindow(station) makeFirstResponder: [GetStationWindow(station) contentView]];
     [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
 }
 - (void) windowDidResignKey: (NSNotification *) notification
@@ -353,6 +394,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
         [loop performSelector: @selector(performClose:) target: to_close[i] argument: self order: 0 modes: modes];
     }
 }
+@end
+@implementation EngineRuntimeEvent
 @end
 
 namespace Engine
@@ -382,7 +425,7 @@ namespace Engine
 				DesktopWindowFactory(Template::ControlTemplate * Template) : _template(Template) {}
 				virtual Window * CreateDesktopWindow(WindowStation * Station) override
 				{
-					return new Controls::OverlappedWindow(0, Station, _template);
+					return _template ? new Controls::OverlappedWindow(0, Station, _template) : new Controls::OverlappedWindow(0, Station);
 				}
 			};
             class CocoaCursor : public ICursor
@@ -417,12 +460,19 @@ namespace Engine
                 }
             }
 			virtual bool IsNativeStationWrapper(void) const override { return true; }
-			virtual void SetFocus(Window * window) override { if ([_window isKeyWindow]) WindowStation::SetFocus(window); }
+			virtual void SetFocus(Window * window) override { if (window) [_window makeKeyWindow]; if ([_window isKeyWindow]) WindowStation::SetFocus(window); }
 			virtual Window * GetFocus(void) override { if ([_window isKeyWindow]) return WindowStation::GetFocus(); else return 0; }
 			virtual void SetCapture(Window * window) override { if ([_window isKeyWindow]) WindowStation::SetCapture(window); }
 			virtual Window * GetCapture(void) override { if ([_window isKeyWindow]) return WindowStation::GetCapture(); else return 0; }
 			virtual void ReleaseCapture(void) override { WindowStation::SetCapture(0); }
-			virtual void SetExclusiveWindow(Window * window) override { if ([_window isKeyWindow]) WindowStation::SetExclusiveWindow(window); }
+			virtual void SetExclusiveWindow(Window * window) override
+            {
+                if (window) [_window makeKeyWindow];
+                if ([_window isKeyWindow]) {
+                    WindowStation::SetExclusiveWindow(window);
+                    WindowStation::SetFocus(window);
+                }
+            }
 			virtual Window * GetExclusiveWindow(void) override { if ([_window isKeyWindow]) return WindowStation::GetExclusiveWindow(); else return 0; }
 			virtual UI::Point GetCursorPos(void) override
             {
@@ -513,6 +563,52 @@ namespace Engine
 				}
 			}
 			virtual void FocusWindowChanged(void) override { [[_window contentView] setNeedsDisplay: YES]; AnimationStateChanged(); }
+            virtual Box GetDesktopBox(void) override
+            {
+                NSScreen * screen = [_window screen];
+                CGRect rect = [screen frame];
+                CGRect vrect = [screen visibleFrame];
+                double scale = [screen backingScaleFactor];
+                return UI::Box(int(vrect.origin.x * scale), int((rect.size.height - vrect.origin.y - vrect.size.height) * scale),
+                    int((vrect.origin.x + vrect.size.width) * scale), int((rect.size.height - vrect.origin.y) * scale));
+            }
+			virtual Box GetAbsoluteDesktopBox(const Box & box) override
+			{
+                double scale = [_window backingScaleFactor];
+                CGRect frame = [[_window contentView] frame];
+                CGRect rect = NSMakeRect(double(box.Left) / scale, frame.size.height - double(box.Bottom) / scale,
+                    double(box.Right - box.Left) / scale, double(box.Bottom - box.Top) / scale);
+                rect = [_window convertRectToScreen: [[_window contentView] convertRect: rect toView: nil]];
+                NSScreen * screen = [NSScreen mainScreen];
+                CGRect srect = [screen frame];
+                Box result(int(rect.origin.x * scale), int((srect.size.height - rect.origin.y - rect.size.height) * scale), 0, 0);
+                result.Right = result.Left + int(rect.size.width * scale);
+                result.Bottom = result.Top + int(rect.size.height * scale);
+                return result;
+			}
+			virtual void RequireRedraw(void) override { [[_window contentView] setNeedsDisplay: YES]; }
+            virtual void DeferredDestroy(Window * window) override
+            {
+                EngineRuntimeEvent * event = [[EngineRuntimeEvent alloc] init];
+                event->target = window;
+                event->operation = 0;
+                event->identifier = 0;
+                NSRunLoop * loop = [NSRunLoop currentRunLoop];
+                NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+                [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
+                [event release];
+            }
+            virtual void DeferredRaiseEvent(Window * window, int ID) override
+            {
+                EngineRuntimeEvent * event = [[EngineRuntimeEvent alloc] init];
+                event->target = window;
+                event->operation = 1;
+                event->identifier = ID;
+                NSRunLoop * loop = [NSRunLoop currentRunLoop];
+                NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+                [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
+                [event release];
+            }
 
             void LowLevelSetTimer(Window * window, uint32 period)
             {
@@ -715,12 +811,12 @@ namespace Engine
             SafePointer<NativeStation> station = new NativeStation(window, &factory);
             EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
             EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
+            view->window_delegate = delegate;
             [window setAcceptsMouseMovedEvents: YES];
             [window setTabbingMode: NSWindowTabbingModeDisallowed];
             [window setDelegate: delegate];
             [window setContentView: view];
             [view release];
-            [delegate release];
 			Controls::OverlappedWindow * local_desktop = station->GetDesktop()->As<Controls::OverlappedWindow>();
 			local_desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
 			if (!props->Background) {
@@ -734,6 +830,44 @@ namespace Engine
 				local_desktop->SetBackground(Background);
 			}
             station->SetBox(UI::Box(0, 0, client_box.Right - client_box.Left, client_box.Bottom - client_box.Top));
+            station->Retain();
+			return station;
+        }
+        UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
+        {
+            InitializeWindowSystem();
+            Box ClientBox(Position, GetScreenDimensions());
+			Box ClientArea(0, 0, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top);
+            NSScreen * screen = [NSScreen mainScreen];
+            CGRect desktop_rect = [screen frame];
+            double scale = GetScreenScale();
+            NSWindowStyleMask style = NSWindowStyleMaskUtilityWindow;
+            CGRect window_rect = NSMakeRect(0, 0, double(ClientArea.Right) / scale, double(ClientArea.Bottom) / scale);
+            window_rect.origin.x = double(ClientBox.Left) / scale;
+            window_rect.origin.y = desktop_rect.size.height - double(ClientBox.Bottom) / scale;
+            PopupWindow * window = [[PopupWindow alloc] initWithContentRect: window_rect styleMask: style backing: NSBackingStoreBuffered defer: NO];
+            [window setFloatingPanel: YES];
+            [window setHidesOnDeactivate: NO];
+            NativeStation::DesktopWindowFactory factory(Template);
+            SafePointer<NativeStation> station = new NativeStation(window, &factory);
+            EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
+            EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
+            view->window_delegate = delegate;
+            [window setAcceptsMouseMovedEvents: YES];
+            [window setTabbingMode: NSWindowTabbingModeDisallowed];
+            [window setDelegate: delegate];
+            [window setContentView: view];
+            [view release];
+			Controls::OverlappedWindow * local_desktop = station->GetDesktop()->As<Controls::OverlappedWindow>();
+			local_desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
+			{
+				Color BackgroundColor = 0xFF000000;
+				SafePointer<Template::BarShape> Background = new Template::BarShape;
+				Background->Position = UI::Rectangle::Entire();
+				Background->Gradient << Template::GradientPoint(Template::ColorTemplate(BackgroundColor), 0.0);
+				local_desktop->SetBackground(Background);
+			}
+            station->SetBox(ClientArea);
             station->Retain();
 			return station;
         }

@@ -42,6 +42,7 @@ namespace Engine
 			};
 			Controls::OverlappedWindow * CreateFramelessDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+			Controls::OverlappedWindow * CreatePopupDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 
 			void InitializeCodecCollection(void);
 			IResourceLoader * CreateNativeCompatibleResourceLoader(void);
@@ -56,6 +57,7 @@ namespace Engine
 			{
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramelessDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramedDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreatePopupDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 				friend class ContentFrame;
 			private:
 				struct size
@@ -81,6 +83,7 @@ namespace Engine
 				Window * _minimize;
 				Window * _help;
 				size _size;
+				bool _overlaps = true;
 			public:
 				OverlappedWindow(Window * Parent, WindowStation * Station);
 				OverlappedWindow(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);

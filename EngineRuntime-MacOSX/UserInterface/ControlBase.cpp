@@ -215,6 +215,10 @@ namespace Engine
 			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == this) return i;
 			return -1;
 		}
+		void Window::RequireRedraw(void) { Station->RequireRedraw(); }
+		void Window::DeferredDestroy(void) { Station->DeferredDestroy(this); }
+		void Window::DeferredRaiseEvent(int ID) { Station->DeferredRaiseEvent(this, ID); }
+		void Window::PostEvent(int ID) { Station->DeferredRaiseEvent(this, ID); }
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
@@ -252,6 +256,7 @@ namespace Engine
 		}
 		void WindowStation::DestroyStation(void)
 		{
+			Works = false;
 			if (TopLevelWindow.Inner()) DeconstructChain(TopLevelWindow);
 			this->Release();
 		}
@@ -310,8 +315,9 @@ namespace Engine
 		}
 		void WindowStation::GetMouseTarget(Point global, Window ** target, Point * local)
 		{
+			if (!Works) { *target = 0; return; }
 			Window * Target = EnabledHitTest(global);
-			if (ExclusiveWindow) if (!Target->IsGeneralizedParent(ExclusiveWindow)) Target = 0;
+			if (ExclusiveWindow && Target) if (!Target->IsGeneralizedParent(ExclusiveWindow)) Target = 0;
 			*target = Target; *local = CalculateLocalPoint(Target, global);
 		}
 		void WindowStation::SetActiveWindow(Window * window) { if (ActiveWindow.Inner() != window) ActiveWindow.SetRetain(window); if (ActiveWindow) ActiveWindow->SetOrder(Window::DepthOrder::SetFirst); }
@@ -337,9 +343,10 @@ namespace Engine
 		void WindowStation::SetFocus(Window * window)
 		{
 			if (window == FocusedWindow.Inner()) return;
-			if (FocusedWindow.Inner()) FocusedWindow->FocusChanged(false);
+			Window * Old = FocusedWindow;
 			FocusedWindow.SetRetain(window);
-			if (FocusedWindow.Inner()) FocusedWindow->FocusChanged(true);
+			if (Old) Old->FocusChanged(false);
+			if (FocusedWindow) FocusedWindow->FocusChanged(true);
 			FocusWindowChanged();
 		}
 		Window * WindowStation::GetFocus(void)
@@ -349,22 +356,28 @@ namespace Engine
 		void WindowStation::SetCapture(Window * window)
 		{
 			if (window == CaptureWindow.Inner()) return;
-			if (CaptureWindow.Inner()) CaptureWindow->CaptureChanged(false);
+			Window * Old = CaptureWindow;
 			CaptureWindow.SetRetain(window);
-			if (CaptureWindow.Inner()) {
-				CaptureWindow->CaptureChanged(true);
-			}
+			if (Old) Old->CaptureChanged(false);
+			if (CaptureWindow) CaptureWindow->CaptureChanged(true);
 			MouseMove(GetCursorPos());
 		}
 		Window * WindowStation::GetCapture(void) { return CaptureWindow; }
 		void WindowStation::ReleaseCapture(void) { SetCapture(0); }
-		void WindowStation::SetExclusiveWindow(Window * window) { if (ExclusiveWindow) ExclusiveWindow->LostExclusiveMode(); ExclusiveWindow.SetRetain(window); MouseMove(GetCursorPos()); }
+		void WindowStation::SetExclusiveWindow(Window * window)
+		{
+			Window * Old = ExclusiveWindow;
+			ExclusiveWindow.SetRetain(window);
+			if (Old) Old->LostExclusiveMode();
+			MouseMove(GetCursorPos());
+		}
 		Window * WindowStation::GetExclusiveWindow(void) { return ExclusiveWindow; }
 		void WindowStation::FocusChanged(bool got_focus)
 		{
 			if (!got_focus) {
-				if (FocusedWindow.Inner()) FocusedWindow->FocusChanged(false);
+				Window * Old = FocusedWindow;
 				FocusedWindow.SetReference(0);
+				if (Old) Old->FocusChanged(false);
 				FocusWindowChanged();
 			}
 		}
@@ -372,12 +385,14 @@ namespace Engine
 		{
 			if (!got_capture) {
 				if (CaptureWindow.Inner()) {
-					CaptureWindow->CaptureChanged(false);
+					Window * Old = CaptureWindow;
 					CaptureWindow.SetReference(0);
+					Old->CaptureChanged(false);
 				}
 				if (ExclusiveWindow.Inner()) {
-					ExclusiveWindow->LostExclusiveMode();
+					Window * Old = ExclusiveWindow;
 					ExclusiveWindow.SetReference(0);
+					Old->LostExclusiveMode();
 				}
 			}
 		}
@@ -520,6 +535,11 @@ namespace Engine
 		Window::RefreshPeriod WindowStation::GetRefreshRate(void) { return Window::RefreshPeriod::None; }
 		void WindowStation::AnimationStateChanged(void) {}
 		void WindowStation::FocusWindowChanged(void) {}
+		Box WindowStation::GetDesktopBox(void) { return Position; }
+		Box WindowStation::GetAbsoluteDesktopBox(const Box & box) { return box; }
+		void WindowStation::RequireRedraw(void) {}
+		void WindowStation::DeferredDestroy(Window * window) {}
+		void WindowStation::DeferredRaiseEvent(Window * window, int ID) {}
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
