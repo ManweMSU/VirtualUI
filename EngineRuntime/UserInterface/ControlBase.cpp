@@ -216,9 +216,9 @@ namespace Engine
 			return -1;
 		}
 		void Window::RequireRedraw(void) { Station->RequireRedraw(); }
-		void Window::DeployedDestroy(void) { Station->DeployedDestroy(this); }
-		void Window::DeployedRaiseEvent(int ID) { Station->DeployedRaiseEvent(this, ID); }
-		void Window::PostEvent(int ID) { Station->DeployedRaiseEvent(this, ID); }
+		void Window::DeferredDestroy(void) { Station->DeferredDestroy(this); }
+		void Window::DeferredRaiseEvent(int ID) { Station->DeferredRaiseEvent(this, ID); }
+		void Window::PostEvent(int ID) { Station->DeferredRaiseEvent(this, ID); }
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
@@ -538,8 +538,8 @@ namespace Engine
 		Box WindowStation::GetDesktopBox(void) { return Position; }
 		Box WindowStation::GetAbsoluteDesktopBox(const Box & box) { return box; }
 		void WindowStation::RequireRedraw(void) {}
-		void WindowStation::DeployedDestroy(Window * window) {}
-		void WindowStation::DeployedRaiseEvent(Window * window, int ID) {}
+		void WindowStation::DeferredDestroy(Window * window) {}
+		void WindowStation::DeferredRaiseEvent(Window * window, int ID) {}
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}

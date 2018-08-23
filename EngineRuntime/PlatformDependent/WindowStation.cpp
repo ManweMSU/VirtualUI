@@ -163,8 +163,8 @@ namespace Engine
 				}
 			}
 		}
-		void HandleWindowStation::DeployedDestroy(Window * window) { PostMessageW(_window, ERT_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
-		void HandleWindowStation::DeployedRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERT_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
+		void HandleWindowStation::DeferredDestroy(Window * window) { PostMessageW(_window, ERT_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
+		void HandleWindowStation::DeferredRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERT_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
@@ -246,7 +246,7 @@ namespace Engine
 			} else if (Msg == ERT_RAISEEVENT) {
 				Window * window = reinterpret_cast<Window *>(WParam);
 				if (window) {
-					window->RaiseEvent(int(LParam), Window::Event::Deployed, 0);
+					window->RaiseEvent(int(LParam), Window::Event::Deferred, 0);
 					window->RequireRedraw();
 				}
 			}

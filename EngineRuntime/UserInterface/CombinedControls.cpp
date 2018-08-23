@@ -234,7 +234,7 @@ namespace Engine
 			Window * ComboBox::FindChild(int _ID) { if (ID && ID == _ID) return this; else return 0; }
 			void ComboBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle ComboBox::GetRectangle(void) { return ControlPosition; }
-			void ComboBox::RaiseEvent(int _ID, Event event, Window * sender) { if (_ID == 1 && event == Event::Deployed) GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
+			void ComboBox::RaiseEvent(int _ID, Event event, Window * sender) { if (_ID == 1 && event == Event::Deferred) GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
 			void ComboBox::FocusChanged(bool got_focus) { if (!got_focus && _list && _list->GetFocus() != _list) _list->GetStation()->SetExclusiveWindow(0); }
 			void ComboBox::CaptureChanged(bool got_capture) { if (!got_capture && (_state & 0xF) == 1) _state = 0; }
 			void ComboBox::LeftButtonDown(Point at)
@@ -465,7 +465,7 @@ namespace Engine
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
 			void ComboBox::ComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeployedDestroy(); _owner->SetFocus(); }
+			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); _owner->SetFocus(); }
 			void ComboBox::ComboListBox::LeftButtonUp(Point at)
 			{
 				if (_hot != -1) {
@@ -744,7 +744,7 @@ namespace Engine
 					else if (_ID == 1004) Paste();
 					else if (_ID == 1005) Delete();
 					else GetParent()->RaiseEvent(_ID, Event::Command, this);
-				} else if (event == Event::Deployed && _ID == 1) {
+				} else if (event == Event::Deferred && _ID == 1) {
 					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 				} else GetParent()->RaiseEvent(_ID, event, sender);
 			}
@@ -1224,7 +1224,7 @@ namespace Engine
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
 			void TextComboBox::TextComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeployedDestroy(); _owner->SetFocus(); }
+			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); _owner->SetFocus(); }
 			void TextComboBox::TextComboListBox::LeftButtonUp(Point at)
 			{
 				if (_hot != -1) {

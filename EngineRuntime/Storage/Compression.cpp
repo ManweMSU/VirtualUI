@@ -300,7 +300,7 @@ namespace Engine
 				if (!Result) throw OutOfMemoryException();
 				try {
 					Code Input;
-					LempelZivWelchDictionaryItem Deployed;
+					LempelZivWelchDictionaryItem Deferred;
 					while (Source.Pointer() < Source.Length()) {
 						const LempelZivWelchDictionaryItem * Node = 0, * Last = 0;
 						Code Read;
@@ -314,8 +314,8 @@ namespace Engine
 						} while (Node && Source.Pointer() < Source.Length());
 						if (Source.Pointer() < Source.Length()) {
 							Result->Write(Last->ReplaceWith);
-							if (Deployed.Word.Length()) {
-								Dictionary << Deployed;
+							if (Deferred.Word.Length()) {
+								Dictionary << Deferred;
 								Length++;
 								if (Length == Dimension) {
 									Dimension <<= 1;
@@ -323,14 +323,14 @@ namespace Engine
 									Dictionary.Append(0);
 								}
 							}
-							Deployed = LempelZivWelchDictionaryItem{ Input, Code(Length, BitsPerWord) };
+							Deferred = LempelZivWelchDictionaryItem{ Input, Code(Length, BitsPerWord) };
 						} else {
 							if (Node != 0) {
 								Result->Write(Node->ReplaceWith);
 							} else {
 								Result->Write(Last->ReplaceWith);
-								if (Deployed.Word.Length()) {
-									Dictionary << Deployed;
+								if (Deferred.Word.Length()) {
+									Dictionary << Deferred;
 									Length++;
 									if (Length == Dimension) {
 										Dimension <<= 1;
