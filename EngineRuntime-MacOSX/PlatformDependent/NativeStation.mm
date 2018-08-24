@@ -82,6 +82,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 @end
 @interface EngineRuntimeWindowDelegate : NSObject<NSWindowDelegate>
 {
+@public
     Engine::UI::WindowStation * station;
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
@@ -364,11 +365,13 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (BOOL) windowShouldClose: (NSWindow *) sender
 {
+    if (!station) return NO;
     station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Close);
     return NO;
 }
 - (void) windowDidBecomeKey: (NSNotification *) notification
 {
+    if (!station) return;
     station->FocusChanged(true);
     station->CaptureChanged(true);
     [GetStationWindow(station) makeFirstResponder: [GetStationWindow(station) contentView]];
@@ -376,6 +379,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) windowDidResignKey: (NSNotification *) notification
 {
+    if (!station) return;
     station->FocusChanged(false);
     station->CaptureChanged(false);
     [[GetStationWindow(station) contentView] keyboardStateInactivate];
@@ -388,10 +392,22 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     NSRunLoop * loop = [NSRunLoop currentRunLoop];
     NSArray<NSWindow *> * windows = [NSApp windows];
     NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
-    Engine::Array<NSWindow *> to_close(0x10);
-    for (int i = 0; i < [windows count]; i++) to_close << [windows objectAtIndex: i];
-    for (int i = 0; i < to_close.Length(); i++) {
-        [loop performSelector: @selector(performClose:) target: to_close[i] argument: self order: 0 modes: modes];
+    Engine::Array<NSWindow *> asked(0x10);
+    while (true) {
+        bool exit = true;
+        for (int i = 0; i < [windows count]; i++) {
+            NSWindow * target = [windows objectAtIndex: i];
+            bool was_asked = false;
+            for (int j = 0; j < asked.Length(); j++) if (asked[j] == target) { was_asked = true; break; }
+            if (was_asked) continue;
+            asked << target;
+            exit = false;
+            if (![target parentWindow]) {
+                [loop performSelector: @selector(performClose:) target: target argument: self order: 0 modes: modes];
+            }
+            break;
+        }
+        if (exit) break;
     }
 }
 @end
@@ -511,6 +527,9 @@ namespace Engine
 	{
         class NativeStation : public WindowStation
 		{
+            friend void InternalShowWindow(UI::WindowStation * Station, bool Show);
+		    friend void ShowWindow(UI::WindowStation * Station, bool Show);
+
 			NSWindow * _window;
 			SafePointer<ICursor> _null;
 			SafePointer<ICursor> _arrow;
@@ -521,6 +540,9 @@ namespace Engine
 			SafePointer<ICursor> _size_left_up_right_down;
 			SafePointer<ICursor> _size_left_down_right_up;
 			SafePointer<ICursor> _size_all;
+            Array<NativeStation *> _slaves;
+            bool _visible = false;
+            NativeStation * _parent = 0;
 			Array<EngineRuntimeTimerTarget *> _timers;
 			SafePointer<Cocoa::QuartzRenderingDevice> RenderingDevice;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
@@ -546,7 +568,7 @@ namespace Engine
             };
             static void FreeDataCallback(void * info, const void * data, size_t size) { free(info); }
 		
-            NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory) : _window(window), WindowStation(factory)
+            NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory) : _window(window), WindowStation(factory), _slaves(0x10), _timers(0x10)
             {
                 RenderingDevice = new Cocoa::QuartzRenderingDevice;
                 SetRenderingDevice(RenderingDevice);
@@ -591,7 +613,13 @@ namespace Engine
 			virtual bool NativeHitTest(const UI::Point & at) override
             {
                 auto box = GetBox();
-                if ([_window isKeyWindow] && at.x >= 0 && at.y >= 0 && at.x < box.Right && at.y < box.Bottom) return true;
+
+                double scale = [_window backingScaleFactor];
+                CGRect frame = [[_window contentView] frame];
+                CGRect rect = NSMakeRect(double(at.x) / scale, frame.size.height - double(at.y) / scale, 0.0, 0.0);
+                rect = [_window convertRectToScreen: [[_window contentView] convertRect: rect toView: nil]];
+                if ([_window isKeyWindow] && at.x >= 0 && at.y >= 0 && at.x < box.Right && at.y < box.Bottom
+                    && [NSWindow windowNumberAtPoint: rect.origin belowWindowWithWindowNumber: 0] == [_window windowNumber]) return true;
                 return false;
             }
 			virtual ICursor * LoadCursor(Streaming::Stream * Source) override
@@ -652,7 +680,20 @@ namespace Engine
 			virtual void SetCursor(ICursor * cursor) override { static_cast<CocoaCursor *>(cursor)->Set(); }
 			virtual void SetTimer(Window * window, uint32 period) override { LowLevelSetTimer(window, period); }
 
-			virtual void OnDesktopDestroy(void) override { [_window close]; DestroyStation(); }
+			virtual void OnDesktopDestroy(void) override
+            {
+                EngineRuntimeWindowDelegate * dlg = ((EngineRuntimeWindowDelegate *) [_window delegate]);
+                if (dlg) dlg->station = 0;
+                for (int i = 0; i < _slaves.Length(); i++) _slaves[i]->GetDesktop()->Destroy();
+                if (_parent) {
+                    for (int i = 0; i < _parent->_slaves.Length(); i++) if (_parent->_slaves[i] == this) {
+                        _parent->_slaves.Remove(i);
+                        break;
+                    }
+                }
+                [_window close];
+                DestroyStation();
+            }
 			virtual void RequireRefreshRate(Window::RefreshPeriod period) override { InternalRate = period; AnimationStateChanged(); }
 			virtual Window::RefreshPeriod GetRefreshRate(void) override { return InternalRate; }
 			virtual void AnimationStateChanged(void) override
@@ -717,6 +758,8 @@ namespace Engine
                 [event release];
             }
 
+            bool IsOnScreen(void) const { if (_parent) return _parent->IsOnScreen() && _visible; else return _visible; }
+            void SetParent(NativeStation * new_parent) { _parent = new_parent; new_parent->_slaves << this; }
             void LowLevelSetTimer(Window * window, uint32 period)
             {
                 if (period) {
@@ -908,14 +951,15 @@ namespace Engine
                 double(parent_box.Right - parent_box.Left) / scale, double(parent_box.Bottom - parent_box.Top) / scale);
             window_rect.origin.x = parent_rect.origin.x + (parent_rect.size.width - window_rect.size.width) / 2.0;
             window_rect.origin.y = parent_rect.origin.y + (parent_rect.size.height - window_rect.size.height) / 2.0;
-            NSWindow * window = [[NSWindow alloc] initWithContentRect: window_rect styleMask: style backing: NSBackingStoreBuffered defer: NO];
-            // set parent structure
+            NSWindow * window = props->ToolWindow ? ([[NSPanel alloc] initWithContentRect: window_rect styleMask: style backing: NSBackingStoreBuffered defer: NO]) :
+                ([[NSWindow alloc] initWithContentRect: window_rect styleMask: style backing: NSBackingStoreBuffered defer: NO]);
             NSString * title = Cocoa::CocoaString(props->Title);
             [window setTitle: title];
             [window setContentMinSize: minimal_rect.size];
             [title release];
             NativeStation::DesktopWindowFactory factory(Template);
             SafePointer<NativeStation> station = new NativeStation(window, &factory);
+            if (ParentStation) station->SetParent(static_cast<NativeStation *>(ParentStation));
             EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
             EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
             view->window_delegate = delegate;
@@ -978,13 +1022,36 @@ namespace Engine
             station->Retain();
 			return station;
         }
+        void InternalShowWindow(UI::WindowStation * Station, bool Show)
+        {
+            NativeStation * st = static_cast<NativeStation *>(Station);
+            if (Show) {
+                NSWindow * obj = st->GetWindow();
+                [obj orderFrontRegardless];
+                if (st->_parent) {
+                    NSWindow * parent_obj = st->_parent->GetWindow();
+                    [parent_obj addChildWindow: obj ordered: NSWindowAbove];
+                }
+                for (int i = 0; i < st->_slaves.Length(); i++) if (st->_slaves[i]->_visible) {
+                    InternalShowWindow(st->_slaves[i], true);
+                }
+            } else {
+                NSWindow * obj = st->GetWindow();
+                for (int i = 0; i < st->_slaves.Length(); i++) {
+                    InternalShowWindow(st->_slaves[i], false);
+                }
+                if (st->_parent) {
+                    NSWindow * parent_obj = st->_parent->GetWindow();
+                    [parent_obj removeChildWindow: obj];
+                }
+                [obj orderOut: nil];
+            }
+        }
 		void ShowWindow(UI::WindowStation * Station, bool Show)
         {
-            if (Show) {
-                [static_cast<NativeStation *>(Station)->GetWindow() orderFrontRegardless];
-            } else {
-                [static_cast<NativeStation *>(Station)->GetWindow() orderOut: nil];
-            }     
+            NativeStation * st = static_cast<NativeStation *>(Station);
+            if (!st->_parent || st->_parent->IsOnScreen()) InternalShowWindow(Station, Show);
+            st->_visible = Show;
         }
 		void EnableWindow(UI::WindowStation * Station, bool Enable) {}
 		void SetWindowTitle(UI::WindowStation * Station, const string & Title)

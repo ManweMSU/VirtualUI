@@ -135,9 +135,13 @@ int Main(void)
     source->Release();
 
     auto Callback2 = new _cb2;
-    auto w4 = Windows::CreateFramedDialog(interface.Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
+    auto templ = interface.Dialog[L"Test3"];
+    auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0);
+    templ->Properties->GetProperty(L"ToolWindow").Set<bool>(true);
+    auto w666 = Windows::CreateFramedDialog(templ, 0, UI::Rectangle::Invalid(), w4->GetStation());
     w4->FindChild(212121)->SetText(req.ToString());
     if (w4) w4->Show(true);
+    if (w666) w666->Show(true);
     
     Windows::RunMessageLoop();
 
