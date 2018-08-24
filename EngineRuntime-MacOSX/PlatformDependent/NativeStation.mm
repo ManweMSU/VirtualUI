@@ -398,6 +398,113 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 @implementation EngineRuntimeEvent
 @end
 
+@interface EngineRuntimeMenuItem : NSView
+{
+@public
+    Engine::Cocoa::QuartzRenderingDevice * device;
+    Engine::UI::Menues::MenuItem * item;
+    int * code;
+    NSMenuItem * server;
+    NSMenu * owner;
+}
+- (void) drawRect : (NSRect) dirtyRect;
+- (void) mouseUp: (NSEvent *) event;
+@end
+@interface EngineRuntimeMenuSeparator : NSView
+{
+@public
+    Engine::Cocoa::QuartzRenderingDevice * device;
+    Engine::UI::Menues::MenuSeparator * item;
+}
+- (void) drawRect : (NSRect) dirtyRect;
+@end
+@implementation EngineRuntimeMenuItem
+- (void) drawRect : (NSRect) dirtyRect
+{
+    auto rect = [self frame];
+    double scale = [[self window] backingScaleFactor];
+    Engine::UI::Box box = Engine::UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
+    CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
+    device->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
+    item->Render(box, [server isHighlighted]);
+}
+- (void) mouseUp: (NSEvent *) event
+{
+    if (!item->Disabled) {
+        *code = item->ID;
+        [owner cancelTracking];
+    }
+}
+@end
+@implementation EngineRuntimeMenuSeparator
+- (void) drawRect : (NSRect) dirtyRect
+{
+    auto rect = [self frame];
+    double scale = [[self window] backingScaleFactor];
+    Engine::UI::Box box = Engine::UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
+    CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
+    device->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
+    item->Render(box, false);
+}
+@end
+
+NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menues::MenuItem * item, NSMenuItem * server)
+{
+    double scale = Engine::UI::Windows::GetScreenScale();
+    EngineRuntimeMenuItem * obj = [[EngineRuntimeMenuItem alloc] init];
+    [obj setFrameSize: NSMakeSize(double(width) / scale, double(item->GetHeight()) / scale)];
+    obj->device = device;
+    obj->item = item;
+    obj->code = code;
+    obj->server = server;
+    obj->owner = owner;
+    return obj;
+}
+NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menues::MenuSeparator * item)
+{
+    double scale = Engine::UI::Windows::GetScreenScale();
+    EngineRuntimeMenuSeparator * obj = [[EngineRuntimeMenuSeparator alloc] init];
+    [obj setFrameSize: NSMakeSize(double(width) / scale, double(item->GetHeight()) / scale)];
+    obj->device = device;
+    obj->item = item;
+    return obj;
+}
+NSMenu * build_engine_menu(NSMenu * owner, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menues::MenuElement> & elements)
+{
+    NSMenu * result = [[NSMenu alloc] initWithTitle: @""];
+    [result setAutoenablesItems: NO];
+    int width = 0;
+    for (int i = 0; i < elements.Length(); i++) {
+        int w = elements[i].GetWidth();
+        if (w > width) width = w;
+    }
+    for (int i = 0; i < elements.Length(); i++) {
+        Engine::UI::Menues::MenuItem * src_item = 0;
+        Engine::UI::Menues::MenuSeparator * src_sep = 0;
+        if (elements[i].IsSeparator()) src_sep = static_cast<Engine::UI::Menues::MenuSeparator *>(elements.ElementAt(i));
+        else src_item = static_cast<Engine::UI::Menues::MenuItem *>(elements.ElementAt(i));
+        NSMenuItem * item = [[NSMenuItem alloc] initWithTitle: @"" action: nil keyEquivalent: @""];
+        if (src_sep || src_item->Disabled) [item setEnabled: NO];
+        if (src_item && src_item->Checked) [item setState: NSControlStateValueOn];
+        NSView * view = 0;
+        if (src_item) {
+            view = create_engine_menu_item(owner ? owner : result, width, code, device, src_item, item);
+        } else if (src_sep) {
+            view = create_engine_menu_separator(width, device, src_sep);
+        }
+        [item setView: view];
+        [view release];
+        if (src_item && src_item->Children.Length()) {
+            NSMenu * sub = build_engine_menu(owner ? owner : result, code, device, src_item->Children);
+            [item setSubmenu: sub];
+            [sub release];
+        }
+        [result addItem: item];
+        [item release];
+    }
+    return result;
+}
+
 namespace Engine
 {
 	namespace NativeWindows
@@ -917,7 +1024,20 @@ namespace Engine
         }
 		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at)
         {
-			return 0;
+            NSWindow * window = static_cast<NativeStation *>(owner->GetStation())->GetWindow();
+            double scale = [window backingScaleFactor];
+            NSView * server = [window contentView];
+            NSRect rect = [server frame];
+            NSPoint point = NSMakePoint(double(at.x / scale), rect.size.height - double(at.y / scale));
+            SafePointer<Cocoa::QuartzRenderingDevice> device = new Cocoa::QuartzRenderingDevice;
+            device->SetTimerValue(0);
+            for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(device);
+            int result = 0;
+            NSMenu * popup = build_engine_menu(0, &result, device, menu->Children);
+            [popup popUpMenuPositioningItem: nil atLocation: point inView: server];
+            [popup release];
+            for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();
+            return result;
         }
 		UI::Box GetScreenDimensions(void)
         {
