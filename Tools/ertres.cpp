@@ -220,7 +220,7 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
             if (reslist.Length()) {
                 for (int i = 0; i < reslist.Length(); i++) {
                     string inner_name = reslist[i].Locale.Length() ? (reslist[i].Name + L"-" + reslist[i].Locale) : reslist[i].Name;
-                    script << L"\"" + inner_name + L"\" RCDATA \"" + make_lexem(reslist[i].SourcePath) + L"\"" << IO::NewLineChar;
+                    script << L"" + inner_name + L" RCDATA \"" + make_lexem(reslist[i].SourcePath) + L"\"" << IO::NewLineChar;
                 }
                 script << IO::NewLineChar;
             }

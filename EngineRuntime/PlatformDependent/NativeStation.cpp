@@ -110,11 +110,16 @@ namespace Engine
 		}
 		class NativeStation : public HandleWindowStation
 		{
+			friend LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+			friend void EnableWindow(UI::WindowStation * Station, bool Enable);
 		private:
 			SafePointer<IDXGISwapChain1> SwapChain;
 			SafePointer<ID2D1DeviceContext> DeviceContext;
 			SafePointer<Direct2D::D2DRenderDevice> RenderingDevice;
 			int MinWidth = 0, MinHeight = 0;
+			Array<NativeStation *> _slaves;
+			NativeStation * _parent = 0;
+			int last_x = 0x80000000, last_y = 0x80000000;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
 
 			class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
@@ -129,7 +134,7 @@ namespace Engine
 				}
 			};
 		public:
-			NativeStation(HWND Handle, Template::ControlTemplate * Template) : HandleWindowStation(Handle, &DesktopWindowFactory(Template))
+			NativeStation(HWND Handle, Template::ControlTemplate * Template) : HandleWindowStation(Handle, &DesktopWindowFactory(Template)), _slaves(0x10)
 			{
 				Direct3D::CreateD2DDeviceContextForWindow(Handle, DeviceContext.InnerRef(), SwapChain.InnerRef());
 				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
@@ -139,6 +144,13 @@ namespace Engine
 			virtual bool IsNativeStationWrapper(void) const override { return true; }
 			virtual void OnDesktopDestroy(void) override
 			{
+				HWND parent_window = _parent ? _parent->GetHandle() : 0;
+				if (parent_window) {
+					NativeStation * parent = _parent;
+					for (int i = 0; i < parent->_slaves.Length(); i++) if (parent->_slaves[i] == this) { parent->_slaves.Remove(i); break; }
+				}
+				Array<NativeStation *> slaves = _slaves;
+				for (int i = 0; i < slaves.Length(); i++) slaves[i]->GetDesktop()->Destroy();
 				::DestroyWindow(_window);
 				DestroyStation();
 			}
@@ -192,6 +204,7 @@ namespace Engine
 			HWND GetHandle(void) const { return _window; }
 			int & GetMinWidth(void) { return MinWidth; }
 			int & GetMinHeight(void) { return MinHeight; }
+			void MakeParent(NativeStation * child) { _slaves << child; child->_parent = this; }
 		};
 		UI::WindowStation * CreateOverlappedWindow(Template::ControlTemplate * Template, const UI::Rectangle & Position, WindowStation * ParentStation)
 		{
@@ -228,6 +241,7 @@ namespace Engine
 			if (!props->MinimizeButton) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_MINIMIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 			if (!props->Sizeble) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_SIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 			SafePointer<NativeStation> Station = new NativeStation(Handle, Template);
+			if (ParentStation) static_cast<NativeStation *>(ParentStation)->MakeParent(Station);
 			SetWindowLongPtrW(Handle, 0, reinterpret_cast<LONG_PTR>(Station.Inner()));
 			Station->GetMinWidth() = mRect.right - mRect.left;
 			Station->GetMinHeight() = mRect.bottom - mRect.top;
@@ -288,7 +302,8 @@ namespace Engine
 		}
 		void EnableWindow(UI::WindowStation * Station, bool Enable)
 		{
-			::EnableWindow(reinterpret_cast<NativeStation *>(Station)->GetHandle(), Enable);
+			auto st = static_cast<NativeStation *>(Station);
+			::EnableWindow(st->GetHandle(), Enable);
 		}
 		void SetWindowTitle(UI::WindowStation * Station, const string & Title)
 		{
@@ -366,25 +381,6 @@ namespace Engine
 				DispatchMessageW(&Msg);
 			}
 		}
-		int RunModalDialog(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, UI::Window * Parent)
-		{
-			auto station = Parent ? static_cast<NativeStation *>(Parent->GetStation()) : 0;
-			HWND parent = station ? station->GetHandle() : 0;
-			auto dialog = Windows::CreateFramedDialog(Template, Callback, Rectangle::Invalid(), station);
-			auto dialog_station = static_cast<NativeStation *>(dialog->GetStation());
-			SetParent(dialog_station->GetHandle(), parent);
-			dialog->Show(true);
-			EnableWindow(parent, false);
-			MSG Msg;
-			while (GetMessageW(&Msg, 0, 0, 0)) {
-				TranslateMessage(&Msg);
-				DispatchMessageW(&Msg);
-			}
-			EnableWindow(parent, true);
-			dialog->Destroy();
-			return int(Msg.wParam);
-		}
-		void ExitModal(int code) { PostQuitMessage(code); }
 		void ExitMainLoop(void) { PostQuitMessage(0); }
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
@@ -395,6 +391,27 @@ namespace Engine
 					station->ResizeContent();
 					Result = station->ProcessWindowEvents(Msg, WParam, LParam);
 					station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Move);
+				}
+			} else if (Msg == WM_MOVE) {
+				if (station) {
+					Result = station->ProcessWindowEvents(Msg, WParam, LParam);
+					auto p = MAKEPOINTS(LParam);
+					if (station->last_x != 0x80000000 && station->last_y != 0x80000000) {
+						int dx = p.x - station->last_x;
+						int dy = p.y - station->last_y;
+						for (int i = 0; i < station->_slaves.Length(); i++) {
+							HWND child = station->_slaves[i]->GetHandle();
+							RECT rect;
+							GetWindowRect(child, &rect);
+							SetWindowPos(child, 0, rect.left + dx, rect.top + dy, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+						}
+					}
+					station->last_x = p.x;
+					station->last_y = p.y;
+				}
+			} else if (Msg == WM_ENABLE) {
+				for (int i = 0; i < station->_slaves.Length(); i++) {
+					::EnableWindow(station->_slaves[i]->GetHandle(), WParam ? true : false);
 				}
 			} else if (Msg == WM_SYSCOMMAND) {
 				if (WParam == SC_CONTEXTHELP) {

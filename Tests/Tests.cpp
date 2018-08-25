@@ -512,6 +512,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
 			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
 			auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
+			auto w666 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], 0, UI::Rectangle::Invalid(), w4->GetStation());
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 			w2->SetText(L"window");
 
@@ -529,6 +530,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w3->Show(true);
 			w4->Show(true);
 			w5->Show(true);
+			w666->Show(true);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}

@@ -5,8 +5,9 @@
 
 #undef ZeroMemory
 
-#define ERT_DESTROYWINDOW	(WM_USER + 0x001)
-#define ERT_RAISEEVENT		(WM_USER + 0x002)
+#define ERTM_DESTROYWINDOW	(WM_USER + 0x001)
+#define ERTM_RAISEEVENT		(WM_USER + 0x002)
+#define ERTM_EXECUTEJOB		(WM_USER + 0x003)
 
 namespace Engine
 {
@@ -163,8 +164,10 @@ namespace Engine
 				}
 			}
 		}
-		void HandleWindowStation::DeferredDestroy(Window * window) { PostMessageW(_window, ERT_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
-		void HandleWindowStation::DeferredRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERT_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
+		void HandleWindowStation::DeferredDestroy(Window * window) { PostMessageW(_window, ERTM_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
+		void HandleWindowStation::DeferredRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERTM_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
+		void HandleWindowStation::PostJob(Tasks::ThreadJob * job) { job->Retain(); PostMessageW(_window, ERTM_EXECUTEJOB, 0, reinterpret_cast<eint>(job)); }
+		HWND HandleWindowStation::Handle(void) { return _window; }
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
@@ -240,15 +243,19 @@ namespace Engine
 			} else if (Msg == WM_TIMER) {
 				int index = int(WParam) - 2;
 				if (index >= 0 && index < _timers.Length() && _timers[index]) _timers[index]->Timer();
-			} else if (Msg == ERT_DESTROYWINDOW) {
+			} else if (Msg == ERTM_DESTROYWINDOW) {
 				Window * window = reinterpret_cast<Window *>(WParam);
 				if (window) window->Destroy();
-			} else if (Msg == ERT_RAISEEVENT) {
+			} else if (Msg == ERTM_RAISEEVENT) {
 				Window * window = reinterpret_cast<Window *>(WParam);
 				if (window) {
 					window->RaiseEvent(int(LParam), Window::Event::Deferred, 0);
 					window->RequireRedraw();
 				}
+			} else if (Msg == ERTM_EXECUTEJOB) {
+				Tasks::ThreadJob * job = reinterpret_cast<Tasks::ThreadJob *>(LParam);
+				job->DoJob(0);
+				job->Release();
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);
 		}

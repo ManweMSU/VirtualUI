@@ -687,7 +687,7 @@ namespace Engine
 				chars.SetLength(text.GetEncodedLength(Encoding::UTF32));
 				text.Encode(chars.GetBuffer(), Encoding::UTF32, false);
 				int sp = 0;
-				bool nle = false;
+				bool nle = true;
 				while (sp < chars.Length()) {
 					int ep = sp;
 					while (ep < chars.Length() && chars[ep] != L'\n') ep++;

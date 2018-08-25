@@ -199,6 +199,9 @@
     <ClInclude Include="UserInterface\CombinedControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\Application.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -356,6 +359,9 @@
     </ClCompile>
     <ClCompile Include="UserInterface\CombinedControls.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Application.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

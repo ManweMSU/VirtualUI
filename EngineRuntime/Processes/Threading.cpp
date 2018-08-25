@@ -46,10 +46,13 @@ namespace Engine
 		DWORD WINAPI EngineThreadProc(LPVOID Argument)
 		{
 			NewThreadInfo * info = reinterpret_cast<NewThreadInfo *>(Argument);
+			CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 			ThreadRoutine routine = info->routine;
 			void * argument = info->argument;
 			delete info;
-			return DWORD(routine(argument));
+			auto result = DWORD(routine(argument));
+			CoUninitialize();
+			return result;
 		}
 	}
 	Thread * CreateThread(ThreadRoutine routine, void * argument, uint32 stack_size)

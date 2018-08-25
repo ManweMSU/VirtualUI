@@ -2,6 +2,7 @@
 
 #include "../EngineBase.h"
 #include "../ImageCodec/CodecBase.h"
+#include "../Miscellaneous/ThreadPool.h"
 #include "ShapeBase.h"
 #include "Templates.h"
 #include "Animation.h"
@@ -60,6 +61,7 @@ namespace Engine
 			virtual bool IsVisible(void);
 			virtual bool IsTabStop(void);
 			virtual bool IsOverlapped(void);
+			virtual bool IsNeverActive(void);
 			virtual void SetID(int ID);
 			virtual int GetID(void);
 			virtual Window * FindChild(int ID);
@@ -272,6 +274,7 @@ namespace Engine
 			virtual void RequireRedraw(void);
 			virtual void DeferredDestroy(Window * window);
 			virtual void DeferredRaiseEvent(Window * window, int ID);
+			virtual void PostJob(Tasks::ThreadJob * job);
 
 			VisualStyles & GetVisualStyles(void);
 		};
@@ -299,6 +302,7 @@ namespace Engine
 			virtual Rectangle GetRectangle(void) override;
 			virtual Box GetPosition(void) override;
 			virtual bool IsOverlapped(void) override;
+			virtual bool IsNeverActive(void) override;
 		};
 		class ZeroArgumentProvider : public IArgumentProvider
 		{

@@ -32,6 +32,7 @@
     <ClInclude Include="Network\HTTP.h" />
     <ClInclude Include="Network\Punycode.h" />
     <ClInclude Include="Network\Socket.h" />
+    <ClInclude Include="PlatformDependent\Application.h" />
     <ClInclude Include="PlatformDependent\Assembly.h" />
     <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="PlatformDependent\Clipboard.h" />
@@ -87,6 +88,7 @@
     <ClCompile Include="Network\HTTP.cpp" />
     <ClCompile Include="Network\Punycode.cpp" />
     <ClCompile Include="Network\Socket.cpp" />
+    <ClCompile Include="PlatformDependent\Application.cpp" />
     <ClCompile Include="PlatformDependent\Assembly.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="PlatformDependent\Clipboard.cpp" />

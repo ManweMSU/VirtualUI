@@ -50,6 +50,9 @@ namespace Engine
 			virtual void SetTimer(Window * window, uint32 period) override;
 			virtual void DeferredDestroy(Window * window) override;
 			virtual void DeferredRaiseEvent(Window * window, int ID) override;
+			virtual void PostJob(Tasks::ThreadJob * job) override;
+
+			HWND Handle(void);
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};

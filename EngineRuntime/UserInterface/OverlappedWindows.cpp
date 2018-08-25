@@ -129,7 +129,8 @@ namespace Engine
 					return _visible;
 				}
 			}
-			bool OverlappedWindow::IsOverlapped(void) { return _overlaps; }
+			bool OverlappedWindow::IsOverlapped(void) { return true; }
+			bool OverlappedWindow::IsNeverActive(void) { return !_overlaps; }
 			void OverlappedWindow::SetPosition(const Box & box)
 			{
 				if (GetStation()->IsNativeStationWrapper()) {
