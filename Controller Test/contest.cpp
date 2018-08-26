@@ -233,6 +233,10 @@ public:
 	{
 
 	}
+	virtual void ShowProperties(void) override
+	{
+
+	}
 };
 
 int Main(void)

@@ -18,6 +18,7 @@ namespace Engine
 		void IApplicationCallback::OpenSomeFile(void) {}
 		bool IApplicationCallback::OpenExactFile(const string & path) { return false; }
 		void IApplicationCallback::InvokeHelp(void) {}
+		void IApplicationCallback::ShowProperties(void) {}
 		FileFormat::FileFormat(void) : Extensions(0x4) {}
 		OpenFileInfo::OpenFileInfo(void) : Formats(0x8), Files(0x8) {}
 		SaveFileInfo::SaveFileInfo(void) : Formats(0x8) {}

@@ -10,7 +10,7 @@ namespace Engine
 		enum class MessageBoxButtonSet { Ok, OkCancel, YesNo, YesNoCancel };
 		enum class MessageBoxStyle { Error, Warning, Information };
 		enum class MessageBoxResult { Ok, Cancel, Yes, No };
-		enum class ApplicationAbility { CreateFiles, OpenFiles, ShowHelp };
+		enum class ApplicationAbility { CreateFiles, OpenFiles, ShowHelp, ShowProperties };
 		struct FileFormat
 		{
 			string Description;
@@ -53,6 +53,7 @@ namespace Engine
 			virtual void OpenSomeFile(void);
 			virtual bool OpenExactFile(const string & path);
 			virtual void InvokeHelp(void);
+			virtual void ShowProperties(void);
 		};
 		class ApplicationController : public Object
 		{
