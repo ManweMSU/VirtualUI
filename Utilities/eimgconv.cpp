@@ -113,6 +113,8 @@ int Main(void)
             console << L"No output in command line." << IO::NewLineChar;
             return 1;
         }
+        source = IO::ExpandPath(source);
+        output = IO::ExpandPath(output);
         UI::Windows::InitializeCodecCollection();
         try {
             SafePointer<Image> image = new Image;

@@ -622,7 +622,9 @@ int Main(void)
                 }
                 {
                     SafePointer<RegistryNode> frmdir = prj_cfg->OpenNode(L"FileFormats");
-                    if (!index_file_formats(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
+                    if (frmdir) {
+                        if (!index_file_formats(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
+                    }
                 }
                 string manifest = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".manifest";
                 if (!asm_manifest(manifest, console)) return 1;
@@ -654,7 +656,9 @@ int Main(void)
                 }
                 {
                     SafePointer<RegistryNode> frmdir = prj_cfg->OpenNode(L"FileFormats");
-                    if (!index_file_formats(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
+                    if (frmdir) {
+                        if (!index_file_formats(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
+                    }
                 }
                 string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
                 string plist = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".plist";

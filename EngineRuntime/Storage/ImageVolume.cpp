@@ -76,10 +76,11 @@ namespace Engine
 						uint32 clr = reinterpret_cast<const uint32 *>(conv->GetData())[j];
 						if ((clr & 0xFF000000) != 0xFF000000) alphaused = true;
 						if (clrused.Length() <= 0x100) {
+							bool found = false;
 							for (int k = 0; k < clrused.Length(); k++) {
-								if (clrused[k] == clr) break;
+								if (clrused[k] == clr) { found = true; break; }
 							}
-							clrused << clr;
+							if (!found) clrused << clr;
 						}
 					}
 					Streaming::MemoryStream data(0x10000);
@@ -222,7 +223,7 @@ namespace Engine
 						plt.SetLength(clrused);
 						dec.Read(plt.GetBuffer(), 4 * clrused);
 						for (int j = 0; j < s; j++) {
-							uint8 v;
+							uint32 v = 0;
 							dec.Read(&v, 1);
 							pixel[j].Value = plt[v];
 						}
