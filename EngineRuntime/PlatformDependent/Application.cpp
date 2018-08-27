@@ -9,6 +9,24 @@
 
 #undef CreateWindow
 
+#define BEGIN_GLOBAL_MODAL_SESSION(hwnd_for) \
+::Engine::Array<HWND> enable(0x10); \
+HWND prev = 0; \
+DWORD pid = GetCurrentProcessId(); \
+do { \
+	prev = FindWindowExW(0, prev, 0, 0); \
+	if (prev) { \
+		DWORD wpid; \
+		GetWindowThreadProcessId(prev, &wpid); \
+		if (wpid == pid && prev != hwnd_for && ::IsWindowEnabled(prev)) { \
+			enable << prev; \
+			::EnableWindow(prev, FALSE); \
+		} \
+	} \
+} while (prev);
+#define END_GLOBAL_MODAL_SESSION \
+for (int i = 0; i < enable.Length(); i++) ::EnableWindow(enable[i], TRUE);
+
 namespace Engine
 {
 	namespace Application
@@ -298,15 +316,9 @@ namespace Engine
 					return dialog;
 				} else {
 					dialog->Show(true);
-					Array<UI::Window *> enable(0x10);
-					for (int i = 0; i < _main_windows.Length(); i++) {
-						if (_main_windows[i]->IsEnabled()) {
-							enable << _main_windows[i];
-							_main_windows[i]->Enable(false);
-						}
-					}
+					BEGIN_GLOBAL_MODAL_SESSION(static_cast<UI::HandleWindowStation *>(dialog->GetStation())->Handle())
 					UI::Windows::RunMessageLoop();
-					for (int i = 0; i < enable.Length(); i++) enable[i]->Enable(true);
+					END_GLOBAL_MODAL_SESSION
 					dialog->Destroy();
 					return 0;
 				}
@@ -322,15 +334,9 @@ namespace Engine
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(OpenFileProc, data);
 				} else {
-					Array<UI::Window *> enable(0x10);
-					for (int i = 0; i < _main_windows.Length(); i++) {
-						if (_main_windows[i]->IsEnabled()) {
-							enable << _main_windows[i];
-							_main_windows[i]->Enable(false);
-						}
-					}
+					BEGIN_GLOBAL_MODAL_SESSION(0)
 					OpenFileProc(data);
-					for (int i = 0; i < enable.Length(); i++) enable[i]->Enable(true);
+					END_GLOBAL_MODAL_SESSION
 				}
 			}
 			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
@@ -344,15 +350,9 @@ namespace Engine
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(SaveFileProc, data);
 				} else {
-					Array<UI::Window *> enable(0x10);
-					for (int i = 0; i < _main_windows.Length(); i++) {
-						if (_main_windows[i]->IsEnabled()) {
-							enable << _main_windows[i];
-							_main_windows[i]->Enable(false);
-						}
-					}
+					BEGIN_GLOBAL_MODAL_SESSION(0)
 					SaveFileProc(data);
-					for (int i = 0; i < enable.Length(); i++) enable[i]->Enable(true);
+					END_GLOBAL_MODAL_SESSION
 				}
 			}
 			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
@@ -366,15 +366,9 @@ namespace Engine
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(ChooseDirectoryProc, data);
 				} else {
-					Array<UI::Window *> enable(0x10);
-					for (int i = 0; i < _main_windows.Length(); i++) {
-						if (_main_windows[i]->IsEnabled()) {
-							enable << _main_windows[i];
-							_main_windows[i]->Enable(false);
-						}
-					}
+					BEGIN_GLOBAL_MODAL_SESSION(0)
 					ChooseDirectoryProc(data);
-					for (int i = 0; i < enable.Length(); i++) enable[i]->Enable(true);
+					END_GLOBAL_MODAL_SESSION
 				}
 			}
 			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, Tasks::ThreadJob * OnExit) override
@@ -392,15 +386,9 @@ namespace Engine
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(MessageBoxProc, data, 0x40000);
 				} else {
-					Array<UI::Window *> enable(0x10);
-					for (int i = 0; i < _main_windows.Length(); i++) {
-						if (_main_windows[i]->IsEnabled()) {
-							enable << _main_windows[i];
-							_main_windows[i]->Enable(false);
-						}
-					}
+					BEGIN_GLOBAL_MODAL_SESSION(0)
 					MessageBoxProc(data);
-					for (int i = 0; i < enable.Length(); i++) enable[i]->Enable(true);
+					END_GLOBAL_MODAL_SESSION
 				}
 			}
 			virtual void SetCallback(IApplicationCallback * callback) override { _callback = callback; }
