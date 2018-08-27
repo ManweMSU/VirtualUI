@@ -286,6 +286,7 @@ namespace Engine
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner() && NativeHitTest(at)) return TopLevelWindow->HitTest(at); else return 0; }
 		Window * WindowStation::EnabledHitTest(Point at)
 		{
+			if (!TopLevelWindow || !NativeHitTest(at)) return 0;
 			Window * target = TopLevelWindow->HitTest(at);
 			while (target && !target->IsEnabled()) target = target->Parent;
 			return target;

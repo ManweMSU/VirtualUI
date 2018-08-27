@@ -156,6 +156,13 @@ public:
 			Info->Formats.LastElement().Extensions << L"bmp";
 			Info->Formats.LastElement().Extensions << L"dib";
 			Info->Formats.LastElement().Extensions << L"rle";
+			Info->Formats << Application::FileFormat();
+			Info->Formats.LastElement().Description = L"Tagged Image File Format";
+			Info->Formats.LastElement().Extensions << L"tif";
+			Info->Formats.LastElement().Extensions << L"tiff";
+			Info->Formats << Application::FileFormat();
+			Info->Formats.LastElement().Description = L"Windows Shell Script";
+			Info->Formats.LastElement().Extensions << L"bat";
 			OpenFileJob * job = new OpenFileJob;
 			job->info = Info;
 			job->output = window->FindChild(301);
@@ -183,6 +190,13 @@ public:
 			Info->Formats.LastElement().Extensions << L"bmp";
 			Info->Formats.LastElement().Extensions << L"dib";
 			Info->Formats.LastElement().Extensions << L"rle";
+			Info->Formats << Application::FileFormat();
+			Info->Formats.LastElement().Description = L"Tagged Image File Format";
+			Info->Formats.LastElement().Extensions << L"tif";
+			Info->Formats.LastElement().Extensions << L"tiff";
+			Info->Formats << Application::FileFormat();
+			Info->Formats.LastElement().Description = L"Windows Shell Script";
+			Info->Formats.LastElement().Extensions << L"bat";
 			SaveFileJob * job = new SaveFileJob;
 			job->info = Info;
 			job->output = window->FindChild(301);
@@ -223,19 +237,37 @@ public:
 	}
 	virtual void OpenSomeFile(void) override
 	{
-
+		Application::OpenFileInfo Info;
+		Application::GetController()->SystemOpenFileDialog(&Info, 0, 0);
+		if (Info.Files.Length()) OpenExactFile(Info.Files.FirstElement());
 	}
 	virtual bool OpenExactFile(const string & path) override
 	{
-		return false;
+		MainDelegate * main_delegate = new MainDelegate;
+		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
+		w->AddDialogStandartAccelerators();
+		w->FindChild(301)->SetText(L"open file:\n" + path);
+		w->Show(true);
+		Application::GetController()->RegisterMainWindow(w);
+		return true;
 	}
 	virtual void InvokeHelp(void) override
 	{
-
+		MainDelegate * main_delegate = new MainDelegate;
+		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
+		w->AddDialogStandartAccelerators();
+		w->FindChild(301)->SetText(L"show help");
+		w->Show(true);
+		Application::GetController()->RegisterMainWindow(w);
 	}
 	virtual void ShowProperties(void) override
 	{
-
+		MainDelegate * main_delegate = new MainDelegate;
+		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
+		w->AddDialogStandartAccelerators();
+		w->FindChild(301)->SetText(L"show properties");
+		w->Show(true);
+		Application::GetController()->RegisterMainWindow(w);
 	}
 };
 
@@ -256,7 +288,6 @@ int Main(void)
 	SafePointer< Array<string> > args = GetCommandLine();
 	args->RemoveFirst();
 	Application::CreateController(app_callback, *args);
-
 	Application::GetController()->RunApplication();
 	return 0;
 }

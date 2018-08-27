@@ -8,6 +8,9 @@
 #include "CocoaKeyCodes.h"
 #include "KeyCodes.h"
 #include "AppleCodec.h"
+#include "NativeStationBackdoors.h"
+#include "Application.h"
+#include "ApplicationBackdoors.h"
 #include "../ImageCodec/IconCodec.h"
 #include "../Storage/ImageVolume.h"
 
@@ -43,6 +46,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     Engine::UI::Window * target;
     int operation;
     int identifier;
+    Engine::Tasks::ThreadJob * job;
 }
 @end
 @interface EngineRuntimeContentView : NSView
@@ -89,9 +93,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (BOOL) windowShouldClose: (NSWindow *) sender;
 - (void) windowDidBecomeKey: (NSNotification *) notification;
 - (void) windowDidResignKey: (NSNotification *) notification;
-@end
-@interface EngineRuntimeApplicationDelegate : NSObject<NSApplicationDelegate>
-- (void) close_all: (id) sender;
+- (void) windowWillBeginSheet: (NSNotification *) notification;
+- (void) windowDidEndSheet: (NSNotification *) notification;
 @end
 
 @implementation PopupWindow : NSPanel
@@ -349,41 +352,14 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
         if (event->target) event->target->Destroy();
     } else if (event->operation == 1) {
         if (event->target) event->target->RaiseEvent(event->identifier, Engine::UI::Window::Event::Deferred, 0);
+    } else if (event->operation == 2) {
+        event->job->DoJob(0);
+        event->job->Release();
     }
 }
 - (BOOL) acceptsFirstResponder
 {
     return YES;
-}
-@end
-@implementation EngineRuntimeWindowDelegate
-- (instancetype) initWithStation: (Engine::UI::WindowStation *) _station
-{
-    [super init];
-    station = _station;
-    return self;
-}
-- (BOOL) windowShouldClose: (NSWindow *) sender
-{
-    if (!station) return NO;
-    station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Close);
-    return NO;
-}
-- (void) windowDidBecomeKey: (NSNotification *) notification
-{
-    if (!station) return;
-    station->FocusChanged(true);
-    station->CaptureChanged(true);
-    [GetStationWindow(station) makeFirstResponder: [GetStationWindow(station) contentView]];
-    [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
-}
-- (void) windowDidResignKey: (NSNotification *) notification
-{
-    if (!station) return;
-    station->FocusChanged(false);
-    station->CaptureChanged(false);
-    [[GetStationWindow(station) contentView] keyboardStateInactivate];
-    [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
 }
 @end
 @implementation EngineRuntimeApplicationDelegate
@@ -409,6 +385,56 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
         }
         if (exit) break;
     }
+}
+- (void) applicationDidFinishLaunching: (NSNotification *) notification
+{
+    Engine::Application::ApplicationLaunched();
+}
+- (BOOL) application: (NSApplication *) sender openFile: (NSString *) filename
+{
+    auto controller = Engine::Application::GetController();
+    auto callback = controller ? controller->GetCallback() : 0;
+    if (callback) {
+        return callback->OpenExactFile(Engine::Cocoa::EngineString(filename)) ? YES : NO;
+    } return NO;
+}
+- (BOOL) applicationOpenUntitledFile: (NSApplication *) sender
+{
+    auto controller = Engine::Application::GetController();
+    auto callback = controller ? controller->GetCallback() : 0;
+    if (callback) {
+        callback->CreateNewFile();
+        return YES;
+    } return NO;
+}
+- (void) new_file: (id) sender
+{
+    auto controller = Engine::Application::GetController();
+    auto callback = controller ? controller->GetCallback() : 0;
+    if (callback) callback->CreateNewFile();
+}
+- (void) open_file: (id) sender
+{
+    auto controller = Engine::Application::GetController();
+    auto callback = controller ? controller->GetCallback() : 0;
+    if (callback) callback->OpenSomeFile();
+}
+- (void) show_props: (id) sender
+{
+    auto controller = Engine::Application::GetController();
+    auto callback = controller ? controller->GetCallback() : 0;
+    if (callback) callback->ShowProperties();
+}
+- (void) show_help: (id) sender
+{
+    auto controller = Engine::Application::GetController();
+    auto callback = controller ? controller->GetCallback() : 0;
+    if (callback) callback->InvokeHelp();
+}
+- (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *) sender
+{
+    [self close_all: sender];
+    return NSTerminateCancel;
 }
 @end
 @implementation EngineRuntimeEvent
@@ -529,6 +555,7 @@ namespace Engine
 		{
             friend void InternalShowWindow(UI::WindowStation * Station, bool Show);
 		    friend void ShowWindow(UI::WindowStation * Station, bool Show);
+            friend void ShowSlaves(UI::WindowStation * Station, bool Show);
 
 			NSWindow * _window;
 			SafePointer<ICursor> _null;
@@ -682,7 +709,7 @@ namespace Engine
 
 			virtual void OnDesktopDestroy(void) override
             {
-                EngineRuntimeWindowDelegate * dlg = ((EngineRuntimeWindowDelegate *) [_window delegate]);
+                EngineRuntimeWindowDelegate * dlg = (EngineRuntimeWindowDelegate *) ((EngineRuntimeContentView *) [_window contentView])->window_delegate;
                 if (dlg) dlg->station = 0;
                 for (int i = 0; i < _slaves.Length(); i++) _slaves[i]->GetDesktop()->Destroy();
                 if (_parent) {
@@ -752,6 +779,17 @@ namespace Engine
                 event->target = window;
                 event->operation = 1;
                 event->identifier = ID;
+                NSRunLoop * loop = [NSRunLoop currentRunLoop];
+                NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+                [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
+                [event release];
+            }
+            virtual void PostJob(Tasks::ThreadJob * job) override
+            {
+                EngineRuntimeEvent * event = [[EngineRuntimeEvent alloc] init];
+                event->operation = 2;
+                event->job = job;
+                job->Retain();
                 NSRunLoop * loop = [NSRunLoop currentRunLoop];
                 NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
                 [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
@@ -1053,6 +1091,14 @@ namespace Engine
             if (!st->_parent || st->_parent->IsOnScreen()) InternalShowWindow(Station, Show);
             st->_visible = Show;
         }
+        void ShowSlaves(UI::WindowStation * Station, bool Show)
+        {
+            NativeStation * st = static_cast<NativeStation *>(Station);
+            if (!st->IsOnScreen()) return;
+            for (int i = 0; i < st->_slaves.Length(); i++) {
+                InternalShowWindow(st->_slaves[i], Show);
+            }
+        }
 		void EnableWindow(UI::WindowStation * Station, bool Enable) {}
 		void SetWindowTitle(UI::WindowStation * Station, const string & Title)
         {
@@ -1123,17 +1169,13 @@ namespace Engine
         {
             [NSApp run];
         }
-		int RunModalDialog(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, UI::Window * Parent)
-        {
-            return 0;
-        }
-		void ExitModal(int code)
-        {
-
-        }
 		void ExitMainLoop(void)
         {
             [NSApp stop: nil];
+        }
+        NSWindow * GetWindowObject(UI::WindowStation * station)
+        {
+            return static_cast<NativeStation *>(station)->GetWindow();
         }
 	}
 }
@@ -1146,3 +1188,44 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 {
     return static_cast<Engine::NativeWindows::NativeStation *>(station)->GetWindow();
 }
+
+@implementation EngineRuntimeWindowDelegate
+- (instancetype) initWithStation: (Engine::UI::WindowStation *) _station
+{
+    [super init];
+    station = _station;
+    return self;
+}
+- (BOOL) windowShouldClose: (NSWindow *) sender
+{
+    if (!station) return NO;
+    station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Close);
+    return NO;
+}
+- (void) windowDidBecomeKey: (NSNotification *) notification
+{
+    if (!station) return;
+    station->FocusChanged(true);
+    station->CaptureChanged(true);
+    [GetStationWindow(station) makeFirstResponder: [GetStationWindow(station) contentView]];
+    [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
+}
+- (void) windowDidResignKey: (NSNotification *) notification
+{
+    if (!station) return;
+    station->FocusChanged(false);
+    station->CaptureChanged(false);
+    [[GetStationWindow(station) contentView] keyboardStateInactivate];
+    [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
+}
+- (void) windowWillBeginSheet: (NSNotification *) notification
+{
+    if (!station) return;
+    Engine::NativeWindows::ShowSlaves(station, false);
+}
+- (void) windowDidEndSheet: (NSNotification *) notification
+{
+    if (!station) return;
+    Engine::NativeWindows::ShowSlaves(station, true);
+}
+@end

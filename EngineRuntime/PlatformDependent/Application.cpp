@@ -245,10 +245,12 @@ namespace Engine
 				else if (data->Style == MessageBoxStyle::Warning) type |= MB_ICONEXCLAMATION;
 				else if (data->Style == MessageBoxStyle::Information) type |= MB_ICONINFORMATION;
 				int result = MessageBoxW(data->Owner, data->Text, data->Title, type);
-				if (result == IDYES) *data->Result = MessageBoxResult::Yes;
-				else if (result == IDNO) *data->Result = MessageBoxResult::No;
-				else if (result == IDCANCEL) *data->Result = MessageBoxResult::Cancel;
-				else if (result == IDOK) *data->Result = MessageBoxResult::Ok;
+				if (data->Result) {
+					if (result == IDYES) *data->Result = MessageBoxResult::Yes;
+					else if (result == IDNO) *data->Result = MessageBoxResult::No;
+					else if (result == IDCANCEL) *data->Result = MessageBoxResult::Cancel;
+					else if (result == IDOK) *data->Result = MessageBoxResult::Ok;
+				}
 				if (data->Job) {
 					if (data->Context) data->Context->PostJob(data->Job);
 					else data->Job->DoJob(0);

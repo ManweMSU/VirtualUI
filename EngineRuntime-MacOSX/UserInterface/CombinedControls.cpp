@@ -117,6 +117,7 @@ namespace Engine
 			void ComboBox::invalidate_viewport(void) { _viewport_element.SetReference(0); }
 			void ComboBox::run_drop_down(void)
 			{
+				if (GetCapture() == this) ReleaseCapture();
 				for (int i = 0; i < _elements.Length(); i++) {
 					if (_elements[i].ViewNormal) _elements[i].ViewNormal->ClearCache();
 					if (_elements[i].ViewDisabled) _elements[i].ViewDisabled->ClearCache();
@@ -545,6 +546,7 @@ namespace Engine
 			}
 			void TextComboBox::run_drop_down(void)
 			{
+				if (GetCapture() == this) ReleaseCapture();
 				_save = true;
 				auto my = GetStation()->GetAbsoluteDesktopBox(GetAbsolutePosition());
 				auto desktop = GetStation()->GetDesktopBox();

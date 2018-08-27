@@ -15,6 +15,7 @@ namespace Engine
 		bool Window::IsVisible(void) { return true; }
 		bool Window::IsTabStop(void) { return false; }
 		bool Window::IsOverlapped(void) { return false; }
+		bool Window::IsNeverActive(void) { return true; }
 		void Window::SetID(int ID) {}
 		int Window::GetID(void) { return 0; }
 		Window * Window::FindChild(int ID) { return 0; }
@@ -285,6 +286,7 @@ namespace Engine
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner() && NativeHitTest(at)) return TopLevelWindow->HitTest(at); else return 0; }
 		Window * WindowStation::EnabledHitTest(Point at)
 		{
+			if (!TopLevelWindow || !NativeHitTest(at)) return 0;
 			Window * target = TopLevelWindow->HitTest(at);
 			while (target && !target->IsEnabled()) target = target->Parent;
 			return target;
@@ -410,7 +412,7 @@ namespace Engine
 			if (Target) {
 				if (!ExclusiveWindow) {
 					Window * Parent = Target->GetOverlappedParent();
-					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent) {
+					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent && !Parent->IsNeverActive()) {
 						SetActiveWindow(Parent);
 						SetFocus(0);
 					}
@@ -451,7 +453,7 @@ namespace Engine
 			if (Target) {
 				if (!ExclusiveWindow) {
 					Window * Parent = Target->GetOverlappedParent();
-					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent) {
+					if (Parent != TopLevelWindow.Inner() && ActiveWindow.Inner() != Parent && !Parent->IsNeverActive()) {
 						SetActiveWindow(Parent);
 						SetFocus(0);
 					}
@@ -540,6 +542,7 @@ namespace Engine
 		void WindowStation::RequireRedraw(void) {}
 		void WindowStation::DeferredDestroy(Window * window) {}
 		void WindowStation::DeferredRaiseEvent(Window * window, int ID) {}
+		void WindowStation::PostJob(Tasks::ThreadJob * job) {}
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
@@ -606,6 +609,7 @@ namespace Engine
 		Rectangle TopLevelWindow::GetRectangle(void) { return Rectangle::Entire(); }
 		Box TopLevelWindow::GetPosition(void) { return GetStation()->GetBox(); }
 		bool TopLevelWindow::IsOverlapped(void) { return true; }
+		bool TopLevelWindow::IsNeverActive(void) { return false; }
 
 		ZeroArgumentProvider::ZeroArgumentProvider(void) {}
 		void ZeroArgumentProvider::GetArgument(const string & name, int * value) { *value = 0; }

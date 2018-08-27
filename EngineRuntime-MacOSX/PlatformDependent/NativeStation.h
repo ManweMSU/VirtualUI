@@ -26,8 +26,6 @@ namespace Engine
 		UI::Box GetScreenDimensions(void);
 		double GetScreenScale(void);
 		void RunMainMessageLoop(void);
-		int RunModalDialog(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, UI::Window * Parent);
-		void ExitModal(int code);
 		void ExitMainLoop(void);
 	}
 }

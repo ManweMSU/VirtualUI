@@ -96,6 +96,7 @@ namespace Engine
 				virtual void Show(bool visible) override;
 				virtual bool IsVisible(void) override;
 				virtual bool IsOverlapped(void) override;
+				virtual bool IsNeverActive(void) override;
 				virtual void SetPosition(const Box & box) override;
 				virtual Box GetPosition(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
