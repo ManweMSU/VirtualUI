@@ -241,8 +241,10 @@ bool BuildRuntime(TextWriter & console)
         try {
             FileStream sys_cfg_src(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/ertbuild.ini", AccessRead, OpenExisting);
             sys_cfg = CompileTextRegistry(&sys_cfg_src);
-            SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
-            sys_cfg.SetRetain(target);
+            if (sys_cfg) {
+                SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
+                sys_cfg.SetRetain(target);
+            }
             if (!sys_cfg) throw Exception();
         }
         catch (...) {
@@ -479,8 +481,10 @@ int Main(void)
                     FileStream prj_cfg_src(IO::ExpandPath(args->ElementAt(1)), AccessRead, OpenExisting);
                     sys_cfg = CompileTextRegistry(&sys_cfg_src);
                     prj_cfg = CompileTextRegistry(&prj_cfg_src);
-                    SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
-                    sys_cfg.SetRetain(target);
+                    if (sys_cfg) {
+                        SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
+                        sys_cfg.SetRetain(target);
+                    }
                     if (!sys_cfg | !prj_cfg) throw Exception();
                     proj_time = IO::DateTime::GetFileAlterTime(prj_cfg_src.Handle());
                     string ss = prj_cfg->GetValueString(L"Subsystem");
