@@ -453,7 +453,7 @@ namespace Engine
 		void ApplicationLaunched(void)
 		{
 			auto controller = static_cast<MacOSXApplicationController *>(GetController());
-			if (controller->_callback) {
+			if (controller && controller->_callback) {
 				for (int i = 0; i < controller->_deferred_open.Length(); i++) {
 					controller->_callback->OpenExactFile(controller->_deferred_open[i]);
 				}

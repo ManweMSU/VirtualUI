@@ -48,6 +48,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     int identifier;
     Engine::Tasks::ThreadJob * job;
 }
+- (void) queue_event: (NSView *) view;
 @end
 @interface EngineRuntimeContentView : NSView
 {
@@ -62,9 +63,9 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
 - (void) dealloc;
-- (void) drawRect : (NSRect) dirtyRect;
+- (void) drawRect: (NSRect) dirtyRect;
 - (BOOL) acceptsFirstMouse: (NSEvent *) event;
-- (void) setFrame : (NSRect) frame;
+- (void) setFrame: (NSRect) frame;
 - (void) setFrameSize: (NSSize) newSize;
 - (void) keyboardStateInactivate;
 
@@ -438,6 +439,13 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 @end
 @implementation EngineRuntimeEvent
+- (void) queue_event: (NSView *) view;
+{
+    NSRunLoop * loop = [NSRunLoop currentRunLoop];
+    NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+    [loop performSelector: @selector(engineEvent:) target: view argument: self order: 0 modes: modes];
+    [self release];
+}
 @end
 
 @interface EngineRuntimeMenuItem : NSView
@@ -768,10 +776,7 @@ namespace Engine
                 event->target = window;
                 event->operation = 0;
                 event->identifier = 0;
-                NSRunLoop * loop = [NSRunLoop currentRunLoop];
-                NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
-                [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
-                [event release];
+                [event performSelectorOnMainThread: @selector(queue_event:) withObject: [_window contentView] waitUntilDone: NO];
             }
             virtual void DeferredRaiseEvent(Window * window, int ID) override
             {
@@ -779,10 +784,7 @@ namespace Engine
                 event->target = window;
                 event->operation = 1;
                 event->identifier = ID;
-                NSRunLoop * loop = [NSRunLoop currentRunLoop];
-                NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
-                [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
-                [event release];
+                [event performSelectorOnMainThread: @selector(queue_event:) withObject: [_window contentView] waitUntilDone: NO];
             }
             virtual void PostJob(Tasks::ThreadJob * job) override
             {
@@ -790,10 +792,7 @@ namespace Engine
                 event->operation = 2;
                 event->job = job;
                 job->Retain();
-                NSRunLoop * loop = [NSRunLoop currentRunLoop];
-                NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
-                [loop performSelector: @selector(engineEvent:) target: [_window contentView] argument: event order: 0 modes: modes];
-                [event release];
+                [event performSelectorOnMainThread: @selector(queue_event:) withObject: [_window contentView] waitUntilDone: NO];
             }
 
             bool IsOnScreen(void) const { if (_parent) return _parent->IsOnScreen() && _visible; else return _visible; }
