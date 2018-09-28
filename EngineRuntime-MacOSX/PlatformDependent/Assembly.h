@@ -10,5 +10,6 @@ namespace Engine
 
 		string GetCurrentUserLocale(void);
 		Streaming::Stream * QueryResource(const widechar * identifier);
+		Streaming::Stream * QueryLocalizedResource(const widechar * identifier);
 	}
 }

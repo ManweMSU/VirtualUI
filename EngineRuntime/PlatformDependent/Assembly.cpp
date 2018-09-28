@@ -39,5 +39,26 @@ namespace Engine
 			}
 			catch (...) { return 0; }
 		}
+		Streaming::Stream * QueryLocalizedResource(const widechar * identifier)
+		{
+			HMODULE me = GetModuleHandleW(0);
+			HRSRC search = FindResourceW(me, string(identifier) + L"-" + CurrentLocale, RT_RCDATA);
+			if (!search) {
+				if (CurrentLocale.Length()) {
+					search = FindResourceW(me, identifier, RT_RCDATA);
+				}
+				if (!search) return 0;
+			}
+			HGLOBAL resource = LoadResource(me, search);
+			if (!resource) return 0;
+			void * data = LockResource(resource);
+			if (!data) return 0;
+			try {
+				SafePointer<Streaming::MemoryStream> stream = new Streaming::MemoryStream(data, SizeofResource(me, search));
+				stream->Retain();
+				return stream;
+			}
+			catch (...) { return 0; }
+		}
 	}
 }

@@ -253,7 +253,7 @@ namespace Engine
 			static int MessageBoxProc(void * argument)
 			{
 				MessageBoxStruct * data = reinterpret_cast<MessageBoxStruct *>(argument);
-				*data->Result = MessageBoxResult::Cancel;
+				if (data->Result) *data->Result = MessageBoxResult::Cancel;
 				UINT type = 0;
 				if (data->Buttons == MessageBoxButtonSet::Ok) type = MB_OK;
 				else if (data->Buttons == MessageBoxButtonSet::OkCancel) type = MB_OKCANCEL;
