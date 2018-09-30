@@ -553,6 +553,7 @@ namespace Engine
 						remove_at->ValueNames[index] = IO::Path::GetFileName(name_to);
 					} else if (index >= 0 && index_no == -1) {
 						int index_ins = attach_at->CreateRawValue(IO::Path::GetFileName(name_to), remove_at->Values[index].type);
+						if (index_ins <= index) index++;
 						attach_at->Values[index_ins] = remove_at->Values[index];
 						remove_at->ValueNames.Remove(index);
 						remove_at->Values.Remove(index);

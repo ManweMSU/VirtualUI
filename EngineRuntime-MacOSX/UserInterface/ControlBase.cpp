@@ -106,7 +106,7 @@ namespace Engine
 			do {
 				if (!current->IsEnabled() || !current->IsVisible()) return false;
 				current = current->Parent;
-			} while (current->Parent);
+			} while (current && current->Parent);
 			return true;
 		}
 		Window * Window::GetOverlappedParent(void)
@@ -223,11 +223,12 @@ namespace Engine
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
-			window->Parent.SetReference(0);
-			window->Station.SetReference(0);
-			for (int i = 0; i < window->Children.Length(); i++) DeconstructChain(&window->Children[i]);
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
+			SetTimer(window, 0);
+			for (int i = 0; i < window->Children.Length(); i++) DeconstructChain(&window->Children[i]);
+			window->Parent.SetReference(0);
+			window->Station.SetReference(0);
 		}
 		WindowStation::WindowStation(IDesktopWindowFactory * Factory) : Position(0, 0, 0, 0), Animations(0x10)
 		{
