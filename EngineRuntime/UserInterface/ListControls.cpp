@@ -1792,7 +1792,7 @@ namespace Engine
 					if (_editor) ArrangeChildren();
 				} else GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void ListView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; _state = 0; } }
+			void ListView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; _state = 0; _cell = 0; } }
 			void ListView::LeftButtonDown(Point at)
 			{
 				SetFocus();
