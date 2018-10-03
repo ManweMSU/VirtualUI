@@ -225,6 +225,8 @@ namespace Engine
 		{
 			if (CaptureWindow.Inner() == window) ReleaseCapture();
 			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
+			if (ActiveWindow.Inner() == window) SetActiveWindow(TopLevelWindow);
+			if (ExclusiveWindow.Inner() == window) SetExclusiveWindow(0);
 			SetTimer(window, 0);
 			for (int i = 0; i < window->Children.Length(); i++) DeconstructChain(&window->Children[i]);
 			window->Parent.SetReference(0);
@@ -250,11 +252,13 @@ namespace Engine
 			}
 			SafePointer<Window> Parent = window->Parent;
 			Parent->Retain();
-			DeconstructChain(window);
+			SafePointer<Window> Target = window;
+			Target->Retain();
 			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == window) {
 				Parent->Children.Remove(i);
 				break;
 			}
+			DeconstructChain(window);
 		}
 		void WindowStation::DestroyStation(void)
 		{

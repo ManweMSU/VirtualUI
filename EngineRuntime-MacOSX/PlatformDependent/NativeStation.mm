@@ -624,9 +624,9 @@ namespace Engine
                 }
             }
 			virtual bool IsNativeStationWrapper(void) const override { return true; }
-			virtual void SetFocus(Window * window) override { if (window) [_window makeKeyWindow]; if ([_window isKeyWindow]) WindowStation::SetFocus(window); }
+			virtual void SetFocus(Window * window) override { if (window) [_window makeKeyWindow]; if ([_window isKeyWindow]) WindowStation::SetFocus(window); else WindowStation::SetFocus(0); }
 			virtual Window * GetFocus(void) override { if ([_window isKeyWindow]) return WindowStation::GetFocus(); else return 0; }
-			virtual void SetCapture(Window * window) override { if ([_window isKeyWindow]) WindowStation::SetCapture(window); }
+			virtual void SetCapture(Window * window) override { if ([_window isKeyWindow]) WindowStation::SetCapture(window); else WindowStation::SetCapture(0); }
 			virtual Window * GetCapture(void) override { if ([_window isKeyWindow]) return WindowStation::GetCapture(); else return 0; }
 			virtual void ReleaseCapture(void) override { WindowStation::SetCapture(0); }
 			virtual void SetExclusiveWindow(Window * window) override

@@ -713,7 +713,7 @@ namespace Engine
 				return group;
 			}
 			Window * ListBox::GetEmbeddedEditor(void) { return _editor; }
-			void ListBox::CloseEmbeddedEditor(void) { if (_editor) { _editor->Destroy(); _editor = 0; } }
+			void ListBox::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; editor->Destroy(); } }
 
 			int TreeView::TreeViewItem::get_height(void) const { int s = Parent ? 1 : 0; if (Expanded) for (int i = 0; i < Children.Length(); i++) s += Children[i].get_height(); return s; }
 			void TreeView::TreeViewItem::reset_cache(void)
@@ -1321,7 +1321,7 @@ namespace Engine
 				return group;
 			}
 			Window * TreeView::GetEmbeddedEditor(void) { return _editor; }
-			void TreeView::CloseEmbeddedEditor(void) { if (_editor) { _editor->Destroy(); _editor = 0; } }
+			void TreeView::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; editor->Destroy(); } }
 
 			ListView::Element::Element(void) : ViewNormal(0x10), ViewDisabled(0x10) {}
 			ListView::Element::Element(ListView * view) : ViewNormal(view->_columns.Length()), ViewDisabled(view->_columns.Length()) {}
@@ -2347,7 +2347,7 @@ namespace Engine
 				return group;
 			}
 			Window * ListView::GetEmbeddedEditor(void) { return _editor; }
-			void ListView::CloseEmbeddedEditor(void) { if (_editor) { _editor->Destroy(); _editor = 0; _editor_cell = -1; } }
+			void ListView::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; _editor_cell = -1; editor->Destroy(); } }
 		}
 	}
 }
