@@ -43,6 +43,10 @@
 #include <Storage/ImageVolume.h>
 #include <PlatformDependent/Assembly.h>
 #include <Storage/StringTable.h>
+#include <Math/MathBase.h>
+#include <Math/Complex.h>
+#include <Math/Vector.h>
+#include <Math/Matrix.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -154,6 +158,45 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Scale          : " << UI::Windows::GetScreenScale() << IO::NewLineChar;
 	(*conout) << L"Locale         : " << Assembly::GetCurrentUserLocale() << IO::NewLineChar;
+
+	(*conout) << string(Math::Complex(5.0)) << IO::NewLineChar;
+	(*conout) << string(ENGINE_I) << IO::NewLineChar;
+
+	auto v = Math::Vector<Math::Complex, 4>(ENGINE_I, -ENGINE_I, 0.0, 0.0);
+	(*conout) << Math::length(v) << IO::NewLineChar;
+	(*conout) << string(v) << IO::NewLineChar;
+
+	(*conout) << string(Math::TensorProduct(Math::Vector3(1, 2, 3), Math::Vector2(1, 2))) << IO::NewLineChar;
+	(*conout) << string(Math::VectorColumnCast(v)) << IO::NewLineChar;
+	(*conout) << string(Math::Matrix<Math::Complex, 2, 2>::MatrixCast(v)) << IO::NewLineChar;
+
+	auto m1 = Math::TensorProduct(Math::Vector3(1, 2, 3), Math::Vector2(1, 2));
+	(*conout) << string(m1) << IO::NewLineChar;
+	(*conout) << string(m1 * transpone(m1)) << IO::NewLineChar;
+	(*conout) << string(m1 * Math::Vector2(1, 1)) << IO::NewLineChar;
+
+	Math::Vector2 f(1.0, 1.0);
+	Math::Vector2 r(1.0, 1.0);
+	Math::Matrix2x2 m;
+	m(0, 0) = 0.0;
+	m(0, 1) = -2.0;
+	m(1, 0) = 7.0;
+	m(1, 1) = -3.0;
+	Math::Matrix2x2 im = Math::inverse(m);
+	auto hi = m * im;
+
+	(*conout) << string(m) << IO::NewLineChar;
+	(*conout) << string(Math::VectorColumnCast(f)) << IO::NewLineChar;
+	(*conout) << L"det = " << string(det(m)) << IO::NewLineChar;
+	(*conout) << L"tr  = " << string(tr(m)) << IO::NewLineChar;
+
+	Math::GaussianEliminationMethod(m, f, r);
+	(*conout) << string(r) << IO::NewLineChar << IO::NewLineChar;
+	(*conout) << string(im) << IO::NewLineChar;
+	(*conout) << string(hi) << IO::NewLineChar;
+
+	(*conout) << L"pidor" << IO::NewLineChar;
+	
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 

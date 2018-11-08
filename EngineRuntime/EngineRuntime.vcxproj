@@ -23,6 +23,10 @@
     <ClInclude Include="EngineRuntime.h" />
     <ClInclude Include="ImageCodec\CodecBase.h" />
     <ClInclude Include="ImageCodec\IconCodec.h" />
+    <ClInclude Include="Math\Complex.h" />
+    <ClInclude Include="Math\MathBase.h" />
+    <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
@@ -81,6 +85,10 @@
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="ImageCodec\CodecBase.cpp" />
     <ClCompile Include="ImageCodec\IconCodec.cpp" />
+    <ClCompile Include="Math\Complex.cpp" />
+    <ClCompile Include="Math\MathBase.cpp" />
+    <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="Miscellaneous\ThreadPool.cpp" />
