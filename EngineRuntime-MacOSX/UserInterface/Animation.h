@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ShapeBase.h"
+#include "../Math/MathBase.h"
 
 namespace Engine
 {
@@ -35,18 +36,18 @@ namespace Engine
 				{
 					double t = double(time - BeginTime) / double(Duration);
 					if (BeginClass == AnimationClass::Hard && EndClass == AnimationClass::Hard) {
-						return lerp(BeginState, EndState, t);
+						return Math::lerp(BeginState, EndState, t);
 					} else if (BeginClass == AnimationClass::Smooth && EndClass == AnimationClass::Hard) {
-						return lerp(BeginState, EndState, t * t);
+						return Math::lerp(BeginState, EndState, t * t);
 					} else if (BeginClass == AnimationClass::Hard && EndClass == AnimationClass::Smooth) {
 						t = 1.0 - t;
-						return lerp(BeginState, EndState, 1.0 - t * t);
+						return Math::lerp(BeginState, EndState, 1.0 - t * t);
 					} else {
 						if (t < 0.5) {
-							return lerp(BeginState, EndState, 2.0 * t * t);
+							return Math::lerp(BeginState, EndState, 2.0 * t * t);
 						} else {
 							t = 1.0 - t;
-							return lerp(BeginState, EndState, 1.0 - 2.0 * t * t);
+							return Math::lerp(BeginState, EndState, 1.0 - 2.0 * t * t);
 						}
 					}
 				}

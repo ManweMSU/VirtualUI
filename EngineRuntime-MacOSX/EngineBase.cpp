@@ -627,7 +627,7 @@ namespace Engine
 		int point = FindFirst(L',');
 		if (point == -1) point = FindFirst(L'.');
 		if (point == -1) point = len;
-		if (point != max(FindLast(L','), FindLast(L'.'))) throw InvalidFormatException();
+		if (point != len && point != max(FindLast(L','), FindLast(L'.'))) throw InvalidFormatException();
 		for (int i = start; i < point; i++) {
 			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
 			int digit = text[i] - L'0';
@@ -685,7 +685,7 @@ namespace Engine
 		int point = FindFirst(L',');
 		if (point == -1) point = FindFirst(L'.');
 		if (point == -1) point = len;
-		if (point != max(FindLast(L','), FindLast(L'.'))) throw InvalidFormatException();
+		if (point != len && point != max(FindLast(L','), FindLast(L'.'))) throw InvalidFormatException();
 		for (int i = start; i < point; i++) {
 			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
 			int digit = text[i] - L'0';
@@ -754,6 +754,4 @@ namespace Engine
 	double sgn(double x) { return (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0); }
 	float sgn(float x) { return (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f); }
 	int sgn(int x) { return (x > 0) ? 1 : ((x < 0) ? -1 : 0); }
-	double saturate(double x) { if (x < 0.0) return 0.0; else if (x > 1.0) return 1.0; else return x; }
-	float saturate(float x) { if (x < 0.0f) return 0.0f; else if (x > 1.0f) return 1.0f; else return x; }
 }
