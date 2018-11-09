@@ -199,10 +199,7 @@ namespace Engine
 		}
 		void CreateSymbolicLink(const string & at, const string & to)
 		{
-			if (!CreateSymbolicLinkW(NormalizePath(at), NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) {
-				DWORD e = GetLastError();
-				throw FileAccessException();
-			}
+			if (!CreateSymbolicLinkW(NormalizePath(at), NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException();
 		}
 		string GetExecutablePath(void)
 		{
