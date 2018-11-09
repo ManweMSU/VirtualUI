@@ -64,6 +64,7 @@
 #undef GetCurrentTime
 #undef CreateFile
 #undef CreateSemaphore
+#undef CreateSymbolicLink
 
 using namespace Engine;
 using namespace Engine::UI;
@@ -199,6 +200,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
+
+	IO::CreateSymbolicLink(L"pidor", L"..\\EngineRuntime-MacOSX");
 
 	/*{
 		SafePointer<Tasks::ThreadPool> pool = new Tasks::ThreadPool;

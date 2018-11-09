@@ -10,6 +10,7 @@
 #undef GetCurrentDirectory
 #undef CreateDirectory
 #undef RemoveDirectory
+#undef CreateSymbolicLink
 
 namespace Engine
 {
@@ -195,6 +196,13 @@ namespace Engine
 		void RemoveDirectory(const string & path)
 		{
 			if (!RemoveDirectoryW(NormalizePath(path))) throw FileAccessException();
+		}
+		void CreateSymbolicLink(const string & at, const string & to)
+		{
+			if (!CreateSymbolicLinkW(NormalizePath(at), NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) {
+				DWORD e = GetLastError();
+				throw FileAccessException();
+			}
 		}
 		string GetExecutablePath(void)
 		{

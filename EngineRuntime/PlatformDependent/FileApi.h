@@ -53,6 +53,7 @@ namespace Engine
 		string GetCurrentDirectory(void);
 		void CreateDirectory(const string & path);
 		void RemoveDirectory(const string & path);
+		void CreateSymbolicLink(const string & at, const string & to);
 		string GetExecutablePath(void);
 		namespace Path
 		{
