@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceRoot}"
+    },
+    "tasks": [
+        {
+            "label": "Build project",
+            "type": "shell",
+            "command": "\"$rtbt$\"",
+            "args": [
+                "\"$rtprj$\""
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        }
+    ]
+}
