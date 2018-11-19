@@ -34,6 +34,7 @@ struct FileFormat
     bool CanCreate;
 };
 
+handle error_output;
 string target_system;
 SafePointer<RegistryNode> sys_cfg;
 SafePointer<RegistryNode> prj_cfg;
@@ -43,7 +44,17 @@ string bundle_path;
 Array<Resource> reslist(0x10);
 Array<FileFormat> formats(0x10);
 bool clean = false;
+bool errlog = false;
 
+void print_error(handle from)
+{
+    FileStream From(from);
+    FileStream To(error_output);
+    From.Seek(0, Begin);
+    TextReader FromReader(&From);
+    TextWriter ToWriter(&To);
+    ToWriter.Write(FromReader.ReadAll());
+}
 void try_create_directory(const string & path)
 {
     try { IO::CreateDirectory(path); } catch (...) {}
@@ -135,7 +146,8 @@ bool compile_resource(const string & rc, const string & res, const string & log,
         compiler->Wait();
         if (compiler->GetExitCode()) {
             console << L"Failed" << IO::NewLineChar;
-            Shell::OpenFile(log);
+            if (errlog) print_error(IO::GetStandartError());
+            else Shell::OpenFile(log);
             return false;
         }
         console << L"Succeed" << IO::NewLineChar;
@@ -524,6 +536,7 @@ int Main(void)
 {
     UI::Windows::InitializeCodecCollection();
     handle console_output = IO::CloneHandle(IO::GetStandartOutput());
+    error_output = IO::CloneHandle(IO::GetStandartError());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -534,7 +547,7 @@ int Main(void)
     console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
     if (args->Length() < 2) {
         console << L"Command line syntax:" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> <object path> <:winres|:macres> [:clean]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> <object path> <:winres|:macres> [:clean] [:errlog]" << IO::NewLineChar;
         console << L"      [:bundle <bundle path.app>]" << IO::NewLineChar;
         console << L"Where" << IO::NewLineChar;
         console << L"  project config.ini  - project configuration to take data," << IO::NewLineChar;
@@ -542,6 +555,7 @@ int Main(void)
         console << L"  :winres             - build .ico, .manifest, .rc and .res resources," << IO::NewLineChar;
         console << L"  :macres             - build .icns and info.plist resources," << IO::NewLineChar;
         console << L"  :clean              - rebuild all outputs," << IO::NewLineChar;
+        console << L"  :errlog             - print logs of failed tools into error stream," << IO::NewLineChar;
         console << L"  :bundle             - produce Mac OS X Application Bundle directory (without code)," << IO::NewLineChar;
         console << L"  bundle path.app     - path to .app bundle folder (bundle name)." << IO::NewLineChar;
         console << IO::NewLineChar;
@@ -554,6 +568,7 @@ int Main(void)
             if (string::CompareIgnoreCase(args->ElementAt(i), L":winres") == 0) target_system = L"windows";
             else if (string::CompareIgnoreCase(args->ElementAt(i), L":macres") == 0) target_system = L"macosx";
             else if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
+            else if (string::CompareIgnoreCase(args->ElementAt(i), L":errlog") == 0) errlog = true;
             else if (string::CompareIgnoreCase(args->ElementAt(i), L":bundle") == 0) {
                 bundle_path = (i < args->Length() - 1) ? args->ElementAt(i + 1) : L"";
                 if (!bundle_path.Length()) {

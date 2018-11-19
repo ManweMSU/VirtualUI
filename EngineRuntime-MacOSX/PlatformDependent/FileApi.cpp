@@ -206,6 +206,14 @@ namespace Engine
             SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
             if (rmdir(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException();
 		}
+		void CreateSymbolicLink(const string & at, const string & to)
+		{
+			SafePointer< Array<uint8> > At = NormalizePath(at).EncodeSequence(Encoding::UTF8, true);
+			SafePointer< Array<uint8> > To = NormalizePath(to).EncodeSequence(Encoding::UTF8, true);
+			if (symlink(reinterpret_cast<char *>(To->GetBuffer()), reinterpret_cast<char *>(At->GetBuffer())) == -1) {
+				throw FileAccessException();
+			}
+		}
 		string GetExecutablePath(void)
 		{
             Array<uint8> Path(0x800);

@@ -21,7 +21,9 @@ struct VersionInfo
 };
 
 handle console_output;
+handle error_output;
 bool clean = false;
+bool errlog = false;
 string rt_path;
 SafePointer<RegistryNode> sys_cfg;
 SafePointer<RegistryNode> prj_cfg;
@@ -38,6 +40,15 @@ string compile_architecture = L"x86";
 string compile_subsystem = L"console";
 #endif
 
+void print_error(handle from)
+{
+    FileStream From(from);
+    FileStream To(error_output);
+    From.Seek(0, Begin);
+    TextReader FromReader(&From);
+    TextWriter ToWriter(&To);
+    ToWriter.Write(FromReader.ReadAll());
+}
 void try_create_directory(const string & path)
 {
     try { IO::CreateDirectory(path); } catch (...) {}
@@ -183,7 +194,8 @@ bool compile(const string & source, const string & object, const string & log, T
     compiler->Wait();
     if (compiler->GetExitCode()) {
         console << L"Failed" << IO::NewLineChar;
-        Shell::OpenFile(log);
+        if (errlog) print_error(IO::GetStandartError());
+        else Shell::OpenFile(log);
         return false;
     }
     console << L"Succeed" << IO::NewLineChar;
@@ -229,7 +241,8 @@ bool link(const Array<string> & objs, const string & exe, const string & real_ex
     if (linker->GetExitCode()) {
         console << L"Failed" << IO::NewLineChar;
         console << L"Linking error!" << IO::NewLineChar;
-        Shell::OpenFile(log);
+        if (errlog) print_error(IO::GetStandartError());
+        else Shell::OpenFile(log);
         return false;
     }
     console << L"Succeed" << IO::NewLineChar;
@@ -305,9 +318,10 @@ bool run_restool(const string & prj, const string & out_path, const string & bun
         rt_args << L":bundle";
         rt_args << bundle_path;
     }
+    if (errlog) rt_args << L":errlog";
     console << L"Starting native resource generator..." << IO::NewLineChar << IO::NewLineChar;
     IO::SetStandartOutput(console_output);
-    IO::SetStandartError(console_output);
+    IO::SetStandartError(error_output);
     SafePointer<Process> restool = CreateCommandProcess(sys_cfg->GetValueString(L"ResourceTool"), &rt_args);
     if (!restool) {
         console << L"Failed to start resource generator (" + sys_cfg->GetValueString(L"ResourceTool") + L")." << IO::NewLineChar;
@@ -413,7 +427,7 @@ bool invoke(RegistryNode * node, const string & base_path, const string & obj_pa
         }
     }
     IO::SetStandartOutput(console_output);
-    IO::SetStandartError(console_output);
+    IO::SetStandartError(error_output);
     SafePointer<Process> process = CreateCommandProcess(server, &command_line);
     if (!process) {
         process.SetReference(CreateProcess(base_path + L"/" + server, &command_line));
@@ -443,6 +457,7 @@ bool do_invokations(const string & base_path, const string & obj_path, TextWrite
 int Main(void)
 {
     console_output = IO::CloneHandle(IO::GetStandartOutput());
+    error_output = IO::CloneHandle(IO::GetStandartError());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -454,16 +469,18 @@ int Main(void)
     
     if (args->Length() < 2) {
         console << L"Command line syntax:" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean] [:x64]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean] [:x64] [:errlog]" << IO::NewLineChar;
         console << L"    to build your project" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" :asmrt [:clean] [:x64]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" :asmrt [:clean] [:x64] [:errlog]" << IO::NewLineChar;
         console << L"    to rebuild runtime object cache" << IO::NewLineChar;
-        console << L"  use :clean to recompile all the sources." << IO::NewLineChar;
+        console << L"  use :clean to recompile all the sources," << IO::NewLineChar;
+        console << L"  use :errlog to print logs of failed operations into error stream." << IO::NewLineChar;
         console << IO::NewLineChar;
     } else {
         for (int i = 1; i < args->Length(); i++) {
             if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
             else if (string::CompareIgnoreCase(args->ElementAt(i), L":x64") == 0) compile_architecture = L"x64";
+            else if (string::CompareIgnoreCase(args->ElementAt(i), L":errlog") == 0) errlog = true;
         }
         if (string::CompareIgnoreCase(args->ElementAt(1), L":asmrt") == 0) {
             prj_ver.UseDefines = false;
