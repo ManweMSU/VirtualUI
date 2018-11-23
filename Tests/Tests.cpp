@@ -48,6 +48,8 @@
 #include <Math/Vector.h>
 #include <Math/Matrix.h>
 
+#include <PlatformDependent/SystemColors.h>
+
 #include "stdafx.h"
 #include "Tests.h"
 
@@ -200,8 +202,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
-
-	IO::CreateSymbolicLink(L"pidor", L"..\\EngineRuntime-MacOSX");
 
 	/*{
 		SafePointer<Tasks::ThreadPool> pool = new Tasks::ThreadPool;
@@ -559,7 +559,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
 			auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
 			auto w666 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], 0, UI::Rectangle::Invalid(), w4->GetStation());
-			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
+			//w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
+
+			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(UI::GetSystemColor(UI::SystemColor::Theme));
+
 			w2->SetText(L"window");
 
 			w->AddDialogStandartAccelerators();
@@ -662,9 +665,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			//ValidateRect(hWnd, 0);
 			if (Target) {
+				Device->SetTimerValue(GetTimerValue());
+				if (station) station->Animate();
 				Target->SetDpi(96.0f, 96.0f);
 				Target->BeginDraw();
-				Device->SetTimerValue(GetTimerValue());
 				if (station) station->Render();
 				Target->EndDraw();
 				SwapChain->Present(1, 0);

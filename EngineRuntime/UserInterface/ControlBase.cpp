@@ -270,20 +270,6 @@ namespace Engine
 		Box WindowStation::GetBox(void) { return Position; }
 		void WindowStation::Render(void)
 		{
-			uint32 time = GetTimerValue();
-			for (int i = 0; i < Animations.Length(); i++) {
-				if (Animations[i].IsOver(time)) {
-					Animations[i].Target->SetRectangle(Animations[i].GetFrame(Animations[i].EndTime));
-					if (Animations[i].Action == Animation::AnimationAction::HideWindow || Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
-						Animations[i].Target->Show(false);
-						if (Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) Animations[i].Target->SetRectangle(Animations[i].BeginState);
-					}
-					Animations.Remove(i); i--;
-					if (Animations.Length() == 0) AnimationStateChanged();
-				} else {
-					Animations[i].Target->SetRectangle(Animations[i].GetFrame(time));
-				}
-			}
 			if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position);
 		}
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
@@ -334,7 +320,7 @@ namespace Engine
 			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
 			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
 			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
-				begin_class, end_class, action);
+				begin_class, end_class, action, 1);
 			if (Animations.Length() == 1) AnimationStateChanged();
 		}
 		void WindowStation::AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
@@ -343,10 +329,43 @@ namespace Engine
 			window->SetRectangle(from);
 			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
 			Animations << WindowAnimationState(window, window->GetRectangle(), position, GetTimerValue(), duration,
-				begin_class, end_class, action);
+				begin_class, end_class, action, 1);
+			if (Animations.Length() == 1) AnimationStateChanged();
+		}
+		void WindowStation::AnimateWindow(Window * window, const Box & from, const Box & position, uint32 duration, Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action)
+		{
+			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
+			window->SetPosition(from);
+			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
+			Rectangle from_rect(from.Left, from.Top, from.Right, from.Bottom);
+			Rectangle to_rect(position.Left, position.Top, position.Right, position.Bottom);
+			Animations << WindowAnimationState(window, from_rect, to_rect, GetTimerValue(), duration,
+				begin_class, end_class, action, 0);
 			if (Animations.Length() == 1) AnimationStateChanged();
 		}
 		bool WindowStation::IsPlayingAnimation(void) const { return Animations.Length() != 0; }
+		void WindowStation::Animate(void)
+		{
+			uint32 time = GetTimerValue();
+			for (int i = 0; i < Animations.Length(); i++) {
+				if (Animations[i].IsOver(time)) {
+					if (Animations[i].Special) Animations[i].Target->SetRectangle(Animations[i].GetFrame(Animations[i].EndTime));
+					else Animations[i].Target->SetPosition(Box(Animations[i].GetFrame(Animations[i].EndTime), Box(0, 0, 0, 0)));
+					if (Animations[i].Action == Animation::AnimationAction::HideWindow || Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
+						Animations[i].Target->Show(false);
+						if (Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
+							if (Animations[i].Special) Animations[i].Target->SetRectangle(Animations[i].BeginState);
+							else Animations[i].Target->SetPosition(Box(Animations[i].BeginState, Box(0, 0, 0, 0)));
+						}
+					}
+					Animations.Remove(i); i--;
+					if (Animations.Length() == 0) AnimationStateChanged();
+				} else {
+					if (Animations[i].Special) Animations[i].Target->SetRectangle(Animations[i].GetFrame(time));
+					else Animations[i].Target->SetPosition(Box(Animations[i].GetFrame(time), Box(0, 0, 0, 0)));
+				}
+			}
+		}
 		void WindowStation::SetFocus(Window * window)
 		{
 			if (window == FocusedWindow.Inner()) return;

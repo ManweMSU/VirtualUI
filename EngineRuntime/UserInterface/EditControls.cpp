@@ -600,7 +600,7 @@ namespace Engine
 					auto ep = max(_content.sp, _content.cp);
 					for (int i = max(vpl, 0); i < min(vph, _content.lines.Length()); i++) {
 						if (_text_info.ElementAt(i)) {
-							if (sp != ep && focused) {
+							if (sp != ep && !Disabled) {
 								if (sp.y != ep.y) {
 									if (i < sp.y) _text_info[i].HighlightText(-1, -1);
 									else if (i == sp.y) _text_info[i].HighlightText(sp.x, _content.lines[i].text.Length());
@@ -707,6 +707,7 @@ namespace Engine
 				_vscroll->Position = 0;
 				_hscroll->Position = 0;
 				_deferred_update = true;
+				if (_hook) _hook->CaretPositionChanged(this);
 			}
 			string MultiLineEdit::GetText(void)
 			{
@@ -742,6 +743,7 @@ namespace Engine
 					SetFocus();
 					SetCapture();
 					_save = true;
+					auto pcp = _content.cp;
 					if (y < 0) {
 						_content.cp = EditorCoord();
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
@@ -757,11 +759,13 @@ namespace Engine
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					}
 					ScrollToCaret();
+					if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
 			void MultiLineEdit::LeftButtonUp(Point at) { if (_state == 1) ReleaseCapture(); }
 			void MultiLineEdit::LeftButtonDoubleClick(Point at)
 			{
+				auto pcp = _content.cp;
 				_content.sp = _content.cp;
 				int len = _content.lines[_content.cp.y].text.Length();
 				auto & _sp = _content.sp.x;
@@ -769,6 +773,7 @@ namespace Engine
 				auto & _text = _content.lines[_content.cp.y].text;
 				while (_sp > 0 && ((IsAlphabetical(_text[_sp - 1]) || (_text[_sp - 1] >= L'0' && _text[_sp - 1] <= L'9') || (_text[_sp - 1] == L'_')))) _sp--;
 				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp] >= L'0' && _text[_cp] <= L'9') || (_text[_cp] == L'_')))) _cp++;
+				if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 			}
 			void MultiLineEdit::RightButtonDown(Point at)
 			{
@@ -781,6 +786,7 @@ namespace Engine
 					auto sp = min(_content.sp, _content.cp);
 					auto ep = max(_content.sp, _content.cp);
 					EditorCoord pos;
+					auto pcp = _content.cp;
 					if (y < 0) {
 						pos = EditorCoord();
 					} else if (y >= _content.lines.Length()) {
@@ -792,6 +798,7 @@ namespace Engine
 					}
 					if (sp > pos || ep < pos) _content.cp = _content.sp = pos;
 					ScrollToCaret();
+					if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
 			void MultiLineEdit::RightButtonUp(Point at)
@@ -818,6 +825,7 @@ namespace Engine
 			{
 				if (_state == 1) {
 					int y = (at.y - Border + _vscroll->Position) / _fh;
+					auto pcp = _content.cp;
 					if (y < 0) {
 						_content.cp = EditorCoord();
 					} else if (y >= _content.lines.Length()) {
@@ -826,6 +834,7 @@ namespace Engine
 						_content.cp = EditorCoord(_text_info[y].TestPosition(at.x - Border + _hscroll->Position), y);
 					}
 					ScrollToCaret();
+					if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
 			void MultiLineEdit::ScrollVertically(double delta) { _vscroll->SetScrollerPositionSilent(_vscroll->Position + int(delta * double(_vscroll->Line))); }
@@ -865,8 +874,10 @@ namespace Engine
 					_save = true;
 					if (_content.cp.x > 0) {
 						_content.cp = EditorCoord(_content.cp.x - 1, _content.cp.y);
+						if (_hook) _hook->CaretPositionChanged(this);
 					} else if (_content.cp.y > 0) {
 						_content.cp = EditorCoord(_content.lines[_content.cp.y - 1].text.Length(), _content.cp.y - 1);
+						if (_hook) _hook->CaretPositionChanged(this);
 					}
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
@@ -874,8 +885,10 @@ namespace Engine
 					_save = true;
 					if (_content.cp.x < _content.lines[_content.cp.y].text.Length()) {
 						_content.cp = EditorCoord(_content.cp.x + 1, _content.cp.y);
+						if (_hook) _hook->CaretPositionChanged(this);
 					} else if (_content.cp.y < _content.lines.Length() - 1) {
 						_content.cp = EditorCoord(0, _content.cp.y + 1);
+						if (_hook) _hook->CaretPositionChanged(this);
 					}
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
@@ -885,11 +898,13 @@ namespace Engine
 				} else if (key_code == KeyCodes::Home) {
 					_save = true;
 					_content.cp.x = 0;
+					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::End) {
 					_save = true;
 					_content.cp.x = _content.lines[_content.cp.y].text.Length();
+					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::Up) {
@@ -897,6 +912,7 @@ namespace Engine
 					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
 					_content.cp.y = max(_content.cp.y - 1, 0);
 					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::Down) {
@@ -904,6 +920,7 @@ namespace Engine
 					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
 					_content.cp.y = min(_content.cp.y + 1, _content.lines.Length() - 1);
 					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::PageUp) {
@@ -912,6 +929,7 @@ namespace Engine
 					int dy = _vscroll->Page / _fh;
 					_content.cp.y = max(_content.cp.y - dy, 0);
 					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::PageDown) {
@@ -920,6 +938,7 @@ namespace Engine
 					int dy = _vscroll->Page / _fh;
 					_content.cp.y = min(_content.cp.y + dy, _content.lines.Length() - 1);
 					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
 				} else if (key_code == KeyCodes::Return) {
@@ -968,6 +987,7 @@ namespace Engine
 					_deferred_scroll = true;
 					_deferred_update = true;
 					for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i);
+					if (_hook) _hook->CaretPositionChanged(this);
 					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 				}
 			}
@@ -979,6 +999,7 @@ namespace Engine
 					_deferred_scroll = true;
 					_deferred_update = true;
 					for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i);
+					if (_hook) _hook->CaretPositionChanged(this);
 					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 				}
 			}
@@ -1050,6 +1071,7 @@ namespace Engine
 				_content.cp.y = max(min(caret_position.y, _content.lines.Length() - 1), 0);
 				_content.sp.x = max(min(selection_position.x, _content.lines[_content.sp.y].text.Length()), 0);
 				_content.cp.x = max(min(caret_position.x, _content.lines[_content.cp.y].text.Length()), 0);
+				if (_hook) _hook->CaretPositionChanged(this);
 			}
 			Point MultiLineEdit::GetCaretPosition(void) { return Point(_content.cp.x, _content.cp.y); }
 			Point MultiLineEdit::GetSelectionPosition(void) { return Point(_content.sp.x, _content.sp.y); }
@@ -1169,12 +1191,14 @@ namespace Engine
 					}
 				}
 				_deferred_update = true;
+				if (_hook) _hook->CaretPositionChanged(this);
 				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 			}
 
 			string MultiLineEdit::IMultiLineEditHook::Filter(MultiLineEdit * sender, const string & input, Point insert_at) { return input; }
 			Array<uint8>* MultiLineEdit::IMultiLineEditHook::ColorHighlight(MultiLineEdit * sender, const Array<uint32>& text, int line) { return 0; }
 			Array<UI::Color>* MultiLineEdit::IMultiLineEditHook::GetPalette(MultiLineEdit * sender) { return 0; }
+			void MultiLineEdit::IMultiLineEditHook::CaretPositionChanged(MultiLineEdit * sender) {}
 
 			MultiLineEdit::EditorCoord::EditorCoord(void) {}
 			MultiLineEdit::EditorCoord::EditorCoord(int sx, int sy) : x(sx), y(sy) {}

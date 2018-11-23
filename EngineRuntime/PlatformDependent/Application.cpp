@@ -200,7 +200,7 @@ namespace Engine
 				if (GetSaveFileNameW(&ofn)) {
 					data->Info->File = result.ToString();
 					data->Info->Format = ofn.nFilterIndex - 1;
-					if (data->Info->AppendExtension) {
+					if (data->Info->AppendExtension && data->Info->Formats.Length()) {
 						bool has_ext = false;
 						for (int i = 0; i < data->Info->Formats[data->Info->Format].Extensions.Length(); i++) {
 							if (string::CompareIgnoreCase(IO::Path::GetExtension(data->Info->File), data->Info->Formats[data->Info->Format].Extensions[i]) == 0) {

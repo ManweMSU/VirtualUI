@@ -47,6 +47,7 @@
     <ClInclude Include="PlatformDependent\KeyCodes.h" />
     <ClInclude Include="PlatformDependent\NativeStation.h" />
     <ClInclude Include="PlatformDependent\StringConvert.h" />
+    <ClInclude Include="PlatformDependent\SystemColors.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
     <ClInclude Include="Processes\Process.h" />
     <ClInclude Include="Processes\Shell.h" />
@@ -107,6 +108,7 @@
     <ClCompile Include="PlatformDependent\KeyCodes.cpp" />
     <ClCompile Include="PlatformDependent\NativeStation.cpp" />
     <ClCompile Include="PlatformDependent\StringConvert.cpp" />
+    <ClCompile Include="PlatformDependent\SystemColors.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
     <ClCompile Include="Processes\Process.cpp" />
     <ClCompile Include="Processes\Shell.cpp" />

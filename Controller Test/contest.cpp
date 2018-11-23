@@ -123,9 +123,7 @@ public:
 class MainDelegate : public UI::Windows::IWindowEventCallback
 {
 public:
-	virtual void OnInitialized(UI::Window * window) override
-	{
-	}
+	virtual void OnInitialized(UI::Window * window) override {}
 	virtual void OnControlEvent(UI::Window * window, int ID, UI::Window::Event event, UI::Window * sender) override
 	{
 		if (ID == 101) {

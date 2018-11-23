@@ -293,6 +293,7 @@ namespace Engine
 				else Cursor = SystemCursor::SizeUpDown;
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(Cursor));
 			}
+			void OverlappedWindow::Timer(void) { if (_callback) _callback->OnFrameEvent(this, FrameEvent::Timer); }
 			ContentFrame * OverlappedWindow::GetContentFrame(void) { return _inner; }
 			IWindowEventCallback * OverlappedWindow::GetCallback(void) { return _callback; }
 			void OverlappedWindow::SetCallback(IWindowEventCallback * callback) { _callback = callback; }

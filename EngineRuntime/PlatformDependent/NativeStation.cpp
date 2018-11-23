@@ -121,7 +121,7 @@ namespace Engine
 			NativeStation * _parent = 0;
 			int last_x = 0x80000000, last_y = 0x80000000;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
-
+		public:
 			class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
 			{
 				Template::ControlTemplate * _template = 0;
@@ -133,8 +133,8 @@ namespace Engine
 						new Controls::OverlappedWindow(0, Station);
 				}
 			};
-		public:
-			NativeStation(HWND Handle, Template::ControlTemplate * Template) : HandleWindowStation(Handle, &DesktopWindowFactory(Template)), _slaves(0x10)
+		
+			NativeStation(HWND Handle, DesktopWindowFactory * Factory) : HandleWindowStation(Handle, Factory), _slaves(0x10)
 			{
 				Direct3D::CreateD2DDeviceContextForWindow(Handle, DeviceContext.InnerRef(), SwapChain.InnerRef());
 				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
@@ -189,9 +189,10 @@ namespace Engine
 			void RenderContent(void)
 			{
 				if (DeviceContext) {
+					RenderingDevice->SetTimerValue(GetTimerValue());
+					Animate();
 					DeviceContext->SetDpi(96.0f, 96.0f);
 					DeviceContext->BeginDraw();
-					RenderingDevice->SetTimerValue(GetTimerValue());
 					Render();
 					DeviceContext->EndDraw();
 					SwapChain->Present(1, 0);
@@ -240,7 +241,8 @@ namespace Engine
 			if (!props->MaximizeButton) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_MAXIMIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 			if (!props->MinimizeButton) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_MINIMIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 			if (!props->Sizeble) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_SIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-			SafePointer<NativeStation> Station = new NativeStation(Handle, Template);
+			NativeStation::DesktopWindowFactory Factory(Template);
+			SafePointer<NativeStation> Station = new NativeStation(Handle, &Factory);
 			if (ParentStation) static_cast<NativeStation *>(ParentStation)->MakeParent(Station);
 			SetWindowLongPtrW(Handle, 0, reinterpret_cast<LONG_PTR>(Station.Inner()));
 			Station->GetMinWidth() = mRect.right - mRect.left;
@@ -280,7 +282,8 @@ namespace Engine
 			HWND Handle = CreateWindowExW(ExStyle, L"engine_runtime_popup_class", L"", Style,
 				ClientBox.Left, ClientBox.Top, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top,
 				0, 0, 0, 0);
-			SafePointer<NativeStation> Station = new NativeStation(Handle, Template);
+			NativeStation::DesktopWindowFactory Factory(Template);
+			SafePointer<NativeStation> Station = new NativeStation(Handle, &Factory);
 			SetWindowLongPtrW(Handle, 0, reinterpret_cast<LONG_PTR>(Station.Inner()));
 			Controls::OverlappedWindow * Desktop = Station->GetDesktop()->As<Controls::OverlappedWindow>();
 			Desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());

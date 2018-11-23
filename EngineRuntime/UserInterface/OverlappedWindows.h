@@ -32,7 +32,7 @@ namespace Engine
 		}
 		namespace Windows
 		{
-			enum class FrameEvent { Close, Move, Maximize, Minimize, Help, PopupMenuCancelled };
+			enum class FrameEvent { Close, Move, Maximize, Minimize, Help, PopupMenuCancelled, Timer };
 			class IWindowEventCallback
 			{
 			public:
@@ -112,6 +112,7 @@ namespace Engine
 				virtual bool TranslateAccelerators(int key_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
+				virtual void Timer(void) override;
 
 				ContentFrame * GetContentFrame(void);
 				Windows::IWindowEventCallback * GetCallback(void);

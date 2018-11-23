@@ -24,12 +24,13 @@ namespace Engine
 				AnimationClass BeginClass;
 				AnimationClass EndClass;
 				AnimationAction Action;
+				uint32 Special;
 
 				AnimationState(void) {}
 				AnimationState(T * target, const V & begin, const V & end, uint32 current, uint32 duration,
-					AnimationClass begin_class, AnimationClass end_class, AnimationAction action) :
+					AnimationClass begin_class, AnimationClass end_class, AnimationAction action, uint32 special) :
 					Target(target), BeginState(begin), EndState(end), BeginTime(current), EndTime(current + duration),
-					Duration(duration), BeginClass(begin_class), EndClass(end_class), Action(action) {}
+					Duration(duration), BeginClass(begin_class), EndClass(end_class), Action(action), Special(special) {}
 
 				bool IsOver(uint32 time) const { return (time - BeginTime >= Duration); }
 				V GetFrame(uint32 time) const
