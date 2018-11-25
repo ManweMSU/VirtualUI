@@ -111,6 +111,7 @@ namespace Engine
 					virtual string Filter(MultiLineEdit * sender, const string & input, Point insert_at);
 					virtual Array<uint8> * ColorHighlight(MultiLineEdit * sender, const Array<uint32> & text, int line);
 					virtual Array<UI::Color> * GetPalette(MultiLineEdit * sender);
+					virtual void CaretPositionChanged(MultiLineEdit * sender);
 				};
 				struct EditorCoord
 				{

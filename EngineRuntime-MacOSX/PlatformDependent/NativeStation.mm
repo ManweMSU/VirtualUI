@@ -58,7 +58,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     uint32 last_ldown;
     uint32 last_rdown;
     uint32 dbl;
-    int last_x, last_y, fkeys;
+    int last_x, last_y, fkeys, last_px, last_py;
     bool lwas, rwas, mwas;
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
@@ -126,6 +126,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     last_rdown = 0;
     last_x = 0;
     last_y = 0;
+    last_px = -1;
+    last_py = -1;
     fkeys = 0;
     lwas = false;
     rwas = false;
@@ -204,8 +206,9 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
+        if (x != last_x || y != last_y) [self mouseMoved: event];
         auto time = Engine::GetTimerValue();
-        if (lwas && (time - last_ldown) < dbl) {
+        if (lwas && (time - last_ldown) < dbl && x == last_px && y == last_py) {
             lwas = false;
             station->LeftButtonDoubleClick(Engine::UI::Point(x, y));
             [self setNeedsDisplay: YES];
@@ -215,6 +218,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
             station->LeftButtonDown(Engine::UI::Point(x, y));
             [self setNeedsDisplay: YES];
         }
+        last_px = x; last_py = y;
     }
 }
 - (void) mouseUp: (NSEvent *) event
@@ -248,8 +252,9 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
+        if (x != last_x || y != last_y) [self mouseMoved: event];
         auto time = Engine::GetTimerValue();
-        if (rwas && (time - last_rdown) < dbl) {
+        if (rwas && (time - last_rdown) < dbl && x == last_px && y == last_py) {
             rwas = false;
             station->RightButtonDoubleClick(Engine::UI::Point(x, y));
             [self setNeedsDisplay: YES];
@@ -259,6 +264,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
             station->RightButtonDown(Engine::UI::Point(x, y));
             [self setNeedsDisplay: YES];
         }
+        last_px = x; last_py = y;
     }
 }
 - (void) rightMouseUp: (NSEvent *) event
@@ -830,12 +836,13 @@ namespace Engine
 			void RenderContent(void)
 			{
 				if (RenderingDevice) {
+                    RenderingDevice->SetTimerValue(GetTimerValue());
+                    Animate();
                     auto rect = [[_window contentView] frame];
                     double scale = [_window backingScaleFactor];
                     UI::Box box = UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
                     CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
                     RenderingDevice->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
-                    RenderingDevice->SetTimerValue(GetTimerValue());
                     Render();
 				}
 			}
@@ -1017,7 +1024,8 @@ namespace Engine
 				Background->Gradient << Template::GradientPoint(Template::ColorTemplate(BackgroundColor), 0.0);
 				local_desktop->SetBackground(Background);
 			}
-            station->SetBox(UI::Box(0, 0, client_box.Right - client_box.Left, client_box.Bottom - client_box.Top));
+            NSRect actual = [view frame];
+            station->SetBox(UI::Box(0, 0, int(actual.size.width * scale), int(actual.size.height * scale)));
             station->Retain();
 			return station;
         }
@@ -1055,7 +1063,8 @@ namespace Engine
 				Background->Gradient << Template::GradientPoint(Template::ColorTemplate(BackgroundColor), 0.0);
 				local_desktop->SetBackground(Background);
 			}
-            station->SetBox(ClientArea);
+            NSRect actual = [view frame];
+            station->SetBox(UI::Box(0, 0, int(actual.size.width * scale), int(actual.size.height * scale)));
             station->Retain();
 			return station;
         }
@@ -1094,7 +1103,7 @@ namespace Engine
         {
             NativeStation * st = static_cast<NativeStation *>(Station);
             if (!st->IsOnScreen()) return;
-            for (int i = 0; i < st->_slaves.Length(); i++) {
+            for (int i = 0; i < st->_slaves.Length(); i++) if (st->_slaves[i]->_visible) {
                 InternalShowWindow(st->_slaves[i], Show);
             }
         }

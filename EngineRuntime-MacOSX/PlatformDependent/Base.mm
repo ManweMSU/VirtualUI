@@ -71,24 +71,26 @@ namespace Engine
 
 	void StringLower(widechar * str, int length)
 	{
-		for (int i = 0; i < length; i++) {
-			NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
-			NSString * c = [s lowercaseStringWithLocale: [NSLocale currentLocale]];
-			[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
-				options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
-			[s release];
-			[c release];
+		@autoreleasepool {
+			for (int i = 0; i < length; i++) {
+				NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+				NSString * c = [s localizedLowercaseString];
+				[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
+					options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
+				[s release];
+			}
 		}
 	}
 	void StringUpper(widechar * str, int length)
 	{
-		for (int i = 0; i < length; i++) {
-			NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
-			NSString * c = [s uppercaseStringWithLocale: [NSLocale currentLocale]];
-			[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
-				options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
-			[s release];
-			[c release];
+		@autoreleasepool {
+			for (int i = 0; i < length; i++) {
+				NSString * s = [[NSString alloc] initWithBytes: str + i length: sizeof(widechar) encoding: NSUTF32LittleEndianStringEncoding];
+				NSString * c = [s localizedUppercaseString];
+				[c getBytes: (str + i) maxLength: sizeof(widechar) usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
+					options: 0 range: NSMakeRange(0, 1) remainingRange: NULL];
+				[s release];
+			}
 		}
 	}
 	bool IsAlphabetical(uint32 letter)

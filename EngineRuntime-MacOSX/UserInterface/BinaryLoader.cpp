@@ -1,5 +1,7 @@
 #include "BinaryLoader.h"
 
+#include "../PlatformDependent/SystemColors.h"
+
 using namespace Engine::Streaming;
 
 namespace Engine
@@ -138,6 +140,31 @@ namespace Engine
 				}
 				using namespace Format;
 
+				Color MapSystemColor(Color input)
+				{
+					if (input.a == 0) {
+						if (!input.Value) return 0;
+						int code = input.r;
+						Color result = 0;
+						if (code == 1) result = GetSystemColor(SystemColor::Theme);
+						else if (code == 2) result = GetSystemColor(SystemColor::WindowBackgroup);
+						else if (code == 3) result = GetSystemColor(SystemColor::WindowText);
+						else if (code == 4) result = GetSystemColor(SystemColor::SelectedBackground);
+						else if (code == 5) result = GetSystemColor(SystemColor::SelectedText);
+						else if (code == 6) result = GetSystemColor(SystemColor::MenuBackground);
+						else if (code == 7) result = GetSystemColor(SystemColor::MenuText);
+						else if (code == 8) result = GetSystemColor(SystemColor::MenuHotBackground);
+						else if (code == 9) result = GetSystemColor(SystemColor::MenuHotText);
+						else if (code == 10) result = GetSystemColor(SystemColor::GrayedText);
+						else if (code == 11) result = GetSystemColor(SystemColor::Hyperlink);
+						if (input.b != 255) {
+							double blend = double(input.b) / 255.0;
+							result.a = uint8(double(result.a) * blend);
+						}
+						return result;
+					} else return input;
+				}
+
 				void LoadTexture(Texture * Source, uint8 * Data, uint Size, IResourceLoader * ResourceLoader, InterfaceTemplate & Result)
 				{
 					SafePointer<Stream> TextureSource;
@@ -202,7 +229,7 @@ namespace Engine
 				{
 					string Argument = string(Data + Source->Parameter, -1, Encoding::UTF16);
 					if (Argument.Length()) return Template::BasicTemplate<Color>::Undefined(Argument);
-					else return Template::BasicTemplate<Color>(Color(Source->Value));
+					else return Template::BasicTemplate<Color>(MapSystemColor(Color(Source->Value)));
 				}
 				Template::BasicTemplate<string> LoadTextTemplate(Template4 * Source, const uint8 * Data, uint Size)
 				{
@@ -345,7 +372,7 @@ namespace Engine
 									if (Property.Type == Reflection::PropertyType::Boolean) {
 										Property.Set<bool>(Ex->Value != 0);
 									} else if (Property.Type == Reflection::PropertyType::Color) {
-										Property.Set<Color>(Ex->Value);
+										Property.Set<Color>(MapSystemColor(Ex->Value));
 									} else {
 										string Resource = string(Data + Ex->Value, -1, Encoding::UTF16);
 										if (Property.Type == Reflection::PropertyType::String) {

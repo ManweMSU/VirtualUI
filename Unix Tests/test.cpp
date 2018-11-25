@@ -1,5 +1,7 @@
 #include <EngineRuntime.h>
 
+#include <PlatformDependent/SystemColors.h>
+
 using namespace Engine;
 using namespace Engine::UI;
 
@@ -138,6 +140,14 @@ int Main(void)
     auto templ = interface.Dialog[L"Test3"];
     auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0);
     templ->Properties->GetProperty(L"ToolWindow").Set<bool>(true);
+    SafePointer<UI::Template::BarShape> Shape = new UI::Template::BarShape;
+    Shape->Position.Left = UI::Template::Coordinate(0);
+    Shape->Position.Top = UI::Template::Coordinate(0);
+    Shape->Position.Right = UI::Template::Coordinate(UI::Coordinate(0, 0.0, 1.0));
+    Shape->Position.Bottom = UI::Template::Coordinate(UI::Coordinate(0, 0.0, 1.0));
+    Shape->Gradient << UI::Template::GradientPoint(UI::Template::ColorTemplate(GetSystemColor(SystemColor::MenuHotBackground)), UI::Template::DoubleTemplate(0.0));
+    Shape->GradientAngle = UI::Template::DoubleTemplate(0.0);
+    w4->As<UI::Controls::OverlappedWindow>()->SetBackground(Shape);
     auto w666 = Windows::CreateFramedDialog(templ, 0, UI::Rectangle::Invalid(), w4->GetStation());
     w4->FindChild(212121)->SetText(req.ToString());
     if (w4) w4->Show(true);

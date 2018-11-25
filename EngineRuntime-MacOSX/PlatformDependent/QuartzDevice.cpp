@@ -68,7 +68,7 @@ namespace Engine
             CoreTextFont(const string & FaceName, double Height, double Scale, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
             {
                 CFStringRef font_name = CFStringCreateWithBytes(kCFAllocatorDefault, reinterpret_cast<const uint8 *>(static_cast<const widechar *>(FaceName)),
-                    FaceName.Length(), kCFStringEncodingUTF32LE, false);
+                    FaceName.Length() * 4, kCFStringEncodingUTF32LE, false);
                 CFStringRef alt_font_name = CFStringCreateWithCString(kCFAllocatorDefault, "Apple Color Emoji", kCFStringEncodingASCII);
                 if (!font_name) throw Exception();
                 zoomed_height = Height * 0.75;

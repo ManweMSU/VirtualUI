@@ -231,7 +231,10 @@ namespace Engine
 				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
 			void AnimateWindow(Window * window, const Rectangle & from, const Rectangle & position, uint32 duration,
 				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
+			void AnimateWindow(Window * window, const Box & from, const Box & position, uint32 duration,
+				Animation::AnimationClass begin_class, Animation::AnimationClass end_class, Animation::AnimationAction action);
 			bool IsPlayingAnimation(void) const;
+			void Animate(void);
 
 			virtual void SetFocus(Window * window);
 			virtual Window * GetFocus(void);
