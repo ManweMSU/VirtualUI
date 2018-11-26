@@ -55,6 +55,7 @@ namespace Engine
 		void EncodeImage(Streaming::Stream * stream, Image * image, const string & format);
 		Frame * DecodeFrame(Streaming::Stream * stream);
 		Image * DecodeImage(Streaming::Stream * stream);
+		string GetEncodedImageFormat(Streaming::Stream * stream);
 
 		enum class FrameUsage { ColorMap, NormalMap, LightMap };
 		enum class PixelFormat { B8G8R8A8, R8G8B8A8, B8G8R8U8, R8G8B8U8, B8G8R8, R8G8B8, P8, P4, P2, P1 };
