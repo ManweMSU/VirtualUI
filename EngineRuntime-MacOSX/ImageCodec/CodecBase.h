@@ -91,7 +91,7 @@ namespace Engine
 			uint8 * RawData;
 			Array<uint32> Palette;
 		public:
-			FrameUsage Usage = FrameUsage::NormalMap;
+			FrameUsage Usage = FrameUsage::ColorMap;
 			int32 HotPointX = 0;
 			int32 HotPointY = 0;
 			int32 Duration = 0;
