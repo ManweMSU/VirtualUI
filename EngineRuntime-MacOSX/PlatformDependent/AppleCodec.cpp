@@ -169,7 +169,7 @@ namespace Engine
 				if ((sign & 0xFFFF) == 0x4D42) return L"BMP";
 				else if (sign == 0x0A1A0A0D474E5089) return L"PNG";
 				else if ((sign & 0xFFFFFF) == 0xFFD8FF) return L"JPG";
-				else if ((sign & 0xFFFFFFFFFFFF) == 0x613938464947) return L"GIF";
+				else if ((sign & 0xFFFFFFFFFFFF) == 0x613938464947 || (sign & 0xFFFFFFFFFFFF) == 0x613738464947) return L"GIF";
 				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
