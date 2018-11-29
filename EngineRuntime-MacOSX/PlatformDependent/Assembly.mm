@@ -12,7 +12,7 @@ namespace Engine
 
 		string GetCurrentUserLocale(void)
 		{
-			return Cocoa::EngineString([[NSLocale currentLocale] languageCode]);
+			return Cocoa::EngineString([[NSLocale preferredLanguages] objectAtIndex: 0]).Fragment(0, 2);
 		}
 		Streaming::Stream * QueryResource(const widechar * identifier)
 		{
