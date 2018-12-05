@@ -362,14 +362,22 @@ namespace Engine
 		void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) {
-				if (Codecs[i].CanEncode(format) && Codecs[i].IsFrameCodec()) Codecs[i].EncodeFrame(stream, frame, format);
+				if (Codecs[i].CanEncode(format) && Codecs[i].IsFrameCodec()) {
+					Codecs[i].EncodeFrame(stream, frame, format);
+					return;
+				}
 			}
+			throw InvalidFormatException();
 		}
 		void EncodeImage(Streaming::Stream * stream, Image * image, const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) {
-				if (Codecs[i].CanEncode(format) && Codecs[i].IsImageCodec()) Codecs[i].EncodeImage(stream, image, format);
+				if (Codecs[i].CanEncode(format) && Codecs[i].IsImageCodec()) {
+					Codecs[i].EncodeImage(stream, image, format);
+					return;
+				}
 			}
+			throw InvalidFormatException();
 		}
 		Frame * DecodeFrame(Streaming::Stream * stream)
 		{
@@ -388,6 +396,16 @@ namespace Engine
 				}
 			}
 			return 0;
+		}
+		string GetEncodedImageFormat(Streaming::Stream * stream)
+		{
+			for (int i = 0; i < Codecs.Length(); i++) {
+				if (Codecs[i].IsImageCodec()) {
+					string format = Codecs[i].ExamineData(stream);
+					if (format.Length()) return format;
+				}
+			}
+			return L"";
 		}
 	}
 }
