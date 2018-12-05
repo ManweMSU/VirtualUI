@@ -409,6 +409,7 @@ namespace Engine
 		class D2DTextureDD : public ITexture
 		{
 		public:
+			SafePointer<D2DTexture> Source;
 			Array<ID2D1Bitmap *> Frames;
 			Array<uint32> FrameDuration;
 			uint32 TotalDuration;
@@ -701,6 +702,7 @@ namespace Engine
 					D2DTexture * src = static_cast<D2DTexture *>(texture);
 					D2DTextureDD * dd = new (std::nothrow) D2DTextureDD;
 					if (!dd) throw OutOfMemoryException();
+					dd->Source.SetRetain(src);
 					dd->w = src->w; dd->h = src->h;
 					dd->TotalDuration = src->TotalDuration;
 					dd->FrameDuration = src->FrameDuration;

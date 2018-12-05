@@ -337,8 +337,8 @@ namespace Engine
 			for (int i = 0; i < Animations.Length(); i++) if (Animations[i].Target == window) return;
 			window->SetPosition(from);
 			if (action == Animation::AnimationAction::ShowWindow) window->Show(true);
-			Rectangle from_rect(from.Left, from.Top, from.Right, from.Bottom);
-			Rectangle to_rect(position.Left, position.Top, position.Right, position.Bottom);
+			Rectangle from_rect(Coordinate(0, from.Left, 0.0), Coordinate(0, from.Top, 0.0), Coordinate(0, from.Right, 0.0), Coordinate(0, from.Bottom, 0.0));
+			Rectangle to_rect(Coordinate(0, position.Left, 0.0), Coordinate(0, position.Top, 0.0), Coordinate(0, position.Right, 0.0), Coordinate(0, position.Bottom, 0.0));
 			Animations << WindowAnimationState(window, from_rect, to_rect, GetTimerValue(), duration,
 				begin_class, end_class, action, 0);
 			if (Animations.Length() == 1) AnimationStateChanged();
@@ -350,19 +350,28 @@ namespace Engine
 			for (int i = 0; i < Animations.Length(); i++) {
 				if (Animations[i].IsOver(time)) {
 					if (Animations[i].Special) Animations[i].Target->SetRectangle(Animations[i].GetFrame(Animations[i].EndTime));
-					else Animations[i].Target->SetPosition(Box(Animations[i].GetFrame(Animations[i].EndTime), Box(0, 0, 0, 0)));
+					else {
+						auto frame = Animations[i].GetFrame(Animations[i].EndTime);
+						Animations[i].Target->SetPosition(Box(int(frame.Left.Zoom + 0.5), int(frame.Top.Zoom + 0.5), int(frame.Right.Zoom + 0.5), int(frame.Bottom.Zoom + 0.5)));
+					}
 					if (Animations[i].Action == Animation::AnimationAction::HideWindow || Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
 						Animations[i].Target->Show(false);
 						if (Animations[i].Action == Animation::AnimationAction::HideWindowKeepPosition) {
 							if (Animations[i].Special) Animations[i].Target->SetRectangle(Animations[i].BeginState);
-							else Animations[i].Target->SetPosition(Box(Animations[i].BeginState, Box(0, 0, 0, 0)));
+							else {
+								auto frame = Animations[i].BeginState;
+								Animations[i].Target->SetPosition(Box(int(frame.Left.Zoom + 0.5), int(frame.Top.Zoom + 0.5), int(frame.Right.Zoom + 0.5), int(frame.Bottom.Zoom + 0.5)));
+							}
 						}
 					}
 					Animations.Remove(i); i--;
 					if (Animations.Length() == 0) AnimationStateChanged();
 				} else {
 					if (Animations[i].Special) Animations[i].Target->SetRectangle(Animations[i].GetFrame(time));
-					else Animations[i].Target->SetPosition(Box(Animations[i].GetFrame(time), Box(0, 0, 0, 0)));
+					else {
+						auto frame = Animations[i].GetFrame(time);
+						Animations[i].Target->SetPosition(Box(int(frame.Left.Zoom + 0.5), int(frame.Top.Zoom + 0.5), int(frame.Right.Zoom + 0.5), int(frame.Bottom.Zoom + 0.5)));
+					}
 				}
 			}
 		}

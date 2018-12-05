@@ -47,7 +47,7 @@
 #include <Math/Complex.h>
 #include <Math/Vector.h>
 #include <Math/Matrix.h>
-
+#include <PlatformSpecific/WindowsTaskbar.h>
 #include <PlatformDependent/SystemColors.h>
 
 #include "stdafx.h"
@@ -580,6 +580,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w4->Show(true);
 			w5->Show(true);
 			w666->Show(true);
+
+			WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
+			WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}

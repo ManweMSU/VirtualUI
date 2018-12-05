@@ -175,8 +175,13 @@ namespace Engine
 					auto & formats = Info->Formats;
 					if (formats.Length() > 1) {
 						DynamicString exts;
+						Array<string> was(0x10);
 						for (int i = 0; i < formats.Length(); i++) for (int j = 0; j < formats[i].Extensions.Length(); j++) {
 							auto & ext = formats[i].Extensions[j];
+							bool f_was = false;
+							for (int k = 0; k < was.Length(); k++) if (string::CompareIgnoreCase(was[k], ext) == 0) { f_was = true; break; }
+							if (f_was) continue;
+							was << ext;
 							if (i || j) exts += L";";
 							exts += L"*.";
 							exts += ext;

@@ -32,6 +32,9 @@
     <Filter Include="Math">
       <UniqueIdentifier>{4412c2f8-d2b8-44ae-9a0d-e73013193c6f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PlatformSpecific">
+      <UniqueIdentifier>{70776db3-808a-4edb-be5e-81b91374b43c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -220,6 +223,9 @@
     <ClInclude Include="PlatformDependent\SystemColors.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformSpecific\WindowsTaskbar.h">
+      <Filter>PlatformSpecific</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -395,6 +401,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\SystemColors.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformSpecific\WindowsTaskbar.cpp">
+      <Filter>PlatformSpecific</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
