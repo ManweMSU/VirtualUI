@@ -84,6 +84,23 @@ namespace Engine
 		CloseHandle(pi.hThread);
 		return new WinapiProcess::Process(pi.hProcess);
 	}
+	bool CreateProcessElevated(const string & image, const Array<string>* command_line)
+	{
+		SHELLEXECUTEINFOW info;
+		DynamicString cmd;
+		if (command_line) {
+			for (int i = 0; i < command_line->Length(); i++) WinapiProcess::AppendCommandLine(cmd, command_line->ElementAt(i));
+		}
+		ZeroMemory(&info, sizeof(info));
+		info.cbSize = sizeof(info);
+		info.fMask = SEE_MASK_UNICODE | SEE_MASK_NO_CONSOLE | SEE_MASK_FLAG_NO_UI | SEE_MASK_NOASYNC;
+		info.lpVerb = L"runas";
+		info.lpFile = IO::ExpandPath(image);
+		info.lpParameters = cmd;
+		info.nShow = SW_SHOW;
+		if (!ShellExecuteExW(&info)) return false;
+		return true;
+	}
 	Array<string>* GetCommandLine(void)
 	{
 		int count;
