@@ -4,6 +4,7 @@
 #include "NativeStation.h"
 #include "NativeStationBackdoors.h"
 #include "CocoaInterop.h"
+#include "Assembly.h"
 
 @interface EngineRuntimeOpenSaveDelegate : NSObject<NSOpenSavePanelDelegate>
 {
@@ -86,44 +87,58 @@ namespace Engine
 				if (callback) {
 					NSMenu * menu = [NSApp mainMenu];
 					if (callback->GetAbility(ApplicationAbility::CreateFiles) || callback->GetAbility(ApplicationAbility::OpenFiles)) {
-						NSMenuItem * file_menu_item = [[NSMenuItem alloc] initWithTitle: @"File" action: NULL keyEquivalent: @""];
-						NSMenu * file_menu = [[NSMenu alloc] initWithTitle: @"File"];
+						NSString * file_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(313, L"File"));
+						NSString * new_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(314, L"New file"));
+						NSString * open_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(315, L"Open file"));
+						NSString * close_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(316, L"Close window"));
+
+						NSMenuItem * file_menu_item = [[NSMenuItem alloc] initWithTitle: file_str action: NULL keyEquivalent: @""];
+						NSMenu * file_menu = [[NSMenu alloc] initWithTitle: file_str];
 						[file_menu_item setSubmenu: file_menu];
 						if (callback->GetAbility(ApplicationAbility::CreateFiles)) {
-							NSMenuItem * create = [[NSMenuItem alloc] initWithTitle: @"New file" action: @selector(new_file:) keyEquivalent: @"n"];
+							NSMenuItem * create = [[NSMenuItem alloc] initWithTitle: new_str action: @selector(new_file:) keyEquivalent: @"n"];
 							[file_menu addItem: create];
 							[create release];
 						}
 						if (callback->GetAbility(ApplicationAbility::OpenFiles)) {
-							NSMenuItem * open = [[NSMenuItem alloc] initWithTitle: @"Open file" action: @selector(open_file:) keyEquivalent: @"o"];
+							NSMenuItem * open = [[NSMenuItem alloc] initWithTitle: open_str action: @selector(open_file:) keyEquivalent: @"o"];
 							[file_menu addItem: open];
 							[open release];
 						}
 						NSMenuItem * sep = [NSMenuItem separatorItem];
 						[file_menu addItem: sep];
 						[sep release];
-						NSMenuItem * close = [[NSMenuItem alloc] initWithTitle: @"Close window" action: @selector(performClose:) keyEquivalent: @"w"];
+						NSMenuItem * close = [[NSMenuItem alloc] initWithTitle: close_str action: @selector(performClose:) keyEquivalent: @"w"];
 						[file_menu addItem: close];
 						[close release];
 						[menu insertItem: file_menu_item atIndex: 1];
 						[file_menu_item release];
 						[file_menu release];
+
+						[file_str release];
+						[new_str release];
+						[open_str release];
+						[close_str release];
 					}
 					if (callback->GetAbility(ApplicationAbility::ShowProperties)) {
 						NSMenu * main = [[menu itemAtIndex: 0] submenu];
+						NSString * prop_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(317, L"Preferences"));
 
 						NSMenuItem * sep = [NSMenuItem separatorItem];
 						[main insertItem: sep atIndex: 1];
 						[sep release];
-						NSMenuItem * props = [[NSMenuItem alloc] initWithTitle: @"Preferences" action: @selector(show_props:) keyEquivalent: @","];
+						NSMenuItem * props = [[NSMenuItem alloc] initWithTitle: prop_str action: @selector(show_props:) keyEquivalent: @","];
 						[main insertItem: props atIndex: 2];
 						[props release];
+						[prop_str release];
 					}
 					if (callback->GetAbility(ApplicationAbility::ShowHelp)) {
 						NSMenu * help = [NSApp helpMenu];
-						NSMenuItem * item = [[NSMenuItem alloc] initWithTitle: @"Documentation" action: @selector(show_help:) keyEquivalent: @""];
+						NSString * docs_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(318, L"Show Help"));
+						NSMenuItem * item = [[NSMenuItem alloc] initWithTitle: docs_str action: @selector(show_help:) keyEquivalent: @""];
 						[help addItem: item];
 						[item release];
+						[docs_str release];
 					}
 				}
 			}
@@ -186,7 +201,7 @@ namespace Engine
 							exts += L"*.";
 							exts += ext;
 						}
-						auto str = L"All supported (" + exts.ToString() + L")";
+						auto str = string(Assembly::GetLocalizedCommonString(201, L"All supported")) + L" (" + exts.ToString() + L")";
 						NSString * ns = Engine::Cocoa::CocoaString(str);
 						[view addItemWithTitle: ns];
 						[ns release];
@@ -204,7 +219,9 @@ namespace Engine
 						[view addItemWithTitle: ns];
 						[ns release];
 					}
-					[view addItemWithTitle: @"All files (*.*)"];
+					NSString * all = Cocoa::CocoaString(string(Assembly::GetLocalizedCommonString(202, L"All files")) + L" (*.*)");
+					[view addItemWithTitle: all];
+					[all release];
 					[view selectItemAtIndex: 1 + Info->DefaultFormat];
 					[view setAction: @selector(format_changed:)];
 					[view setTarget: delegate];
@@ -382,17 +399,33 @@ namespace Engine
 				[text release];
 				[title release];
 				if (Buttons == MessageBoxButtonSet::Ok) {
-					[alert addButtonWithTitle: @"OK"];
+					NSString * text_1 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(101, L"OK"));
+					[alert addButtonWithTitle: text_1];
+					[text_1 release];
 				} else if (Buttons == MessageBoxButtonSet::OkCancel) {
-					[alert addButtonWithTitle: @"Cancel"];
-					[alert addButtonWithTitle: @"OK"];
+					NSString * text_1 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(101, L"OK"));
+					NSString * text_2 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(102, L"Cancel"));
+					[alert addButtonWithTitle: text_2];
+					[alert addButtonWithTitle: text_1];
+					[text_1 release];
+					[text_2 release];
 				} else if (Buttons == MessageBoxButtonSet::YesNo) {
-					[alert addButtonWithTitle: @"No"];
-					[alert addButtonWithTitle: @"Yes"];
+					NSString * text_1 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(103, L"Yes"));
+					NSString * text_2 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(104, L"No"));
+					[alert addButtonWithTitle: text_2];
+					[alert addButtonWithTitle: text_1];
+					[text_1 release];
+					[text_2 release];
 				} else if (Buttons == MessageBoxButtonSet::YesNoCancel) {
-					[alert addButtonWithTitle: @"Cancel"];
-					[alert addButtonWithTitle: @"No"];
-					[alert addButtonWithTitle: @"Yes"];
+					NSString * text_0 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(102, L"Cancel"));
+					NSString * text_1 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(103, L"Yes"));
+					NSString * text_2 = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(104, L"No"));
+					[alert addButtonWithTitle: text_0];
+					[alert addButtonWithTitle: text_2];
+					[alert addButtonWithTitle: text_1];
+					[text_0 release];
+					[text_1 release];
+					[text_2 release];
 				}
 				if (Style == MessageBoxStyle::Error) [alert setAlertStyle: NSAlertStyleCritical];
 				else if (Style == MessageBoxStyle::Warning) [alert setAlertStyle: NSAlertStyleWarning];

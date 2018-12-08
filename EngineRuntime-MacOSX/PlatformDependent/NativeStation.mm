@@ -13,6 +13,7 @@
 #include "ApplicationBackdoors.h"
 #include "../ImageCodec/IconCodec.h"
 #include "../Storage/ImageVolume.h"
+#include "Assembly.h"
 
 using namespace Engine::UI;
 
@@ -854,52 +855,66 @@ namespace Engine
         {
             if (!_Initialized) {
                 InitializeCodecCollection();
+
+                NSString * about_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(301, L"About"));
+                NSString * services_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(302, L"Services"));
+                NSString * hide_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(303, L"Hide"));
+                NSString * hide_all_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(304, L"Hide others"));
+                NSString * show_all_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(305, L"Show all"));
+                NSString * exit_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(306, L"Exit"));
+                NSString * window_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(307, L"Window"));
+                NSString * minimize_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(308, L"Minimize"));
+                NSString * zoom_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(309, L"Zoom"));
+                NSString * fullsreen_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(310, L"Toggle Full Screen"));
+                NSString * bring_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(311, L"Bring All to Front"));
+                NSString * help_str = Cocoa::CocoaString(Assembly::GetLocalizedCommonString(312, L"Help"));
+
                 [NSApplication sharedApplication];
                 EngineRuntimeApplicationDelegate * delegate = [[EngineRuntimeApplicationDelegate alloc] init];
                 [NSApp setDelegate: delegate];
                 NSMenu * menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
                 NSMenuItem * main_item = [[NSMenuItem alloc] initWithTitle: @"Application Menu" action: NULL keyEquivalent: @""];
                 NSMenu * main_menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
-                NSMenuItem * about = [[NSMenuItem alloc] initWithTitle: @"About" action: @selector(orderFrontStandardAboutPanel:) keyEquivalent: @""];
+                NSMenuItem * about = [[NSMenuItem alloc] initWithTitle: about_str action: @selector(orderFrontStandardAboutPanel:) keyEquivalent: @""];
                 NSMenuItem * about_sep = [NSMenuItem separatorItem];
                 [main_item setSubmenu: main_menu];
                 [main_menu addItem: about];
                 [main_menu addItem: about_sep];
-                NSMenuItem * services_items = [[NSMenuItem alloc] initWithTitle: @"Services" action: NULL keyEquivalent: @""];
-                NSMenu * services_menu = [[NSMenu alloc] initWithTitle: @"Services Menu"];
+                NSMenuItem * services_items = [[NSMenuItem alloc] initWithTitle: services_str action: NULL keyEquivalent: @""];
+                NSMenu * services_menu = [[NSMenu alloc] initWithTitle: services_str];
                 NSMenuItem * services_sep = [NSMenuItem separatorItem];
-                NSMenuItem * hide_app = [[NSMenuItem alloc] initWithTitle: @"Hide" action: @selector(hide:) keyEquivalent: @"h"];
+                NSMenuItem * hide_app = [[NSMenuItem alloc] initWithTitle: hide_str action: @selector(hide:) keyEquivalent: @"h"];
                 [services_items setSubmenu: services_menu];
                 [main_menu addItem: services_items];
                 [main_menu addItem: services_sep];
                 [main_menu addItem: hide_app];
-                NSMenuItem * hide_others = [[NSMenuItem alloc] initWithTitle: @"Hide others" action: @selector(hideOtherApplications:) keyEquivalent: @"h"];
+                NSMenuItem * hide_others = [[NSMenuItem alloc] initWithTitle: hide_all_str action: @selector(hideOtherApplications:) keyEquivalent: @"h"];
                 [main_menu addItem: hide_others];
                 [hide_others setKeyEquivalentModifierMask: NSEventModifierFlagOption | NSEventModifierFlagCommand];
-                NSMenuItem * show_all = [[NSMenuItem alloc] initWithTitle: @"Show all" action: @selector(unhideAllApplications:) keyEquivalent: @""];
+                NSMenuItem * show_all = [[NSMenuItem alloc] initWithTitle: show_all_str action: @selector(unhideAllApplications:) keyEquivalent: @""];
                 NSMenuItem * show_sep = [NSMenuItem separatorItem];
-                NSMenuItem * item_exit = [[NSMenuItem alloc] initWithTitle: @"Exit" action: @selector(close_all:) keyEquivalent: @"q"];
+                NSMenuItem * item_exit = [[NSMenuItem alloc] initWithTitle: exit_str action: @selector(close_all:) keyEquivalent: @"q"];
                 [main_menu addItem: show_all];
                 [main_menu addItem: show_sep];
                 [main_menu addItem: item_exit];
 
-                NSMenuItem * window_menu_item = [[NSMenuItem alloc] initWithTitle: @"Window" action: NULL keyEquivalent: @""];
-                NSMenu * window_menu = [[NSMenu alloc] initWithTitle: @"Window"];
+                NSMenuItem * window_menu_item = [[NSMenuItem alloc] initWithTitle: window_str action: NULL keyEquivalent: @""];
+                NSMenu * window_menu = [[NSMenu alloc] initWithTitle: window_str];
                 [window_menu_item setSubmenu: window_menu];
-                NSMenuItem * window_minimize = [[NSMenuItem alloc] initWithTitle: @"Minimize" action: @selector(performMiniaturize:) keyEquivalent: @"m"];
-                NSMenuItem * window_maximize = [[NSMenuItem alloc] initWithTitle: @"Zoom" action: @selector(performZoom:) keyEquivalent: @""];
-                NSMenuItem * window_fullscreen = [[NSMenuItem alloc] initWithTitle: @"Toggle Full Screen" action: @selector(toggleFullScreen:) keyEquivalent: @"f"];
+                NSMenuItem * window_minimize = [[NSMenuItem alloc] initWithTitle: minimize_str action: @selector(performMiniaturize:) keyEquivalent: @"m"];
+                NSMenuItem * window_maximize = [[NSMenuItem alloc] initWithTitle: zoom_str action: @selector(performZoom:) keyEquivalent: @""];
+                NSMenuItem * window_fullscreen = [[NSMenuItem alloc] initWithTitle: fullsreen_str action: @selector(toggleFullScreen:) keyEquivalent: @"f"];
                 [window_fullscreen setKeyEquivalentModifierMask: NSEventModifierFlagControl | NSEventModifierFlagCommand];
                 NSMenuItem * window_sep = [NSMenuItem separatorItem];
-                NSMenuItem * window_bring = [[NSMenuItem alloc] initWithTitle: @"Bring All to Front" action: @selector(arrangeInFront:) keyEquivalent: @""];
+                NSMenuItem * window_bring = [[NSMenuItem alloc] initWithTitle: bring_str action: @selector(arrangeInFront:) keyEquivalent: @""];
                 [window_menu addItem: window_minimize];
                 [window_menu addItem: window_maximize];
                 [window_menu addItem: window_fullscreen];
                 [window_menu addItem: window_sep];
                 [window_menu addItem: window_bring];
 
-                NSMenuItem * help_menu_item = [[NSMenuItem alloc] initWithTitle: @"Help" action: NULL keyEquivalent: @""];
-                NSMenu * help_menu = [[NSMenu alloc] initWithTitle: @"Help"];
+                NSMenuItem * help_menu_item = [[NSMenuItem alloc] initWithTitle: help_str action: NULL keyEquivalent: @""];
+                NSMenu * help_menu = [[NSMenu alloc] initWithTitle: help_str];
                 [help_menu_item setSubmenu: help_menu];
 
                 [menu addItem: main_item];
@@ -932,6 +947,19 @@ namespace Engine
                 [window_bring release];
                 [help_menu_item release];
                 [help_menu release];
+
+                [about_str release];
+                [services_str release];
+                [hide_str release];
+                [hide_all_str release];
+                [show_all_str release];
+                [exit_str release];
+                [window_str release];
+                [minimize_str release];
+                [zoom_str release];
+                [fullsreen_str release];
+                [bring_str release];
+                [help_str release];
 
                 _Initialized = true;
             }

@@ -93,6 +93,42 @@ namespace Engine
 		[argv release];
 		return 0;
 	}
+	bool CreateProcessElevated(const string & image, const Array<string> * command_line)
+	{
+		int argc = 1 + (command_line ? command_line->Length() : 0);
+		char ** argv = new (std::nothrow) char * [argc + 1];
+		if (!argv) return false;
+		ZeroMemory(argv, (argc + 1) * sizeof(char *));
+		string image_full = IO::ExpandPath(image);
+		argv[0] = new (std::nothrow) char[image_full.GetEncodedLength(Encoding::UTF8) + 1];
+		if (!argv[0]) { delete[] argv; return false; }
+		image_full.Encode(argv[0], Encoding::UTF8, true);
+		if (command_line) for (int i = 0; i < command_line->Length(); i++) {
+			argv[i + 1] = new (std::nothrow) char[command_line->ElementAt(i).GetEncodedLength(Encoding::UTF8) + 1];
+			if (!argv[i + 1]) {
+				for (int j = 0; j < i; j++) delete[] argv[j];
+				delete[] argv;
+				return false;
+			}
+			command_line->ElementAt(i).Encode(argv[i + 1], Encoding::UTF8, true);
+		}
+		AuthorizationRef auth;
+		if (AuthorizationCreate(0, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &auth) != errAuthorizationSuccess) {
+			for (int j = 0; j < argc; j++) delete[] argv[j];
+			delete[] argv;
+			return false;
+		}
+		if (AuthorizationExecuteWithPrivileges(auth, argv[0], kAuthorizationFlagDefaults, argv + 1, 0) != errAuthorizationSuccess) {
+			AuthorizationFree(auth, kAuthorizationFlagDefaults);
+			for (int j = 0; j < argc; j++) delete[] argv[j];
+			delete[] argv;
+			return false;
+		}
+		AuthorizationFree(auth, kAuthorizationFlagDefaults);
+		for (int j = 0; j < argc; j++) delete[] argv[j];
+		delete[] argv;
+		return true;
+	}
 	Array<string>* GetCommandLine(void)
 	{
 		int argc = *_NSGetArgc();

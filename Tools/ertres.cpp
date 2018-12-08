@@ -430,6 +430,17 @@ bool build_bundle(const string & plist, const Array<string> & icons, const strin
     try_create_directory(bundle + L"/Contents");
     try_create_directory(bundle + L"/Contents/MacOS");
     try_create_directory(bundle + L"/Contents/Resources");
+    Array<string> locales(0x10);
+    locales << L"en";
+    for (int i = 0; i < reslist.Length(); i++) {
+        if (!reslist[i].Locale.Length()) continue;
+        bool added = false;
+        for (int j = 0; j < locales.Length(); j++) if (string::CompareIgnoreCase(reslist[i].Locale, locales[j]) == 0) { added = true; break; }
+        if (!added) locales << reslist[i].Locale.LowerCase();
+    }
+    for (int i = 0; i < locales.Length(); i++) {
+        try_create_directory(bundle + L"/Contents/Resources/" + locales[i] + L".lproj");
+    }
     try {
         copy_file(plist, bundle + L"/Contents/Info.plist");
         if (icons.Length()) {

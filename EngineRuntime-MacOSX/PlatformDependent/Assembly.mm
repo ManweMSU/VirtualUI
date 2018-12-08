@@ -9,6 +9,7 @@ namespace Engine
 	namespace Assembly
 	{
 		string CurrentLocale;
+		SafePointer<Storage::StringTable> LocalizedStrings;
 
 		string GetCurrentUserLocale(void)
 		{
@@ -74,5 +75,8 @@ namespace Engine
 				return stream;
 			} catch (...) { return 0; }
 		}
+		void SetLocalizedCommonStrings(Storage::StringTable * table) { LocalizedStrings.SetRetain(table); }
+		Storage::StringTable * GetLocalizedCommonStrings(void) { return LocalizedStrings; }
+		const widechar * GetLocalizedCommonString(int ID, const widechar * alternate) { if (LocalizedStrings) return LocalizedStrings->GetString(ID); else return alternate; }
 	}
 }
