@@ -48,6 +48,8 @@
 #include <Math/Vector.h>
 #include <Math/Matrix.h>
 #include <PlatformSpecific/WindowsTaskbar.h>
+#include <PlatformSpecific/WindowsRegistry.h>
+#include <PlatformSpecific/WindowsShortcut.h>
 #include <PlatformDependent/SystemColors.h>
 
 #include "stdafx.h"
@@ -202,34 +204,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
-
-	/*{
-		SafePointer<Tasks::ThreadPool> pool = new Tasks::ThreadPool;
-		SafePointer<Streaming::Stream> output = new Streaming::FileStream(L"arch.ecsa", Streaming::AccessReadWrite, Streaming::CreateAlways);
-		SafePointer<Storage::NewArchive> arch = Storage::CreateArchive(output, 2);
-		SafePointer<Streaming::Stream> f1 = new Streaming::FileStream(L"EngineRuntime_x86.lib", Streaming::AccessRead, Streaming::OpenExisting);
-		SafePointer<Streaming::Stream> f2 = new Streaming::FileStream(L"test.eui", Streaming::AccessRead, Streaming::OpenExisting);
-		arch->SetFileName(1, L"EngineRuntime_x86.lib");
-		arch->SetFileType(1, L"LIB");
-		arch->SetFileID(1, 666);
-		arch->SetFileCustom(1, 6666);
-		arch->SetFileName(2, L"test.eui");
-		arch->SetFileType(2, L"EUI");
-		arch->SetFileID(2, 77);
-		arch->SetFileCustom(2, 7777);
-		arch->SetFileCreationTime(2, Time(2018, 6, 28, 12, 0, 0, 0));
-		arch->SetFileAttribute(2, L"kornevgen", L"pidor");
-		arch->SetFileData(1, f1, Storage::MethodChain(Storage::CompressionMethod::LempelZivWelch, Storage::CompressionMethod::Huffman), Storage::CompressionQuality::Sequential, pool);
-		arch->SetFileData(2, f2, Storage::MethodChain(Storage::CompressionMethod::LempelZivWelch, Storage::CompressionMethod::Huffman), Storage::CompressionQuality::Sequential, pool);
-
-		arch->Finalize();
-	}*/
-	/*{
-		SafePointer<Streaming::Stream> source = new Streaming::FileStream(L"arch.ecsa", Streaming::AccessRead, Streaming::OpenExisting);
-		SafePointer<Storage::Archive> arc = Storage::OpenArchive(source);
-
-		int t = 666;
-	}*/
 
 	SafePointer<IResourceLoader> resource_loader = Engine::NativeWindows::CreateCompatibleResourceLoader();
 

@@ -3,6 +3,7 @@
 #include "WindowStation.h"
 #include "NativeStation.h"
 #include "../Miscellaneous/DynamicString.h"
+#include "Assembly.h"
 
 #include <ObjIdl.h>
 #include <ShlObj.h>
@@ -105,7 +106,8 @@ namespace Engine
 							exts.Append(L"*.", 2);
 							exts.Append(ext, ext.Length());
 						}
-						filter.Append(L"All supported (", 15);
+						string all_supp = string(Assembly::GetLocalizedCommonString(201, L"All supported")) + L" (";
+						filter.Append(all_supp, all_supp.Length());
 						filter << exts;
 						filter.Append(L")\0", 2);
 						filter << exts;
@@ -126,9 +128,13 @@ namespace Engine
 						filter << exts;
 						filter.Append(L"\0", 1);
 					}
-					filter.Append(L"All files (*.*)\0*.*\0\0", 21);
+					string all_files = string(Assembly::GetLocalizedCommonString(202, L"All files")) + L" (*.*)";
+					filter.Append(all_files, all_files.Length() + 1);
+					filter.Append(L"*.*\0\0", 5);
 				} else {
-					filter.Append(L"All files (*.*)\0*.*\0\0", 21);
+					string all_files = string(Assembly::GetLocalizedCommonString(202, L"All files")) + L" (*.*)";
+					filter.Append(all_files, all_files.Length() + 1);
+					filter.Append(L"*.*\0\0", 5);
 				}
 				ofn.hwndOwner = data->Owner;
 				ofn.lpstrFile = result;
@@ -194,7 +200,9 @@ namespace Engine
 					}
 					filter.Append(L"\0", 1);
 				} else {
-					filter.Append(L"All files (*.*)\0*.*\0\0", 21);
+					string all_files = string(Assembly::GetLocalizedCommonString(202, L"All files")) + L" (*.*)";
+					filter.Append(all_files, all_files.Length() + 1);
+					filter.Append(L"*.*\0\0", 5);
 				}
 				ofn.hwndOwner = data->Owner;
 				ofn.lpstrFile = result;

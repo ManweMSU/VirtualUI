@@ -15,6 +15,8 @@
 #include "Miscellaneous/UndoBuffer.h"
 #include "Network/HTTP.h"
 #include "Network/Socket.h"
+#include "PlatformSpecific/WindowsRegistry.h"
+#include "PlatformSpecific/WindowsShortcut.h"
 #include "PlatformSpecific/WindowsTaskbar.h"
 #include "PlatformDependent/Application.h"
 #include "PlatformDependent/Assembly.h"
