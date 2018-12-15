@@ -193,6 +193,7 @@ namespace Engine
 					Animate();
 					DeviceContext->SetDpi(96.0f, 96.0f);
 					DeviceContext->BeginDraw();
+					if (_clear_background) DeviceContext->Clear(D2D1::ColorF(0.0, 0.0, 0.0, 0.0));
 					Render();
 					DeviceContext->EndDraw();
 					SwapChain->Present(1, 0);

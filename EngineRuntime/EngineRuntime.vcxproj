@@ -49,6 +49,7 @@
     <ClInclude Include="PlatformDependent\StringConvert.h" />
     <ClInclude Include="PlatformDependent\SystemColors.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
+    <ClInclude Include="PlatformSpecific\WindowsEffects.h" />
     <ClInclude Include="PlatformSpecific\WindowsRegistry.h" />
     <ClInclude Include="PlatformSpecific\WindowsShortcut.h" />
     <ClInclude Include="PlatformSpecific\WindowsTaskbar.h" />
@@ -113,6 +114,7 @@
     <ClCompile Include="PlatformDependent\StringConvert.cpp" />
     <ClCompile Include="PlatformDependent\SystemColors.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
+    <ClCompile Include="PlatformSpecific\WindowsEffects.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsRegistry.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsShortcut.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsTaskbar.cpp" />

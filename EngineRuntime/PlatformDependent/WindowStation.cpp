@@ -24,7 +24,7 @@ namespace Engine
 				~WindowsCursor(void) override { if (Owned) DestroyCursor(Handle); }
 			};
 		}
-		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory), _window(window), _timers(0x10)
+		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory), _window(window), _timers(0x10), _clear_background(false)
 		{
 			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
 			_beam.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_IBEAM)));
@@ -35,7 +35,7 @@ namespace Engine
 			_size_left_down_right_up.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENESW)));
 			_size_all.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZEALL)));
 		}
-		HandleWindowStation::HandleWindowStation(HWND window) : _window(window), _timers(0x10)
+		HandleWindowStation::HandleWindowStation(HWND window) : _window(window), _timers(0x10), _clear_background(false)
 		{
 			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
 			_beam.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_IBEAM)));
@@ -168,6 +168,7 @@ namespace Engine
 		void HandleWindowStation::DeferredRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERTM_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
 		void HandleWindowStation::PostJob(Tasks::ThreadJob * job) { job->Retain(); PostMessageW(_window, ERTM_EXECUTEJOB, 0, reinterpret_cast<eint>(job)); }
 		HWND HandleWindowStation::Handle(void) { return _window; }
+		bool & HandleWindowStation::ClearBackgroundFlag(void) { return _clear_background; }
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {

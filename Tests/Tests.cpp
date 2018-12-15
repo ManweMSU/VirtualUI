@@ -50,6 +50,7 @@
 #include <PlatformSpecific/WindowsTaskbar.h>
 #include <PlatformSpecific/WindowsRegistry.h>
 #include <PlatformSpecific/WindowsShortcut.h>
+#include <PlatformSpecific/WindowsEffects.h>
 #include <PlatformDependent/SystemColors.h>
 
 #include "stdafx.h"
@@ -527,12 +528,15 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto Hook = new _thl;
 			auto Hook2 = new _thl2;
 
+			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
+			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
+			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
+
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
 			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
 			auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
-			auto w666 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], 0, UI::Rectangle::Invalid(), w4->GetStation());
 			//w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(UI::GetSystemColor(UI::SystemColor::Theme));
@@ -553,10 +557,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w3->Show(true);
 			w4->Show(true);
 			w5->Show(true);
-			w666->Show(true);
 
 			WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
 			WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
+			WindowsSpecific::SetWindowTransparentcy(w4, 0.7);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}

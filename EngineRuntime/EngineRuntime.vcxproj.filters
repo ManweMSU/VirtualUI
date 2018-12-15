@@ -232,6 +232,9 @@
     <ClInclude Include="PlatformSpecific\WindowsShortcut.h">
       <Filter>PlatformSpecific</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformSpecific\WindowsEffects.h">
+      <Filter>PlatformSpecific</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -415,6 +418,9 @@
       <Filter>PlatformSpecific</Filter>
     </ClCompile>
     <ClCompile Include="PlatformSpecific\WindowsRegistry.cpp">
+      <Filter>PlatformSpecific</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformSpecific\WindowsEffects.cpp">
       <Filter>PlatformSpecific</Filter>
     </ClCompile>
   </ItemGroup>

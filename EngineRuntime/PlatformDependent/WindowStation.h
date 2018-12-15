@@ -14,6 +14,7 @@ namespace Engine
 		{
 		protected:
 			HWND _window;
+			bool _clear_background;
 
 			HandleWindowStation(HWND window, IDesktopWindowFactory * Factory);
 		private:
@@ -53,6 +54,7 @@ namespace Engine
 			virtual void PostJob(Tasks::ThreadJob * job) override;
 
 			HWND Handle(void);
+			bool & ClearBackgroundFlag(void);
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};
