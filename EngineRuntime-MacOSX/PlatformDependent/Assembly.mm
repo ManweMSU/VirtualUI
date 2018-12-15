@@ -27,15 +27,12 @@ namespace Engine
 					name = Cocoa::CocoaString(string(identifier) + L"-" + CurrentLocale);
 					url = [bundle URLForResource: name withExtension: nil];
 					[name release];
-					[bundle release];
 					if (!url) return 0;
 				} else {
-					[bundle release];
 					return 0;
 				}
 			} else {
 				[name release];
-				[bundle release];
 			}
 			string path = Cocoa::EngineString([url path]);
 			[url release];
@@ -57,15 +54,12 @@ namespace Engine
 					name = Cocoa::CocoaString(identifier);
 					url = [bundle URLForResource: name withExtension: nil];
 					[name release];
-					[bundle release];
 					if (!url) return 0;
 				} else {
-					[bundle release];
 					return 0;
 				}
 			} else {
 				[name release];
-				[bundle release];
 			}
 			string path = Cocoa::EngineString([url path]);
 			[url release];
