@@ -154,11 +154,11 @@ namespace Engine
 	ImmutableString InvalidFormatException::ToString(void) const { return ImmutableString(L"InvalidFormatException"); }
 	ImmutableString InvalidStateException::ToString(void) const { return ImmutableString(L"InvalidStateException"); }
 
-	ImmutableString::ImmutableString(void) { text = new (std::nothrow) widechar[1]; if (!text) throw OutOfMemoryException(); text[0] = 0; }
-	ImmutableString::ImmutableString(const ImmutableString & src) { text = new (std::nothrow) widechar[src.Length() + 1]; if (!text) throw OutOfMemoryException(); StringCopy(text, src.text); }
+	ImmutableString::ImmutableString(void) { text = 0; }
+	ImmutableString::ImmutableString(const ImmutableString & src) { if (src.Length()) { text = new (std::nothrow) widechar[src.Length() + 1]; if (!text) throw OutOfMemoryException(); StringCopy(text, src.text); } else text = 0; }
 	ImmutableString::ImmutableString(ImmutableString && src) { text = src.text; src.text = 0; }
-	ImmutableString::ImmutableString(const widechar * src) { text = new (std::nothrow) widechar[StringLength(src) + 1]; if (!text) throw OutOfMemoryException(); StringCopy(text, src); }
-	ImmutableString::ImmutableString(const widechar * sequence, int length) { text = new (std::nothrow) widechar[length + 1]; if (!text) throw OutOfMemoryException(); text[length] = 0; MemoryCopy(text, sequence, sizeof(widechar) * length); }
+	ImmutableString::ImmutableString(const widechar * src) { if (StringLength(src)) { text = new (std::nothrow) widechar[StringLength(src) + 1]; if (!text) throw OutOfMemoryException(); StringCopy(text, src); } else text = 0; }
+	ImmutableString::ImmutableString(const widechar * sequence, int length) { if (length) { text = new (std::nothrow) widechar[length + 1]; if (!text) throw OutOfMemoryException(); text[length] = 0; MemoryCopy(text, sequence, sizeof(widechar) * length); } else text = 0; }
 	ImmutableString::ImmutableString(int32 src)
 	{
 		widechar * conv = new (std::nothrow) widechar[0x10];
@@ -297,10 +297,12 @@ namespace Engine
 	ImmutableString::ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding)
 	{
 		int len = MeasureSequenceLength(Sequence, Length, SequenceEncoding, SystemEncoding);
-		text = new (std::nothrow) widechar[len + 1];
-		if (!text) throw OutOfMemoryException();
-		ConvertEncoding(text, Sequence, Length, SequenceEncoding, SystemEncoding);
-		text[len] = 0;
+		if (len) {
+			text = new (std::nothrow) widechar[len + 1];
+			if (!text) throw OutOfMemoryException();
+			ConvertEncoding(text, Sequence, Length, SequenceEncoding, SystemEncoding);
+			text[len] = 0;
+		} else text = 0;
 	}
 	ImmutableString::ImmutableString(float src, widechar separator) : ImmutableString()
 	{
@@ -373,58 +375,74 @@ namespace Engine
 	ImmutableString::ImmutableString(widechar src, int repeats)
 	{
 		if (repeats < 0) throw InvalidArgumentException();
-		text = new (std::nothrow) widechar[repeats + 1]; if (!text) throw OutOfMemoryException();
-		for (int i = 0; i < repeats; i++) text[i] = src; text[repeats] = 0;
+		if (repeats) {
+			text = new (std::nothrow) widechar[repeats + 1]; if (!text) throw OutOfMemoryException();
+			for (int i = 0; i < repeats; i++) text[i] = src; text[repeats] = 0;
+		} else text = 0;
 	}
 	ImmutableString::ImmutableString(const Object * object) : ImmutableString(object->ToString()) {}
 	ImmutableString::~ImmutableString(void) { delete[] text; }
 	ImmutableString & ImmutableString::operator=(const ImmutableString & src)
 	{
 		if (this == &src) return *this;
-		widechar * alloc = new (std::nothrow) widechar[src.Length() + 1];
-		if (!alloc) throw new OutOfMemoryException();
-		delete[] text; text = alloc;
-		StringCopy(text, src.text);
+		if (src.Length()) {
+			widechar * alloc = new (std::nothrow) widechar[src.Length() + 1];
+			if (!alloc) throw new OutOfMemoryException();
+			delete[] text; text = alloc;
+			StringCopy(text, src.text);
+		} else {
+			delete[] text; text = 0;
+		}
 		return *this;
 	}
 	ImmutableString & ImmutableString::operator=(const widechar * src)
 	{
 		if (text == src) return *this;
-		widechar * alloc = new (std::nothrow) widechar[StringLength(src) + 1];
-		if (!alloc) throw new OutOfMemoryException();
-		delete[] text; text = alloc;
-		StringCopy(text, src);
+		if (StringLength(src)) {
+			widechar * alloc = new (std::nothrow) widechar[StringLength(src) + 1];
+			if (!alloc) throw new OutOfMemoryException();
+			delete[] text; text = alloc;
+			StringCopy(text, src);
+		} else {
+			delete[] text; text = 0;
+		}
 		return *this;
 	}
-	ImmutableString::operator const widechar*(void) const { return text; }
-	int ImmutableString::Length(void) const { return StringLength(text); }
-	int ImmutableString::Compare(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a.text, b.text); }
-	int ImmutableString::CompareIgnoreCase(const ImmutableString & a, const ImmutableString & b) { return StringCompareCaseInsensitive(a.text, b.text); }
-	widechar ImmutableString::operator[](int index) const { return text[index]; }
-	widechar ImmutableString::CharAt(int index) const { return text[index]; }
+	ImmutableString::operator const widechar*(void) const { return text ? text : L""; }
+	int ImmutableString::Length(void) const { return text ? StringLength(text) : 0; }
+	int ImmutableString::Compare(const ImmutableString & a, const ImmutableString & b) { return StringCompare(a, b); }
+	int ImmutableString::CompareIgnoreCase(const ImmutableString & a, const ImmutableString & b) { return StringCompareCaseInsensitive(a, b); }
+	widechar ImmutableString::operator[](int index) const { return text ? text[index] : 0; }
+	widechar ImmutableString::CharAt(int index) const { return text ? text[index] : 0; }
 	ImmutableString ImmutableString::ToString(void) const { return *this; }
 	void ImmutableString::Concatenate(const ImmutableString & str)
 	{
-		int len = Length();
-		widechar * alloc = new (std::nothrow) widechar[len + str.Length() + 1];
-		if (!alloc) throw OutOfMemoryException();
-		StringCopy(alloc, text);
-		StringCopy(alloc + len, str.text);
-		delete[] text;
-		text = alloc;
+		int len = Length(), alen = str.Length();
+		if (len + alen) {
+			widechar * alloc = new (std::nothrow) widechar[len + alen + 1];
+			if (!alloc) throw OutOfMemoryException();
+			StringCopy(alloc, *this);
+			StringCopy(alloc + len, str);
+			delete[] text;
+			text = alloc;
+		} else {
+			delete[] text; text = 0;
+		}
 	}
 	ImmutableString & ImmutableString::operator+=(const ImmutableString & str) { Concatenate(str); return *this; }
-	int ImmutableString::FindFirst(widechar letter) const { for (int i = 0; i < Length(); i++) if (text[i] == letter) return i; return -1; }
+	int ImmutableString::FindFirst(widechar letter) const { if (!text) return -1; for (int i = 0; i < Length(); i++) if (text[i] == letter) return i; return -1; }
 	int ImmutableString::FindFirst(const ImmutableString & str) const
 	{
+		if (!text) return -1;
 		int len = str.Length();
 		if (!len) throw InvalidArgumentException();
 		for (int i = 0; i < Length() - len + 1; i++) if (SequenceCompare(text + i, str.text, len) == 0) return i;
 		return -1;
 	}
-	int ImmutableString::FindLast(widechar letter) const { for (int i = Length() - 1; i >= 0; i--) if (text[i] == letter) return i; return -1; }
+	int ImmutableString::FindLast(widechar letter) const { if (!text) return -1; for (int i = Length() - 1; i >= 0; i--) if (text[i] == letter) return i; return -1; }
 	int ImmutableString::FindLast(const ImmutableString & str) const
 	{
+		if (!text) return -1;
 		int len = str.Length();
 		if (!len) throw InvalidArgumentException();
 		for (int i = Length() - len; i >= 0; i--) if (SequenceCompare(text + i, str.text, len) == 0) return i;
@@ -432,6 +450,7 @@ namespace Engine
 	}
 	ImmutableString ImmutableString::Fragment(int PosStart, int CharLength) const
 	{
+		if (!text) return L"";
 		int len = Length();
 		if (PosStart < 0 || PosStart > len || !CharLength) return L"";
 		if (CharLength < -1) return L"";
@@ -440,11 +459,13 @@ namespace Engine
 	}
 	int ImmutableString::GeneralizedFindFirst(int from, const widechar * seq, int length) const
 	{
+		if (!text) return -1;
 		for (int i = from; i < Length() - length + 1; i++) if (SequenceCompare(text + i, seq, length) == 0) return i;
 		return -1;
 	}
 	ImmutableString ImmutableString::GeneralizedReplace(const widechar * seq, int length, const widechar * with, int withlen) const
 	{
+
 		if (!length) throw InvalidArgumentException();
 		ImmutableString result;
 		ImmutableString With(with, withlen);
@@ -465,6 +486,7 @@ namespace Engine
 	}
 	uint64 ImmutableString::GeneralizedToUInt64(int dfrom, int dto) const
 	{
+		if (!text) throw InvalidFormatException();
 		uint64 value = 0;
 		for (int i = dfrom; i < dto; i++) {
 			if (text[i] < L'0' || text[i] > L'9') throw InvalidFormatException();
@@ -478,6 +500,7 @@ namespace Engine
 	}
 	uint64 ImmutableString::GeneralizedToUInt64(int dfrom, int dto, const ImmutableString & digits, bool case_sensitive) const
 	{
+		if (!text) throw InvalidFormatException();
 		uint64 value = 0;
 		auto base = digits.Length();
 		if (base < 2) throw InvalidArgumentException();
@@ -504,10 +527,10 @@ namespace Engine
 	ImmutableString ImmutableString::Replace(widechar Substring, const ImmutableString & with) const { return GeneralizedReplace(&Substring, 1, with, with.Length()); }
 	ImmutableString ImmutableString::Replace(const ImmutableString & Substring, widechar with) const { return GeneralizedReplace(Substring, Substring.Length(), &with, 1); }
 	ImmutableString ImmutableString::Replace(widechar Substring, widechar with) const { return GeneralizedReplace(&Substring, 1, &with, 1); }
-	ImmutableString ImmutableString::LowerCase(void) const { ImmutableString result = *this; StringLower(result.text, Length()); return result; }
-	ImmutableString ImmutableString::UpperCase(void) const { ImmutableString result = *this; StringUpper(result.text, Length()); return result; }
-	int ImmutableString::GetEncodedLength(Encoding encoding) const { return MeasureSequenceLength(text, Length(), SystemEncoding, encoding); }
-	void ImmutableString::Encode(void * buffer, Encoding encoding, bool include_terminator) const { ConvertEncoding(buffer, text, Length() + (include_terminator ? 1 : 0), SystemEncoding, encoding); }
+	ImmutableString ImmutableString::LowerCase(void) const { if (!text) return L""; ImmutableString result = *this; StringLower(result.text, Length()); return result; }
+	ImmutableString ImmutableString::UpperCase(void) const { if (!text) return L""; ImmutableString result = *this; StringUpper(result.text, Length()); return result; }
+	int ImmutableString::GetEncodedLength(Encoding encoding) const { return text ? MeasureSequenceLength(text, Length(), SystemEncoding, encoding) : 0; }
+	void ImmutableString::Encode(void * buffer, Encoding encoding, bool include_terminator) const { ConvertEncoding(buffer, *this, Length() + (include_terminator ? 1 : 0), SystemEncoding, encoding); }
 	Array<uint8>* ImmutableString::EncodeSequence(Encoding encoding, bool include_terminator) const
 	{
 		int char_length = GetEncodedLength(encoding) + (include_terminator ? 1 : 0);
@@ -515,14 +538,14 @@ namespace Engine
 		Array<uint8> * result = new Array<uint8>;
 		try {
 			result->SetLength(char_length * GetBytesPerChar(encoding));
-			ConvertEncoding(*result, text, src_length, SystemEncoding, encoding);
+			ConvertEncoding(*result, *this, src_length, SystemEncoding, encoding);
 		}
 		catch (...) { result->Release(); throw; }
 		return result;
 	}
 	Array<ImmutableString> ImmutableString::Split(widechar divider) const
 	{
-		Array<ImmutableString> result;
+		Array<ImmutableString> result(0x10);
 		int pos = -1, len = Length();
 		while (pos < len) {
 			int div = GeneralizedFindFirst(pos + 1, &divider, 1);
@@ -541,6 +564,7 @@ namespace Engine
 	uint64 ImmutableString::ToUInt64(const ImmutableString & digits, bool case_sensitive) const { return GeneralizedToUInt64(0, Length(), digits, case_sensitive); }
 	int64 ImmutableString::ToInt64(void) const
 	{
+		if (!text) throw InvalidFormatException();
 		bool negative = false;
 		int start = 0;
 		auto len = Length();
@@ -558,6 +582,7 @@ namespace Engine
 	}
 	int64 ImmutableString::ToInt64(const ImmutableString & digits, bool case_sensitive) const
 	{
+		if (!text) throw InvalidFormatException();
 		bool negative = false;
 		int start = 0;
 		auto len = Length();
@@ -586,6 +611,7 @@ namespace Engine
 	}
 	int32 ImmutableString::ToInt32(void) const
 	{
+		if (!text) throw InvalidFormatException();
 		bool negative = false;
 		int start = 0;
 		auto len = Length();
@@ -602,6 +628,7 @@ namespace Engine
 	}
 	int32 ImmutableString::ToInt32(const ImmutableString & digits, bool case_sensitive) const
 	{
+		if (!text) throw InvalidFormatException();
 		bool negative = false;
 		int start = 0;
 		auto len = Length();
@@ -618,6 +645,7 @@ namespace Engine
 	}
 	float ImmutableString::ToFloat(void) const
 	{
+		if (!text) throw InvalidFormatException();
 		float value = 0.0f;
 		bool negative = false;
 		int start = 0;
@@ -645,6 +673,7 @@ namespace Engine
 	}
 	float ImmutableString::ToFloat(const ImmutableString & separators) const
 	{
+		if (!text) throw InvalidFormatException();
 		float value = 0.0f;
 		bool negative = false;
 		int start = 0;
@@ -676,6 +705,7 @@ namespace Engine
 	}
 	double ImmutableString::ToDouble(void) const
 	{
+		if (!text) throw InvalidFormatException();
 		double value = 0.0;
 		bool negative = false;
 		int start = 0;
@@ -703,6 +733,7 @@ namespace Engine
 	}
 	double ImmutableString::ToDouble(const ImmutableString & separators) const
 	{
+		if (!text) throw InvalidFormatException();
 		double value = 0.0;
 		bool negative = false;
 		int start = 0;

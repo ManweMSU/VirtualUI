@@ -3,6 +3,7 @@
 #include "../Miscellaneous/DynamicString.h"
 #include "../PlatformDependent/FileApi.h"
 #include "../PlatformDependent/CocoaInterop.h"
+#include "../Streaming.h"
 
 #include <time.h>
 #include <crt_externs.h>
@@ -45,10 +46,13 @@ namespace Engine
 		}
 		NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::NormalizePath(image)));
 		@try {
-			NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
-			[app release];
-			[argv release];
-			return new CocoaProcess::Process(task);
+			@autoreleasepool {
+				NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
+				[task retain];
+				[app release];
+				[argv release];
+				return new CocoaProcess::Process(task);
+			}
 		}
 		@catch (NSException * e) {}
 		[app release];
@@ -82,10 +86,13 @@ namespace Engine
 		for (int i = 0; i < search_list.Length(); i++) {
 			NSString * app = Cocoa::CocoaString(IO::NormalizePath(search_list[i]));
 			@try {
-				NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
-				[app release];
-				[argv release];
-				return new CocoaProcess::Process(task);
+				@autoreleasepool {
+					NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
+					[task retain];
+					[app release];
+					[argv release];
+					return new CocoaProcess::Process(task);
+				}
 			}
 			@catch (NSException * e) {}
 			[app release];

@@ -112,9 +112,10 @@ int Main(void)
     SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandartInput());
     Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
 
-    Array<string> args(0x10);
-    args << L"/etc/paths.d/my_path";
-    Console << CreateProcessElevated(L"/usr/bin/touch", &args) << IO::NewLineChar;
+    SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();
+    for (int i = 0; i < vols->Length(); i++) {
+        Console << L"Volume \"" + vols->ElementAt(i).Label + L"\" at path " + vols->ElementAt(i).Path + IO::NewLineChar;
+    }
 
     UI::Zoom = Windows::GetScreenScale();
 

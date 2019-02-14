@@ -322,6 +322,14 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
+			Array<Volume>* GetVolumes(void)
+			{
+				SafePointer< Array<Volume> > result = new Array<Volume>(0x10);
+				SafePointer< Array<string> > volumes = GetDirectories(L"/Volumes/*");
+				for (int i = 0; i < volumes->Length(); i++) result->Append( Volume{ L"/Volumes/" + volumes->ElementAt(i), volumes->ElementAt(i) } );
+				result->Retain();
+				return result;
+			}
 		}
 		namespace DateTime
 		{

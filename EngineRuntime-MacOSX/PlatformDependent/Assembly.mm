@@ -4,6 +4,8 @@
 
 @import Foundation;
 
+using namespace Engine::Streaming;
+
 namespace Engine
 {
 	namespace Assembly
@@ -20,22 +22,25 @@ namespace Engine
 			NSBundle * bundle = [NSBundle mainBundle];
 			if (!bundle) return 0;
 			NSString * name = Cocoa::CocoaString(identifier);
-			NSURL * url = [bundle URLForResource: name withExtension: nil];
-			if (!url) {
-				[name release];
-				if (CurrentLocale.Length()) {
-					name = Cocoa::CocoaString(string(identifier) + L"-" + CurrentLocale);
-					url = [bundle URLForResource: name withExtension: nil];
+			string path;
+			NSURL * url;
+			@autoreleasepool {
+				url = [bundle URLForResource: name withExtension: nil];
+				if (!url) {
 					[name release];
-					if (!url) return 0;
+					if (CurrentLocale.Length()) {
+						name = Cocoa::CocoaString(string(identifier) + L"-" + CurrentLocale);
+						url = [bundle URLForResource: name withExtension: nil];
+						[name release];
+						if (!url) return 0;
+					} else {
+						return 0;
+					}
 				} else {
-					return 0;
+					[name release];
 				}
-			} else {
-				[name release];
+				path = Cocoa::EngineString([url path]);
 			}
-			string path = Cocoa::EngineString([url path]);
-			[url release];
 			try {
 				SafePointer<Streaming::FileStream> stream = new Streaming::FileStream(path, Streaming::AccessRead, Streaming::OpenExisting);
 				stream->Retain();
@@ -47,22 +52,25 @@ namespace Engine
 			NSBundle * bundle = [NSBundle mainBundle];
 			if (!bundle) return 0;
 			NSString * name = Cocoa::CocoaString(string(identifier) + L"-" + CurrentLocale);
-			NSURL * url = [bundle URLForResource: name withExtension: nil];
-			if (!url) {
-				[name release];
-				if (CurrentLocale.Length()) {
-					name = Cocoa::CocoaString(identifier);
-					url = [bundle URLForResource: name withExtension: nil];
+			string path;
+			NSURL * url;
+			@autoreleasepool {
+				url = [bundle URLForResource: name withExtension: nil];
+				if (!url) {
 					[name release];
-					if (!url) return 0;
+					if (CurrentLocale.Length()) {
+						name = Cocoa::CocoaString(identifier);
+						url = [bundle URLForResource: name withExtension: nil];
+						[name release];
+						if (!url) return 0;
+					} else {
+						return 0;
+					}
 				} else {
-					return 0;
+					[name release];
 				}
-			} else {
-				[name release];
+				path = Cocoa::EngineString([url path]);
 			}
-			string path = Cocoa::EngineString([url path]);
-			[url release];
 			try {
 				SafePointer<Streaming::FileStream> stream = new Streaming::FileStream(path, Streaming::AccessRead, Streaming::OpenExisting);
 				stream->Retain();

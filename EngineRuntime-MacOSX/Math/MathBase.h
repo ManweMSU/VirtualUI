@@ -10,6 +10,7 @@ namespace Engine
 	{
 		typedef double Real;
 		typedef Real real;
+		typedef float ShortReal;
 
 		Real inverse(Real x) noexcept;
 
