@@ -151,6 +151,7 @@ namespace Engine
 				}
 				Array<NativeStation *> slaves = _slaves;
 				for (int i = 0; i < slaves.Length(); i++) slaves[i]->GetDesktop()->Destroy();
+				SetWindowLongPtrW(_window, 0, 0);
 				::DestroyWindow(_window);
 				DestroyStation();
 			}
@@ -389,6 +390,7 @@ namespace Engine
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));
+			if (!station) return DefWindowProcW(Wnd, Msg, WParam, LParam);
 			LRESULT Result = 0;
 			if (Msg == WM_SIZE) {
 				if (station) {

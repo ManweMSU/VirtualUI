@@ -100,6 +100,6 @@ namespace Engine
 	{
 		uint64 result;
 		GetPhysicallyInstalledSystemMemory(&result);
-		return result;
+		return result * 0x400;
 	}
 }

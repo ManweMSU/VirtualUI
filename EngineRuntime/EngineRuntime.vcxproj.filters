@@ -235,6 +235,9 @@
     <ClInclude Include="PlatformSpecific\WindowsEffects.h">
       <Filter>PlatformSpecific</Filter>
     </ClInclude>
+    <ClInclude Include="Storage\JSON.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -422,6 +425,9 @@
     </ClCompile>
     <ClCompile Include="PlatformSpecific\WindowsEffects.cpp">
       <Filter>PlatformSpecific</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\JSON.cpp">
+      <Filter>Storage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

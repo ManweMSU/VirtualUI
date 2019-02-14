@@ -174,7 +174,7 @@ namespace Engine
 								pos++;
 								uint32 ucsdec = 0xFFFFFFFF;
 								widechar escc = text[pos];
-								if ((escc == L'\\') || (escc == L'\'') || (escc == L'\"') || (escc == L'?')) {
+								if ((escc == L'\\') || (escc == L'\'') || (escc == L'\"') || (escc == L'?') || (escc == L'/')) {
 									Text += escc;
 									pos++;
 								} else if (escc == L'a' || escc == L'A') {
@@ -198,11 +198,25 @@ namespace Engine
 								} else if (escc == L'v' || escc == L'V') {
 									Text += L'\v';
 									pos++;
-								} else if (escc == L'x' || escc == L'X') {
+								} else if (escc == L'x' || escc == L'X' || escc == L'U') {
 									pos++;
 									ucsdec = 0;
 									int count = 0;
 									while ((count < 8) && ((text[pos] >= L'0' && text[pos] <= L'9') || (text[pos] >= L'A' && text[pos] <= L'F') || (text[pos] >= L'a' && text[pos] <= L'f'))) {
+										int rec = 0;
+										if ((text[pos] >= L'0') && (text[pos] <= L'9')) rec = text[pos] - L'0';
+										else if ((text[pos] >= L'A') && (text[pos] <= L'F')) rec = text[pos] - L'A' + 10;
+										else rec = text[pos] - L'a' + 10;
+										ucsdec <<= 4;
+										ucsdec |= rec;
+										count++;
+										pos++;
+									}
+								} else if (escc == L'u') {
+									pos++;
+									ucsdec = 0;
+									int count = 0;
+									while ((count < 4) && ((text[pos] >= L'0' && text[pos] <= L'9') || (text[pos] >= L'A' && text[pos] <= L'F') || (text[pos] >= L'a' && text[pos] <= L'f'))) {
 										int rec = 0;
 										if ((text[pos] >= L'0') && (text[pos] <= L'9')) rec = text[pos] - L'0';
 										else if ((text[pos] >= L'A') && (text[pos] <= L'F')) rec = text[pos] - L'A' + 10;

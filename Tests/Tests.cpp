@@ -52,6 +52,7 @@
 #include <PlatformSpecific/WindowsShortcut.h>
 #include <PlatformSpecific/WindowsEffects.h>
 #include <PlatformDependent/SystemColors.h>
+#include <Storage/JSON.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -164,6 +165,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
 	(*conout) << L"Scale          : " << UI::Windows::GetScreenScale() << IO::NewLineChar;
 	(*conout) << L"Locale         : " << Assembly::GetCurrentUserLocale() << IO::NewLineChar;
+	(*conout) << L"Memory (GB)    : " << GetInstalledMemory() / 0x40000000 << IO::NewLineChar;
 
 	(*conout) << string(Math::Complex(5.0)) << IO::NewLineChar;
 	(*conout) << string(ENGINE_I) << IO::NewLineChar;
@@ -200,9 +202,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << string(r) << IO::NewLineChar << IO::NewLineChar;
 	(*conout) << string(im) << IO::NewLineChar;
 	(*conout) << string(hi) << IO::NewLineChar;
-
-	(*conout) << L"pidor" << IO::NewLineChar;
-	
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 

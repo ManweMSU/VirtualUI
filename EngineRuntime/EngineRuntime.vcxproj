@@ -60,6 +60,7 @@
     <ClInclude Include="Storage\Chain.h" />
     <ClInclude Include="Storage\Compression.h" />
     <ClInclude Include="Storage\ImageVolume.h" />
+    <ClInclude Include="Storage\JSON.h" />
     <ClInclude Include="Storage\Registry.h" />
     <ClInclude Include="Storage\StringTable.h" />
     <ClInclude Include="Storage\SubbyteCoding.h" />
@@ -125,6 +126,7 @@
     <ClCompile Include="Storage\Chain.cpp" />
     <ClCompile Include="Storage\Compression.cpp" />
     <ClCompile Include="Storage\ImageVolume.cpp" />
+    <ClCompile Include="Storage\JSON.cpp" />
     <ClCompile Include="Storage\Registry.cpp" />
     <ClCompile Include="Storage\StringTable.cpp" />
     <ClCompile Include="Storage\SubbyteCoding.cpp" />

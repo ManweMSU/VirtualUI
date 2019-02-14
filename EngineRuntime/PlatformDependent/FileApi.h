@@ -64,8 +64,14 @@ namespace Engine
 		}
 		namespace Search
 		{
+			struct Volume
+			{
+				string Path;
+				string Label;
+			};
 			Array<string> * GetFiles(const string & path, bool recursive = false);
 			Array<string> * GetDirectories(const string & path);
+			Array<Volume> * GetVolumes(void);
 		}
 		namespace DateTime
 		{

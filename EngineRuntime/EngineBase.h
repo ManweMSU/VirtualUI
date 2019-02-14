@@ -55,7 +55,7 @@ namespace Engine
 	class InvalidFormatException : public Exception { public: ImmutableString ToString(void) const override; };
 	class InvalidStateException : public Exception { public: ImmutableString ToString(void) const override; };
 
-	class ImmutableString final : public Object
+	class ImmutableString final
 	{
 	private:
 		widechar * text;
@@ -83,7 +83,7 @@ namespace Engine
 		ImmutableString(widechar src, int repeats);
 		explicit ImmutableString(const Object * object);
 		explicit ImmutableString(const void * src);
-		~ImmutableString(void) override;
+		~ImmutableString(void);
 
 		ImmutableString & operator = (const ImmutableString & src);
 		ImmutableString & operator = (const widechar * src);
@@ -108,9 +108,9 @@ namespace Engine
 		widechar operator [] (int index) const;
 		widechar CharAt(int index) const;
 
-		ImmutableString ToString(void) const override;
+		ImmutableString ToString(void) const;
 
-		virtual void Concatenate(const ImmutableString & str);
+		void Concatenate(const ImmutableString & str);
 		
 		ImmutableString friend operator + (const ImmutableString & a, const ImmutableString & b);
 		ImmutableString friend operator + (const widechar * a, const ImmutableString & b);
@@ -152,6 +152,13 @@ namespace Engine
 	};
 
 	typedef ImmutableString string;
+	typedef bool Boolean;
+
+	constexpr widechar * DecimalBase = L"0123456789";
+	constexpr widechar * HexadecimalBase = L"0123456789ABCDEF";
+	constexpr widechar * HexadecimalBaseLowerCase = L"0123456789abcdef";
+	constexpr widechar * OctalBase = L"01234567";
+	constexpr widechar * BinaryBase = L"01";
 
 	template <class V> void swap(V & a, V & b) { if (&a == &b) return; uint8 buffer[sizeof(V)]; MemoryCopy(buffer, &a, sizeof(V)); MemoryCopy(&a, &b, sizeof(V)); MemoryCopy(&b, buffer, sizeof(V)); }
 	template <class V> void safe_swap(V & a, V & b) { V e = a; a = b; b = e; }
@@ -515,7 +522,7 @@ namespace Engine
 		return bl;
 	}
 
-	template <class O> class SafePointer final : Object
+	template <class O> class SafePointer final
 	{
 	private:
 		O * reference = 0;

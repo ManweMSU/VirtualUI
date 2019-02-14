@@ -310,6 +310,26 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
+			Array<Volume>* GetVolumes(void)
+			{
+				SafePointer< Array<Volume> > result = new Array<Volume>(0x10);
+				auto drives = GetLogicalDrives();
+				widechar drive = L'A';
+				while (drives) {
+					if (drives & 1) {
+						DynamicString label;
+						Volume vol;
+						vol.Path = string(drive) + L":";
+						label.ReserveLength(MAX_PATH + 1);
+						if (GetVolumeInformationW(vol.Path, label, label.ReservedLength(), 0, 0, 0, 0, 0)) vol.Label = label.ToString();
+						result->Append(vol);
+					}
+					drive++;
+					drives = (drives >> 1);
+				}
+				result->Retain();
+				return result;
+			}
 		}
 		namespace DateTime
 		{
