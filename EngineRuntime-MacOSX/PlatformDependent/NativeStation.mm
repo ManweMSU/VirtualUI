@@ -978,21 +978,15 @@ namespace Engine
             ~NativeResourceLoader(void) override {}
 
             virtual UI::ITexture * LoadTexture(Streaming::Stream * Source) override { return _device->LoadTexture(Source); }
-            virtual UI::ITexture * LoadTexture(const string & Name) override
-            {
-                Streaming::FileStream source(Name, Streaming::AccessRead, Streaming::OpenExisting);
-                return LoadTexture(&source);
-            }
+            virtual UI::ITexture * LoadTexture(Codec::Image * Source) override { return _device->LoadTexture(Source); }
+			virtual UI::ITexture * LoadTexture(Codec::Frame * Source) override { return _device->LoadTexture(Source); }
             virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
             {
                 return _device->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
             }
             virtual void ReloadTexture(UI::ITexture * Texture, Streaming::Stream * Source) override { Texture->Reload(_device, Source); }
-            virtual void ReloadTexture(UI::ITexture * Texture, const string & Name) override
-            {
-                Streaming::FileStream source(Name, Streaming::AccessRead, Streaming::OpenExisting);
-                Texture->Reload(_device, &source);
-            }
+            virtual void ReloadTexture(UI::ITexture * Texture, Codec::Image * Source) override { Texture->Reload(_device, Source); }
+			virtual void ReloadTexture(UI::ITexture * Texture, Codec::Frame * Source) override { Texture->Reload(_device, Source); }
             virtual void ReloadFont(UI::IFont * Font) override { Font->Reload(_device); }
         };
 		UI::IResourceLoader * CreateCompatibleResourceLoader(void)

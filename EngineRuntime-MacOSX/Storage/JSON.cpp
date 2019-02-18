@@ -93,6 +93,7 @@ namespace Engine
 			};
 			void JsonWriteStructure(TextWriter * writer, const string & pref, Reflected & obj)
 			{
+				obj.WillBeSerialized();
 				string inner_pref = pref + L"    ";
 				writer->WriteLine(L"{");
 				JsonPropertyWriter pw;
@@ -101,9 +102,11 @@ namespace Engine
 				pw.ps << IO::NewLineChar;
 				writer->Write(pw.ps);
 				writer->Write(pref + L"}");
+				obj.WasSerialized();
 			}
 			void JsonWriteStructure(DynamicString & writer, const string & pref, Reflected & obj)
 			{
+				obj.WillBeSerialized();
 				string inner_pref = pref + L"    ";
 				writer << L"{" << IO::NewLineChar;
 				JsonPropertyWriter pw;
@@ -112,6 +115,7 @@ namespace Engine
 				pw.ps << IO::NewLineChar;
 				writer << pw.ps;
 				writer << pref << L"}";
+				obj.WasSerialized();
 			}
 			void JsonPropertyWriter::EnumerateProperty(const string & name, void * address, PropertyType type, PropertyType inner, int volume, int element_size)
 			{
@@ -418,6 +422,7 @@ namespace Engine
 #define GET_STATIC_ARRAY_FIELD(p) p.VolumeElement(j)
 			void JsonAnalyzeStructure(Reflected & obj, Syntax::SyntaxTreeNode & node)
 			{
+				obj.WillBeDeserialized();
 				int ni = -1;
 				int vi = -1;
 				while (true) {
@@ -620,8 +625,8 @@ namespace Engine
 							}
 						}
 					}
-					int a = 5;
 				}
+				obj.WasDeserialized();
 			}
 		}
 		JsonSerializer::JsonSerializer(Streaming::Stream * stream)
@@ -691,7 +696,6 @@ namespace Engine
 				tokens.SetReference(0);
 				// Handling
 				JsonInternal::JsonAnalyzeStructure(obj, tree.Root);
-				obj.WasDeserialized();
 			}
 			catch (...) {}
 		}

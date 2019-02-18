@@ -65,6 +65,9 @@ namespace Engine
 		public:
 			virtual void EnumerateProperties(IPropertyEnumerator & enumerator);
 			virtual PropertyInfo GetProperty(const string & name) = 0;
+			virtual void WillBeSerialized(void);
+			virtual void WasSerialized(void);
+			virtual void WillBeDeserialized(void);
 			virtual void WasDeserialized(void);
 			void Serialize(ISerializer * serializer);
 			void Deserialize(ISerializer * serializer);
