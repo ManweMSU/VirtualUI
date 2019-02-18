@@ -25,6 +25,8 @@
 #include "Processes/Threading.h"
 #include "Processes/Shell.h"
 #include "Storage/Archive.h"
+#include "Storage/JSON.h"
+#include "Storage/Object.h"
 #include "Storage/Registry.h"
 #include "Storage/StringTable.h"
 #include "Storage/TextRegistry.h"

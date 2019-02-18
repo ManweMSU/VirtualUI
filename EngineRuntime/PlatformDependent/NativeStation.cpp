@@ -90,17 +90,12 @@ namespace Engine
 			~NativeResourceLoader(void) override {}
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
-			virtual ITexture * LoadTexture(const string & Name) override
-			{
-				try {
-					Streaming::FileStream source(Name, Streaming::AccessRead, Streaming::OpenExisting);
-					return LoadTexture(&source);
-				}
-				catch (...) { return 0; }
-			}
+			virtual ITexture * LoadTexture(Codec::Image * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
+			virtual ITexture * LoadTexture(Codec::Frame * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
 			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return Direct2D::StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 			virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) override {}
-			virtual void ReloadTexture(ITexture * Texture, const string & Name) override {}
+			virtual void ReloadTexture(ITexture * Texture, Codec::Image * Source) override {}
+			virtual void ReloadTexture(ITexture * Texture, Codec::Frame * Source) override {}
 			virtual void ReloadFont(UI::IFont * Font) override {}
 		};
 		IResourceLoader * CreateCompatibleResourceLoader(void)

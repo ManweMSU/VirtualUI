@@ -53,6 +53,7 @@
 #include <PlatformSpecific/WindowsEffects.h>
 #include <PlatformDependent/SystemColors.h>
 #include <Storage/JSON.h>
+#include <Storage/Object.h>
 
 #include "stdafx.h"
 #include "Tests.h"

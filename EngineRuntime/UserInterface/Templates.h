@@ -253,10 +253,12 @@ namespace Engine
 		{
 		public:
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
-			virtual ITexture * LoadTexture(const string & Name) = 0;
+			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
+			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
 			virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) = 0;
-			virtual void ReloadTexture(ITexture * Texture, const string & Name) = 0;
+			virtual void ReloadTexture(ITexture * Texture, Codec::Image * Source) = 0;
+			virtual void ReloadTexture(ITexture * Texture, Codec::Frame * Source) = 0;
 			virtual void ReloadFont(IFont * Font) = 0;
 		};
 		class IResourceResolver : public Object

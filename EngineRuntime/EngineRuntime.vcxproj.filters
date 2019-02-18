@@ -238,6 +238,9 @@
     <ClInclude Include="Storage\JSON.h">
       <Filter>Storage</Filter>
     </ClInclude>
+    <ClInclude Include="Storage\Object.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -427,6 +430,9 @@
       <Filter>PlatformSpecific</Filter>
     </ClCompile>
     <ClCompile Include="Storage\JSON.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage\Object.cpp">
       <Filter>Storage</Filter>
     </ClCompile>
   </ItemGroup>

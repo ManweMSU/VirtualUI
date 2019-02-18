@@ -22,6 +22,9 @@ namespace Engine
 			virtual void Flush(void) = 0;
 			void CopyTo(Stream * to, uint64 length);
 			void CopyTo(Stream * to);
+			void CopyToUntilEof(Stream * to);
+			Array<uint8> * ReadAll(void);
+			void WriteArray(const Array<uint8> * data);
 		};
 
 		class FileStream final : public Stream
