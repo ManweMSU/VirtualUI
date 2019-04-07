@@ -247,6 +247,12 @@
     <ClInclude Include="UserInterface\BinaryLoader.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\Canvas.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Color.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -446,6 +452,9 @@
     </ClCompile>
     <ClCompile Include="UserInterface\BinaryLoader.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Color.cpp">
+      <Filter>Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

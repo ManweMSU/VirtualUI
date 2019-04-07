@@ -103,6 +103,11 @@ namespace Engine
 			InitializeCodecCollection();
 			return new NativeResourceLoader();
 		}
+		Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color)
+		{
+			Direct2D::InitializeFactory();
+			return Direct2D::D2DRenderDevice::CreateD2DCompatibleTextureRenderingDevice(width, height, color);
+		}
 		class NativeStation : public HandleWindowStation
 		{
 			friend LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);

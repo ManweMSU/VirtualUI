@@ -592,11 +592,11 @@ namespace Engine
 
 		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
 			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) :
 			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced)
+			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const noexcept { return Target; }
@@ -1022,6 +1022,114 @@ namespace Engine
 		void D2DRenderDevice::SetTimerValue(uint32 time) noexcept { AnimationTimer = time; }
 		uint32 D2DRenderDevice::GetCaretBlinkHalfTime(void) noexcept { return HalfBlinkPeriod; }
 		void D2DRenderDevice::ClearCache(void) noexcept { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
+		Drawing::ICanvasRenderingDevice * D2DRenderDevice::QueryCanvasDevice(void) noexcept { return this; }
+		void D2DRenderDevice::DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept
+		{
+			SafePointer<ID2D1PathGeometry> geometry;
+			SafePointer<ID2D1SolidColorBrush> brush;
+			if (D2DFactory->CreatePathGeometry(geometry.InnerRef()) != S_OK) return;
+			if (count) {
+				SafePointer<ID2D1GeometrySink> sink;
+				if (geometry->Open(sink.InnerRef()) != S_OK) return;
+				sink->BeginFigure(D2D1::Point2F(float(points[0].x), float(points[0].y)), D2D1_FIGURE_BEGIN_FILLED);
+				for (int i = 1; i < count; i++) sink->AddLine(D2D1::Point2F(float(points[i].x), float(points[i].y)));
+				sink->EndFigure(D2D1_FIGURE_END_OPEN);
+				sink->Close();
+			}
+			if (Target->CreateSolidColorBrush(D2D1::ColorF(float(color.x), float(color.y), float(color.z), float(color.w)), brush.InnerRef()) != S_OK) return;
+			Target->DrawGeometry(geometry, brush, float(width));
+		}
+		void D2DRenderDevice::FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept
+		{
+			SafePointer<ID2D1PathGeometry> geometry;
+			SafePointer<ID2D1SolidColorBrush> brush;
+			if (D2DFactory->CreatePathGeometry(geometry.InnerRef()) != S_OK) return;
+			if (count) {
+				SafePointer<ID2D1GeometrySink> sink;
+				if (geometry->Open(sink.InnerRef()) != S_OK) return;
+				sink->BeginFigure(D2D1::Point2F(float(points[0].x), float(points[0].y)), D2D1_FIGURE_BEGIN_FILLED);
+				for (int i = 1; i < count; i++) sink->AddLine(D2D1::Point2F(float(points[i].x), float(points[i].y)));
+				sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+				sink->Close();
+			}
+			if (Target->CreateSolidColorBrush(D2D1::ColorF(float(color.x), float(color.y), float(color.z), float(color.w)), brush.InnerRef()) != S_OK) return;
+			Target->FillGeometry(geometry, brush);
+		}
+		Drawing::ITextureRenderingDevice * D2DRenderDevice::CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept { return CreateD2DCompatibleTextureRenderingDevice(width, height, color); }
+		Drawing::ITextureRenderingDevice * D2DRenderDevice::CreateD2DCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept
+		{
+			SafePointer<IWICBitmap> Bitmap;
+			Array<UI::Color> Pixels(width);
+			Pixels.SetLength(width * height);
+			{
+				Math::Color prem = color;
+				prem.x *= prem.w;
+				prem.y *= prem.w;
+				prem.z *= prem.w;
+				swap(prem.x, prem.z);
+				UI::Color pixel = prem;
+				for (int i = 0; i < Pixels.Length(); i++) Pixels[i] = pixel;
+			}
+			if (WICFactory->CreateBitmapFromMemory(width, height, GUID_WICPixelFormat32bppPBGRA, 4 * width, 4 * width * height, reinterpret_cast<LPBYTE>(Pixels.GetBuffer()), Bitmap.InnerRef()) != S_OK) return 0;
+			SafePointer<ID2D1RenderTarget> RenderTarget;
+			D2D1_RENDER_TARGET_PROPERTIES props;
+			props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+			props.dpiX = 0.0f;
+			props.dpiY = 0.0f;
+			props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+			props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+			if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
+			SafePointer<D2DRenderDevice> Device = new D2DRenderDevice(RenderTarget);
+			Device->BitmapTarget.SetReference(Bitmap);
+			Device->BitmapTarget->AddRef();
+			Device->BitmapTargetResX = width;
+			Device->BitmapTargetResY = height;
+			Device->Retain();
+			return Device;
+		}
+		void D2DRenderDevice::BeginDraw(void) noexcept
+		{
+			if (BitmapTarget && BitmapTargetState == 0) {
+				Target->BeginDraw();
+				BitmapTargetState = 1;
+			}
+		}
+		void D2DRenderDevice::EndDraw(void) noexcept
+		{
+			if (BitmapTarget && BitmapTargetState == 1) {
+				Target->EndDraw();
+				BitmapTargetState = 0;
+			}
+		}
+		UI::ITexture * D2DRenderDevice::GetRenderTargetAsTexture(void) noexcept
+		{
+			if (!BitmapTarget || BitmapTargetState) return 0;
+			SafePointer<D2DTexture> result = new D2DTexture;
+			result->Frames.Append(BitmapTarget);
+			result->FrameDuration.Append(0);
+			result->TotalDuration = 0;
+			result->w = BitmapTargetResX;
+			result->h = BitmapTargetResY;
+			result->Retain();
+			BitmapTarget->AddRef();
+			return result;
+		}
+		Engine::Codec::Frame * D2DRenderDevice::GetRenderTargetAsFrame(void) noexcept
+		{
+			if (!BitmapTarget || BitmapTargetState) return 0;
+			SafePointer<Engine::Codec::Frame> result = new Engine::Codec::Frame(BitmapTargetResX, BitmapTargetResY, BitmapTargetResX * 4, PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown);
+			SafePointer<IWICBitmapLock> lock;
+			if (BitmapTarget->Lock(0, WICBitmapLockRead, lock.InnerRef()) == S_OK) {
+				UINT size;
+				WICInProcPointer ptr;
+				lock->GetDataPointer(&size, &ptr);
+				MemoryCopy(result->GetData(), ptr, min(size, uint(4 * BitmapTargetResX * BitmapTargetResY)));
+			}
+			result->Retain();
+			return result;
+		}
 
 		void TextRenderingInfo::FillAdvances(void)
 		{

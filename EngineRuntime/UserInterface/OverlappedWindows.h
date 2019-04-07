@@ -2,6 +2,7 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
+#include "Canvas.h"
 
 namespace Engine
 {
@@ -46,6 +47,7 @@ namespace Engine
 
 			void InitializeCodecCollection(void);
 			IResourceLoader * CreateNativeCompatibleResourceLoader(void);
+			Drawing::ITextureRenderingDevice * CreateNativeCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color);
 			Box GetScreenDimensions(void);
 			double GetScreenScale(void);
 			void RunMessageLoop(void);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../UserInterface/ShapeBase.h"
+#include "../UserInterface/Canvas.h"
 #include "../Miscellaneous/Dictionary.h"
 #include "../ImageCodec/CodecBase.h"
 
@@ -31,7 +32,7 @@ namespace Engine
 			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout);
 		}
 
-		class D2DRenderDevice : public IRenderingDevice
+		class D2DRenderDevice : public Drawing::ITextureRenderingDevice
 		{
 			ID2D1DeviceContext * ExtendedTarget;
 			ID2D1RenderTarget * Target;
@@ -44,6 +45,9 @@ namespace Engine
 			Dictionary::ObjectCache<double, IBlurEffectRenderingInfo> BlurCache;
 			Dictionary::ObjectCache<ITexture *, ITexture> TextureCache;
 			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
+			SafePointer<IWICBitmap> BitmapTarget;
+			int BitmapTargetState;
+			int BitmapTargetResX, BitmapTargetResY;
 		public:
 			D2DRenderDevice(ID2D1DeviceContext * target);
 			D2DRenderDevice(ID2D1RenderTarget * target);
@@ -80,6 +84,17 @@ namespace Engine
 			virtual void SetTimerValue(uint32 time) noexcept override;
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override;
 			virtual void ClearCache(void) noexcept override;
+
+			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override;
+			virtual void DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept override;
+			virtual void FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept override;
+			virtual Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept override;
+			virtual void BeginDraw(void) noexcept override;
+			virtual void EndDraw(void) noexcept override;
+			virtual UI::ITexture * GetRenderTargetAsTexture(void) noexcept override;
+			virtual Engine::Codec::Frame * GetRenderTargetAsFrame(void) noexcept override;
+
+			static Drawing::ITextureRenderingDevice * CreateD2DCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept;
 		};
 	}
 }

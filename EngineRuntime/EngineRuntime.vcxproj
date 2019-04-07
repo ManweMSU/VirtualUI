@@ -23,6 +23,7 @@
     <ClInclude Include="EngineRuntime.h" />
     <ClInclude Include="ImageCodec\CodecBase.h" />
     <ClInclude Include="ImageCodec\IconCodec.h" />
+    <ClInclude Include="Math\Color.h" />
     <ClInclude Include="Math\Complex.h" />
     <ClInclude Include="Math\MathBase.h" />
     <ClInclude Include="Math\Matrix.h" />
@@ -76,6 +77,7 @@
     <ClInclude Include="UserInterface\BinaryLoader.h" />
     <ClInclude Include="UserInterface\BinaryLoaderLegacy.h" />
     <ClInclude Include="UserInterface\ButtonControls.h" />
+    <ClInclude Include="UserInterface\Canvas.h" />
     <ClInclude Include="UserInterface\CombinedControls.h" />
     <ClInclude Include="UserInterface\ControlBase.h" />
     <ClInclude Include="UserInterface\ControlClasses.h" />
@@ -94,6 +96,7 @@
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="ImageCodec\CodecBase.cpp" />
     <ClCompile Include="ImageCodec\IconCodec.cpp" />
+    <ClCompile Include="Math\Color.cpp" />
     <ClCompile Include="Math\Complex.cpp" />
     <ClCompile Include="Math\MathBase.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />

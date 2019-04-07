@@ -6,6 +6,7 @@
 
 namespace Engine
 {
+	namespace Drawing { class ICanvasRenderingDevice; }
 	namespace UI
 	{
 		extern double Zoom;
@@ -186,7 +187,6 @@ namespace Engine
 			virtual int GetHeight(void) const noexcept = 0;
 			virtual void Reload(IRenderingDevice * Device) = 0;
 		};
-
 		class IRenderingDevice : public Object
 		{
 		public:
@@ -218,6 +218,7 @@ namespace Engine
 			virtual void SetTimerValue(uint32 time) noexcept = 0;
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept = 0;
 			virtual void ClearCache(void) noexcept = 0;
+			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept;
 			virtual ~IRenderingDevice(void);
 		};
 

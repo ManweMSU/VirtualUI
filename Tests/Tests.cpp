@@ -214,6 +214,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	UI::Windows::InitializeCodecCollection();
+
 	
 	UI::Zoom = 2.0;
 
