@@ -29,6 +29,38 @@ namespace Engine
 			delete[] buffer;
 		}
 		void Stream::CopyTo(Stream * to) { CopyTo(to, Length() - Seek(0, Current)); }
+		void Stream::CopyToUntilEof(Stream * to)
+		{
+			constexpr uint64 buflen = 0x100000;
+			uint8 * buffer = new (std::nothrow) uint8[buflen];
+			if (!buffer) throw OutOfMemoryException();
+			try {
+				while (true) {
+					Read(buffer, buflen);
+					to->Write(buffer, buflen);
+				}
+			} catch (FileReadEndOfFileException & e) {
+				if (e.DataRead) to->Write(buffer, e.DataRead);
+			} catch (...) {
+				delete[] buffer;
+				throw;
+			}
+			delete[] buffer;
+		}
+		Array<uint8>* Stream::ReadAll(void)
+		{
+			uint64 current = Seek(0, Current);
+			uint64 length = Length();
+			if (length - current > 0x7FFFFFFF) throw OutOfMemoryException();
+			int len = int(length - current);
+			SafePointer< Array<uint8> > result = new (std::nothrow) Array<uint8>(len);
+			if (!result) throw OutOfMemoryException();
+			result->SetLength(len);
+			Read(result->GetBuffer(), len);
+			result->Retain();
+			return result;
+		}
+		void Stream::WriteArray(const Array<uint8>* data) { Write(data->GetBuffer(), data->Length()); }
 		FileStream::FileStream(const string & path, FileAccess access, FileCreationMode mode) : owned(true) { file = CreateFile(path, static_cast<IO::FileAccess>(access), static_cast<IO::FileCreationMode>(mode)); }
 		FileStream::FileStream(handle file_handle, bool take_control) : owned(take_control) { file = file_handle; }
 		void FileStream::Read(void * buffer, uint32 length) { ReadFile(file, buffer, length); }
