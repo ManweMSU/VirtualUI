@@ -111,6 +111,14 @@ ENGINE_PACKED_STRUCTURE(TestPacked)
 	uint16 foobar;
 ENGINE_END_PACKED_STRUCTURE
 
+class Chronometer
+{
+	uint32 begin;
+public:
+	Chronometer(void) : begin(GetTimerValue()) {}
+	operator uint32 (void) const { return GetTimerValue() - begin; }
+};
+
 void CreateBlangSpelling(Syntax::Spelling & spelling)
 {
 	spelling.BooleanFalseLiteral = L"false";
@@ -205,6 +213,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	(*conout) << string(hi) << IO::NewLineChar;
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
+	UI::Windows::InitializeCodecCollection();
+	
+	UI::Zoom = 2.0;
 
 	SafePointer<IResourceLoader> resource_loader = Engine::NativeWindows::CreateCompatibleResourceLoader();
 
@@ -227,7 +238,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 	{
 		{
-			UI::Zoom = 2.0;
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
 			{
 				//SafePointer<Streaming::Stream> Source = new Streaming::FileStream(L"Test.eui", Streaming::AccessRead, Streaming::OpenExisting);
@@ -310,7 +320,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= 0 - Border - ButtonsWidth"), 0.0, 1.0),
 					Template::Coordinate(Template::IntegerTemplate::Undefined(L"= Border + Caption"), 0.0, 0.0)
 				);
-				Title->Font = ::Template->Font[L"NormalFont"];
+				Title->Font = ::Template->Font[L"Font"];
 				Title->Text = Template::StringTemplate::Undefined(L"Text");
 				Title->TextColor = UI::Color(0xFFFFFFFF);
 				Title->HorizontalAlign = TextShape::TextHorizontalAlign::Left;

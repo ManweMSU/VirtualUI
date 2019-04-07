@@ -76,9 +76,6 @@
     <ClInclude Include="UserInterface\ControlClasses.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="UserInterface\BinaryLoader.h">
-      <Filter>UserInterface</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\StaticControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -241,6 +238,15 @@
     <ClInclude Include="Storage\Object.h">
       <Filter>Storage</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\BinaryLoaderLegacy.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\InterfaceFormat.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\BinaryLoader.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -269,9 +275,6 @@
     </ClCompile>
     <ClCompile Include="Miscellaneous\Reflection.cpp">
       <Filter>Miscellaneous</Filter>
-    </ClCompile>
-    <ClCompile Include="UserInterface\BinaryLoader.cpp">
-      <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\ControlClasses.cpp">
       <Filter>UserInterface</Filter>
@@ -434,6 +437,15 @@
     </ClCompile>
     <ClCompile Include="Storage\Object.cpp">
       <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\BinaryLoaderLegacy.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\InterfaceFormat.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\BinaryLoader.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
