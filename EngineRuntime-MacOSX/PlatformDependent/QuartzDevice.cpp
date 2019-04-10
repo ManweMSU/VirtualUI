@@ -230,7 +230,7 @@ namespace Engine
         };
 
         QuartzRenderingDevice::QuartzRenderingDevice(void) : BrushCache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), Clipping(0x10), _animation(0) {}
-        QuartzRenderingDevice::~QuartzRenderingDevice(void) {}
+        QuartzRenderingDevice::~QuartzRenderingDevice(void) { if (BitmapTarget) CGContextRelease(reinterpret_cast<CGContextRef>(_context)); }
 
         void * QuartzRenderingDevice::GetContext(void) const noexcept { return _context; }
         void QuartzRenderingDevice::SetContext(void * context, int width, int height, int scale) noexcept
@@ -762,5 +762,71 @@ namespace Engine
             BrushCache.Clear();
             InversionCache.SetReference(0);
         }
+
+        Drawing::ICanvasRenderingDevice * QuartzRenderingDevice::QueryCanvasDevice(void) noexcept { return this; }
+        void QuartzRenderingDevice::DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept
+        {
+            CGContextSetRGBStrokeColor(reinterpret_cast<CGContextRef>(_context), color.x, color.y, color.z, color.w);
+            CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), width / double(_scale));
+            CGContextSetLineJoin(reinterpret_cast<CGContextRef>(_context), kCGLineJoinRound);
+            CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
+            if (count) {
+                CGContextMoveToPoint(reinterpret_cast<CGContextRef>(_context), points[0].x / _scale, (double(_height) - points[0].y) / _scale);
+                for (int i = 1; i < count; i++) CGContextAddLineToPoint(reinterpret_cast<CGContextRef>(_context), points[i].x / double(_scale), (double(_height) - points[i].y) / double(_scale));
+            }
+            CGContextStrokePath(reinterpret_cast<CGContextRef>(_context));
+        }
+        void QuartzRenderingDevice::FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept
+        {
+            CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), color.x, color.y, color.z, color.w);
+            CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
+            if (count) {
+                CGContextMoveToPoint(reinterpret_cast<CGContextRef>(_context), points[0].x / _scale, (double(_height) - points[0].y) / _scale);
+                for (int i = 1; i < count; i++) CGContextAddLineToPoint(reinterpret_cast<CGContextRef>(_context), points[i].x / double(_scale), (double(_height) - points[i].y) / double(_scale));
+            }
+            CGContextFillPath(reinterpret_cast<CGContextRef>(_context));
+        }
+        Drawing::ITextureRenderingDevice * QuartzRenderingDevice::CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept { return CreateQuartzCompatibleTextureRenderingDevice(width, height, color); }
+        void QuartzRenderingDevice::BeginDraw(void) noexcept {}
+        void QuartzRenderingDevice::EndDraw(void) noexcept { CGContextFlush(reinterpret_cast<CGContextRef>(_context)); }
+        UI::ITexture * QuartzRenderingDevice::GetRenderTargetAsTexture(void) noexcept
+        {
+            if (!BitmapTarget) return 0;
+            SafePointer<Engine::Codec::Frame> frame = GetRenderTargetAsFrame();
+            return LoadTexture(frame);
+        }
+        Engine::Codec::Frame * QuartzRenderingDevice::GetRenderTargetAsFrame(void) noexcept
+        {
+            if (!BitmapTarget) return 0;
+            BitmapTarget->Retain();
+            return BitmapTarget;
+        }
+        Drawing::ITextureRenderingDevice * QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept
+        {
+            SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Premultiplied, Codec::LineDirection::TopDown);
+            {
+                Math::Color prem = color;
+                prem.x *= prem.w;
+                prem.y *= prem.w;
+                prem.z *= prem.w;
+                UI::Color pixel = prem;
+                UI::Color * data = reinterpret_cast<UI::Color *>(target->GetData());
+                for (int i = 0; i < width * height; i++) data[i] = pixel;
+            }
+            CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
+            if (!clr) return 0;
+            CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
+            if (!context) {
+                CGColorSpaceRelease(clr);
+                return 0;
+            }
+            CGColorSpaceRelease(clr);
+            SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
+            device->SetContext(context, width, height, 1);
+            device->BitmapTarget.SetRetain(target);
+            device->Retain();
+            return device;
+        }
+        void * GetCoreImageFromTexture(UI::ITexture * texture) { return static_cast<QuartzTexture *>(texture)->frames.FirstElement(); }
     }
 }

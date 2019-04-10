@@ -13,6 +13,8 @@ ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text3)
 ENGINE_END_REFLECTED_CLASS
 
+MacOSXSpecific::TouchBar * tb;
+
 class _cb2 : public Windows::IWindowEventCallback
 {
 public:
@@ -90,6 +92,29 @@ public:
                 group1->ShowAnimated(Animation::SlideSide::Left, 500,
                     Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
             }
+        } else if (ID == 555) {
+            UI::Color clr = static_cast<MacOSXSpecific::TouchBarColorPicker *>(tb->FindChild(555))->GetColor();
+            UI::ITexture * tex;
+            {
+                Array<Math::Vector2> line;
+                line << Math::Vector2(0.0, 0.0);
+                line << Math::Vector2(200.0, 100.0);
+                line << Math::Vector2(200.0, 200.0);
+                line << Math::Vector2(20.0, 200.0);
+                auto rd = UI::Windows::CreateNativeCompatibleTextureRenderingDevice(256, 256, Math::Color(1.0, 0.7, 0.7, 1.0));
+                rd->BeginDraw();
+                rd->FillPolygon(line.GetBuffer(), line.Length(), Math::Color(clr));
+                rd->DrawPolygon(line.GetBuffer(), line.Length(), Math::Color(0.0, 0.0, 0.0, 0.5), 10.0);
+                rd->EndDraw();
+                tex = rd->GetRenderTargetAsTexture();
+                rd->Release();
+            }
+            window->FindChild(789)->As<UI::Controls::Static>()->SetImage(tex);
+            tex->Release();
+            window->RequireRedraw();
+        } else if (ID == 10101) {
+            double value = static_cast<MacOSXSpecific::TouchBarSlider *>(tb->FindChild(10101))->GetPosition();
+            Streaming::TextWriter(SafePointer<Streaming::Stream>(new Streaming::FileStream(IO::GetStandartOutput()))).WriteLine(L"Slider: " + string(value));
         }
     }
     virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
@@ -141,9 +166,78 @@ int Main(void)
     UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
     source->Release();
 
+    UI::ITexture * tex;
+    {
+        Array<Math::Vector2> line;
+        line << Math::Vector2(0.0, 0.0);
+        line << Math::Vector2(200.0, 100.0);
+        line << Math::Vector2(200.0, 200.0);
+        line << Math::Vector2(20.0, 200.0);
+        auto rd = UI::Windows::CreateNativeCompatibleTextureRenderingDevice(256, 256, Math::Color(1.0, 0.7, 0.7, 1.0));
+        rd->BeginDraw();
+        rd->FillPolygon(line.GetBuffer(), line.Length(), Math::Color(0.0, 0.0, 1.0, 1.0));
+        rd->DrawPolygon(line.GetBuffer(), line.Length(), Math::Color(0.0, 0.0, 0.0, 0.5), 10.0);
+        rd->EndDraw();
+        tex = rd->GetRenderTargetAsTexture();
+        rd->Release();
+    }
+
+    Console << string(tex) + IO::NewLineChar;
+
+    MacOSXSpecific::TouchBar bar;
+    {
+        auto item = MacOSXSpecific::TouchBar::CreateButtonItem();
+        item->SetID(1);
+        item->SetText(L"Ы");
+        //item->SetImageID(L"NSTouchBarColorPickerFont");
+        //item->SetImage(tex);
+        bar.AddChild(item);
+        item->Release();
+
+        auto btn1 = MacOSXSpecific::TouchBar::CreateButtonItem();
+        btn1->SetID(1);
+        btn1->SetImageID(L"NSTouchBarFastForwardTemplate");
+        auto btn2 = MacOSXSpecific::TouchBar::CreateButtonItem();
+        btn2->SetID(2);
+        btn2->SetImageID(L"NSTouchBarRewindTemplate");
+
+        auto gr = MacOSXSpecific::TouchBar::CreatePopoverItem();
+        gr->AddChild(btn2);
+        gr->AddChild(btn1);
+        //gr->SetText(L"Группа");
+        gr->SetImageID(L"NSTouchBarEnterFullScreenTemplate");
+        bar.AddChild(gr);
+        gr->Release();
+        btn1->Release();
+        btn2->Release();
+
+        auto cp = MacOSXSpecific::TouchBar::CreateColorPickerItem();
+        cp->SetID(555);
+        cp->SetImageID(L"NSTouchBarColorPickerFill");
+        cp->SetColor(UI::Color(255, 140, 140, 255));
+        cp->SetCanBeTransparent(false);
+        bar.AddChild(cp);
+        cp->Release();
+
+        auto sl = MacOSXSpecific::TouchBar::CreateSliderItem();
+        sl->SetMinimalImageID(L"NSTouchBarExitFullScreenTemplate");
+        sl->SetMaximalImageID(L"NSTouchBarEnterFullScreenTemplate");
+        sl->SetID(10101);
+        sl->SetMinimalRange(0.0);
+        sl->SetMaximalRange(100.0);
+        sl->SetPosition(60.0);
+        bar.AddChild(sl);
+        sl->Release();
+    }
+    tb = &bar;
+
     auto Callback2 = new _cb2;
     auto templ = interface.Dialog[L"Test3"];
+    templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
+    templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
+    tex->Release();
     auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0);
+    MacOSXSpecific::TouchBar::SetTouchBarForWindow(w4, &bar);
     w4->FindChild(212121)->SetText(req.ToString());
     if (w4) w4->Show(true);
     

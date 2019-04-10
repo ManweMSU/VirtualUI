@@ -1,5 +1,6 @@
 #include "ShapeBase.h"
 #include "Templates.h"
+#include "../Math/Color.h"
 
 namespace Engine
 {
@@ -70,8 +71,8 @@ namespace Engine
 		Color::Color(void) noexcept {}
 		Color::Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa) noexcept : r(sr), g(sg), b(sb), a(sa) {}
 		Color::Color(int sr, int sg, int sb, int sa) noexcept : r(sr), g(sg), b(sb), a(sa) {}
-		Color::Color(float sr, float sg, float sb, float sa) noexcept : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 0), 0)), a(max(min(int(sa * 255.0f), 0), 0)) {}
-		Color::Color(double sr, double sg, double sb, double sa) noexcept : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 0), 0)), a(max(min(int(sa * 255.0), 0), 0)) {}
+		Color::Color(float sr, float sg, float sb, float sa) noexcept : r(max(min(int(sr * 255.0f), 255), 0)), g(max(min(int(sg * 255.0f), 255), 0)), b(max(min(int(sb * 255.0f), 255), 0)), a(max(min(int(sa * 255.0f), 255), 0)) {}
+		Color::Color(double sr, double sg, double sb, double sa) noexcept : r(max(min(int(sr * 255.0), 255), 0)), g(max(min(int(sg * 255.0), 255), 0)), b(max(min(int(sb * 255.0), 255), 0)), a(max(min(int(sa * 255.0), 255), 0)) {}
 		Color::Color(uint32 code) noexcept : Value(code) {}
 		Color::operator uint32(void) const noexcept { return Value; }
 		FrameShape::FrameShape(const Rectangle & position) : Children(0x10), RenderMode(FrameRenderMode::Normal), Opacity(1.0) { Position = position; }
@@ -121,6 +122,7 @@ namespace Engine
 		void BarShape::ClearCache(void) noexcept { Info.SetReference(0); }
 		Shape * BarShape::Clone(void) const { return new BarShape(Position, Gradient, GradientAngle); }
 		string BarShape::ToString(void) const { return L"BarShape"; }
+		Drawing::ICanvasRenderingDevice * IRenderingDevice::QueryCanvasDevice(void) noexcept { return 0; }
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
 		IBlurEffectRenderingInfo::~IBlurEffectRenderingInfo(void) {}

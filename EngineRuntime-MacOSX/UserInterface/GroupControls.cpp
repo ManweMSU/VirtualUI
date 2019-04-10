@@ -227,11 +227,11 @@ namespace Engine
 			{
 				if (Disabled) return this;
 				auto vs_box = _vertical->GetPosition();
-				if (vs_box.IsInside(at)) {
+				if (_show_vs && vs_box.IsInside(at)) {
 					return _vertical->HitTest(Point(at.x - vs_box.Left, at.y - vs_box.Top));
 				}
 				auto hs_box = _horizontal->GetPosition();
-				if (hs_box.IsInside(at)) {
+				if (_show_hs && hs_box.IsInside(at)) {
 					return _horizontal->HitTest(Point(at.x - hs_box.Left, at.y - hs_box.Top));
 				}
 				auto box = _virtual->GetPosition();

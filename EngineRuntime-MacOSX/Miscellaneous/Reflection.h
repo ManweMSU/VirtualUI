@@ -94,6 +94,9 @@ namespace Engine
 			Array<V> InnerArray;
 
 			ReflectedPlainArray(void) : InnerArray(0x80) {}
+			ReflectedPlainArray(const ReflectedPlainArray & src) : InnerArray(src.InnerArray) {}
+			ReflectedPlainArray(ReflectedPlainArray && src) : InnerArray(src.InnerArray) {}
+			ReflectedPlainArray & operator = (const ReflectedPlainArray & src) { InnerArray = src.InnerArray; return *this; }
 			virtual ~ReflectedPlainArray(void) override {}
 
 			operator Array<V> & (void) { return InnerArray; }
@@ -123,6 +126,9 @@ namespace Engine
 			SafeArray<V> InnerArray;
 
 			ReflectedSafeArray(void) : InnerArray(0x80) {}
+			ReflectedSafeArray(const ReflectedSafeArray & src) : InnerArray(src.InnerArray) {}
+			ReflectedSafeArray(ReflectedSafeArray && src) : InnerArray(src.InnerArray) {}
+			ReflectedSafeArray & operator = (const ReflectedSafeArray & src) { InnerArray = src.InnerArray; return *this; }
 			virtual ~ReflectedSafeArray(void) override {}
 
 			operator SafeArray<V> & (void) { return InnerArray; }

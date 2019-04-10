@@ -42,6 +42,11 @@ namespace Engine
 				BasicTemplate(const T & src) : value(src) {}
 
 				static BasicTemplate Undefined(const string & argument_from) { BasicTemplate result; result.argument = argument_from; return result; }
+
+				T & GetValue(void) { return value; }
+				const T & GetValue(void) const { return value; }
+				string & GetArgument(void) { return argument; }
+				const string & GetArgument(void) const { return argument; }
 				
 				bool IsDefined(void) const { return argument.Length() == 0; }
 				T Initialize(IArgumentProvider * provider) const

@@ -589,6 +589,7 @@ namespace Engine
 			SafePointer<Cocoa::QuartzRenderingDevice> RenderingDevice;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
         public:
+            SafePointer<Object> TouchBar;
             class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
 			{
 				Template::ControlTemplate * _template = 0;
@@ -995,6 +996,10 @@ namespace Engine
             SafePointer<Cocoa::QuartzRenderingDevice> device = new Cocoa::QuartzRenderingDevice;
             return new NativeResourceLoader(device);
         }
+        Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color)
+		{
+            return Cocoa::QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(width, height, color);
+		}
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
         {
             InitializeWindowSystem();
@@ -1114,6 +1119,11 @@ namespace Engine
                 }
                 [obj orderOut: nil];
             }
+        }
+        void SetTouchBarObject(UI::WindowStation * Station, Object * Bar)
+        {
+            NativeStation * st = static_cast<NativeStation *>(Station);
+            st->TouchBar.SetRetain(Bar);
         }
 		void ShowWindow(UI::WindowStation * Station, bool Show)
         {

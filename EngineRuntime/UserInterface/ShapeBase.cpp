@@ -1,6 +1,6 @@
 #include "ShapeBase.h"
 #include "Templates.h"
-#include "..\Math\Color.h"
+#include "../Math/Color.h"
 
 namespace Engine
 {

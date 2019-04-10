@@ -1,13 +1,15 @@
 #pragma once
 
 #include "../UserInterface/ShapeBase.h"
+#include "../UserInterface/Canvas.h"
 #include "../Miscellaneous/Dictionary.h"
 
 namespace Engine
 {
 	namespace Cocoa
 	{
-        class QuartzRenderingDevice : public UI::IRenderingDevice
+		void * GetCoreImageFromTexture(UI::ITexture * texture);
+        class QuartzRenderingDevice : public Drawing::ITextureRenderingDevice
         {
             void * _context;
             int _width, _height, _scale;
@@ -16,6 +18,8 @@ namespace Engine
             Dictionary::ObjectCache<UI::Color, UI::IBarRenderingInfo> BrushCache;
 			SafePointer<UI::IInversionEffectRenderingInfo> InversionCache;
 			Array<UI::Box> Clipping;
+
+			SafePointer<Codec::Frame> BitmapTarget;
         public:
             QuartzRenderingDevice(void);
 			~QuartzRenderingDevice(void) override;
@@ -52,6 +56,17 @@ namespace Engine
 			virtual void SetTimerValue(uint32 time) noexcept override;
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override;
 			virtual void ClearCache(void) noexcept override;
+
+			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override;
+			virtual void DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept override;
+			virtual void FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept override;
+			virtual Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept override;
+			virtual void BeginDraw(void) noexcept override;
+			virtual void EndDraw(void) noexcept override;
+			virtual UI::ITexture * GetRenderTargetAsTexture(void) noexcept override;
+			virtual Engine::Codec::Frame * GetRenderTargetAsFrame(void) noexcept override;
+
+			static Drawing::ITextureRenderingDevice * CreateQuartzCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept;
         };
     }
 }

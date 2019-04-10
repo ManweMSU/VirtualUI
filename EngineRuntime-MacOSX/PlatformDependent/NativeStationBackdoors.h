@@ -20,6 +20,7 @@ namespace Engine
 	namespace NativeWindows
 	{
         void InternalShowWindow(UI::WindowStation * Station, bool Show);
+        void SetTouchBarObject(UI::WindowStation * Station, Object * Bar);
         NSWindow * GetWindowObject(UI::WindowStation * station);
     }
 }

@@ -43,6 +43,13 @@ namespace Engine
 					else TEST_CLASS(HorizontalTrackBar)
 					else TEST_CLASS(VerticalTrackBar)
 					else TEST_CLASS(CustomControl)
+
+					else TEST_CLASS(TouchBar)
+					else TEST_CLASS(TouchBarButton)
+					else TEST_CLASS(TouchBarGroup)
+					else TEST_CLASS(TouchBarPopover)
+					else TEST_CLASS(TouchBarColorPicker)
+					else TEST_CLASS(TouchBarSlider)
 					else return 0;
 				}
 			}

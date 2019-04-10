@@ -570,6 +570,7 @@ namespace Engine
 			}
 			void InitializeCodecCollection(void) { NativeWindows::InitializeCodecCollection(); }
 			IResourceLoader * CreateNativeCompatibleResourceLoader(void) { return NativeWindows::CreateCompatibleResourceLoader(); }
+			Drawing::ITextureRenderingDevice * CreateNativeCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) { return NativeWindows::CreateCompatibleTextureRenderingDevice(width, height, color); }
 			Box GetScreenDimensions(void) { return NativeWindows::GetScreenDimensions(); }
 			double GetScreenScale(void) { return NativeWindows::GetScreenScale(); }
 			void RunMessageLoop(void) { NativeWindows::RunMainMessageLoop(); }
