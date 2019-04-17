@@ -2,6 +2,7 @@
 
 #include "InterfaceFormat.h"
 #include "BinaryLoaderLegacy.h"
+#include "OverlappedWindows.h"
 #include "../PlatformDependent/Assembly.h"
 
 #ifdef ENGINE_WINDOWS
@@ -19,6 +20,7 @@ namespace Engine
 		{
 			void LoadUserInterfaceFromBinary(InterfaceTemplate & Template, Streaming::Stream * Source, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
 			{
+				Windows::InitializeCodecCollection();
 				try {
 					SafePointer<Format::InterfaceTemplateImage> image = new Format::InterfaceTemplateImage(Source, Assembly::CurrentLocale, CURRENT_SYSTEM, Zoom);
 					image->Compile(Template, ResourceLoader, ResourceResolver);

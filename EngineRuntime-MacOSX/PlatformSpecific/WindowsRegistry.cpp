@@ -34,6 +34,7 @@ namespace Engine
 					SafePointer<RegistryKey> Current;
 					Current.SetRetain(this);
 					for (int i = 0; i < split.Length(); i++) Current = Current->OpenKey(split[i], access);
+					return Current;
 				} else {
 					HKEY New;
 					REGSAM Access = KEY_READ;
