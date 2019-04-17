@@ -132,10 +132,28 @@ public:
 
 int Main(void)
 {
-    SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
-    Streaming::TextWriter Console(ConsoleOutStream);
+    //SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+    //Streaming::TextWriter Console(ConsoleOutStream);
+    IO::Console Console;
     SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandartInput());
     Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
+
+    Console.ClearScreen();
+    Console.MoveCaret(5, 1);
+    for (int i = 0; i < 8; i++) {
+        Console.SetBackgroundColor(i);
+        Console.Write(L' ');
+    }
+    Console.MoveCaret(5, 2);
+    for (int i = 8; i < 16; i++) {
+        Console.SetBackgroundColor(i);
+        Console.Write(L' ');
+    }
+    Console.WriteLine(L"");
+    Console.SetBackgroundColor(-1);
+    Console.Write(L"pidor");
+    //Console.ClearLine();
+    Console.Write(L"kornevgen");
 
     SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();
     for (int i = 0; i < vols->Length(); i++) {

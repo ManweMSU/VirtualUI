@@ -85,17 +85,24 @@ namespace Engine
 			virtual string ToString(void) const override;
 		};
 
-		class TextWriter final : public Object
+		class ITextWriter : public Object
+		{
+		public:
+			virtual void Write(const string & text) const = 0;
+			virtual void WriteLine(const string & text) const = 0;
+			virtual void WriteEncodingSignature(void) const = 0;
+		};
+		class TextWriter final : public ITextWriter
 		{
 			Stream * dest;
 			Encoding coding;
 		public:
 			TextWriter(Stream * Dest);
 			TextWriter(Stream * Dest, Encoding encoding);
-			void Write(const string & text) const;
-			void WriteLine(const string & text) const;
-			void WriteEncodingSignature(void) const;
 			virtual ~TextWriter(void) override;
+			virtual void Write(const string & text) const override;
+			virtual void WriteLine(const string & text) const override;
+			virtual void WriteEncodingSignature(void) const override;
 			virtual string ToString(void) const override;
 
 			TextWriter & operator << (const string & text);
