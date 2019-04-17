@@ -81,6 +81,7 @@ namespace Engine
                 Write(L"\e[" + string(y + 1) + L";" + string(x + 1) + L"H");
             }
         }
+        void Console::SetTitle(const string & title) {}
 
         Console & Console::operator << (const string & text) { writer << text; return *this; }
         const Console & Console::operator << (const string & text) const { writer << text; return *this; }

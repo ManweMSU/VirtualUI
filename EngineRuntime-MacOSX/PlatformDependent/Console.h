@@ -45,6 +45,7 @@ namespace Engine
             void ClearScreen(void);
             void ClearLine(void);
             void MoveCaret(int x, int y);
+            void SetTitle(const string & title);
 
 			Console & operator << (const string & text);
 			const Console & operator << (const string & text) const;
