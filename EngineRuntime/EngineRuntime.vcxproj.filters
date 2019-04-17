@@ -253,6 +253,9 @@
     <ClInclude Include="Math\Color.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="PlatformDependent\Console.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -455,6 +458,9 @@
     </ClCompile>
     <ClCompile Include="Math\Color.cpp">
       <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Console.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -42,6 +42,7 @@
     <ClInclude Include="PlatformDependent\Base.h" />
     <ClInclude Include="PlatformDependent\Clipboard.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
+    <ClInclude Include="PlatformDependent\Console.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\Direct3D.h" />
     <ClInclude Include="PlatformDependent\FileApi.h" />
@@ -113,6 +114,7 @@
     <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="PlatformDependent\Clipboard.cpp" />
     <ClCompile Include="PlatformDependent\ComInterop.cpp" />
+    <ClCompile Include="PlatformDependent\Console.cpp" />
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\Direct3D.cpp" />
     <ClCompile Include="PlatformDependent\FileApi.cpp" />

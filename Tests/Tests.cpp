@@ -52,6 +52,7 @@
 #include <PlatformSpecific/WindowsShortcut.h>
 #include <PlatformSpecific/WindowsEffects.h>
 #include <PlatformDependent/SystemColors.h>
+#include <PlatformDependent/Console.h>
 #include <Storage/JSON.h>
 #include <Storage/Object.h>
 
@@ -165,6 +166,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	SetConsoleTitleW(L"ui tests");
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
+
+	IO::Console cns;
+	cns.SetTextColor(15);
+	cns.SetBackgroundColor(8);
+	cns.MoveCaret(5, 2);
+	cns.ClearScreen();
+	cns.Write(L"pidor");
 
 	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
 	(*conout) << L"Full path      : " << IO::GetExecutablePath() << IO::NewLineChar;
