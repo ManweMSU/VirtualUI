@@ -761,9 +761,9 @@ bool Execute(Array<Syntax::Token> & command, TextWriter & console)
                 }
             } else if (string::CompareIgnoreCase(command[0].Content, L"arc") == 0) {
                 list.Archive(console);
-            }
-        }
-    }
+            } else return false;
+        } else return false;
+    } else return false;
     return true;
 }
 
