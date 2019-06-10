@@ -7,7 +7,7 @@ namespace Engine
     namespace IO
     {
 		Console::Console(void) : writer(new Streaming::FileStream(GetStandartOutput())), file(GetStandartOutput()) { CONSOLE_SCREEN_BUFFER_INFO info; GetConsoleScreenBufferInfo(file, &info); attr = info.wAttributes; }
-        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output) {}
+        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output) { CONSOLE_SCREEN_BUFFER_INFO info; GetConsoleScreenBufferInfo(file, &info); attr = info.wAttributes; }
         Console::~Console(void) {}
         void Console::Write(const string & text) const { writer.Write(text); }
         void Console::WriteLine(const string & text) const { writer.WriteLine(text); }

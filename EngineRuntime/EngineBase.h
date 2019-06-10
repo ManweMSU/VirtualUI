@@ -69,6 +69,7 @@ namespace Engine
 		ImmutableString(ImmutableString && src);
 		ImmutableString(const widechar * src);
 		ImmutableString(const widechar * sequence, int length);
+		ImmutableString(const char * src);
 		ImmutableString(int32 src);
 		ImmutableString(uint32 src);
 		ImmutableString(int64 src);

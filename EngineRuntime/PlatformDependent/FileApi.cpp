@@ -138,7 +138,7 @@ namespace Engine
 		void ReadFile(handle file, void * to, uint32 amount)
 		{
 			DWORD Read;
-			if (!::ReadFile(file, to, amount, &Read, 0)) throw FileAccessException();
+			if (!::ReadFile(file, to, amount, &Read, 0) && GetLastError() != ERROR_BROKEN_PIPE) throw FileAccessException();
 			if (Read != amount) throw FileReadEndOfFileException(Read);
 		}
 		void WriteFile(handle file, const void * data, uint32 amount)

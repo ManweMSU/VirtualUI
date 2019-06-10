@@ -62,7 +62,6 @@ namespace Engine
 			for (int i = 0; i < command_line->Length(); i++) WinapiProcess::AppendCommandLine(cmd, command_line->ElementAt(i));
 		}
 		DWORD Flags = 0;
-		if (si.hStdOutput != INVALID_HANDLE_VALUE) Flags = CREATE_NO_WINDOW;
 		if (!CreateProcessW(0, cmd, 0, 0, TRUE, Flags, 0, 0, &si, &pi)) return 0;
 		CloseHandle(pi.hThread);
 		return new WinapiProcess::Process(pi.hProcess);
@@ -82,8 +81,7 @@ namespace Engine
 		if (command_line) {
 			for (int i = 0; i < command_line->Length(); i++) WinapiProcess::AppendCommandLine(cmd, command_line->ElementAt(i));
 		}
-		DWORD Flags = 0;
-		if (si.hStdOutput != INVALID_HANDLE_VALUE) Flags = CREATE_NO_WINDOW;
+		DWORD Flags = 0;	
 		if (!CreateProcessW(0, cmd, 0, 0, TRUE, Flags, 0, 0, &si, &pi)) return 0;
 		CloseHandle(pi.hThread);
 		return new WinapiProcess::Process(pi.hProcess);
