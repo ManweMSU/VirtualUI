@@ -30,6 +30,7 @@ namespace Engine
             if (ident.Length()) {
                 NSString * name = Cocoa::CocoaString(ident);
                 NSImage * image = [NSImage imageNamed: name];
+                [image retain];
                 [name release];
                 return image;
             } else if (texture) {
@@ -53,19 +54,20 @@ namespace Engine
 
             virtual void WakeUp(void) override
             {
-                NSString * ident = Cocoa::CocoaString(Identifier);
-                item = [[NSCustomTouchBarItem alloc] initWithIdentifier: ident];
-                [ident release];
-                NSButton * button = [NSButton buttonWithTitle: @"" target: (EngineRuntimeTouchBarDelegate *) Root->GetDelegate() action: @selector(handle_touch_bar_event:)];
-                [button setTag: _ID];
-                [item setView: button];
-                [button release];
-                NSString * title = Cocoa::CocoaString(Text);
-                [[item view] setTitle: title];
-                [title release];
-                NSImage * image = GetCocoaImage(Image, ImageID);
-                [[item view] setImage: image];
-                [image release];
+                @autoreleasepool {
+                    NSString * ident = Cocoa::CocoaString(Identifier);
+                    item = [[NSCustomTouchBarItem alloc] initWithIdentifier: ident];
+                    [ident release];
+                    NSButton * button = [NSButton buttonWithTitle: @"" target: (EngineRuntimeTouchBarDelegate *) Root->GetDelegate() action: @selector(handle_touch_bar_event:)];
+                    [button setTag: _ID];
+                    [item setView: button];
+                    NSString * title = Cocoa::CocoaString(Text);
+                    [[item view] setTitle: title];
+                    [title release];
+                    NSImage * image = GetCocoaImage(Image, ImageID);
+                    [[item view] setImage: image];
+                    [image release];
+                }
             }
             virtual void Shutdown(void) override
             {
@@ -92,21 +94,25 @@ namespace Engine
             virtual string GetImageID(void) override { return ImageID; }
             virtual void SetImageID(const string & text) override
             {
-                ImageID = text;
-                if (item) {
-                    NSImage * image = GetCocoaImage(Image, ImageID);
-                    [[item view] setImage: image];
-                    [image release];
+                @autoreleasepool {
+                    ImageID = text;
+                    if (item) {
+                        NSImage * image = GetCocoaImage(Image, ImageID);
+                        [[item view] setImage: image];
+                        [image release];
+                    }
                 }
             }
             virtual UI::ITexture * GetImage(void) override { return Image; }
             virtual void SetImage(UI::ITexture * image) override
             {
-                Image.SetRetain(image);
-                if (item) {
-                    NSImage * image = GetCocoaImage(Image, ImageID);
-                    [[item view] setImage: image];
-                    [image release];
+                @autoreleasepool {
+                    Image.SetRetain(image);
+                    if (item) {
+                        NSImage * image = GetCocoaImage(Image, ImageID);
+                        [[item view] setImage: image];
+                        [image release];
+                    }
                 }
             }
         };
@@ -129,25 +135,28 @@ namespace Engine
 
             void Populate(void)
             {
-                if (item) {
-                    Array<NSString *> items(0x10);
-                    for (int i = 0; i < Items.Length(); i++) items << Cocoa::CocoaString(Items[i].Identifier);
-                    auto bar = [item groupTouchBar];
-                    NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
-                    [bar setDefaultItemIdentifiers: idents];
-                    [idents release];
-                    for (int i = 0; i < items.Length(); i++) [items[i] release];
+                @autoreleasepool {
+                    if (item) {
+                        Array<NSString *> items(0x10);
+                        for (int i = 0; i < Items.Length(); i++) items << Cocoa::CocoaString(Items[i].Identifier);
+                        auto bar = [item groupTouchBar];
+                        NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
+                        [bar setDefaultItemIdentifiers: idents];
+                        for (int i = 0; i < items.Length(); i++) [items[i] release];
+                    }
                 }
             }
             virtual void WakeUp(void) override
             {
-                NSString * ident = Cocoa::CocoaString(Identifier);
-                NSArray * a = [NSArray array];
-                item = [NSGroupTouchBarItem groupItemWithIdentifier: ident items: a];
-                [a release];
-                [ident release];
-                [[item groupTouchBar] setDelegate: (id) Root->GetDelegate()];
-                Populate();
+                @autoreleasepool {
+                    NSString * ident = Cocoa::CocoaString(Identifier);
+                    NSArray * a = [NSArray array];
+                    item = [NSGroupTouchBarItem groupItemWithIdentifier: ident items: a];
+                    [item retain];
+                    [ident release];
+                    [[item groupTouchBar] setDelegate: (id) Root->GetDelegate()];
+                    Populate();
+                }
             }
             virtual void Shutdown(void) override
             {
@@ -204,29 +213,32 @@ namespace Engine
 
             void Populate(void)
             {
-                if (item) {
-                    Array<NSString *> items(0x10);
-                    for (int i = 0; i < Items.Length(); i++) items << Cocoa::CocoaString(Items[i].Identifier);
-                    auto bar = [item popoverTouchBar];
-                    NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
-                    [bar setDefaultItemIdentifiers: idents];
-                    [idents release];
-                    for (int i = 0; i < items.Length(); i++) [items[i] release];
+                @autoreleasepool {
+                    if (item) {
+                        Array<NSString *> items(0x10);
+                        for (int i = 0; i < Items.Length(); i++) items << Cocoa::CocoaString(Items[i].Identifier);
+                        auto bar = [item popoverTouchBar];
+                        NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
+                        [bar setDefaultItemIdentifiers: idents];
+                        for (int i = 0; i < items.Length(); i++) [items[i] release];
+                    }
                 }
             }
             virtual void WakeUp(void) override
             {
-                NSString * ident = Cocoa::CocoaString(Identifier);
-                item = [[NSPopoverTouchBarItem alloc] initWithIdentifier: ident];
-                [ident release];
-                [[item popoverTouchBar] setDelegate: (id) Root->GetDelegate()];
-                Populate();
-                NSString * title = Cocoa::CocoaString(Text);
-                [item setCollapsedRepresentationLabel: title];
-                [title release];
-                NSImage * image = GetCocoaImage(Image, ImageID);
-                [item setCollapsedRepresentationImage: image];
-                [image release];
+                @autoreleasepool {
+                    NSString * ident = Cocoa::CocoaString(Identifier);
+                    item = [[NSPopoverTouchBarItem alloc] initWithIdentifier: ident];
+                    [ident release];
+                    [[item popoverTouchBar] setDelegate: (id) Root->GetDelegate()];
+                    Populate();
+                    NSString * title = Cocoa::CocoaString(Text);
+                    [item setCollapsedRepresentationLabel: title];
+                    [title release];
+                    NSImage * image = GetCocoaImage(Image, ImageID);
+                    [item setCollapsedRepresentationImage: image];
+                    [image release];
+                }
             }
             virtual void Shutdown(void) override
             {
@@ -281,21 +293,25 @@ namespace Engine
             virtual string GetImageID(void) override { return ImageID; }
             virtual void SetImageID(const string & text) override
             {
-                ImageID = text;
-                if (item) {
-                    NSImage * image = GetCocoaImage(Image, ImageID);
-                    [item setCollapsedRepresentationImage: image];
-                    [image release];
+                @autoreleasepool {
+                    ImageID = text;
+                    if (item) {
+                        NSImage * image = GetCocoaImage(Image, ImageID);
+                        [item setCollapsedRepresentationImage: image];
+                        [image release];
+                    }
                 }
             }
             virtual UI::ITexture * GetImage(void) override { return Image; }
             virtual void SetImage(UI::ITexture * image) override
             {
-                Image.SetRetain(image);
-                if (item) {
-                    NSImage * image = GetCocoaImage(Image, ImageID);
-                    [item setCollapsedRepresentationImage: image];
-                    [image release];
+                @autoreleasepool {
+                    Image.SetRetain(image);
+                    if (item) {
+                        NSImage * image = GetCocoaImage(Image, ImageID);
+                        [item setCollapsedRepresentationImage: image];
+                        [image release];
+                    }
                 }
             }
         };
@@ -314,21 +330,22 @@ namespace Engine
             void IntSetColor(UI::Color color) { Color = color; }
             virtual void WakeUp(void) override
             {
-                NSString * ident = Cocoa::CocoaString(Identifier);
-                NSImage * image = GetCocoaImage(Image, ImageID);
-                item = [NSColorPickerTouchBarItem colorPickerWithIdentifier: ident buttonImage: image];
-                [image release];
-                [ident release];
-                NSArray<NSColorSpace *> * spaces = [NSArray<NSColorSpace *> arrayWithObject: [NSColorSpace deviceRGBColorSpace]];
-                [item setAllowedColorSpaces: spaces];
-                [spaces release];
-                [item setShowsAlpha: AllowTransparent ? YES : NO];
-                [item setTarget: (id) Root->GetDelegate()];
-                [item setAction: @selector(handle_touch_bar_event_from_picker:)];
-                Math::Color mc(Color);
-                NSColor * color = [NSColor colorWithDeviceRed: mc.x green: mc.y blue: mc.z alpha: mc.w];
-                [item setColor: color];
-                [color release];
+                @autoreleasepool {
+                    NSString * ident = Cocoa::CocoaString(Identifier);
+                    NSImage * image = GetCocoaImage(Image, ImageID);
+                    item = [NSColorPickerTouchBarItem colorPickerWithIdentifier: ident buttonImage: image];
+                    [item retain];
+                    [image release];
+                    [ident release];
+                    NSArray<NSColorSpace *> * spaces = [NSArray<NSColorSpace *> arrayWithObject: [NSColorSpace deviceRGBColorSpace]];
+                    [item setAllowedColorSpaces: spaces];
+                    [item setShowsAlpha: AllowTransparent ? YES : NO];
+                    [item setTarget: (id) Root->GetDelegate()];
+                    [item setAction: @selector(handle_touch_bar_event_from_picker:)];
+                    Math::Color mc(Color);
+                    NSColor * color = [NSColor colorWithDeviceRed: mc.x green: mc.y blue: mc.z alpha: mc.w];
+                    [item setColor: color];
+                }
             }
             virtual void Shutdown(void) override
             {
@@ -345,12 +362,13 @@ namespace Engine
             virtual UI::Color GetColor(void) override { return Color; }
             virtual void SetColor(UI::Color color) override
             {
-                Color = color;
-                if (item) {
-                    Math::Color mc(Color);
-                    NSColor * color = [NSColor colorWithDeviceRed: mc.x green: mc.y blue: mc.z alpha: mc.w];
-                    [item setColor: color];
-                    [color release];
+                @autoreleasepool {
+                    Color = color;
+                    if (item) {
+                        Math::Color mc(Color);
+                        NSColor * color = [NSColor colorWithDeviceRed: mc.x green: mc.y blue: mc.z alpha: mc.w];
+                        [item setColor: color];
+                    }
                 }
             }
             virtual bool CanBeTransparent(void) override { return AllowTransparent; }
@@ -391,30 +409,30 @@ namespace Engine
             void IntSetPosition(double value) { Position = value; }
             virtual void WakeUp(void) override
             {
-                NSString * ident = Cocoa::CocoaString(Identifier);
-                item = [[NSSliderTouchBarItem alloc] initWithIdentifier: ident];
-                [ident release];
-                [item setTarget: (id) Root->GetDelegate()];
-                [item setAction: @selector(handle_touch_bar_event_from_slider:)];
-                NSSlider * slider = [item slider];
-                [slider setMaxValue: RangeMaximal];
-                [slider setMinValue: RangeMinimal];
-                [slider setNumberOfTickMarks: Ticks];
-                [slider setAllowsTickMarkValuesOnly: YES];
-                [slider setDoubleValue: Position];
-                NSImage * minim = GetCocoaImage(MinImage, MinImageID);
-                if (minim) {
-                    NSSliderAccessory * acc = [NSSliderAccessory accessoryWithImage: minim];
-                    [item setMinimumValueAccessory: acc];
-                    [acc release];
-                    [minim release];
-                }
-                NSImage * maxim = GetCocoaImage(MaxImage, MaxImageID);
-                if (maxim) {
-                    NSSliderAccessory * acc = [NSSliderAccessory accessoryWithImage: maxim];
-                    [item setMaximumValueAccessory: acc];
-                    [acc release];
-                    [maxim release];
+                @autoreleasepool {
+                    NSString * ident = Cocoa::CocoaString(Identifier);
+                    item = [[NSSliderTouchBarItem alloc] initWithIdentifier: ident];
+                    [ident release];
+                    [item setTarget: (id) Root->GetDelegate()];
+                    [item setAction: @selector(handle_touch_bar_event_from_slider:)];
+                    NSSlider * slider = [item slider];
+                    [slider setMaxValue: RangeMaximal];
+                    [slider setMinValue: RangeMinimal];
+                    [slider setNumberOfTickMarks: Ticks];
+                    [slider setAllowsTickMarkValuesOnly: YES];
+                    [slider setDoubleValue: Position];
+                    NSImage * minim = GetCocoaImage(MinImage, MinImageID);
+                    if (minim) {
+                        NSSliderAccessory * acc = [NSSliderAccessory accessoryWithImage: minim];
+                        [item setMinimumValueAccessory: acc];
+                        [minim release];
+                    }
+                    NSImage * maxim = GetCocoaImage(MaxImage, MaxImageID);
+                    if (maxim) {
+                        NSSliderAccessory * acc = [NSSliderAccessory accessoryWithImage: maxim];
+                        [item setMaximumValueAccessory: acc];
+                        [maxim release];
+                    }
                 }
             }
             virtual void Shutdown(void) override
@@ -481,13 +499,14 @@ namespace Engine
 
         void TouchBar::refresh_bar(void)
         {
-            Array<NSString *> items(0x10);
-            for (int i = 0; i < RootItems.Length(); i++) items << Cocoa::CocoaString(RootItems[i].Identifier);
-            auto bar = ((NSTouchBar *) Bar);
-            NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
-            [bar setDefaultItemIdentifiers: idents];
-            [idents release];
-            for (int i = 0; i < items.Length(); i++) [items[i] release];
+            @autoreleasepool {
+                Array<NSString *> items(0x10);
+                for (int i = 0; i < RootItems.Length(); i++) items << Cocoa::CocoaString(RootItems[i].Identifier);
+                auto bar = ((NSTouchBar *) Bar);
+                NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
+                [bar setDefaultItemIdentifiers: idents];
+                for (int i = 0; i < items.Length(); i++) [items[i] release];
+            }
         }
         void TouchBar::RegisterChild(TouchBarItem * item)
         {
@@ -650,6 +669,7 @@ namespace Engine
         {
             SafePointer<TouchBar> bar = new TouchBar(source);
             TouchBar::SetTouchBarForWindow(window, bar);
+            bar->Retain();
             return bar;
         }
     }

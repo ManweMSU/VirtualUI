@@ -25,6 +25,7 @@ handle error_output;
 bool clean = false;
 bool errlog = false;
 string rt_path;
+Array<string> inc_paths(0x10);
 SafePointer<RegistryNode> sys_cfg;
 SafePointer<RegistryNode> prj_cfg;
 VersionInfo prj_ver;
@@ -119,6 +120,10 @@ bool compile(const string & source, const string & object, const string & log, T
     clang_args << source;
     clang_args << sys_cfg->GetValueString(L"Compiler/IncludeArgument");
     clang_args << rt_path;
+    for (int i = 0; i < inc_paths.Length(); i++) {
+        clang_args << sys_cfg->GetValueString(L"Compiler/IncludeArgument");
+        clang_args << inc_paths[i];
+    }
     {
         string out_arg = sys_cfg->GetValueString(L"Compiler/OutputArgument");
         if (out_arg.FindFirst(L'$') == -1) {
@@ -548,6 +553,17 @@ int Main(void)
                 Array<string> source_list(0x80);
                 string prj_cfg_path = IO::Path::GetDirectory(IO::ExpandPath(args->ElementAt(1)));
                 string sys_cfg_path = IO::Path::GetDirectory(IO::GetExecutablePath());
+                {
+                    SafePointer<RegistryNode> inc_node = prj_cfg->OpenNode(L"Include");
+                    if (inc_node) {
+                        auto & vals = inc_node->GetValues();
+                        for (int i = 0; i < vals.Length(); i++) {
+                            auto p = inc_node->GetValueString(vals[i]);
+                            if (p[0] == L'$') inc_paths << p.Fragment(1, -1);
+                            else inc_paths << IO::ExpandPath(prj_cfg_path + L"/" + p);
+                        }
+                    }
+                }
                 string prj_path = IO::ExpandPath(prj_cfg_path + L"/" + prj_cfg->GetValueString(L"CompileAt"));
                 rt_path = IO::ExpandPath(sys_cfg_path + L"/" + sys_cfg->GetValueString(L"RuntimePath"));
                 {
@@ -570,15 +586,17 @@ int Main(void)
                     if (list) {
                         auto & paths = list->GetValues();
                         for (int i = 0; i < paths.Length(); i++) {
-                            source_list << IO::ExpandPath(prj_path + L"/" + list->GetValueString(paths[i]));
+                            auto p = list->GetValueString(paths[i]);
+                            if (p[0] == L'$') source_list << p.Fragment(1, -1);
+                            else source_list << IO::ExpandPath(prj_path + L"/" + p);
                         }
                     }
                 }
-                string out_path = prj_cfg_path + L"/" + prj_cfg->GetValueString(L"OutputLocation");
+                string out_path = prj_cfg_path + string(IO::PathChar) + prj_cfg->GetValueString(L"OutputLocation");
+                if (prj_cfg->GetValueString(L"OutputLocation")[0] == L'$') out_path = prj_cfg->GetValueString(L"OutputLocation").Fragment(1, -1);
                 string bitness = compile_architecture == L"x64" ? L"64" : L"32";
                 string platform_path = prj_cfg->GetValueString(L"OutputLocation" + compile_system + bitness);
-                if (platform_path.Length()) out_path += L"/" + platform_path;
-                out_path = IO::ExpandPath(out_path);
+                if (platform_path.Length()) out_path += string(IO::PathChar) + platform_path;
                 try_create_directory_full(out_path);
                 if (clean) clear_directory(out_path);
                 try_create_directory(out_path + L"/_obj");
