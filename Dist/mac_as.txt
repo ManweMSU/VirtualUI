@@ -1,0 +1,24 @@
+﻿
+set metadata include
+set notation binary
+set format e64
+append "../EngineRuntime-MacOSX/*" rec
+set user 1
+append "tools_macosx/*"
+set user 2
+append "test_macosx/*"
+set user 3
+select name "*.DS_Store"
+exclude
+select name "*._*"
+exclude
+select name "*_build*"
+exclude
+invert
+set quality e
+set block 0x10000
+set chain lzw huffman
+set time c unset
+set time a unset
+set time m unset
+finish
