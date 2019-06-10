@@ -558,7 +558,7 @@ int Main(void)
     console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
     if (args->Length() < 2) {
         console << L"Command line syntax:" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> <object path> <:winres|:macres> [:clean] [:errlog]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> <object path> :winres|:macres [:clean] [:errlog]" << IO::NewLineChar;
         console << L"      [:bundle <bundle path.app>]" << IO::NewLineChar;
         console << L"Where" << IO::NewLineChar;
         console << L"  project config.ini  - project configuration to take data," << IO::NewLineChar;
