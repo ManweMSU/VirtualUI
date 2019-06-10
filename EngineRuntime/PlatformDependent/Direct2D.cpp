@@ -134,10 +134,12 @@ namespace Engine
 			virtual Frame * DecodeFrame(Stream * stream) override
 			{
 				SafePointer<Image> image = DecodeImage(stream);
-				SafePointer<Frame> frame = image->Frames.ElementAt(0);
-				frame->Retain();
-				frame->Retain();
-				return frame;
+				if (image) {
+					SafePointer<Frame> frame = image->Frames.ElementAt(0);
+					frame->Retain();
+					frame->Retain();
+					return frame;
+				} else return 0;
 			}
 			virtual Image * DecodeImage(Stream * stream) override
 			{
@@ -211,10 +213,11 @@ namespace Engine
 				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
+				else if ((sign & 0xFFFFFFFF00000000) == 0x7079746600000000) return L"HEIF";
 				else return L"";
 			}
 			virtual bool CanEncode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS"); }
-			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS"); }
+			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS" || format == L"HEIF"); }
 		};
 
 		Engine::Codec::Codec * _WicCodec = 0;

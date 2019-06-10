@@ -245,6 +245,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
+	/*Streaming::FileStream image_stream(L"test_heif.heic", Streaming::AccessRead, Streaming::OpenExisting);
+	string format = Codec::GetEncodedImageFormat(&image_stream);
+	image_stream.Seek(0, Streaming::Begin);
+	SafePointer<Codec::Frame> image_frame = Codec::DecodeFrame(&image_stream);
+	SafePointer<UI::ITexture> image = image_frame ? Device->LoadTexture(image_frame) : 0;*/
 	{
 		{
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
@@ -263,7 +268,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Back->From = Rectangle::Entire();
 				Back->RenderMode = TextureShape::TextureRenderMode::Fit;
 				Back->Position = Rectangle::Entire();
+
 				Back->Texture = ::Template->Texture[L"Wallpaper"];
+				//Back->Texture = UI::Template::TextureTemplate(image);
+
 				SafePointer<Template::BarShape> Fill = new Template::BarShape;
 				Fill->Gradient << GradientPoint(0xFF303050);
 				back->Children.Append(Back);

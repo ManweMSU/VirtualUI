@@ -173,7 +173,7 @@ namespace Engine
 				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
 				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
-				else if (sign == 0x7079746618000000) return L"HEIF";
+				else if ((sign & 0xFFFFFFFF00000000) == 0x7079746600000000) return L"HEIF";
 				else return L"";
 			}
 			virtual bool CanEncode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF"); }
