@@ -74,7 +74,7 @@ namespace Engine
 		class MacOSXApplicationController : public ApplicationController
 		{
 			friend void ApplicationLaunched(void);
-		private:
+		public:
 			IApplicationCallback * _callback;
 			Array<UI::Window *> _main_windows;
 			Array<string> _deferred_open;

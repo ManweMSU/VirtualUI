@@ -153,6 +153,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) setFrame : (NSRect) frame
 {
+    if (!station) return;
     [super setFrame: frame];
     double scale = [[self window] backingScaleFactor];
     station->SetBox(Engine::UI::Box(0, 0, double(frame.size.width * scale), double(frame.size.height * scale)));
@@ -161,6 +162,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) setFrameSize: (NSSize) newSize
 {
+    if (!station) return;
     [super setFrameSize: newSize];
     double scale = [[self window] backingScaleFactor];
     station->SetBox(Engine::UI::Box(0, 0, double(newSize.width * scale), double(newSize.height * scale)));
@@ -173,7 +175,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) mouseMoved: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -188,7 +190,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) mouseDragged: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -203,7 +205,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) mouseDown: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -224,7 +226,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) mouseUp: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -234,7 +236,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) rightMouseDragged: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -249,7 +251,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) rightMouseDown: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -270,7 +272,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) rightMouseUp: (NSEvent *) event
 {
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow] && station) {
         auto pos = [NSEvent mouseLocation];
         int x, y;
         ScreenToView(pos.x, pos.y, self, x, y);
@@ -284,7 +286,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
     if (Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Control) || Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Alternative) ||
         Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::System)) dead = true;
-    if (key) {
+    if (key && station) {
         station->KeyDown(key);
         if (!dead) {
             Engine::string etext;
@@ -305,13 +307,14 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 {
     bool dead;
     uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
-    if (key) {
+    if (key && station) {
         station->KeyUp(key);
         [self setNeedsDisplay: YES];
     }
 }
 - (void) flagsChanged: (NSEvent *) event
 {
+    if (!station) return;
     bool shift = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Shift);
     bool control = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Control);
     bool alternative = Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Alternative);
@@ -342,6 +345,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) scrollWheel: (NSEvent *) event
 {
+    if (!station) return;
     double dx = [event deltaX];
     double dy = [event deltaY];
     station->ScrollHorizontally(-dx);
@@ -441,7 +445,26 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *) sender
 {
-    [self close_all: sender];
+    NSRunLoop * loop = [NSRunLoop currentRunLoop];
+    NSArray<NSWindow *> * windows = [NSApp windows];
+    NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+    Engine::Array<NSWindow *> asked(0x10);
+    while (true) {
+        bool exit = true;
+        for (int i = 0; i < [windows count]; i++) {
+            NSWindow * target = [windows objectAtIndex: i];
+            bool was_asked = false;
+            for (int j = 0; j < asked.Length(); j++) if (asked[j] == target) { was_asked = true; break; }
+            if (was_asked) continue;
+            asked << target;
+            exit = false;
+            if (![target parentWindow]) {
+                [loop performSelector: @selector(performClose:) target: target argument: self order: 0 modes: modes];
+            }
+            break;
+        }
+        if (exit) break;
+    }
     return NSTerminateCancel;
 }
 @end

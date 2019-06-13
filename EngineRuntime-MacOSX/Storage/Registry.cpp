@@ -637,6 +637,8 @@ namespace Engine
 				auto storage = ResolveValueByPath(path);
 				if (storage) storage->Set(value);
 			}
+			virtual void SetValue(const string & path, const widechar * value) { SetValue(path, string(value)); }
+			virtual void SetValue(const string & path, const char * value) override { SetValue(path, string(value)); }
 			virtual void SetValue(const string & path, int64 value) override
 			{
 				auto storage = ResolveValueByPath(path);
@@ -852,6 +854,8 @@ namespace Engine
 			virtual void SetValue(const string & path, float value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, bool value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, const string & value) override { Root->SetValue(path, value); }
+			virtual void SetValue(const string & path, const widechar * value) override { Root->SetValue(path, value); }
+			virtual void SetValue(const string & path, const char * value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, int64 value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, double value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, UI::Color value) override { Root->SetValue(path, value); }

@@ -219,6 +219,9 @@ namespace Engine
 							frame.CopyTo(stream);
 						} else {
 							SafePointer<Frame> Conv = image->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::BottomUp));
+							Array<uint8> Mask(0x100);
+							uint32 mask_scanline = ((Conv->GetWidth() + 31) / 32) * 4;
+							for (int s = 0; s < mask_scanline * Conv->GetHeight(); s++) Mask << uint8(0);
 							WindowsBitmapInfoHeader bhdr;
 							ZeroMemory(&bhdr, sizeof(bhdr));
 							bhdr.struct_size = sizeof(bhdr);
@@ -226,9 +229,10 @@ namespace Engine
 							bhdr.height = Conv->GetHeight() * 2;
 							bhdr.planes = 1;
 							bhdr.bpp = 32;
-							bhdr.data_size = Conv->GetHeight() * Conv->GetScanLineLength();
+							bhdr.data_size = Conv->GetHeight() * Conv->GetScanLineLength() + Mask.Length();
 							stream->Write(&bhdr, sizeof(bhdr));
-							stream->Write(Conv->GetData(), bhdr.data_size);
+							stream->Write(Conv->GetData(), Conv->GetHeight() * Conv->GetScanLineLength());
+							stream->Write(Mask.GetBuffer(), Mask.Length());
 						}
 						frames[i].size = uint32(stream->Seek(0, Current) - start - frames[i].offset);
 					}

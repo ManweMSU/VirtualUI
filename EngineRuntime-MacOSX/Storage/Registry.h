@@ -43,6 +43,8 @@ namespace Engine
 			virtual void SetValue(const string & path, float value) = 0;
 			virtual void SetValue(const string & path, bool value) = 0;
 			virtual void SetValue(const string & path, const string & value) = 0;
+			virtual void SetValue(const string & path, const widechar * value) = 0;
+			virtual void SetValue(const string & path, const char * value) = 0;
 			virtual void SetValue(const string & path, int64 value) = 0;
 			virtual void SetValue(const string & path, double value) = 0;
 			virtual void SetValue(const string & path, UI::Color value) = 0;

@@ -33,7 +33,10 @@ namespace Engine
 					auto split = IO::NormalizePath(Name).Split(L'\\');
 					SafePointer<RegistryKey> Current;
 					Current.SetRetain(this);
-					for (int i = 0; i < split.Length(); i++) Current = Current->OpenKey(split[i], access);
+					for (int i = 0; i < split.Length(); i++) {
+						if (split[i].Length() && Current) Current = Current->OpenKey(split[i], access);
+					}
+					if (Current) Current->Retain();
 					return Current;
 				} else {
 					HKEY New;

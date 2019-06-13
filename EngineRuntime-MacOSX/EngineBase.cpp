@@ -159,6 +159,7 @@ namespace Engine
 	ImmutableString::ImmutableString(ImmutableString && src) { text = src.text; src.text = 0; }
 	ImmutableString::ImmutableString(const widechar * src) { if (StringLength(src)) { text = new (std::nothrow) widechar[StringLength(src) + 1]; if (!text) throw OutOfMemoryException(); StringCopy(text, src); } else text = 0; }
 	ImmutableString::ImmutableString(const widechar * sequence, int length) { if (length) { text = new (std::nothrow) widechar[length + 1]; if (!text) throw OutOfMemoryException(); text[length] = 0; MemoryCopy(text, sequence, sizeof(widechar) * length); } else text = 0; }
+	ImmutableString::ImmutableString(const char * src) : ImmutableString(src, -1, Encoding::UTF8) {}
 	ImmutableString::ImmutableString(int32 src)
 	{
 		widechar * conv = new (std::nothrow) widechar[0x10];
