@@ -112,15 +112,15 @@ namespace Engine
 				int LeftEdge;
 				int RightEdge;
 				Color Brush;
-                CGFontRef Font;
+                CTFontRef FontCT;
 			};
             SafePointer<CoreTextFont> font;
 			Array<CGGlyph> GlyphString;
 			Array<CGFloat> GlyphAdvances;
             Array<CGPoint> GlyphPositions;
-            Array<CGFontRef> Fonts;
-            CGFontRef base_font;
-            CGFontRef alt_font;
+            Array<CTFontRef> FontsCT;
+            Array<bool> Surrogate;
+            Array<int> CharEnds32;
 			Array<TextRange> Ranges;
             Color TextColor;
             Color BackColor;
@@ -134,13 +134,11 @@ namespace Engine
 			int hls, hle;
             Array<Color> ExtraBrushes;
 
-            CoreTextRenderingInfo(void) : GlyphString(0x40), GlyphAdvances(0x40), GlyphPositions(0x40), ExtraBrushes(0x40), Fonts(0x40) {}
-            ~CoreTextRenderingInfo(void) override
-            {
-                if (base_font) CGFontRelease(base_font);
-                if (alt_font) CGFontRelease(alt_font);
-            }
+            CoreTextRenderingInfo(void) : GlyphString(0x40), GlyphAdvances(0x40), GlyphPositions(0x40), ExtraBrushes(0x40), FontsCT(0x40), Surrogate(0x40), CharEnds32(0x40), Ranges(0x40) {}
+            ~CoreTextRenderingInfo(void) override {}
 
+            int TranslatePositionUtf32ToUtf16(int pos) { int p32 = 0, p16 = 0; while (p32 < pos) { p32++; p16++; if (Surrogate[p16]) p16++; } return p16; }
+            int TranslatePositionUtf16ToUtf32(int pos) { int s = 0; for (int i = 0; i < pos; i++) if (!Surrogate[i]) s++; return s; }
             virtual void GetExtent(int & width, int & height) noexcept override { width = run_length; height = int(font->height); }
 			virtual void SetHighlightColor(const UI::Color & color) noexcept override
 			{
@@ -153,25 +151,30 @@ namespace Engine
 			virtual int TestPosition(int point) noexcept override
 			{
 				if (point < 0) return 0;
-				if (point > run_length) return GlyphString.Length();
+				if (point > run_length) return TranslatePositionUtf16ToUtf32(GlyphString.Length());
 				double p = double(point);
 				double s = 0.0;
 				for (int i = 0; i < GlyphAdvances.Length(); i++) {
 					if (p <= s + GlyphAdvances[i]) {
-						if (p < s + GlyphAdvances[i] / 2.0) return i;
-						else return i + 1;
+						if (p < s + GlyphAdvances[i] / 2.0) return TranslatePositionUtf16ToUtf32(i);
+						else return TranslatePositionUtf16ToUtf32(i + 1);
 						break;
 					}
 					s += GlyphAdvances[i];
 				}
-				return GlyphString.Length();
+                return TranslatePositionUtf16ToUtf32(GlyphString.Length());
 			}
-			virtual int EndOfChar(int Index) noexcept override
+            int EndOfChar16(int Index) noexcept
 			{
 				if (Index < 0) return 0;
 				double summ = 0.0;
 				for (int i = 0; i <= Index; i++) summ += GlyphAdvances[i];
 				return int(summ);
+			}
+			virtual int EndOfChar(int Index) noexcept override
+			{
+				if (Index < 0) return 0;
+				return CharEnds32[Index];
 			}
 			virtual void SetCharPalette(const Array<UI::Color> & colors) override
 			{
@@ -182,14 +185,17 @@ namespace Engine
 			}
             void ResetRanges(const Array<uint8> * indicies)
             {
+                SafePointer< Array<uint8> > ind;
+                if (indicies) ind = new Array<uint8>(*indicies); else ind = 0;
+                if (ind) for (int i = 0; i < Surrogate.Length(); i++) if (Surrogate[i]) ind->Insert(ind->ElementAt(i - 1), i);
                 Ranges.Clear();
 				int cp = 0;
-				while (cp < Fonts.Length()) {
+				while (cp < FontsCT.Length()) {
 					int ep = cp;
-					while (ep < Fonts.Length() && Fonts[ep] == Fonts[cp] && (!indicies || indicies->ElementAt(ep) == indicies->ElementAt(cp))) ep++;
-					int index = indicies ? indicies->ElementAt(cp) : 0;
-                    CGFontRef font_ref = Fonts[cp];
-					Ranges << TextRange{ cp, ep, (index == 0) ? TextColor : ExtraBrushes[index - 1], font_ref };
+					while (ep < FontsCT.Length() && FontsCT[ep] == FontsCT[cp] && (!ind || ind->ElementAt(ep) == ind->ElementAt(cp))) ep++;
+					int index = ind ? ind->ElementAt(cp) : 0;
+                    CTFontRef font_ref_ct = FontsCT[cp];
+					Ranges << TextRange{ cp, ep, (index == 0) ? TextColor : ExtraBrushes[index - 1], font_ref_ct };
 					cp = ep;
 				}
             }
@@ -320,127 +326,40 @@ namespace Engine
         }
         UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
         {
-            SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
-            if (!text.Length()) {
-                info->base_font = 0;
-                info->alt_font = 0;
-                info->run_length = 0;
-                info->font.SetRetain(reinterpret_cast<CoreTextFont *>(font));
-                info->Retain();
-                return info;
-            }
-            Array<uint16> utf16(0x100);
-            Array<bool> alt(0x100);
-            Array<CGGlyph> alt_glyph(0x100);
-            utf16.SetLength(text.GetEncodedLength(Encoding::UTF16));
-            alt.SetLength(utf16.Length());
-            alt_glyph.SetLength(utf16.Length());
-            ZeroMemory(alt.GetBuffer(), utf16.Length());
-            text.Encode(utf16.GetBuffer(), Encoding::UTF16, false);
-            info->font.SetRetain(reinterpret_cast<CoreTextFont *>(font));
-            info->GlyphString.SetLength(utf16.Length());
-            info->base_font = CTFontCopyGraphicsFont(info->font->font, 0);
-            info->alt_font = CTFontCopyGraphicsFont(info->font->alt_font, 0);
-            CTFontGetGlyphsForCharacters(info->font->font, utf16.GetBuffer(), info->GlyphString.GetBuffer(), utf16.Length());
-            CTFontGetGlyphsForCharacters(info->font->alt_font, utf16.GetBuffer(), alt_glyph.GetBuffer(), utf16.Length());
-            CGGlyph space, question; UniChar spc = 32, que = '?';
-            CTFontGetGlyphsForCharacters(info->font->font, &spc, &space, 1);
-            CTFontGetGlyphsForCharacters(info->font->font, &que, &question, 1);
-            for (int i = utf16.Length() - 1; i >= 0; i--) {
-                if (utf16[i] == L'\t') {
-                    info->GlyphString[i] = 0;
-                    alt_glyph[i] = 0;
-                } else {
-                    if (!info->GlyphString[i]) {
-                        if (alt_glyph[i]) {
-                            info->GlyphString[i] = alt_glyph[i];
-                            alt[i] = true;
-                        } else {
-                            info->GlyphString[i] = question;
-                        }
-                    }
-                }
-            }
-            info->GlyphAdvances.SetLength(info->GlyphString.Length());
-            info->GlyphPositions.SetLength(info->GlyphString.Length());
-            Array<CGSize> adv(0x10);
-            adv.SetLength(info->GlyphString.Length());
-            info->Fonts.SetLength(info->GlyphString.Length());
-            double v = 0.0;
-            for (int i = 0; i < adv.Length(); i++) {
-                if (alt[i]) {
-                    CTFontGetAdvancesForGlyphs(info->font->alt_font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
-                    v += adv[i].width;
-                    info->Fonts[i] = info->alt_font;
-                } else {
-                    if (info->GlyphString[i]) {
-                        CTFontGetAdvancesForGlyphs(info->font->font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
-                        v += adv[i].width;
-                    } else {
-                        info->GlyphString[i] = space;
-                        int w = int(int64(v) + 4 * info->font->width) / int64(4 * info->font->width);
-                        double lv = v;
-                        v = double(4 * info->font->width * w);
-                        adv[i].width = v - lv;
-                    }
-                    info->Fonts[i] = info->base_font;
-                }
-            }
-            for (int i = 0; i < adv.Length(); i++) info->GlyphAdvances[i] = adv[i].width;
-            if (adv.Length()) {
-                info->GlyphPositions[0].x = 0.0;
-                info->GlyphPositions[0].y = 0.0;
-                for (int i = 1; i < adv.Length(); i++) {
-                    info->GlyphPositions[i].x = info->GlyphPositions[i - 1].x + adv[i - 1].width;
-                    info->GlyphPositions[i].y = 0.0;
-                }
-            }
-            info->halign = horizontal_align;
-            info->valign = vertical_align;
-            info->run_length = int(info->GlyphPositions.LastElement().x + info->GlyphAdvances.LastElement());
-            info->BaselineOffset = int(CTFontGetDescent(reinterpret_cast<CoreTextFont *>(font)->font));
-            info->UnderlineOffset = CTFontGetUnderlinePosition(reinterpret_cast<CoreTextFont *>(font)->font);
-            info->UnderlineHalfWidth = CTFontGetUnderlineThickness(reinterpret_cast<CoreTextFont *>(font)->font) / 2.0;
-            info->StrikeoutOffset = (CTFontGetAscent(reinterpret_cast<CoreTextFont *>(font)->font) - CTFontGetDescent(reinterpret_cast<CoreTextFont *>(font)->font)) / 2.0;
-            info->StrikeoutHalfWidth = info->UnderlineHalfWidth;
-            info->TextColor.r = double(color.r) / 255.0;
-            info->TextColor.g = double(color.g) / 255.0;
-            info->TextColor.b = double(color.b) / 255.0;
-            info->TextColor.a = double(color.a) / 255.0;
-            info->hls = info->hle = -1;
-            info->ResetRanges(0);
-            info->Retain();
-            return info;
+            Array<uint32> chars(text.Length());
+            chars.SetLength(text.Length());
+            text.Encode(chars.GetBuffer(), Encoding::UTF32, false);
+            return CreateTextRenderingInfo(font, chars, horizontal_align, vertical_align, color);
         }
         UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
         {
             SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
             if (!text.Length()) {
-                info->base_font = 0;
-                info->alt_font = 0;
                 info->run_length = 0;
                 info->font.SetRetain(reinterpret_cast<CoreTextFont *>(font));
                 info->Retain();
                 return info;
             }
+            info->CharEnds32.SetLength(text.Length());
             Array<uint16> utf16(0x100);
             Array<bool> alt(0x100);
             Array<CGGlyph> alt_glyph(0x100);
             utf16.SetLength(MeasureSequenceLength(text.GetBuffer(), text.Length(), Encoding::UTF32, Encoding::UTF16));
+            info->Surrogate.SetLength(utf16.Length());
             alt.SetLength(utf16.Length());
             alt_glyph.SetLength(utf16.Length());
             ZeroMemory(alt.GetBuffer(), utf16.Length());
             ConvertEncoding(utf16.GetBuffer(), text.GetBuffer(), text.Length(), Encoding::UTF32, Encoding::UTF16);
+            for (int i = 0; i < utf16.Length(); i++) info->Surrogate[i] = (utf16[i] >= 0xDC00 && utf16[i] < 0xE000);
             info->font.SetRetain(reinterpret_cast<CoreTextFont *>(font));
             info->GlyphString.SetLength(utf16.Length());
-            info->base_font = CTFontCopyGraphicsFont(info->font->font, 0);
-            info->alt_font = CTFontCopyGraphicsFont(info->font->alt_font, 0);
             CTFontGetGlyphsForCharacters(info->font->font, utf16.GetBuffer(), info->GlyphString.GetBuffer(), utf16.Length());
             CTFontGetGlyphsForCharacters(info->font->alt_font, utf16.GetBuffer(), alt_glyph.GetBuffer(), utf16.Length());
-            CGGlyph space, question; UniChar spc = 32, que = '?';
+            CGGlyph space, alt_space, question; UniChar spc = 32, que = '?';
             CTFontGetGlyphsForCharacters(info->font->font, &spc, &space, 1);
             CTFontGetGlyphsForCharacters(info->font->font, &que, &question, 1);
-            for (int i = utf16.Length() - 1; i >= 0; i--) {
+            CTFontGetGlyphsForCharacters(info->font->alt_font, &spc, &alt_space, 1);
+            for (int i = 0; i < utf16.Length(); i++) {
                 if (utf16[i] == L'\t') {
                     info->GlyphString[i] = 0;
                     alt_glyph[i] = 0;
@@ -450,7 +369,12 @@ namespace Engine
                             info->GlyphString[i] = alt_glyph[i];
                             alt[i] = true;
                         } else {
-                            info->GlyphString[i] = question;
+                            if (info->Surrogate[i]) {
+                                alt[i] = alt[i - 1];
+                                info->GlyphString[i] = alt[i] ? alt_space : space;
+                            } else {
+                                info->GlyphString[i] = question;
+                            }
                         }
                     }
                 }
@@ -459,25 +383,31 @@ namespace Engine
             info->GlyphPositions.SetLength(info->GlyphString.Length());
             Array<CGSize> adv(0x10);
             adv.SetLength(info->GlyphString.Length());
-            info->Fonts.SetLength(info->GlyphString.Length());
+            info->FontsCT.SetLength(info->GlyphString.Length());
             double v = 0.0;
             for (int i = 0; i < adv.Length(); i++) {
                 if (alt[i]) {
-                    CTFontGetAdvancesForGlyphs(info->font->alt_font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
-                    v += adv[i].width;
-                    info->Fonts[i] = info->alt_font;
+                    if (!info->Surrogate[i]) {
+                        CTFontGetAdvancesForGlyphs(info->font->alt_font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
+                        v += adv[i].width;
+                    } else adv[i].width = 0.0;
+                    info->FontsCT[i] = info->font->alt_font;
                 } else {
                     if (info->GlyphString[i]) {
-                        CTFontGetAdvancesForGlyphs(info->font->font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
-                        v += adv[i].width;
-                    } else {
+                        if (!info->Surrogate[i]) {
+                            CTFontGetAdvancesForGlyphs(info->font->font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
+                            v += adv[i].width;
+                        } else adv[i].width = 0.0;
+                    } else if (!info->Surrogate[i]) {
                         info->GlyphString[i] = space;
                         int w = int(int64(v) + 4 * info->font->width) / int64(4 * info->font->width);
                         double lv = v;
                         v = double(4 * info->font->width * w);
                         adv[i].width = v - lv;
+                    } else {
+                        info->GlyphString[i] = space;
                     }
-                    info->Fonts[i] = info->base_font;
+                    info->FontsCT[i] = info->font->font;
                 }
             }
             for (int i = 0; i < adv.Length(); i++) info->GlyphAdvances[i] = adv[i].width;
@@ -502,6 +432,7 @@ namespace Engine
             info->TextColor.b = double(color.b) / 255.0;
             info->TextColor.a = double(color.a) / 255.0;
             info->hls = info->hle = -1;
+            for (int i = 0; i < info->CharEnds32.Length(); i++) info->CharEnds32[i] = info->EndOfChar16(info->TranslatePositionUtf32ToUtf16(i));
             info->ResetRanges(0);
             info->Retain();
             return info;
@@ -649,7 +580,6 @@ namespace Engine
         {
             auto info = reinterpret_cast<CoreTextRenderingInfo *>(Info);
             if (!info->GlyphAdvances.Length() || !Info) return;
-            if (!info->base_font) return;
             CGRect at = QuartzMakeRect(At, _width, _height, _scale);
             if (Clip) {
                 CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
@@ -675,16 +605,14 @@ namespace Engine
                     at.origin.y, (end - start) / double(_scale), at.size.height));
 			}
             for (int i = 0; i < info->Ranges.Length(); i++) {
-                CGContextSetFont(reinterpret_cast<CGContextRef>(_context), info->Ranges[i].Font);
                 CGContextSetFontSize(reinterpret_cast<CGContextRef>(_context), info->font->zoomed_height);
                 CGContextSetTextDrawingMode(reinterpret_cast<CGContextRef>(_context), kCGTextFill);
                 CGContextSetTextPosition(reinterpret_cast<CGContextRef>(_context), 0.0, 0.0);
                 CGContextSetTextMatrix(reinterpret_cast<CGContextRef>(_context), trans);
                 CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context),
                     info->Ranges[i].Brush.r, info->Ranges[i].Brush.g, info->Ranges[i].Brush.b, info->Ranges[i].Brush.a);
-                CGContextShowGlyphsAtPositions(reinterpret_cast<CGContextRef>(_context),
-                    info->GlyphString.GetBuffer() + info->Ranges[i].LeftEdge, info->GlyphPositions.GetBuffer() + info->Ranges[i].LeftEdge,
-                    info->Ranges[i].RightEdge - info->Ranges[i].LeftEdge);
+                CTFontDrawGlyphs(info->Ranges[i].FontCT, info->GlyphString.GetBuffer() + info->Ranges[i].LeftEdge, info->GlyphPositions.GetBuffer() + info->Ranges[i].LeftEdge,
+                    info->Ranges[i].RightEdge - info->Ranges[i].LeftEdge, reinterpret_cast<CGContextRef>(_context));
             }
 			if (info->font->underline) {
                 CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->TextColor.r, info->TextColor.g, info->TextColor.b, info->TextColor.a);

@@ -202,61 +202,18 @@ int Main(void)
 
     Console << string(tex) + IO::NewLineChar;
 
-    MacOSXSpecific::TouchBar bar;
-    {
-        auto item = MacOSXSpecific::TouchBar::CreateButtonItem();
-        item->SetID(1);
-        item->SetText(L"Ы");
-        //item->SetImageID(L"NSTouchBarColorPickerFont");
-        //item->SetImage(tex);
-        bar.AddChild(item);
-        item->Release();
-
-        auto btn1 = MacOSXSpecific::TouchBar::CreateButtonItem();
-        btn1->SetID(1);
-        btn1->SetImageID(L"NSTouchBarFastForwardTemplate");
-        auto btn2 = MacOSXSpecific::TouchBar::CreateButtonItem();
-        btn2->SetID(2);
-        btn2->SetImageID(L"NSTouchBarRewindTemplate");
-
-        auto gr = MacOSXSpecific::TouchBar::CreatePopoverItem();
-        gr->AddChild(btn2);
-        gr->AddChild(btn1);
-        //gr->SetText(L"Группа");
-        gr->SetImageID(L"NSTouchBarEnterFullScreenTemplate");
-        bar.AddChild(gr);
-        gr->Release();
-        btn1->Release();
-        btn2->Release();
-
-        auto cp = MacOSXSpecific::TouchBar::CreateColorPickerItem();
-        cp->SetID(555);
-        cp->SetImageID(L"NSTouchBarColorPickerFill");
-        cp->SetColor(UI::Color(255, 140, 140, 255));
-        cp->SetCanBeTransparent(false);
-        bar.AddChild(cp);
-        cp->Release();
-
-        auto sl = MacOSXSpecific::TouchBar::CreateSliderItem();
-        sl->SetMinimalImageID(L"NSTouchBarExitFullScreenTemplate");
-        sl->SetMaximalImageID(L"NSTouchBarEnterFullScreenTemplate");
-        sl->SetID(10101);
-        sl->SetMinimalRange(0.0);
-        sl->SetMaximalRange(100.0);
-        sl->SetPosition(60.0);
-        bar.AddChild(sl);
-        sl->Release();
-    }
-    tb = &bar;
-
     auto Callback2 = new _cb2;
     auto templ = interface.Dialog[L"Test3"];
     templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
     templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
     tex->Release();
     auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0);
-    MacOSXSpecific::TouchBar::SetTouchBarForWindow(w4, &bar);
-    w4->FindChild(212121)->SetText(req.ToString());
+    auto a = string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤").EncodeSequence(Encoding::UTF16, false);
+    for (int i = 0; i < a->Length() / 2; i++) {
+        Console.WriteLine(string(uint32( *reinterpret_cast<uint16 *>(a->GetBuffer() + 2 * i) ), HexadecimalBase, 4));
+    }
+    a->Release();
+    w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
     if (w4) w4->Show(true);
     
     Windows::RunMessageLoop();
