@@ -210,7 +210,7 @@ namespace Engine
 			}
 		}
 		Array(Array && src) : count(src.count), allocated(src.allocated), data(src.data), block(src.block) { src.data = 0; src.allocated = 0; src.count = 0; }
-		explicit Array(int BlockSize) : count(0), allocated(0), data(0), block(BlockSize) {}
+		explicit Array(int BlockSize) : count(0), allocated(0), data(0), block(max(BlockSize, 1)) {}
 		~Array(void) override { for (int i = 0; i < count; i++) data[i].V::~V(); free(data); }
 
 		Array & operator = (const Array & src)
@@ -324,7 +324,7 @@ namespace Engine
 			}
 		}
 		SafeArray(SafeArray && src) : count(src.count), allocated(src.allocated), data(src.data), block(src.block) { src.data = 0; src.allocated = 0; src.count = 0; }
-		explicit SafeArray(int BlockSize) : count(0), allocated(0), data(0), block(BlockSize) {}
+		explicit SafeArray(int BlockSize) : count(0), allocated(0), data(0), block(max(BlockSize, 1)) {}
 		~SafeArray(void) override { for (int i = 0; i < count; i++) delete data[i]; free(data); }
 
 		SafeArray & operator = (const SafeArray & src)
@@ -432,7 +432,7 @@ namespace Engine
 			}
 		}
 		ObjectArray(ObjectArray && src) : count(src.count), allocated(src.allocated), data(src.data), block(src.block) { src.data = 0; src.allocated = 0; src.count = 0; }
-		explicit ObjectArray(int BlockSize) : count(0), allocated(0), data(0), block(BlockSize) {}
+		explicit ObjectArray(int BlockSize) : count(0), allocated(0), data(0), block(max(BlockSize, 1)) {}
 		~ObjectArray(void) override { for (int i = 0; i < count; i++) if (data[i]) data[i]->Release(); free(data); }
 
 		ObjectArray & operator = (const ObjectArray & src)
