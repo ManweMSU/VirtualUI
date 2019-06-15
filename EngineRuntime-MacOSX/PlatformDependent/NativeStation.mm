@@ -61,6 +61,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     uint32 dbl;
     int last_x, last_y, fkeys, last_px, last_py;
     bool lwas, rwas, mwas;
+    NSObject<NSTextInputClient> * input_client;
+    NSTextInputContext * input_context;
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
 - (void) dealloc;
@@ -85,6 +87,24 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 
 - (void) engineEvent: (EngineRuntimeEvent *) event;
 @property(readonly) BOOL acceptsFirstResponder;
+@property(readonly, strong) NSObject * inputContext;
+@end
+@interface EngineRuntimeInputContext : NSObject<NSTextInputClient>
+{
+@public
+    EngineRuntimeContentView * view;
+}
+- (BOOL) hasMarkedText;
+- (NSRange) markedRange;
+- (NSRange) selectedRange;
+- (void) setMarkedText: (id) string selectedRange: (NSRange) selectedRange replacementRange: (NSRange) replacementRange;
+- (void) unmarkText;
+- (NSArray<NSAttributedStringKey> *) validAttributesForMarkedText;
+- (NSAttributedString *) attributedSubstringForProposedRange: (NSRange) range actualRange: (NSRangePointer) actualRange;
+- (void) insertText: (id) string replacementRange: (NSRange) replacementRange;
+- (NSUInteger) characterIndexForPoint: (NSPoint) point;
+- (NSRect) firstRectForCharacterRange: (NSRange) range actualRange: (NSRangePointer) actualRange;
+- (void) doCommandBySelector: (SEL) selector;
 @end
 @interface EngineRuntimeWindowDelegate : NSObject<NSWindowDelegate>
 {
@@ -108,6 +128,38 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 {
     [((EngineRuntimeContentView *) [self contentView])->window_delegate windowDidResignKey: nil];
 }
+@end
+@implementation EngineRuntimeInputContext
+- (BOOL) hasMarkedText { return NO; }
+- (NSRange) markedRange { return { NSNotFound, 0 }; }
+- (NSRange) selectedRange { return { NSNotFound, 0 }; }
+- (void) setMarkedText: (id) string selectedRange: (NSRange) selectedRange replacementRange: (NSRange) replacementRange {}
+- (void) unmarkText {}
+- (NSArray<NSAttributedStringKey> *) validAttributesForMarkedText { return [NSArray<NSAttributedStringKey> array]; }
+- (NSAttributedString *) attributedSubstringForProposedRange: (NSRange) range actualRange: (NSRangePointer) actualRange
+{
+    auto str = [[NSAttributedString alloc] initWithString: [NSString string]];
+    [str autorelease];
+    return str;
+}
+- (void) insertText: (id) string replacementRange: (NSRange) replacementRange
+{
+    Engine::string text;
+    if ([string respondsToSelector: @selector(isEqualToAttributedString:)]) {
+        NSString * str = [string string];
+        text = Engine::Cocoa::EngineString(str);
+    } else {
+        NSString * str = string;
+        text = Engine::Cocoa::EngineString(str);
+    }
+    if (text.Length() && view->station) {
+        for (int i = 0; i < text.Length(); i++) view->station->CharDown(text[i]);
+        [view setNeedsDisplay: YES];
+    }
+}
+- (NSUInteger) characterIndexForPoint: (NSPoint) point { return NSNotFound; }
+- (NSRect) firstRectForCharacterRange: (NSRange) range actualRange: (NSRangePointer) actualRange { return NSMakeRect(0.0, 0.0, 0.0, 0.0); }
+- (void) doCommandBySelector: (SEL) selector {}
 @end
 @implementation EngineRuntimeTimerTarget : NSObject
 - (instancetype) init
@@ -134,11 +186,17 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
     rwas = false;
     mwas = false;
     dbl = uint32([NSEvent doubleClickInterval] * 1000.0);
+    auto ic = [[EngineRuntimeInputContext alloc] init];
+    input_client = ic;
+    input_context = [[NSTextInputContext alloc] initWithClient: ic];
+    ic->view = self;
     return self;
 }
 - (void) dealloc
 {
     [window_delegate release];
+    [input_context release];
+    [input_client release];
     [super dealloc];
 }
 - (void) drawRect : (NSRect) dirtyRect
@@ -369,10 +427,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
         event->job->Release();
     }
 }
-- (BOOL) acceptsFirstResponder
-{
-    return YES;
-}
+- (BOOL) acceptsFirstResponder { return YES; }
+- (NSObject *) inputContext { return input_context; }
 @end
 @implementation EngineRuntimeApplicationDelegate
 - (void) close_all: (id) sender
