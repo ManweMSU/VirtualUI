@@ -105,6 +105,7 @@ namespace Engine
 	{
 		if (platform == Platform::X86) return false;
 		if (platform == Platform::X64) return true;
+		return false;
 	}
 	int GetProcessorsNumber(void)
 	{

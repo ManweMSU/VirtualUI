@@ -155,11 +155,11 @@ namespace Engine
 	typedef ImmutableString string;
 	typedef bool Boolean;
 
-	constexpr widechar * DecimalBase = L"0123456789";
-	constexpr widechar * HexadecimalBase = L"0123456789ABCDEF";
-	constexpr widechar * HexadecimalBaseLowerCase = L"0123456789abcdef";
-	constexpr widechar * OctalBase = L"01234567";
-	constexpr widechar * BinaryBase = L"01";
+	constexpr const widechar * DecimalBase = L"0123456789";
+	constexpr const widechar * HexadecimalBase = L"0123456789ABCDEF";
+	constexpr const widechar * HexadecimalBaseLowerCase = L"0123456789abcdef";
+	constexpr const widechar * OctalBase = L"01234567";
+	constexpr const widechar * BinaryBase = L"01";
 
 	template <class V> void swap(V & a, V & b) { if (&a == &b) return; uint8 buffer[sizeof(V)]; MemoryCopy(buffer, &a, sizeof(V)); MemoryCopy(&a, &b, sizeof(V)); MemoryCopy(&b, buffer, sizeof(V)); }
 	template <class V> void safe_swap(V & a, V & b) { V e = a; a = b; b = e; }
