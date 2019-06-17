@@ -240,16 +240,24 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     {
         return FALSE;
     }
+	try {
+		UI::InterfaceTemplate templ;
+		Streaming::FileStream src(L"estore.eui", Streaming::AccessRead, Streaming::OpenExisting);
+		UI::Loader::LoadUserInterfaceFromBinary(templ, &src);
+		int pidor = 5;
+	} catch (...) { }
 
 	// Starting D3D
 	Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
-	/*Streaming::FileStream image_stream(L"test_heif.heic", Streaming::AccessRead, Streaming::OpenExisting);
-	string format = Codec::GetEncodedImageFormat(&image_stream);
-	image_stream.Seek(0, Streaming::Begin);
-	SafePointer<Codec::Frame> image_frame = Codec::DecodeFrame(&image_stream);
-	SafePointer<UI::ITexture> image = image_frame ? Device->LoadTexture(image_frame) : 0;*/
+	//Streaming::FileStream image_stream(L"test_heif.heic", Streaming::AccessRead, Streaming::OpenExisting);
+	//Streaming::FileStream image_stream_o(L"test_heif.png", Streaming::AccessReadWrite, Streaming::CreateAlways);
+	//string format = Codec::GetEncodedImageFormat(&image_stream);
+	//image_stream.Seek(0, Streaming::Begin);
+	//SafePointer<Codec::Frame> image_frame = Codec::DecodeFrame(&image_stream);
+	//if (image_frame) Codec::EncodeFrame(&image_stream_o, image_frame, L"PNG");
+	//SafePointer<UI::ITexture> image = image_frame ? Device->LoadTexture(image_frame) : 0;
 	{
 		{
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());

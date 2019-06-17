@@ -11,7 +11,6 @@ int wmain(void)
 	InitCommonControls();
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	int result = Main();
-	CoUninitialize();
 	return result;
 }
 #endif
@@ -21,7 +20,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	InitCommonControls();
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	int result = Main();
-	CoUninitialize();
 	return result;
 }
 #endif

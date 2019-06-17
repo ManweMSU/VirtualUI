@@ -147,7 +147,7 @@ namespace Engine
 				IWICBitmapDecoder * Decoder = 0;
 				IWICBitmapFrameDecode * FrameDecoder = 0;
 				IWICMetadataQueryReader * Metadata = 0;
-				IWICFormatConverter * Converter = 0;			
+				IWICFormatConverter * Converter = 0;		
 				SafePointer<Image> Result = new Image;
 				try {
 					uint32 FrameCount;
@@ -172,8 +172,8 @@ namespace Engine
 							Metadata = 0;
 						}
 						if (WICFactory->CreateFormatConverter(&Converter) != S_OK) throw Exception();
-						if (Converter->Initialize(FrameDecoder, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, 0, 0.0f, WICBitmapPaletteTypeCustom) != S_OK) throw IO::FileFormatException();					
-						Converter->CopyPixels(0, 4 * frame->GetWidth(), 4 * frame->GetWidth() * frame->GetHeight(), frame->GetData());
+						if (Converter->Initialize(FrameDecoder, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, 0, 0.0f, WICBitmapPaletteTypeCustom) != S_OK) throw IO::FileFormatException();
+						if (Converter->CopyPixels(0, 4 * frame->GetWidth(), 4 * frame->GetWidth() * frame->GetHeight(), frame->GetData()) != S_OK) throw IO::FileFormatException();
 						Converter->Release();
 						Converter = 0;
 						FrameDecoder->Release();
@@ -541,6 +541,7 @@ namespace Engine
 			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
 			{
 				D2DFont * Font = new D2DFont;
+				Font->AlternativeFace = 0;
 				Font->FontFace = 0;
 				Font->FontName = FaceName;
 				Font->ActualHeight = Height;
