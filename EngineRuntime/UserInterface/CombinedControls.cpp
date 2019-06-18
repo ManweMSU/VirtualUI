@@ -241,7 +241,7 @@ namespace Engine
 			void ComboBox::LeftButtonDown(Point at)
 			{
 				SetFocus();
-				if (_state == 1 || _state & 0x10) {
+				if ((_state == 1 || _state & 0x10) && !_list) {
 					_state = 2;
 					run_drop_down();
 				}
@@ -776,7 +776,7 @@ namespace Engine
 					_cp = pos;
 					ScrollToCaret();
 					if (ocp != _cp || osp != _sp) find_advice();
-				} else if (button.IsInside(at)) { _state = 4; run_drop_down(); }
+				} else if (button.IsInside(at) && !_list) { _state = 4; run_drop_down(); }
 			}
 			void TextComboBox::LeftButtonUp(Point at) { if (_state == 1) ReleaseCapture(); }
 			void TextComboBox::LeftButtonDoubleClick(Point at)
