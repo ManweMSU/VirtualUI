@@ -452,6 +452,7 @@ int Main(void)
         Console.WriteLine(L"");
         Console.Write(L"Installation Path: ");
         string path = Input.ReadLine();
+        if (!path.Length()) path = IO::Path::GetDirectory(IO::GetExecutablePath());
         try_create_directory(path);
         path = IO::ExpandPath(path);
         string arc_path = IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/install.ecsa";
