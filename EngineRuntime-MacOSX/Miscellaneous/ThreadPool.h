@@ -43,4 +43,10 @@ namespace Engine
 			string ToString(void) const override;
 		};
 	}
+	class Task : public Tasks::ThreadJob
+	{
+	public:
+		virtual void DoJob(Tasks::ThreadPool * pool) override final;
+		virtual void DoTask(void) = 0;
+	};
 }
