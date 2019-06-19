@@ -383,77 +383,71 @@ bool copy_attachments(const string & out_path, const string & base_path, const s
     }
     return true;
 }
-bool invoke(RegistryNode * node, const string & base_path, const string & obj_path, TextWriter & console)
+Array<string> * parse_command(const string & cmd)
 {
-    Array<string> args(0x10);
-    string source = node->GetValueString(L"Source");
-    string dest = node->GetValueString(L"Dest");
-    string verb = node->GetValueString(L"Verb");
-    auto & vals = node->GetValues();
-    for (int i = 0; i < vals.Length(); i++) if (vals[i][0] == L'_') args << node->GetValueString(vals[i]);
-    handle manifest;
-    try {
-        manifest = IO::CreateFile(base_path + L"/" + verb + L".command.ini", IO::AccessRead, IO::OpenExisting);
-    }
-    catch (...) {
-        try {
-            manifest = IO::CreateFile(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + verb + L".command.ini", IO::AccessRead, IO::OpenExisting);
-        }
-        catch (...) { return false; }
-    }
-    FileStream manifest_stream(manifest, true);
-    SafePointer<Registry> manifest_reg = CompileTextRegistry(&manifest_stream);
-    if (!manifest_reg) {
-        console << L"Unrecognized command \"" << verb << L"\"." << IO::NewLineChar;
-        return false;
-    }
-    Array<string> command_line(0x10);
-    string server = manifest_reg->GetValueString(L"Server");
-    bool control = (clean) ? false : manifest_reg->GetValueBoolean(L"VersionControl");
-    if (control) {
-        try {
-            FileStream source_stream(source, AccessRead, OpenExisting);
-            FileStream dest_stream(dest, AccessRead, OpenExisting);
-            if (IO::DateTime::GetFileAlterTime(source_stream.Handle()) < IO::DateTime::GetFileAlterTime(dest_stream.Handle())) return true;
-        }
-        catch (...) {}
-    }
-    SafePointer<RegistryNode> cmdl = manifest_reg->OpenNode(L"CommandLine");
-    if (cmdl) {
-        auto & cmdla = cmdl->GetValues();
-        for (int i = 0; i < cmdla.Length(); i++) {
-            string val = cmdl->GetValueString(cmdla[i]);
-            if (val == L"$args$") command_line << args;
-            else {
-                val = val.Replace(L"$source$", source);
-                val = val.Replace(L"$dest$", dest);
-                command_line << val;
+    SafePointer< Array<string> > parts = new Array<string>(0x10);
+    int sp = 0;
+    while (sp < cmd.Length()) {
+        while (sp < cmd.Length() && (cmd[sp] == L' ' || cmd[sp] == L'\t')) sp++;
+        if (sp < cmd.Length()) {
+            widechar bc = 0;
+            if (cmd[sp] == L'\'' || cmd[sp] == L'\"') bc = cmd[sp];
+            int ep = sp;
+            if (bc == 0) {
+                while (ep < cmd.Length() && cmd[ep] != L' ' && cmd[ep] != L'\t') ep++;
+                parts->Append(cmd.Fragment(sp, ep - sp));
+                sp = ep;
+            } else {
+                ep++;
+                while (ep < cmd.Length()) {
+                    if (cmd[ep] == bc) {
+                        if (cmd[ep + 1] == bc) {
+                            ep += 2;
+                        } else {
+                            ep++;
+                            widechar from[3] = { bc, bc, 0 };
+                            widechar to[2] = { bc, 0 };
+                            parts->Append(cmd.Fragment(sp + 1, ep - sp - 2).Replace(from, to));
+                            sp = ep;
+                            break;
+                        }
+                    } else ep++;
+                }
             }
         }
     }
-    IO::SetStandartOutput(console_output);
-    IO::SetStandartError(error_output);
-    SafePointer<Process> process = CreateCommandProcess(server, &command_line);
-    if (!process) {
-        process.SetReference(CreateProcess(base_path + L"/" + server, &command_line));
-    }
-    if (!process) {
-        console << L"Failed to launch the server \"" << server << L"\"." << IO::NewLineChar;
-        return false;
-    }
-    process->Wait();
-    return true;
+    parts->Retain();
+    return parts;
 }
 bool do_invokations(const string & base_path, const string & obj_path, TextWriter & console)
 {
+    IO::SetCurrentDirectory(base_path);
     SafePointer<RegistryNode> base = prj_cfg->OpenNode(L"Invoke");
     if (base) {
-        auto & cmds = base->GetSubnodes();
+        auto & cmds = base->GetValues();
         for (int i = 0; i < cmds.Length(); i++) {
-            SafePointer<RegistryNode> cmd = base->OpenNode(cmds[i]);
-            if (cmd) {
-                if (!invoke(cmd, base_path, obj_path, console)) return false;
+            string command = base->GetValueString(cmds[i]);
+            SafePointer< Array<string> > parts = parse_command(command);
+            if (!parts->Length()) {
+                console << L"The invokation command is empty." << IO::NewLineChar;
+                return false;
             }
+            string server = parts->FirstElement();
+            parts->RemoveFirst();
+            for (int i = 0; i < parts->Length(); i++) {
+                if (string::CompareIgnoreCase(parts->ElementAt(i).Fragment(0, 9), L"<objpath>") == 0) {
+                    parts->ElementAt(i) = IO::ExpandPath(obj_path + parts->ElementAt(i).Fragment(9, -1));
+                }
+            }
+            IO::SetStandartOutput(console_output);
+            IO::SetStandartError(error_output);
+            SafePointer<Process> process = CreateCommandProcess(server, parts);
+            if (!process) {
+                console << L"Failed to launch the server \"" << server << L"\"." << IO::NewLineChar;
+                return false;
+            }
+            process->Wait();
+            if (process->GetExitCode()) return false;
         }
     }
     return true;
@@ -617,7 +611,9 @@ int Main(void)
                     object_list << obj;
                 }
                 if (compile_subsystem != L"object") {
+                    string last_wd = IO::GetCurrentDirectory();
                     if (!do_invokations(prj_path, out_path + L"/_obj", console)) return 1;
+                    IO::SetCurrentDirectory(last_wd);
                     string out_file = out_path + L"/" + prj_cfg->GetValueString(L"OutputName");
                     string exe_ext = sys_cfg->GetValueString(L"ExecutableExtension");
                     if (exe_ext.Length() && string::CompareIgnoreCase(IO::Path::GetExtension(out_file), exe_ext)) out_file += L"." + exe_ext;

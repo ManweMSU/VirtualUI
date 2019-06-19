@@ -147,4 +147,5 @@ namespace Engine
 			return 0;
 		}
 	}
+	void Task::DoJob(Tasks::ThreadPool * pool) { DoTask(); }
 }

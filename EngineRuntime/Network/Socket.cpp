@@ -16,6 +16,26 @@ namespace Engine
 {
 	namespace Network
 	{
+		class SocketSystem
+		{
+			bool Initialized;
+		public:
+			SocketSystem(void) { Initialized = false; }
+			~SocketSystem(void)
+			{
+				if (Initialized) WSACleanup();
+			}
+			void Initialize(void)
+			{
+				if (!Initialized) {
+					Initialized = true;
+					WSADATA data;
+					ZeroMemory(&data, sizeof(data));
+					WSAStartup(MAKEWORD(2, 2), &data);
+				}
+			}
+		};
+		SocketSystem WindowsSockets;
 		class WinSocket : public Socket
 		{
 			SOCKET handle;
@@ -26,7 +46,6 @@ namespace Engine
 			{
 				shutdown(handle, SD_BOTH);
 				closesocket(handle);
-				WSACleanup();
 			}
 			virtual void Read(void * buffer, uint32 length) override
 			{
@@ -104,11 +123,6 @@ namespace Engine
 			virtual Socket * Accept() override
 			{
 				SOCKET new_socket = accept(handle, 0, 0);
-				if (new_socket != INVALID_SOCKET) {
-					WSADATA data;
-					ZeroMemory(&data, sizeof(data));
-					WSAStartup(MAKEWORD(2, 2), &data);
-				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
 			virtual Socket * Accept(Address & address, uint16 & port) override
@@ -138,11 +152,6 @@ namespace Engine
 						address = Address::CreateIPv4(InverseEndianess(uint32(addr.sin_addr.S_un.S_addr)));
 					}
 				}
-				if (new_socket != INVALID_SOCKET) {
-					WSADATA data;
-					ZeroMemory(&data, sizeof(data));
-					WSAStartup(MAKEWORD(2, 2), &data);
-				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
 			virtual void Shutdown(bool close_read, bool close_write) override
@@ -159,9 +168,7 @@ namespace Engine
 		{
 			if (domain == SocketAddressDomain::Unknown) throw InvalidArgumentException();
 			if (protocol == SocketProtocol::Unknown) throw InvalidArgumentException();	
-			WSADATA data;
-			ZeroMemory(&data, sizeof(data));
-			if (WSAStartup(MAKEWORD(2, 2), &data)) return 0;
+			WindowsSockets.Initialize();
 			int socket_domain = 0;
 			int socket_type = 0;
 			int socket_protocol = 0;
@@ -178,9 +185,6 @@ namespace Engine
 			if (domain == SocketAddressDomain::IPv6) {
 				DWORD value = FALSE;
 				setsockopt(handle, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<char *>(&value), 4);
-			}
-			if (handle == INVALID_SOCKET) {
-				WSACleanup();
 			}
 			return (handle == INVALID_SOCKET) ? 0 : new WinSocket(handle, domain == SocketAddressDomain::IPv6);
 		}
@@ -229,9 +233,6 @@ namespace Engine
 		uint16 InverseEndianess(uint16 value) { return ((value & 0xFF00) >> 8) | ((value & 0xFF) << 8); }
 		Array<AddressEntity>* GetAddressByHost(const string & host_name, uint16 host_port, SocketAddressDomain domain, SocketProtocol protocol)
 		{
-			WSADATA data;
-			ZeroMemory(&data, sizeof(data));
-			if (WSAStartup(MAKEWORD(2, 2), &data)) return 0;
 			try {
 				string wname = DomainNameToPunycode(host_name);
 				SafePointer< Array<uint8> > name = wname.EncodeSequence(Encoding::ANSI, true);
@@ -284,11 +285,9 @@ namespace Engine
 				}
 				freeaddrinfo(info);
 				result->Retain();
-				WSACleanup();
 				return result;
 			}
 			catch (...) {
-				WSACleanup();
 				throw;
 			}
 		}
