@@ -311,7 +311,7 @@ namespace Engine
 				int count = scandir(reinterpret_cast<char *>(path_utf8->GetBuffer()), &elements, 0, alphasort);
 				if (count >= 0) {
 					for (int i = 0; i < count; i++) {
-						{
+						if (elements[i]->d_type == DT_DIR) {
 							string name = string(elements[i]->d_name, elements[i]->d_namlen, Encoding::UTF8);
 							if (name != L"." && name != L".." && Syntax::MatchFilePattern(name, filter)) result->Append(name);
 						}
