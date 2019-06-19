@@ -614,7 +614,7 @@ int Main(void)
                     prj_ver.Description = prj_cfg->GetValueString(L"VersionInformation/Description");
                     try {
                         auto verind = prj_cfg->GetValueString(L"VersionInformation/Version").Split(L'.');
-                        if (verind.Length() > 0) prj_ver.VersionMajor = verind[0].ToUInt32(); else prj_ver.VersionMajor = 0;
+                        if (verind.Length() > 0 && verind[0].Length()) prj_ver.VersionMajor = verind[0].ToUInt32(); else prj_ver.VersionMajor = 0;
                         if (verind.Length() > 1) prj_ver.VersionMinor = verind[1].ToUInt32(); else prj_ver.VersionMinor = 0;
                         if (verind.Length() > 2) prj_ver.Subversion = verind[2].ToUInt32(); else prj_ver.Subversion = 0;
                         if (verind.Length() > 3) prj_ver.Build = verind[3].ToUInt32(); else prj_ver.Build = 0;

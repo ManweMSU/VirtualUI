@@ -294,7 +294,7 @@ namespace Engine
 						result += string(uint32(value_binary[i]), L"0123456789ABCDEF", 2);
 					}
 					return result.ToString();
-				} else return 0;
+				} else return L"";
 			}
 			int64 GetLongInteger(void) const
 			{
