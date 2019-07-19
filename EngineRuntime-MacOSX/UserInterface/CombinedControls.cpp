@@ -248,7 +248,7 @@ namespace Engine
 			}
 			void ComboBox::MouseMove(Point at)
 			{
-				if (_state != 1) {
+				if (_state != 1 && _state != 2) {
 					_state = 1;
 					SetCapture();
 				} else if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) ReleaseCapture();

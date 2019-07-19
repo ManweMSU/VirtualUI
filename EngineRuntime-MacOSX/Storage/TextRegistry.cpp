@@ -95,6 +95,7 @@ namespace Engine
 		void RegistryToText(Registry * registry, Streaming::Stream * output, Encoding encoding)
 		{
 			Streaming::TextWriter writer(output, encoding);
+			writer.WriteEncodingSignature();
 			RegistryToText(registry, &writer);
 		}
 
