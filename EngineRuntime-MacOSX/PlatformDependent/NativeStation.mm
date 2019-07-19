@@ -211,8 +211,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) setFrame : (NSRect) frame
 {
-    if (!station) return;
     [super setFrame: frame];
+    if (!station) return;
     double scale = [[self window] backingScaleFactor];
     station->SetBox(Engine::UI::Box(0, 0, double(frame.size.width * scale), double(frame.size.height * scale)));
     station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Move);
@@ -220,8 +220,8 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) setFrameSize: (NSSize) newSize
 {
-    if (!station) return;
     [super setFrameSize: newSize];
+    if (!station) return;
     double scale = [[self window] backingScaleFactor];
     station->SetBox(Engine::UI::Box(0, 0, double(newSize.width * scale), double(newSize.height * scale)));
     station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Move);
@@ -413,14 +413,16 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (void) timerFireMethod: (NSTimer *) timer
 {
     auto target = ((EngineRuntimeTimerTarget *) [timer userInfo])->target;
-    if (target) target->Timer();
+    if (target && station) target->Timer();
     [self setNeedsDisplay: YES];
 }
 - (void) engineEvent: (EngineRuntimeEvent *) event
 {
     if (event->operation == 0) {
+        if (!station) return;
         if (event->target) event->target->Destroy();
     } else if (event->operation == 1) {
+        if (!station) return;
         if (event->target) event->target->RaiseEvent(event->identifier, Engine::UI::Window::Event::Deferred, 0);
     } else if (event->operation == 2) {
         event->job->DoJob(0);
@@ -805,6 +807,7 @@ namespace Engine
 			virtual void OnDesktopDestroy(void) override
             {
                 EngineRuntimeWindowDelegate * dlg = (EngineRuntimeWindowDelegate *) ((EngineRuntimeContentView *) [_window contentView])->window_delegate;
+                ((EngineRuntimeContentView *) [_window contentView])->station = 0;
                 if (dlg) dlg->station = 0;
                 for (int i = 0; i < _slaves.Length(); i++) _slaves[i]->GetDesktop()->Destroy();
                 if (_parent) {

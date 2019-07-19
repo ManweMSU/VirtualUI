@@ -81,7 +81,7 @@ namespace Engine
 		}
 		bool Token::IsVoid(void) const { return Class == TokenClass::Void; }
 
-		Spelling::Spelling(void) : Keywords(0x10), IsolatedChars(0x20), ContinuousCharCombos(0x20) {}
+		Spelling::Spelling(void) : Keywords(0x10), IsolatedChars(0x20), ContinuousCharCombos(0x20), AllowNonLatinNames(false) {}
 		bool Spelling::IsKeyword(const string & word) const
 		{
 			for (int i = 0; i < Keywords.Length(); i++) if (Keywords[i] == word) return true;
@@ -100,6 +100,12 @@ namespace Engine
 		bool operator==(const Token & a, const Token & b) { return a.Content == b.Content && a.Class == b.Class && a.ValueClass == b.ValueClass; }
 		bool operator!=(const Token & a, const Token & b) { return a.Content != b.Content || a.Class != b.Class || a.ValueClass != b.ValueClass; }
 
+		bool IsAllowedAlphabetical(widechar c, const Spelling & spelling)
+		{
+			if (spelling.AllowNonLatinNames) return IsAlphabetical(c);
+			else return (c >= L'A' && c <= L'Z') || (c >= L'a' && c <= L'z');
+		}
+
 		Array<Token>* ParseText(const string & text, const Spelling & spelling)
 		{
 			int pos = 0;
@@ -113,10 +119,10 @@ namespace Engine
 					token.SourcePosition = pos;
 					Result->Append(token);
 					break;
-				} else if ((text[pos] >= L'A' && text[pos] <= L'Z') || (text[pos] >= L'a' && text[pos] <= L'z') || text[pos] == L'_') {
+				} else if (IsAllowedAlphabetical(text[pos], spelling) || text[pos] == L'_') {
 					token.SourcePosition = pos;
 					int sp = pos;
-					while ((text[pos] >= L'A' && text[pos] <= L'Z') || (text[pos] >= L'a' && text[pos] <= L'z') || (text[pos] >= L'0' && text[pos] <= L'9') || text[pos] == L'_') pos++;
+					while (IsAllowedAlphabetical(text[pos], spelling) || (text[pos] >= L'0' && text[pos] <= L'9') || text[pos] == L'_') pos++;
 					token.Content = text.Fragment(sp, pos - sp);
 					if (spelling.IsBooleanFalseLiteral(token.Content)) {
 						token.Content = L"";

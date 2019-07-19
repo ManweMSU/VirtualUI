@@ -61,6 +61,7 @@ namespace Engine
 			string CommentEndOfLineWord;
 			string CommentBlockOpeningWord;
 			string CommentBlockClosingWord;
+			bool AllowNonLatinNames;
 
 			Spelling(void);
 
