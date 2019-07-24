@@ -1,6 +1,8 @@
 #include "MathExpression.h"
 
-#include <math.h>
+#include "../Math/MathBase.h"
+
+using namespace Engine::Math;
 
 namespace Engine
 {
@@ -122,25 +124,25 @@ namespace Engine
 							return int64(cos(value));
 						} else if (func == L"tg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(tan(value));
+							return int64(tg(value));
 						} else if (func == L"ctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(1.0 / tan(value));
+							return int64(ctg(value));
 						} else if (func == L"arcsin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(asin(value));
+							return int64(arcsin(value));
 						} else if (func == L"arccos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(acos(value));
+							return int64(arccos(value));
 						} else if (func == L"arctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(atan(value));
+							return int64(arctg(value));
 						} else if (func == L"arcctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(atan(1.0 / value));
+							return int64(arcctg(value));
 						} else if (func == L"ln") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(log(value));
+							return int64(ln(value));
 						} else if (func == L"exp") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return int64(exp(value));
@@ -205,25 +207,25 @@ namespace Engine
 							return cos(value);
 						} else if (func == L"tg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return tan(value);
+							return tg(value);
 						} else if (func == L"ctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return 1.0 / tan(value);
+							return ctg(value);
 						} else if (func == L"arcsin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return asin(value);
+							return arcsin(value);
 						} else if (func == L"arccos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return acos(value);
+							return arccos(value);
 						} else if (func == L"arctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return atan(value);
+							return arctg(value);
 						} else if (func == L"arcctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return atan(1.0 / value);
+							return arcctg(value);
 						} else if (func == L"ln") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return log(value);
+							return ln(value);
 						} else if (func == L"exp") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
 							return exp(value);

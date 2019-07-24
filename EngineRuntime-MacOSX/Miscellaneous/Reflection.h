@@ -156,9 +156,9 @@ namespace Engine
 #if (defined(_MSC_VER))
 
 #define ENGINE_REFLECTED_CLASS(class_name, parent_class) class class_name : public parent_class { \
-private: template<uint __index> void _mirror_property(::Engine::Reflection::IPropertyEnumerator & enumerator) {} \
+private: template<::Engine::uint __index> void _mirror_property(::Engine::Reflection::IPropertyEnumerator & enumerator) {} \
 public: virtual void EnumerateProperties(::Engine::Reflection::IPropertyEnumerator & enumerator) override { parent_class::EnumerateProperties(enumerator); _mirror_property<__COUNTER__ + 1>(enumerator); } \
-public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const string & name) override { ::Engine::Reflection::GetPropertyEnumerator enumerator(name); EnumerateProperties(enumerator); return enumerator.Result; } \
+public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const ::Engine::string & name) override { ::Engine::Reflection::GetPropertyEnumerator enumerator(name); EnumerateProperties(enumerator); return enumerator.Result; } \
 
 #define ENGINE_END_REFLECTED_CLASS };
 
@@ -172,9 +172,9 @@ public: cxx_type property_name define_postfix;
 
 #define ENGINE_REFLECTED_CLASS(class_name, parent_class) class class_name : public parent_class { \
 private: using __class_name = class_name; \
-private: template<class __enum, uint __index> struct __mirror { static void _mirror_property(__enum & enumerator, __class_name & obj) {} }; \
+private: template<class __enum, ::Engine::uint __index> struct __mirror { static void _mirror_property(__enum & enumerator, __class_name & obj) {} }; \
 public: virtual void EnumerateProperties(::Engine::Reflection::IPropertyEnumerator & enumerator) override { parent_class::EnumerateProperties(enumerator); __mirror<::Engine::Reflection::IPropertyEnumerator, __COUNTER__ + 1>::_mirror_property(enumerator, *this); } \
-public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const string & name) override { ::Engine::Reflection::GetPropertyEnumerator enumerator(name); EnumerateProperties(enumerator); return enumerator.Result; } \
+public: virtual ::Engine::Reflection::PropertyInfo GetProperty(const ::Engine::string & name) override { ::Engine::Reflection::GetPropertyEnumerator enumerator(name); EnumerateProperties(enumerator); return enumerator.Result; } \
 
 #define ENGINE_END_REFLECTED_CLASS };
 

@@ -2,16 +2,16 @@
 
 #include <PlatformDependent/SystemColors.h>
 
-using namespace Engine;
-using namespace Engine::UI;
-
-UI::InterfaceTemplate interface;
-
-ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
+ENGINE_REFLECTED_CLASS(lv_item, Engine::Reflection::Reflected)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text1)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text2)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text3)
 ENGINE_END_REFLECTED_CLASS
+
+using namespace Engine;
+using namespace Engine::UI;
+
+UI::InterfaceTemplate interface;
 
 MacOSXSpecific::TouchBar * tb;
 
