@@ -187,8 +187,8 @@ bool compile(const string & source, const string & object, const string & log, T
         }
     }
     handle clang_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
-    IO::SetStandartOutput(clang_log);
-    IO::SetStandartError(clang_log);
+    IO::SetStandardOutput(clang_log);
+    IO::SetStandardError(clang_log);
     IO::CloseFile(clang_log);
     SafePointer<Process> compiler = CreateCommandProcess(sys_cfg->GetValueString(L"Compiler/Path"), &clang_args);
     if (!compiler) {
@@ -199,7 +199,7 @@ bool compile(const string & source, const string & object, const string & log, T
     compiler->Wait();
     if (compiler->GetExitCode()) {
         console << L"Failed" << IO::NewLineChar;
-        if (errlog) print_error(IO::GetStandartError());
+        if (errlog) print_error(IO::GetStandardError());
         else Shell::OpenFile(log);
         return false;
     }
@@ -233,8 +233,8 @@ bool link(const Array<string> & objs, const string & exe, const string & real_ex
         }
     }
     handle clang_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
-    IO::SetStandartOutput(clang_log);
-    IO::SetStandartError(clang_log);
+    IO::SetStandardOutput(clang_log);
+    IO::SetStandardError(clang_log);
     IO::CloseFile(clang_log);
     SafePointer<Process> linker = CreateCommandProcess(sys_cfg->GetValueString(L"Linker/Path"), &clang_args);
     if (!linker) {
@@ -246,7 +246,7 @@ bool link(const Array<string> & objs, const string & exe, const string & real_ex
     if (linker->GetExitCode()) {
         console << L"Failed" << IO::NewLineChar;
         console << L"Linking error!" << IO::NewLineChar;
-        if (errlog) print_error(IO::GetStandartError());
+        if (errlog) print_error(IO::GetStandardError());
         else Shell::OpenFile(log);
         return false;
     }
@@ -325,8 +325,8 @@ bool run_restool(const string & prj, const string & out_path, const string & bun
     }
     if (errlog) rt_args << L":errlog";
     console << L"Starting native resource generator..." << IO::NewLineChar << IO::NewLineChar;
-    IO::SetStandartOutput(console_output);
-    IO::SetStandartError(error_output);
+    IO::SetStandardOutput(console_output);
+    IO::SetStandardError(error_output);
     SafePointer<Process> restool = CreateCommandProcess(sys_cfg->GetValueString(L"ResourceTool"), &rt_args);
     if (!restool) {
         console << L"Failed to start resource generator (" + sys_cfg->GetValueString(L"ResourceTool") + L")." << IO::NewLineChar;
@@ -439,8 +439,8 @@ bool do_invokations(const string & base_path, const string & obj_path, TextWrite
                     parts->ElementAt(i) = IO::ExpandPath(obj_path + parts->ElementAt(i).Fragment(9, -1));
                 }
             }
-            IO::SetStandartOutput(console_output);
-            IO::SetStandartError(error_output);
+            IO::SetStandardOutput(console_output);
+            IO::SetStandardError(error_output);
             SafePointer<Process> process = CreateCommandProcess(server, parts);
             if (!process) {
                 console << L"Failed to launch the server \"" << server << L"\"." << IO::NewLineChar;
@@ -455,8 +455,8 @@ bool do_invokations(const string & base_path, const string & obj_path, TextWrite
 
 int Main(void)
 {
-    console_output = IO::CloneHandle(IO::GetStandartOutput());
-    error_output = IO::CloneHandle(IO::GetStandartError());
+    console_output = IO::CloneHandle(IO::GetStandardOutput());
+    error_output = IO::CloneHandle(IO::GetStandardError());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 

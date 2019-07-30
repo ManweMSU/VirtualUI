@@ -31,7 +31,7 @@ bool Save(Image * image, const string & as, const string & codec, TextWriter & c
 }
 int Main(void)
 {
-    FileStream console_stream(IO::GetStandartOutput());
+    FileStream console_stream(IO::GetStandardOutput());
     TextWriter console(&console_stream);
 
     SafePointer< Array<string> > args = GetCommandLine();

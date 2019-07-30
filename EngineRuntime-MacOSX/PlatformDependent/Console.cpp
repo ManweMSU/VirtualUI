@@ -6,7 +6,7 @@ namespace Engine
 {
     namespace IO
     {
-        Console::Console(void) : writer(new Streaming::FileStream(GetStandartOutput())), file(GetStandartOutput()) {}
+        Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput())), file(GetStandardOutput()) {}
         Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output) {}
         Console::~Console(void) {}
         void Console::Write(const string & text) const { writer.Write(text); }

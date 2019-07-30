@@ -769,7 +769,7 @@ bool Execute(Array<Syntax::Token> & command, TextWriter & console)
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandartOutput());
+    handle console_output = IO::CloneHandle(IO::GetStandardOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -785,7 +785,7 @@ int Main(void)
         console << L"Where" << IO::NewLineChar;
         console << L"  list         - archive file list to edit, .ecsap or .ecsal," << IO::NewLineChar;
         console << L"  :create      - create or erase existing list instead of loading," << IO::NewLineChar;
-        console << L"  :cs          - execute commands from source different of standart input," << IO::NewLineChar;
+        console << L"  :cs          - execute commands from source different of standard input," << IO::NewLineChar;
         console << L"  command file - text file with commands, ANSI encoding if no signature present," << IO::NewLineChar;
         console << L"  :arc         - archives the list without command interpretation, then exits." << IO::NewLineChar;
         console << L"Use \"?\" command with file opened to get internal command list." << IO::NewLineChar;
@@ -804,7 +804,7 @@ int Main(void)
                 i++;
                 try {
                     handle input = IO::CreateFile(args->ElementAt(i), IO::AccessRead, IO::OpenExisting);
-                    IO::SetStandartInput(input);
+                    IO::SetStandardInput(input);
                     IO::CloseFile(input);
                     prompt = false;
                 }
@@ -839,7 +839,7 @@ int Main(void)
                 if (!list.Archive(console)) return 1;
                 return 0;
             }
-            FileStream InputStream(IO::GetStandartInput());
+            FileStream InputStream(IO::GetStandardInput());
             TextReader Input(&InputStream, IO::TextFileEncoding);
             command_spelling.IsolatedChars << L'?';
             while (!Input.EofReached()) {

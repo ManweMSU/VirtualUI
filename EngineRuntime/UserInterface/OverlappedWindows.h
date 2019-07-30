@@ -128,7 +128,7 @@ namespace Engine
 
 				Array<Accelerators::AcceleratorCommand> & GetAcceleratorTable(void);
 				const Array<Accelerators::AcceleratorCommand> & GetAcceleratorTable(void) const;
-				void AddDialogStandartAccelerators(void);
+				void AddDialogStandardAccelerators(void);
 			};
 			class ContentFrame : public ParentWindow, private Template::Controls::DialogFrame
 			{

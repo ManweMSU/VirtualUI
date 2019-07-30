@@ -81,7 +81,7 @@ namespace Engine
 		}
 		bool Token::IsVoid(void) const { return Class == TokenClass::Void; }
 
-		Spelling::Spelling(void) : Keywords(0x10), IsolatedChars(0x20), ContinuousCharCombos(0x20), AllowNonLatinNames(false) {}
+		Spelling::Spelling(void) : Keywords(0x10), IsolatedChars(0x20), CombinableChars(0x20), AllowNonLatinNames(false) {}
 		bool Spelling::IsKeyword(const string & word) const
 		{
 			for (int i = 0; i < Keywords.Length(); i++) if (Keywords[i] == word) return true;
@@ -264,19 +264,29 @@ namespace Engine
 					Result->Append(token);
 				} else {
 					bool found = false;
-					for (int i = 0; i < spelling.ContinuousCharCombos.Length(); i++) {
-						if (text.Length() - pos >= spelling.ContinuousCharCombos[i].Length() && text.Fragment(pos, spelling.ContinuousCharCombos[i].Length()) == spelling.ContinuousCharCombos[i]) {
-							token.SourcePosition = pos;
-							token.Class = TokenClass::CharCombo;
-							token.ValueClass = TokenConstantClass::Unknown;
-							token.Content = spelling.ContinuousCharCombos[i];
-							Result->Append(token);
-							pos += spelling.ContinuousCharCombos[i].Length();
+					for (int i = 0; i < spelling.CombinableChars.Length(); i++) {
+						if (text[i] == spelling.CombinableChars[i]) {
 							found = true;
 							break;
 						}
 					}
 					if (!found) throw ParserSpellingException(pos, L"Illegal character input");
+					token.SourcePosition = pos;
+					int sp = pos;
+					do {
+						pos++;
+						found = false;
+						for (int i = 0; i < spelling.CombinableChars.Length(); i++) {
+							if (text[i] == spelling.CombinableChars[i]) {
+								found = true;
+								break;
+							}
+						}
+					} while (found);
+					token.Content = text.Fragment(sp, pos - sp);
+					token.Class = TokenClass::CharCombo;
+					token.ValueClass = TokenConstantClass::Unknown;
+					Result->Append(token);		
 				}
 			}
 			Result->Retain();

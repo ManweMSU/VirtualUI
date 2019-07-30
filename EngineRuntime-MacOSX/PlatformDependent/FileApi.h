@@ -32,12 +32,12 @@ namespace Engine
 		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode);
 		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close);
 		void CreatePipe(handle * pipe_in, handle * pipe_out);
-		handle GetStandartOutput(void);
-		handle GetStandartInput(void);
-		handle GetStandartError(void);
-		void SetStandartOutput(handle file);
-		void SetStandartInput(handle file);
-		void SetStandartError(handle file);
+		handle GetStandardOutput(void);
+		handle GetStandardInput(void);
+		handle GetStandardError(void);
+		void SetStandardOutput(handle file);
+		void SetStandardInput(handle file);
+		void SetStandardError(handle file);
 		handle CloneHandle(handle file);
 		void CloseFile(handle file);
 		void Flush(handle file);

@@ -27,7 +27,7 @@ class ModalDelegate : public UI::Windows::IWindowEventCallback
 public:
 	virtual void OnInitialized(UI::Window * window) override
 	{
-		window->As<UI::Controls::OverlappedWindow>()->AddDialogStandartAccelerators();
+		window->As<UI::Controls::OverlappedWindow>()->AddDialogStandardAccelerators();
 	}
 	virtual void OnControlEvent(UI::Window * window, int ID, UI::Window::Event event, UI::Window * sender) override
 	{
@@ -131,7 +131,7 @@ public:
 		} else if (ID == 102) {
 			SlaveDelegate * delegate = new SlaveDelegate;
 			auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Slave"], delegate, UI::Rectangle::Invalid(), window);
-			w->AddDialogStandartAccelerators();
+			w->AddDialogStandardAccelerators();
 			w->Show(true);
 		} else if (ID == 103) {
 			ModalDelegate * delegate = new ModalDelegate;
@@ -229,7 +229,7 @@ public:
 	{
 		MainDelegate * main_delegate = new MainDelegate;
 		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
-		w->AddDialogStandartAccelerators();
+		w->AddDialogStandardAccelerators();
 		w->Show(true);
 		Application::GetController()->RegisterMainWindow(w);
 	}
@@ -243,7 +243,7 @@ public:
 	{
 		MainDelegate * main_delegate = new MainDelegate;
 		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
-		w->AddDialogStandartAccelerators();
+		w->AddDialogStandardAccelerators();
 		w->FindChild(301)->SetText(L"open file:\n" + path);
 		w->Show(true);
 		Application::GetController()->RegisterMainWindow(w);
@@ -253,7 +253,7 @@ public:
 	{
 		MainDelegate * main_delegate = new MainDelegate;
 		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
-		w->AddDialogStandartAccelerators();
+		w->AddDialogStandardAccelerators();
 		w->FindChild(301)->SetText(L"show help");
 		w->Show(true);
 		Application::GetController()->RegisterMainWindow(w);
@@ -262,7 +262,7 @@ public:
 	{
 		MainDelegate * main_delegate = new MainDelegate;
 		auto w = Application::GetController()->CreateWindow(templ->Dialog[L"Main"], main_delegate, UI::Rectangle::Invalid());
-		w->AddDialogStandartAccelerators();
+		w->AddDialogStandardAccelerators();
 		w->FindChild(301)->SetText(L"show properties");
 		w->Show(true);
 		Application::GetController()->RegisterMainWindow(w);

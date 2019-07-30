@@ -15,7 +15,7 @@ void create_directory(const string & path)
 
 int Main(void)
 {
-    console_output = IO::CloneHandle(IO::GetStandartOutput());
+    console_output = IO::CloneHandle(IO::GetStandardOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -124,8 +124,8 @@ int Main(void)
         clang_args << L"-dynamiclib";
         clang_args << L"-Wl,-install_name,@loader_path/../Frameworks/EngineRuntime.framework/EngineRuntime";
         handle clang_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
-        IO::SetStandartOutput(clang_log);
-        IO::SetStandartError(clang_log);
+        IO::SetStandardOutput(clang_log);
+        IO::SetStandardError(clang_log);
         IO::CloseFile(clang_log);
         SafePointer<Process> linker = CreateCommandProcess(cfg->GetValueString(L"Linker/Path"), &clang_args);
         if (!linker) {

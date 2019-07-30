@@ -89,24 +89,24 @@ namespace Engine
 			return file;
 		}
 		void CreatePipe(handle * pipe_in, handle * pipe_out) { if (!::CreatePipe(pipe_out, pipe_in, 0, 0)) throw Exception(); }
-		handle GetStandartOutput(void) { return GetStdHandle(STD_OUTPUT_HANDLE); }
-		handle GetStandartInput(void) { return GetStdHandle(STD_INPUT_HANDLE); }
-		handle GetStandartError(void) { return GetStdHandle(STD_ERROR_HANDLE); }
-		void SetStandartOutput(handle file)
+		handle GetStandardOutput(void) { return GetStdHandle(STD_OUTPUT_HANDLE); }
+		handle GetStandardInput(void) { return GetStdHandle(STD_INPUT_HANDLE); }
+		handle GetStandardError(void) { return GetStdHandle(STD_ERROR_HANDLE); }
+		void SetStandardOutput(handle file)
 		{
 			handle dup;
 			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
 			CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
 			SetStdHandle(STD_OUTPUT_HANDLE, dup);
 		}
-		void SetStandartInput(handle file)
+		void SetStandardInput(handle file)
 		{
 			handle dup;
 			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
 			CloseHandle(GetStdHandle(STD_INPUT_HANDLE));
 			SetStdHandle(STD_INPUT_HANDLE, dup);
 		}
-		void SetStandartError(handle file)
+		void SetStandardError(handle file)
 		{
 			handle dup;
 			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();

@@ -6,7 +6,7 @@ using namespace Engine::Storage;
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandartInput());
+    handle console_output = IO::CloneHandle(IO::GetStandardInput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 

@@ -164,7 +164,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	AllocConsole();
 	SetConsoleTitleW(L"ui tests");
-	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandartOutput());
+	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandardOutput());
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
 	IO::Console cns;
@@ -578,9 +578,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 			w2->SetText(L"window");
 
-			w->AddDialogStandartAccelerators();
-			w2->AddDialogStandartAccelerators();
-			w5->AddDialogStandartAccelerators();
+			w->AddDialogStandardAccelerators();
+			w2->AddDialogStandardAccelerators();
+			w5->AddDialogStandardAccelerators();
 
 			w->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 			w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);

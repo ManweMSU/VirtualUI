@@ -323,7 +323,7 @@ namespace Engine
 			}
 			Array<Accelerators::AcceleratorCommand>& OverlappedWindow::GetAcceleratorTable(void) { return _accels; }
 			const Array<Accelerators::AcceleratorCommand>& OverlappedWindow::GetAcceleratorTable(void) const { return _accels; }
-			void OverlappedWindow::AddDialogStandartAccelerators(void)
+			void OverlappedWindow::AddDialogStandardAccelerators(void)
 			{
 				_accels << Accelerators::AcceleratorCommand(1, KeyCodes::Return, false, false, false);
 				_accels << Accelerators::AcceleratorCommand(2, KeyCodes::Escape, false, false, false);

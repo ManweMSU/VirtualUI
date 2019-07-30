@@ -10,7 +10,7 @@ handle console_output;
 
 int Main(void)
 {
-    console_output = IO::CloneHandle(IO::GetStandartOutput());
+    console_output = IO::CloneHandle(IO::GetStandardOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 

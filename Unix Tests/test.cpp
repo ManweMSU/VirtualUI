@@ -114,12 +114,12 @@ public:
             window->RequireRedraw();
         } else if (ID == 10101) {
             double value = static_cast<MacOSXSpecific::TouchBarSlider *>(tb->FindChild(10101))->GetPosition();
-            Streaming::TextWriter(SafePointer<Streaming::Stream>(new Streaming::FileStream(IO::GetStandartOutput()))).WriteLine(L"Slider: " + string(value));
+            Streaming::TextWriter(SafePointer<Streaming::Stream>(new Streaming::FileStream(IO::GetStandardOutput()))).WriteLine(L"Slider: " + string(value));
         }
     }
     virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
     {
-        // SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+        // SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandardOutput());
         // Streaming::TextWriter Console(ConsoleOutStream);
         // if (event == Windows::FrameEvent::Close) Console << string(L"Close window") + IO::NewLineChar;
         // else if (event == Windows::FrameEvent::Move) Console << string(L"Move window") + IO::NewLineChar;
@@ -132,10 +132,10 @@ public:
 
 int Main(void)
 {
-    //SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandartOutput());
+    //SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandardOutput());
     //Streaming::TextWriter Console(ConsoleOutStream);
     IO::Console Console;
-    SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandartInput());
+    SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandardInput());
     Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
 
     Console.ClearScreen();

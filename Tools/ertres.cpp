@@ -134,8 +134,8 @@ bool compile_resource(const string & rc, const string & res, const string & log,
         }
         rc_args << rc;
         handle rc_log = IO::CreateFile(log, IO::AccessReadWrite, IO::CreateAlways);
-        IO::SetStandartOutput(rc_log);
-        IO::SetStandartError(rc_log);
+        IO::SetStandardOutput(rc_log);
+        IO::SetStandardError(rc_log);
         IO::CloseFile(rc_log);
         SafePointer<Process> compiler = CreateCommandProcess(sys_cfg->GetValueString(L"Compiler/Path"), &rc_args);
         if (!compiler) {
@@ -146,7 +146,7 @@ bool compile_resource(const string & rc, const string & res, const string & log,
         compiler->Wait();
         if (compiler->GetExitCode()) {
             console << L"Failed" << IO::NewLineChar;
-            if (errlog) print_error(IO::GetStandartError());
+            if (errlog) print_error(IO::GetStandardError());
             else Shell::OpenFile(log);
             return false;
         }
@@ -546,8 +546,8 @@ bool asm_format_manifest(const string & name, TextWriter & console)
 int Main(void)
 {
     UI::Windows::InitializeCodecCollection();
-    handle console_output = IO::CloneHandle(IO::GetStandartOutput());
-    error_output = IO::CloneHandle(IO::GetStandartError());
+    handle console_output = IO::CloneHandle(IO::GetStandardOutput());
+    error_output = IO::CloneHandle(IO::GetStandardError());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 

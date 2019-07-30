@@ -45,21 +45,21 @@ string get_stdout(const string & exe)
 {
     handle pipe_in, pipe_out;
     handle clone_out;
-    clone_out = IO::CloneHandle(IO::GetStandartOutput());
+    clone_out = IO::CloneHandle(IO::GetStandardOutput());
     IO::CreatePipe(&pipe_in, &pipe_out);
-    IO::SetStandartOutput(pipe_in);
-    IO::SetStandartError(pipe_in);
+    IO::SetStandardOutput(pipe_in);
+    IO::SetStandardError(pipe_in);
     SafePointer<Process> process = CreateProcess(exe);
     if (!process) {
-        IO::SetStandartOutput(clone_out);
-        IO::SetStandartError(clone_out);
+        IO::SetStandardOutput(clone_out);
+        IO::SetStandardError(clone_out);
         IO::CloseFile(pipe_in);
         IO::CloseFile(pipe_out);
         IO::CloseFile(clone_out);
         return L"";
     }
-    IO::SetStandartOutput(clone_out);
-    IO::SetStandartError(clone_out);
+    IO::SetStandardOutput(clone_out);
+    IO::SetStandardError(clone_out);
     IO::CloseFile(pipe_in);
     IO::CloseFile(clone_out);
     process->Wait();
@@ -435,11 +435,11 @@ int Main(void)
         Engine::Sleep(5000);
         return 0;
     }
-    handle OutputClone = IO::CloneHandle(IO::GetStandartOutput());
+    handle OutputClone = IO::CloneHandle(IO::GetStandardOutput());
     IO::Console Console(OutputClone);
     try {
         UI::Windows::InitializeCodecCollection();
-        FileStream InputStream(IO::GetStandartInput());
+        FileStream InputStream(IO::GetStandardInput());
         TextReader Input(&InputStream, Encoding::UTF8);
         Console.SetTextColor(15);
         Console.SetBackgroundColor(0);
@@ -479,8 +479,8 @@ int Main(void)
         configure(L"../Runtime", path + L"/Tools");
         Console << L"Succeed!" << IO::NewLineChar;
         {
-            IO::SetStandartOutput(OutputClone);
-            IO::SetStandartError(OutputClone);
+            IO::SetStandardOutput(OutputClone);
+            IO::SetStandardError(OutputClone);
             Console << L"Starting the Runtime Compilation..." << IO::NewLineChar;
             Array<string> args(1);
             args << L":asmrt";

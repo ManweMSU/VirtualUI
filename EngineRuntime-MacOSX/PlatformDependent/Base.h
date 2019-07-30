@@ -64,7 +64,7 @@ namespace Engine
 	uint64 TimeUniversalToLocal(uint64 time);
 	uint64 TimeLocalToUniversal(uint64 time);
 
-	// Some C standart library and language dependent case insensitive comparation
+	// Some C standard library and language dependent case insensitive comparation
 	void * MemoryCopy(void * Dest, const void * Source, intptr Length);
 	widechar * StringCopy(widechar * Dest, const widechar * Source);
 	int StringCompare(const widechar * A, const widechar * B);

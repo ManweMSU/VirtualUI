@@ -87,12 +87,12 @@ namespace Engine
             *pipe_in = reinterpret_cast<handle>(result[1]);
             *pipe_out = reinterpret_cast<handle>(result[0]);
         }
-		handle GetStandartOutput(void) { return handle(1); }
-		handle GetStandartInput(void) { return handle(0); }
-		handle GetStandartError(void) { return handle(2); }
-		void SetStandartOutput(handle file) { close(1); dup2(reinterpret_cast<intptr>(file), 1); }
-		void SetStandartInput(handle file) { close(0); dup2(reinterpret_cast<intptr>(file), 0); }
-		void SetStandartError(handle file) { close(2); dup2(reinterpret_cast<intptr>(file), 2); }
+		handle GetStandardOutput(void) { return handle(1); }
+		handle GetStandardInput(void) { return handle(0); }
+		handle GetStandardError(void) { return handle(2); }
+		void SetStandardOutput(handle file) { close(1); dup2(reinterpret_cast<intptr>(file), 1); }
+		void SetStandardInput(handle file) { close(0); dup2(reinterpret_cast<intptr>(file), 0); }
+		void SetStandardError(handle file) { close(2); dup2(reinterpret_cast<intptr>(file), 2); }
 		handle CloneHandle(handle file)
 		{
 			int new_file = dup(reinterpret_cast<intptr>(file));

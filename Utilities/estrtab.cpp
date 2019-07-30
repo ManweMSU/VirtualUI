@@ -56,7 +56,7 @@ void string_table_to_text(StringTable * table, TextWriter & output)
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandartOutput());
+    handle console_output = IO::CloneHandle(IO::GetStandardOutput());
     FileStream console_stream(console_output);
     TextWriter console(&console_stream);
 
@@ -81,7 +81,7 @@ int Main(void)
         console << L"    utf8      - Unicode 1-byte surrogate notation, the default one," << IO::NewLineChar;
         console << L"    utf16     - Unicode 2-byte surrogate notation," << IO::NewLineChar;
         console << L"    utf32     - pure Unicode 4-byte notation." << IO::NewLineChar;
-        console << L"Started only with the source string table name, writes it on the standart output." << IO::NewLineChar;
+        console << L"Started only with the source string table name, writes it on the standard output." << IO::NewLineChar;
         console << IO::NewLineChar;
     } else {
         string source = args->ElementAt(1);
