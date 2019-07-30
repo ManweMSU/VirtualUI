@@ -265,7 +265,7 @@ namespace Engine
 				} else {
 					bool found = false;
 					for (int i = 0; i < spelling.CombinableChars.Length(); i++) {
-						if (text[i] == spelling.CombinableChars[i]) {
+						if (text[pos] == spelling.CombinableChars[i]) {
 							found = true;
 							break;
 						}
@@ -277,7 +277,7 @@ namespace Engine
 						pos++;
 						found = false;
 						for (int i = 0; i < spelling.CombinableChars.Length(); i++) {
-							if (text[i] == spelling.CombinableChars[i]) {
+							if (text[pos] == spelling.CombinableChars[i]) {
 								found = true;
 								break;
 							}
