@@ -139,13 +139,6 @@ void CreateBlangSpelling(Syntax::Spelling & spelling)
 	spelling.IsolatedChars << L'.';
 	spelling.IsolatedChars << L'~';
 	spelling.IsolatedChars << L'@';
-	spelling.ContinuousCharCombos << L"#";
-	spelling.ContinuousCharCombos << L"=";
-	spelling.ContinuousCharCombos << L"+";
-	spelling.ContinuousCharCombos << L"-";
-	spelling.ContinuousCharCombos << L"*";
-	spelling.ContinuousCharCombos << L"/";
-	spelling.ContinuousCharCombos << L"%";
 }
 
 ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)

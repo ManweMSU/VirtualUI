@@ -48,7 +48,7 @@ namespace Engine
 			if (DWriteFactory) { DWriteFactory->Release(); DWriteFactory = 0; }
 		}
 
-		class WicCodec : public Codec
+		class WicCodec : public ICodec
 		{
 		public:
 			virtual void EncodeFrame(Stream * stream, Frame * frame, const string & format) override
@@ -220,8 +220,8 @@ namespace Engine
 			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS" || format == L"HEIF"); }
 		};
 
-		Engine::Codec::Codec * _WicCodec = 0;
-		Engine::Codec::Codec * CreateWicCodec(void) { if (!_WicCodec) { InitializeFactory(); _WicCodec = new WicCodec(); _WicCodec->Release(); } return _WicCodec; }
+		Engine::Codec::ICodec * _WicCodec = 0;
+		Engine::Codec::ICodec * CreateWicCodec(void) { if (!_WicCodec) { InitializeFactory(); _WicCodec = new WicCodec(); _WicCodec->Release(); } return _WicCodec; }
 
 		struct BarRenderingInfo : public IBarRenderingInfo
 		{

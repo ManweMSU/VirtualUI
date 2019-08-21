@@ -22,7 +22,7 @@ namespace Engine
 		void InitializeFactory(void);
 		void ShutdownFactory(void);
 
-		Engine::Codec::Codec * CreateWicCodec(void);
+		Engine::Codec::ICodec * CreateWicCodec(void);
 
 		namespace StandaloneDevice
 		{
