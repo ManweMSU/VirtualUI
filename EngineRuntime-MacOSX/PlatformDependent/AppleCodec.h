@@ -6,6 +6,6 @@ namespace Engine
 {
 	namespace Cocoa
 	{
-        Codec::Codec * CreateAppleCodec(void);
+        Codec::ICodec * CreateAppleCodec(void);
     }
 }

@@ -7,7 +7,7 @@ namespace Engine
 {
 	namespace Cocoa
 	{
-        class AppleCodec : public Codec::Codec
+        class AppleCodec : public Codec::ICodec
         {
         public:
             AppleCodec(void) {}
@@ -180,7 +180,7 @@ namespace Engine
 			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"HEIF"); }
         };
 
-        Codec::Codec * _AppleCodec = 0;
-        Codec::Codec * CreateAppleCodec(void) { if (!_AppleCodec) { _AppleCodec = new AppleCodec(); _AppleCodec->Release(); } return _AppleCodec; }
+        Codec::ICodec * _AppleCodec = 0;
+        Codec::ICodec * CreateAppleCodec(void) { if (!_AppleCodec) { _AppleCodec = new AppleCodec(); _AppleCodec->Release(); } return _AppleCodec; }
     }
 }

@@ -28,7 +28,7 @@ namespace Engine
 			uint32 DataSize;
 		ENGINE_END_PACKED_STRUCTURE
 
-		class VolumeCodec : public Codec::Codec
+		class VolumeCodec : public Codec::ICodec
 		{
 		public:
 			VolumeCodec(void) {}
@@ -258,7 +258,7 @@ namespace Engine
 			virtual bool CanDecode(const string & format) override { return format == L"EIWV"; }
 		};
 
-		Codec::Codec * _VolumeCodec = 0;
-		Codec::Codec * CreateVolumeCodec(void) { if (!_VolumeCodec) { _VolumeCodec = new VolumeCodec(); _VolumeCodec->Release(); } return _VolumeCodec; }
+		Codec::ICodec * _VolumeCodec = 0;
+		Codec::ICodec * CreateVolumeCodec(void) { if (!_VolumeCodec) { _VolumeCodec = new VolumeCodec(); _VolumeCodec->Release(); } return _VolumeCodec; }
 	}
 }

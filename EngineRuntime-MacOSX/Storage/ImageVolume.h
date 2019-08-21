@@ -6,6 +6,6 @@ namespace Engine
 {
 	namespace Storage
 	{
-		Codec::Codec * CreateVolumeCodec(void);
+		Codec::ICodec * CreateVolumeCodec(void);
 	}
 }

@@ -6,6 +6,6 @@ namespace Engine
 {
 	namespace Codec
 	{
-		Codec * CreateIconCodec(void);
+		ICodec * CreateIconCodec(void);
 	}
 }

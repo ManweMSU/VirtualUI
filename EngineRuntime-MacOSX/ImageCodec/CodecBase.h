@@ -30,11 +30,11 @@ namespace Engine
 		class Frame;
 		class Image;
 
-		class Codec : public Object
+		class ICodec : public Object
 		{
 		public:
-			Codec(void);
-			~Codec(void) override;
+			ICodec(void);
+			~ICodec(void) override;
 
 			virtual void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format) = 0;
 			virtual void EncodeImage(Streaming::Stream * stream, Image * image, const string & format) = 0;
@@ -49,8 +49,8 @@ namespace Engine
 			virtual bool CanDecode(const string & format) = 0;
 		};
 
-		Codec * FindCoder(const string & format);
-		Codec * FindDecoder(const string & format);
+		ICodec * FindCoder(const string & format);
+		ICodec * FindDecoder(const string & format);
 		void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format);
 		void EncodeImage(Streaming::Stream * stream, Image * image, const string & format);
 		Frame * DecodeFrame(Streaming::Stream * stream);

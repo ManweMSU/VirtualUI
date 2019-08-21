@@ -345,20 +345,20 @@ namespace Engine
 			return 0;
 		}
 
-		ObjectArray<Codec> Codecs(0x10);
+		ObjectArray<ICodec> Codecs(0x10);
 
-		Codec * FindCoder(const string & format)
+		ICodec * FindCoder(const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].CanEncode(format)) return Codecs.ElementAt(i);
 			return 0;
 		}
-		Codec * FindDecoder(const string & format)
+		ICodec * FindDecoder(const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].CanDecode(format)) return Codecs.ElementAt(i);
 			return 0;
 		}
-		Codec::Codec(void) { Codecs.Append(this); }
-		Codec::~Codec(void) {}
+		ICodec::ICodec(void) { Codecs.Append(this); }
+		ICodec::~ICodec(void) {}
 		void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) {

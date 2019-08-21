@@ -7,7 +7,7 @@ namespace Engine
 	namespace Codec
 	{
 		using namespace Streaming;
-		class IconCodec : public Codec
+		class IconCodec : public ICodec
 		{
 			ENGINE_PACKED_STRUCTURE(WindowsIconHeader)
 				uint16 reserved;
@@ -482,7 +482,7 @@ namespace Engine
 			virtual bool CanEncode(const string & format) override { return (format == L"ICO" || format == L"CUR" || format == L"ICNS"); }
 			virtual bool CanDecode(const string & format) override { return (format == L"ICO" || format == L"CUR" || format == L"ICNS"); }
 		};
-		Codec * _IconCodec = 0;
-		Codec * CreateIconCodec(void) { if (!_IconCodec) { _IconCodec = new IconCodec(); _IconCodec->Release(); } return _IconCodec; }
+		ICodec * _IconCodec = 0;
+		ICodec * CreateIconCodec(void) { if (!_IconCodec) { _IconCodec = new IconCodec(); _IconCodec->Release(); } return _IconCodec; }
 	}
 }
