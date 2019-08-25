@@ -18,10 +18,10 @@ namespace Engine
 				return S_OK;
 			} else return E_NOINTERFACE;
 		}
-		ULONG ComStream::AddRef(void) { return _InterlockedIncrement(&_refcount); }
+		ULONG ComStream::AddRef(void) { return ::InterlockedIncrement(&_refcount); }
 		ULONG ComStream::Release(void)
 		{
-			ULONG New = _InterlockedDecrement(&_refcount);
+			ULONG New = ::InterlockedDecrement(&_refcount);
 			if (!New) delete this;
 			return New;
 		}

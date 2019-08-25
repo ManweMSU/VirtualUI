@@ -30,8 +30,25 @@ namespace Engine
 			}
 			virtual void Read(void * buffer, uint32 length) override
 			{
-				int read = recv(handle, reinterpret_cast<char *>(buffer), length, MSG_WAITALL);
-				if (read == SOCKET_ERROR) throw IO::FileAccessException();
+				char * cbuffer = reinterpret_cast<char *>(buffer);
+				int read = recv(handle, cbuffer, length, MSG_WAITALL);
+				if (read == SOCKET_ERROR) {
+					if (WSAGetLastError() == WSAEOPNOTSUPP) {
+						int totally_read = 0;
+						do {
+							read = recv(handle, cbuffer, length, 0);
+							if (read == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK) continue;
+							else if (read == SOCKET_ERROR) throw IO::FileAccessException();
+							else if (!read) throw IO::FileReadEndOfFileException(totally_read);
+							else if (read < length) {
+								cbuffer += read;
+								totally_read += read;
+								length -= read;
+								continue;
+							} else break;
+						} while (true);
+					} else throw IO::FileAccessException();
+				}
 				if (read != length) throw IO::FileReadEndOfFileException(read);
 			}
 			virtual void Write(const void * data, uint32 length) override
@@ -277,7 +294,7 @@ namespace Engine
 					} else {
 						New.EntityAddress = Address::CreateAny();
 					}
-					if (!cname.Length()) cname = string(current->ai_canonname, -1, Encoding::ANSI);
+					if (!cname.Length() && current->ai_canonname) cname = string(current->ai_canonname, -1, Encoding::ANSI);
 					New.EntityName = cname;
 					result->Append(New);
 					current = current->ai_next;

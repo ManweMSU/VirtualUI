@@ -6,14 +6,24 @@
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "winmm.lib")
 
+#ifdef InterlockedIncrement
 #undef InterlockedIncrement
+#define SystemInterlockedIncrement _InterlockedIncrement
+#else
+#define SystemInterlockedIncrement ::InterlockedIncrement
+#endif
+#ifdef InterlockedDecrement
 #undef InterlockedDecrement
+#define SystemInterlockedDecrement _InterlockedDecrement
+#else
+#define SystemInterlockedDecrement ::InterlockedDecrement
+#endif
 #undef ZeroMemory
 
 namespace Engine
 {
-	uint InterlockedIncrement(uint & Value) { return _InterlockedIncrement(&Value); }
-	uint InterlockedDecrement(uint & Value) { return _InterlockedDecrement(&Value); }
+	uint InterlockedIncrement(uint & Value) { return SystemInterlockedIncrement(&Value); }
+	uint InterlockedDecrement(uint & Value) { return SystemInterlockedDecrement(&Value); }
 	void ZeroMemory(void * Memory, intptr Size) { memset(Memory, 0, Size); }
 	uint32 GetTimerValue(void) { return timeGetTime(); }
 	uint64 GetNativeTime(void)
