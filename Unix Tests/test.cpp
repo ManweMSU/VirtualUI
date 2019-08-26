@@ -215,6 +215,20 @@ int Main(void)
     a->Release();
     w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
     if (w4) w4->Show(true);
+
+	MacOSXSpecific::TouchBar * bar = new MacOSXSpecific::TouchBar;
+	MacOSXSpecific::TouchBarButton * btn = MacOSXSpecific::TouchBar::CreateButtonItem();
+	MacOSXSpecific::TouchBarPopover * pover = MacOSXSpecific::TouchBar::CreatePopoverItem();
+	pover->AddChild(btn);
+	pover->SetID(102);
+	pover->SetText(L"pidor");
+	pover->SetMainItemID(101);
+	btn->SetText(L"PIDOR");
+	btn->SetColor(UI::Color(0, 190, 0));
+	btn->SetID(101);
+	bar->AddChild(pover);
+	bar->SetMainItemID(102);
+	MacOSXSpecific::TouchBar::SetTouchBarForWindow(w4, bar);
     
     Windows::RunMessageLoop();
 

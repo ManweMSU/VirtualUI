@@ -32,6 +32,8 @@ namespace Engine
         public:
             virtual void Clear(void) = 0;
             virtual void AddChild(TouchBarItem * item) = 0;
+			virtual int GetMainItemID(void) = 0;
+			virtual void SetMainItemID(int ID) = 0;
         };
         class TouchBarPopover : public TouchBarGroup
         {
@@ -42,6 +44,8 @@ namespace Engine
             virtual void SetImageID(const string & text) = 0;
             virtual UI::ITexture * GetImage(void) = 0;
             virtual void SetImage(UI::ITexture * image) = 0;
+			virtual int GetMainItemID(void) = 0;
+			virtual void SetMainItemID(int ID) = 0;
         };
         class TouchBarButton : public TouchBarItem
         {
@@ -52,6 +56,8 @@ namespace Engine
             virtual void SetImageID(const string & text) = 0;
             virtual UI::ITexture * GetImage(void) = 0;
             virtual void SetImage(UI::ITexture * image) = 0;
+			virtual UI::Color GetColor(void) = 0;
+			virtual void SetColor(UI::Color color) = 0;
         };
         class TouchBarColorPicker : public TouchBarItem
         {
@@ -93,6 +99,7 @@ namespace Engine
             UI::Window * Host;
             ObjectArray<TouchBarItem> RootItems;
             Dictionary::Dictionary<string, TouchBarItem> Links;
+			int MainItemID;
 
             void refresh_bar(void);
         public:
@@ -107,6 +114,9 @@ namespace Engine
             TouchBarItem * GetChild(int index);
             void Clear(void);
             void AddChild(TouchBarItem * item);
+
+			int GetMainItemID(void);
+			void SetMainItemID(int ID);
 
             TouchBarItem * FindChild(int ID);
             TouchBarItem * FindChildByIdentifier(const string & identifier);

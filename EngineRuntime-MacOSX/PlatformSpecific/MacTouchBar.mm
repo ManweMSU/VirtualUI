@@ -43,13 +43,14 @@ namespace Engine
         }
         class TouchBarButtonImp : public TouchBarButton
         {
+			double r, g, b, a;
             NSCustomTouchBarItem * item;
             int _ID;
             string Text;
             SafePointer<UI::ITexture> Image;
             string ImageID;
         public:
-            TouchBarButtonImp(void) { item = 0; _ID = 0; Root = 0; }
+            TouchBarButtonImp(void) { item = 0; _ID = 0; Root = 0; r = g = b = a = 0.0; }
             virtual ~TouchBarButtonImp(void) override { [item release]; }
 
             virtual void WakeUp(void) override
@@ -60,6 +61,7 @@ namespace Engine
                     [ident release];
                     NSButton * button = [NSButton buttonWithTitle: @"" target: (EngineRuntimeTouchBarDelegate *) Root->GetDelegate() action: @selector(handle_touch_bar_event:)];
                     [button setTag: _ID];
+					if (a) [button setBezelColor: [NSColor colorWithDeviceRed: r green: g blue: b alpha: a]];
                     [item setView: button];
                     NSString * title = Cocoa::CocoaString(Text);
                     [[item view] setTitle: title];
@@ -115,19 +117,28 @@ namespace Engine
                     }
                 }
             }
+			virtual UI::Color GetColor(void) override { return UI::Color(r, g, b, a); }
+			virtual void SetColor(UI::Color color) override
+			{
+				r = double(color.r) / 255.0;
+				g = double(color.g) / 255.0;
+				b = double(color.b) / 255.0;
+				a = double(color.a) / 255.0;
+				@autoreleasepool {
+					if (item) {
+						[[item view] setBezelColor: [NSColor colorWithDeviceRed: r green: g blue: b alpha: a]];
+					}
+				}
+			}
         };
         class TouchBarGroupImp : public TouchBarGroup
         {
             NSGroupTouchBarItem * item;
             ObjectArray<TouchBarItem> Items;
             int _ID;
+			int MainID;
         public:
-            TouchBarGroupImp(void)
-            {
-                item = 0;
-                _ID = 0;
-                Root = 0;
-            }
+            TouchBarGroupImp(void) { item = 0; _ID = 0; Root = 0; MainID = 0; }
             virtual ~TouchBarGroupImp(void) override
             {
                 [item release];
@@ -142,6 +153,12 @@ namespace Engine
                         auto bar = [item groupTouchBar];
                         NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
                         [bar setDefaultItemIdentifiers: idents];
+						auto main_item_ref = MainID ? FindChild(MainID) : 0;
+						if (main_item_ref) {
+							NSString * main_item = Cocoa::CocoaString(main_item_ref->Identifier);
+							[bar setPrincipalItemIdentifier: main_item];
+							[main_item release];
+						}
                         for (int i = 0; i < items.Length(); i++) [items[i] release];
                     }
                 }
@@ -166,6 +183,8 @@ namespace Engine
             virtual void * GetObject(void) override { return item; }
             virtual int GetID(void) override { return _ID; }
             virtual void SetID(int ID) override { _ID = ID; }
+			virtual int GetMainItemID(void) override { return MainID; }
+			virtual void SetMainItemID(int ID) override { MainID = ID; Populate(); }
             virtual TouchBarItem * FindChild(int ID) override
             {
                 if (_ID && _ID == ID) return this;
@@ -204,11 +223,12 @@ namespace Engine
             NSPopoverTouchBarItem * item;
             ObjectArray<TouchBarItem> Items;
             int _ID;
+			int MainID;
             string Text;
             SafePointer<UI::ITexture> Image;
             string ImageID;
         public:
-            TouchBarPopoverImp(void) { item = 0; _ID = 0; Root = 0; }
+            TouchBarPopoverImp(void) { item = 0; _ID = 0; Root = 0; MainID = 0; }
             virtual ~TouchBarPopoverImp(void) override { [item release]; }
 
             void Populate(void)
@@ -220,6 +240,12 @@ namespace Engine
                         auto bar = [item popoverTouchBar];
                         NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
                         [bar setDefaultItemIdentifiers: idents];
+						auto main_item_ref = MainID ? FindChild(MainID) : 0;
+						if (main_item_ref) {
+							NSString * main_item = Cocoa::CocoaString(main_item_ref->Identifier);
+							[bar setPrincipalItemIdentifier: main_item];
+							[main_item release];
+						}
                         for (int i = 0; i < items.Length(); i++) [items[i] release];
                     }
                 }
@@ -248,6 +274,8 @@ namespace Engine
             virtual void * GetObject(void) override { return item; }
             virtual int GetID(void) override { return _ID; }
             virtual void SetID(int ID) override { _ID = ID; }
+			virtual int GetMainItemID(void) override { return MainID; }
+			virtual void SetMainItemID(int ID) override { MainID = ID; Populate(); }
             virtual TouchBarItem * FindChild(int ID) override
             {
                 if (_ID && _ID == ID) return this;
@@ -505,6 +533,12 @@ namespace Engine
                 auto bar = ((NSTouchBar *) Bar);
                 NSArray<NSTouchBarItemIdentifier> * idents = [NSArray<NSTouchBarItemIdentifier> arrayWithObjects: items.GetBuffer() count: items.Length()];
                 [bar setDefaultItemIdentifiers: idents];
+				auto main_item_ref = MainItemID ? FindChild(MainItemID) : 0;
+				if (main_item_ref) {
+					NSString * main_item = Cocoa::CocoaString(main_item_ref->Identifier);
+					[bar setPrincipalItemIdentifier: main_item];
+					[main_item release];
+				}
                 for (int i = 0; i < items.Length(); i++) [items[i] release];
             }
         }
@@ -539,11 +573,13 @@ namespace Engine
                 item->SetText(props->Text);
                 item->SetImage(props->Image);
                 item->SetImageID(props->ImageID);
+				item->SetColor(props->Color);
                 item->Retain();
                 return item;
             } else if (source->Properties->GetTemplateClass() == L"TouchBarGroup") {
                 auto props = reinterpret_cast<UI::Template::Controls::TouchBarGroup *>(source->Properties);
                 SafePointer<TouchBarGroup> item = TouchBar::CreateGroupItem();
+				item->SetMainItemID(props->MainItemID);
                 item->SetID(props->ID);
                 for (int i = 0; i < source->Children.Length(); i++) {
                     SafePointer<TouchBarItem> sub = MakeItem(source->Children.ElementAt(i));
@@ -555,6 +591,7 @@ namespace Engine
                 auto props = reinterpret_cast<UI::Template::Controls::TouchBarPopover *>(source->Properties);
                 SafePointer<TouchBarPopover> item = TouchBar::CreatePopoverItem();
                 item->SetID(props->ID);
+				item->SetMainItemID(props->MainItemID);
                 item->SetImage(props->Image);
                 item->SetImageID(props->ImageID);
                 for (int i = 0; i < source->Children.Length(); i++) {
@@ -589,7 +626,7 @@ namespace Engine
                 return item;
             } else throw InvalidArgumentException();
         }
-        TouchBar::TouchBar(void) : RootItems(0x10), Links(0x20), Host(0)
+        TouchBar::TouchBar(void) : RootItems(0x10), Links(0x20), Host(0), MainItemID(0)
         {
             Bar = [[NSTouchBar alloc] init];
             Delegate = [[EngineRuntimeTouchBarDelegate alloc] init];
@@ -599,6 +636,8 @@ namespace Engine
         TouchBar::TouchBar(UI::Template::ControlTemplate * source) : TouchBar()
         {
             if (source->Properties->GetTemplateClass() != L"TouchBar") throw InvalidArgumentException();
+			auto props = reinterpret_cast<UI::Template::Controls::TouchBar *>(source->Properties);
+			SetMainItemID(props->MainItemID);
             for (int i = 0; i < source->Children.Length(); i++) {
                 SafePointer<TouchBarItem> item = MakeItem(source->Children.ElementAt(i));
                 AddChild(item);
@@ -613,6 +652,9 @@ namespace Engine
                 RootItems.RemoveFirst();
             }
         }
+
+		int TouchBar::GetMainItemID(void) { return MainItemID; }
+		void TouchBar::SetMainItemID(int ID) { MainItemID = ID; refresh_bar(); }
 
         int TouchBar::GetChildrenCount(void) { return RootItems.Length(); }
         TouchBarItem * TouchBar::GetChild(int index) { return RootItems.ElementAt(index); }
