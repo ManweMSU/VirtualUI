@@ -233,12 +233,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     {
         return FALSE;
     }
-	try {
-		UI::InterfaceTemplate templ;
-		Streaming::FileStream src(L"estore.eui", Streaming::AccessRead, Streaming::OpenExisting);
-		UI::Loader::LoadUserInterfaceFromBinary(templ, &src);
-		int pidor = 5;
-	} catch (...) { }
+
+	//WindowsSpecific::SetRenderingDeviceFeatureClass(WindowsSpecific::RenderingDeviceFeatureClass::D2DDevice11);
 
 	// Starting D3D
 	Direct3D::CreateDevices();

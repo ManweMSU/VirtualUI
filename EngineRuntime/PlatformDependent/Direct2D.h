@@ -15,7 +15,8 @@ namespace Engine
 	{
 		using namespace ::Engine::UI;
 
-		extern ID2D1Factory1 * D2DFactory;
+		extern ID2D1Factory1 * D2DFactory1;
+		extern ID2D1Factory * D2DFactory;
 		extern IWICImagingFactory * WICFactory;
 		extern IDWriteFactory * DWriteFactory;
 
@@ -60,14 +61,14 @@ namespace Engine
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override;
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept override;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept override;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
 			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept override;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) override;
 			virtual ITexture * LoadTexture(Engine::Codec::Image * Source) override;
 			virtual ITexture * LoadTexture(Engine::Codec::Frame * Source) override;
-			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
+			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept override;

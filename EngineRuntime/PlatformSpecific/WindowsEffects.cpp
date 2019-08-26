@@ -13,6 +13,9 @@ namespace Engine
 	namespace WindowsSpecific
 	{
 #ifdef ENGINE_WINDOWS
+		RenderingDeviceFeatureClass system_dev_class = RenderingDeviceFeatureClass::D3DDevice11;
+		void SetRenderingDeviceFeatureClass(RenderingDeviceFeatureClass dev_class) { system_dev_class = dev_class; }
+		RenderingDeviceFeatureClass GetRenderingDeviceFeatureClass(void) { return system_dev_class; }
 		void SetWindowTransparentcy(UI::Window * window, double value)
 		{
 			if (!window->GetStation()->IsNativeStationWrapper()) return;

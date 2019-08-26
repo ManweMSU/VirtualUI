@@ -1,5 +1,7 @@
 #include "Direct3D.h"
 
+#include <VersionHelpers.h>
+
 #pragma comment(lib, "d3d11.lib")
 
 #undef ZeroMemory
@@ -28,22 +30,35 @@ namespace Engine
 				D3D_FEATURE_LEVEL LevelSelected;
 				if (D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, D3D11_CREATE_DEVICE_BGRA_SUPPORT, FeatureLevel, 7, D3D11_SDK_VERSION,
 					D3DDevice.InnerRef(), &LevelSelected, D3DDeviceContext.InnerRef()) != S_OK) {
-					throw Exception();
+					D3DDeviceContext.SetReference(0);
+					D3DDevice.SetReference(0);
+					DXGIDevice.SetReference(0);
+					D2DDevice.SetReference(0);
+					return;
 				}
 			}
 			if (!DXGIDevice) {
 				if (D3DDevice->QueryInterface(__uuidof(IDXGIDevice1), (void**) DXGIDevice.InnerRef()) != S_OK) {
-					throw Exception();
+					D3DDeviceContext.SetReference(0);
+					D3DDevice.SetReference(0);
+					DXGIDevice.SetReference(0);
+					D2DDevice.SetReference(0);
+					return;
 				}
 			}
-			if (!D2DDevice) {
-				if (Direct2D::D2DFactory->CreateDevice(DXGIDevice, D2DDevice.InnerRef()) != S_OK) {
-					throw Exception();
+			if (!D2DDevice && Direct2D::D2DFactory1) {
+				if (Direct2D::D2DFactory1->CreateDevice(DXGIDevice, D2DDevice.InnerRef()) != S_OK) {
+					D3DDeviceContext.SetReference(0);
+					D3DDevice.SetReference(0);
+					DXGIDevice.SetReference(0);
+					D2DDevice.SetReference(0);
+					return;
 				}
 			}
 		}
 		void CreateD2DDeviceContextForWindow(HWND Window, ID2D1DeviceContext ** Context, IDXGISwapChain1 ** SwapChain)
 		{
+			if (!D3DDevice || !D2DDevice || !DXGIDevice || !D3DDeviceContext) throw Exception();
 			SafePointer<ID2D1DeviceContext> Result;
 			SafePointer<IDXGISwapChain1> SwapChainResult;
 			if (D2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, Result.InnerRef()) != S_OK) {

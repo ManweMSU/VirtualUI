@@ -25,17 +25,26 @@ namespace Engine
 		class D2DFont;
 		class D2DRenderDevice;
 
-		ID2D1Factory1 * D2DFactory = 0;
+		ID2D1Factory1 * D2DFactory1 = 0;
+		ID2D1Factory * D2DFactory = 0;
 		IWICImagingFactory * WICFactory = 0;
 		IDWriteFactory * DWriteFactory = 0;
 
 		void InitializeFactory(void)
 		{
 			if (!D2DFactory) {
-				if (D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &D2DFactory) != S_OK) throw Exception();
+				if (D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &D2DFactory1) != S_OK) {
+					D2DFactory1 = 0;
+					if (D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &D2DFactory) != S_OK) {
+						D2DFactory = 0;
+						throw Exception();
+					}
+				} else {
+					D2DFactory = D2DFactory1;
+				}
 			}
 			if (!WICFactory) {
-				if (CoCreateInstance(CLSID_WICImagingFactory, 0, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&WICFactory)) != S_OK) throw Exception();
+				if (CoCreateInstance(CLSID_WICImagingFactory1, 0, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&WICFactory)) != S_OK) throw Exception();
 			}
 			if (!DWriteFactory) {
 				if (DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&DWriteFactory)) != S_OK) throw Exception();
@@ -328,7 +337,7 @@ namespace Engine
 					int ep = cp;
 					while (ep < indicies.Length() && indicies[ep] == indicies[cp]) { summ += GlyphAdvances[ep]; ep++; }
 					int index = indicies[cp];
-					Ranges << TextRange{ int(base), int(summ), (index == 0) ? MainBrushInfo.Inner() : ExtraBrushes->ElementAt(index - 1) };
+					Ranges << TextRange{ int(base), int(summ + 1.0), (index == 0) ? MainBrushInfo.Inner() : ExtraBrushes->ElementAt(index - 1) };
 					cp = ep;
 				}
 			}
@@ -354,6 +363,8 @@ namespace Engine
 		struct InversionEffectRenderingInfo : public IInversionEffectRenderingInfo
 		{
 			SafePointer<ID2D1Effect> Effect;
+			SafePointer<IBarRenderingInfo> WhiteBar;
+			SafePointer<IBarRenderingInfo> BlackBar;
 			virtual ~InversionEffectRenderingInfo(void) override {}
 		};
 		class D2DTexture : public ITexture
@@ -689,6 +700,9 @@ namespace Engine
 						0.0f, 0.0f, 0.0f, 1.0f,
 						1.0f, 1.0f, 1.0f, 0.0f
 					));
+				} else {
+					Info->BlackBar.SetReference(CreateBarRenderingInfo(UI::Color(0, 0, 0)));
+					Info->WhiteBar.SetReference(CreateBarRenderingInfo(UI::Color(255, 255, 255)));
 				}
 				InversionInfo.SetReference(Info);
 			}
@@ -971,9 +985,9 @@ namespace Engine
 		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept
 		{
 			if (Layers.Length() || !Info) return;
-			if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
-				auto info = static_cast<InversionEffectRenderingInfo *>(Info);
-				if (info->Effect) {
+			auto info = static_cast<InversionEffectRenderingInfo *>(Info);
+			if (info->Effect) {
+				if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
 					SafePointer<ID2D1Bitmap> Fragment;
 					Box Corrected = At;
 					if (Corrected.Left < 0) Corrected.Left = 0;
@@ -985,6 +999,12 @@ namespace Engine
 						info->Effect->SetInput(0, Fragment);
 						ExtendedTarget->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
 					}
+				}
+			} else {
+				if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
+					RenderBar(info->BlackBar, At);
+				} else {
+					RenderBar(info->WhiteBar, At);
 				}
 			}
 		}
@@ -1165,7 +1185,7 @@ namespace Engine
 		{
 			uint32 Space = 0x20;
 			Font->FontFace->GetGlyphIndicesW(&Space, 1, &NormalSpaceGlyph);
-			Font->AlternativeFace->GetGlyphIndicesW(&Space, 1, &AlternativeSpaceGlyph);
+			if (Font->AlternativeFace) Font->AlternativeFace->GetGlyphIndicesW(&Space, 1, &AlternativeSpaceGlyph);
 			GlyphString.SetLength(CharString.Length());
 			if (Font->FontFace->GetGlyphIndicesW(CharString, CharString.Length(), GlyphString) != S_OK) throw Exception();
 			UseAlternative.SetLength(CharString.Length());
