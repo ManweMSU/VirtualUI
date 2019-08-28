@@ -144,6 +144,8 @@ namespace Engine
 						if (!DeviceContext) throw Exception();
 						RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
 					} catch (...) {
+						RECT Rect;
+						GetClientRect(Handle, &Rect);
 						D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
 						D2D1_HWND_RENDER_TARGET_PROPERTIES WndRenderTargetProps;
 						RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -154,13 +156,15 @@ namespace Engine
 						RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 						RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 						WndRenderTargetProps.hwnd = Handle;
-						WndRenderTargetProps.pixelSize.width = 1;
-						WndRenderTargetProps.pixelSize.height = 1;
+						WndRenderTargetProps.pixelSize.width = max(Rect.right, 1);
+						WndRenderTargetProps.pixelSize.height = max(Rect.bottom, 1);
 						WndRenderTargetProps.presentOptions = D2D1_PRESENT_OPTIONS_IMMEDIATELY;
 						Direct2D::D2DFactory->CreateHwndRenderTarget(&RenderTargetProps, &WndRenderTargetProps, RenderTarget.InnerRef());
 						RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(RenderTarget));
 					}
 				} else {
+					RECT Rect;
+					GetClientRect(Handle, &Rect);
 					D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
 					D2D1_HWND_RENDER_TARGET_PROPERTIES WndRenderTargetProps;
 					RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -171,8 +175,8 @@ namespace Engine
 					RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 					RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 					WndRenderTargetProps.hwnd = Handle;
-					WndRenderTargetProps.pixelSize.width = 1;
-					WndRenderTargetProps.pixelSize.height = 1;
+					WndRenderTargetProps.pixelSize.width = max(Rect.right, 1);
+					WndRenderTargetProps.pixelSize.height = max(Rect.bottom, 1);
 					WndRenderTargetProps.presentOptions = D2D1_PRESENT_OPTIONS_IMMEDIATELY;
 					Direct2D::D2DFactory->CreateHwndRenderTarget(&RenderTargetProps, &WndRenderTargetProps, RenderTarget.InnerRef());
 					RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(RenderTarget));
