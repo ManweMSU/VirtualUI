@@ -1,6 +1,7 @@
 #include <EngineRuntime.h>
 
 #include <PlatformDependent/SystemColors.h>
+#include <PlatformSpecific/MacWindowEffects.h>
 
 ENGINE_REFLECTED_CLASS(lv_item, Engine::Reflection::Reflected)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text1)
@@ -202,8 +203,12 @@ int Main(void)
 
     Console << string(tex) + IO::NewLineChar;
 
+    MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
+        MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::LightTheme);
+
     auto Callback2 = new _cb2;
     auto templ = interface.Dialog[L"Test3"];
+    templ->Properties->GetProperty(L"Background").Get< SafePointer<UI::Template::Shape> >().SetReference(0);
     templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
     templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
     tex->Release();
@@ -214,6 +219,7 @@ int Main(void)
     }
     a->Release();
     w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
+    MacOSXSpecific::SetWindowBackgroundColor(w4, UI::Color(255, 0, 255, 128));
     if (w4) w4->Show(true);
 
 	MacOSXSpecific::TouchBar * bar = new MacOSXSpecific::TouchBar;

@@ -14,6 +14,7 @@
 #include "../ImageCodec/IconCodec.h"
 #include "../Storage/ImageVolume.h"
 #include "Assembly.h"
+#include "../PlatformSpecific/MacWindowEffects.h"
 
 using namespace Engine::UI;
 
@@ -110,6 +111,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 {
 @public
     Engine::UI::WindowStation * station;
+    EngineRuntimeContentView * view;
 }
 - (instancetype) initWithStation: (Engine::UI::WindowStation *) _station;
 - (BOOL) windowShouldClose: (NSWindow *) sender;
@@ -118,6 +120,21 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (void) windowWillBeginSheet: (NSNotification *) notification;
 - (void) windowDidEndSheet: (NSNotification *) notification;
 @end
+EngineRuntimeContentView * __GetEngineViewFromWindow(NSWindow * window)
+{
+    return ((EngineRuntimeWindowDelegate *) [window delegate])->view;
+}
+void __SetEngineWindowBackgroundColor(Engine::UI::Window * window, Engine::UI::Color color)
+{
+    @autoreleasepool {
+        [Engine::NativeWindows::GetWindowObject(window->GetStation()) setBackgroundColor: [NSColor colorWithDeviceRed: color.r / 255.0
+            green: color.g / 255.0 blue: color.b / 255.0 alpha: color.a / 255.0]];
+    }
+}
+void __SetEngineWindowAlpha(Engine::UI::Window * window, double value)
+{
+    [Engine::NativeWindows::GetWindowObject(window->GetStation()) setAlphaValue: value];
+}
 
 @implementation PopupWindow : NSPanel
 - (BOOL) canBecomeKeyWindow
@@ -126,7 +143,7 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 }
 - (void) resignKeyWindow
 {
-    [((EngineRuntimeContentView *) [self contentView])->window_delegate windowDidResignKey: nil];
+    [[self delegate] windowDidResignKey: nil];
 }
 @end
 @implementation EngineRuntimeInputContext
@@ -731,7 +748,7 @@ namespace Engine
             {
                 auto pos = [NSEvent mouseLocation];
                 int x, y;
-                ScreenToView(pos.x, pos.y, [_window contentView], x, y);
+                ScreenToView(pos.x, pos.y, __GetEngineViewFromWindow(_window), x, y);
                 return UI::Point(x, y);
             }
 			virtual bool NativeHitTest(const UI::Point & at) override
@@ -739,9 +756,9 @@ namespace Engine
                 auto box = GetBox();
 
                 double scale = [_window backingScaleFactor];
-                CGRect frame = [[_window contentView] frame];
+                CGRect frame = [__GetEngineViewFromWindow(_window) frame];
                 CGRect rect = NSMakeRect(double(at.x) / scale, frame.size.height - double(at.y) / scale, 0.0, 0.0);
-                rect = [_window convertRectToScreen: [[_window contentView] convertRect: rect toView: nil]];
+                rect = [_window convertRectToScreen: [__GetEngineViewFromWindow(_window) convertRect: rect toView: nil]];
                 if ([_window isKeyWindow] && at.x >= 0 && at.y >= 0 && at.x < box.Right && at.y < box.Bottom
                     && [NSWindow windowNumberAtPoint: rect.origin belowWindowWithWindowNumber: 0] == [_window windowNumber]) return true;
                 return false;
@@ -806,8 +823,8 @@ namespace Engine
 
 			virtual void OnDesktopDestroy(void) override
             {
-                EngineRuntimeWindowDelegate * dlg = (EngineRuntimeWindowDelegate *) ((EngineRuntimeContentView *) [_window contentView])->window_delegate;
-                ((EngineRuntimeContentView *) [_window contentView])->station = 0;
+                EngineRuntimeWindowDelegate * dlg = (EngineRuntimeWindowDelegate *) [_window delegate];
+                ((EngineRuntimeContentView *) __GetEngineViewFromWindow(_window))->station = 0;
                 if (dlg) dlg->station = 0;
                 for (int i = 0; i < _slaves.Length(); i++) _slaves[i]->GetDesktop()->Destroy();
                 if (_parent) {
@@ -835,7 +852,7 @@ namespace Engine
 					}
 				}
 			}
-			virtual void FocusWindowChanged(void) override { [[_window contentView] setNeedsDisplay: YES]; AnimationStateChanged(); }
+			virtual void FocusWindowChanged(void) override { [__GetEngineViewFromWindow(_window) setNeedsDisplay: YES]; AnimationStateChanged(); }
             virtual Box GetDesktopBox(void) override
             {
                 NSScreen * screen = [_window screen];
@@ -848,10 +865,10 @@ namespace Engine
 			virtual Box GetAbsoluteDesktopBox(const Box & box) override
 			{
                 double scale = [_window backingScaleFactor];
-                CGRect frame = [[_window contentView] frame];
+                CGRect frame = [__GetEngineViewFromWindow(_window) frame];
                 CGRect rect = NSMakeRect(double(box.Left) / scale, frame.size.height - double(box.Bottom) / scale,
                     double(box.Right - box.Left) / scale, double(box.Bottom - box.Top) / scale);
-                rect = [_window convertRectToScreen: [[_window contentView] convertRect: rect toView: nil]];
+                rect = [_window convertRectToScreen: [__GetEngineViewFromWindow(_window) convertRect: rect toView: nil]];
                 NSScreen * screen = [NSScreen mainScreen];
                 CGRect srect = [screen frame];
                 Box result(int(rect.origin.x * scale), int((srect.size.height - rect.origin.y - rect.size.height) * scale), 0, 0);
@@ -859,14 +876,14 @@ namespace Engine
                 result.Bottom = result.Top + int(rect.size.height * scale);
                 return result;
 			}
-			virtual void RequireRedraw(void) override { [[_window contentView] setNeedsDisplay: YES]; }
+			virtual void RequireRedraw(void) override { [__GetEngineViewFromWindow(_window) setNeedsDisplay: YES]; }
             virtual void DeferredDestroy(Window * window) override
             {
                 EngineRuntimeEvent * event = [[EngineRuntimeEvent alloc] init];
                 event->target = window;
                 event->operation = 0;
                 event->identifier = 0;
-                [event performSelectorOnMainThread: @selector(queue_event:) withObject: [_window contentView] waitUntilDone: NO];
+                [event performSelectorOnMainThread: @selector(queue_event:) withObject: __GetEngineViewFromWindow(_window) waitUntilDone: NO];
             }
             virtual void DeferredRaiseEvent(Window * window, int ID) override
             {
@@ -874,7 +891,7 @@ namespace Engine
                 event->target = window;
                 event->operation = 1;
                 event->identifier = ID;
-                [event performSelectorOnMainThread: @selector(queue_event:) withObject: [_window contentView] waitUntilDone: NO];
+                [event performSelectorOnMainThread: @selector(queue_event:) withObject: __GetEngineViewFromWindow(_window) waitUntilDone: NO];
             }
             virtual void PostJob(Tasks::ThreadJob * job) override
             {
@@ -882,7 +899,7 @@ namespace Engine
                 event->operation = 2;
                 event->job = job;
                 job->Retain();
-                [event performSelectorOnMainThread: @selector(queue_event:) withObject: [_window contentView] waitUntilDone: NO];
+                [event performSelectorOnMainThread: @selector(queue_event:) withObject: __GetEngineViewFromWindow(_window) waitUntilDone: NO];
             }
 
             bool IsOnScreen(void) const { if (_parent) return _parent->IsOnScreen() && _visible; else return _visible; }
@@ -904,7 +921,7 @@ namespace Engine
                         timer->timer = 0;
                     }
                     NSTimer * sys_timer = [NSTimer timerWithTimeInterval: double(period) / 1000.0
-                        target: [_window contentView] selector: @selector(timerFireMethod:) userInfo: timer repeats: YES];
+                        target: __GetEngineViewFromWindow(_window) selector: @selector(timerFireMethod:) userInfo: timer repeats: YES];
                     timer->timer = sys_timer;
                     [[NSRunLoop currentRunLoop] addTimer: sys_timer forMode: NSDefaultRunLoopMode];
                 } else {
@@ -922,7 +939,7 @@ namespace Engine
 				if (RenderingDevice) {
                     RenderingDevice->SetTimerValue(GetTimerValue());
                     Animate();
-                    auto rect = [[_window contentView] frame];
+                    auto rect = [__GetEngineViewFromWindow(_window) frame];
                     double scale = [_window backingScaleFactor];
                     UI::Box box = UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
                     CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
@@ -1097,6 +1114,10 @@ namespace Engine
 			if (props->MinimizeButton) style |= NSWindowStyleMaskMiniaturizable;
 			if (props->ToolWindow) style |= NSWindowStyleMaskUtilityWindow;
 			if (props->Sizeble) style |= NSWindowStyleMaskResizable;
+            if ((MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) &&
+                (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground) && props->Captioned) {
+                style |= NSWindowStyleMaskFullSizeContentView;
+            }
             double scale = GetScreenScale();
             CGRect window_rect = NSMakeRect(0, 0, double(client_box.Right - client_box.Left) / scale, double(client_box.Bottom - client_box.Top) / scale);
             CGRect minimal_rect = NSMakeRect(0, 0, double(props->MinimalWidth) / scale, double(props->MinimalHeight) / scale);
@@ -1116,10 +1137,45 @@ namespace Engine
             EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
             EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
             view->window_delegate = delegate;
+            delegate->view = view;
             [window setAcceptsMouseMovedEvents: YES];
             [window setTabbingMode: NSWindowTabbingModeDisallowed];
             [window setDelegate: delegate];
-            [window setContentView: view];
+            if ((MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) &&
+                (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground) && props->Captioned) {
+                NSVisualEffectView * fx_view = [[NSVisualEffectView alloc] init];
+                NSRect client = [window contentRectForFrameRect: [window frame]];
+                NSRect layout = [window contentLayoutRect];
+                [fx_view setFrameSize: NSMakeSize(client.size.width, client.size.height)];
+                [view setFrame: layout];
+                [fx_view addSubview: view];
+                [view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+                [window setContentView: fx_view];
+                [fx_view release];
+            } else if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground) {
+                NSVisualEffectView * fx_view = [[NSVisualEffectView alloc] init];
+                [fx_view addSubview: view];
+                [view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+                [window setContentView: fx_view];
+                [fx_view release];
+            } else {
+                [window setContentView: view];
+            }
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
+                [window setTitlebarAppearsTransparent: YES];
+            }
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::Transparent) {
+                [window setOpaque: NO];
+            }
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::LightTheme) {
+                @autoreleasepool {
+                    [window setAppearance: [NSAppearance appearanceNamed: NSAppearanceNameAqua]];
+                }
+            } else if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::DarkTheme) {
+                @autoreleasepool {
+                    [window setAppearance: [NSAppearance appearanceNamed: NSAppearanceNameDarkAqua]];
+                }
+            }
             [view release];
 			Controls::OverlappedWindow * local_desktop = station->GetDesktop()->As<Controls::OverlappedWindow>();
 			local_desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
@@ -1147,6 +1203,10 @@ namespace Engine
             CGRect desktop_rect = [screen frame];
             double scale = GetScreenScale();
             NSWindowStyleMask style = NSWindowStyleMaskUtilityWindow;
+            if ((MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) &&
+                (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground)) {
+                style |= NSWindowStyleMaskFullSizeContentView;
+            }
             CGRect window_rect = NSMakeRect(0, 0, double(ClientArea.Right) / scale, double(ClientArea.Bottom) / scale);
             window_rect.origin.x = double(ClientBox.Left) / scale;
             window_rect.origin.y = desktop_rect.size.height - double(ClientBox.Bottom) / scale;
@@ -1158,14 +1218,39 @@ namespace Engine
             EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
             EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
             view->window_delegate = delegate;
+            delegate->view = view;
             [window setAcceptsMouseMovedEvents: YES];
             [window setTabbingMode: NSWindowTabbingModeDisallowed];
             [window setDelegate: delegate];
             [window setContentView: view];
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground) {
+                NSVisualEffectView * fx_view = [[NSVisualEffectView alloc] init];
+                [fx_view addSubview: view];
+                [view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+                [window setContentView: fx_view];
+                [fx_view release];
+            } else {
+                [window setContentView: view];
+            }
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
+                [window setTitlebarAppearsTransparent: YES];
+            }
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::Transparent) {
+                [window setOpaque: NO];
+            }
+            if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::LightTheme) {
+                @autoreleasepool {
+                    [window setAppearance: [NSAppearance appearanceNamed: NSAppearanceNameAqua]];
+                }
+            } else if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::DarkTheme) {
+                @autoreleasepool {
+                    [window setAppearance: [NSAppearance appearanceNamed: NSAppearanceNameDarkAqua]];
+                }
+            }
             [view release];
 			Controls::OverlappedWindow * local_desktop = station->GetDesktop()->As<Controls::OverlappedWindow>();
 			local_desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
-			{
+			if (!(MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::Transparent)) {
 				Color BackgroundColor = 0xFF000000;
 				SafePointer<Template::BarShape> Background = new Template::BarShape;
 				Background->Position = UI::Rectangle::Entire();
@@ -1261,7 +1346,7 @@ namespace Engine
         {
             NSWindow * window = static_cast<NativeStation *>(owner->GetStation())->GetWindow();
             double scale = [window backingScaleFactor];
-            NSView * server = [window contentView];
+            NSView * server = __GetEngineViewFromWindow(window);
             NSRect rect = [server frame];
             NSPoint point = NSMakePoint(double(at.x / scale), rect.size.height - double(at.y / scale));
             SafePointer<Cocoa::QuartzRenderingDevice> device = new Cocoa::QuartzRenderingDevice;
@@ -1329,16 +1414,16 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
     if (!station) return;
     station->FocusChanged(true);
     station->CaptureChanged(true);
-    [GetStationWindow(station) makeFirstResponder: [GetStationWindow(station) contentView]];
-    [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
+    [GetStationWindow(station) makeFirstResponder: __GetEngineViewFromWindow(GetStationWindow(station))];
+    [__GetEngineViewFromWindow(GetStationWindow(station)) setNeedsDisplay: YES];
 }
 - (void) windowDidResignKey: (NSNotification *) notification
 {
     if (!station) return;
     station->FocusChanged(false);
     station->CaptureChanged(false);
-    [[GetStationWindow(station) contentView] keyboardStateInactivate];
-    [[GetStationWindow(station) contentView] setNeedsDisplay: YES];
+    [__GetEngineViewFromWindow(GetStationWindow(station)) keyboardStateInactivate];
+    [__GetEngineViewFromWindow(GetStationWindow(station)) setNeedsDisplay: YES];
 }
 - (void) windowWillBeginSheet: (NSNotification *) notification
 {
