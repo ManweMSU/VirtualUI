@@ -220,6 +220,7 @@ int Main(void)
     a->Release();
     w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
     MacOSXSpecific::SetWindowBackgroundColor(w4, UI::Color(255, 0, 255, 128));
+    MacOSXSpecific::SetEffectBackgroundMaterial(w4, MacOSXSpecific::EffectBackgroundMaterial::Popover);
     if (w4) w4->Show(true);
 
 	MacOSXSpecific::TouchBar * bar = new MacOSXSpecific::TouchBar;

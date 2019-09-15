@@ -135,6 +135,10 @@ void __SetEngineWindowAlpha(Engine::UI::Window * window, double value)
 {
     [Engine::NativeWindows::GetWindowObject(window->GetStation()) setAlphaValue: value];
 }
+void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long material)
+{
+    [[Engine::NativeWindows::GetWindowObject(window->GetStation()) contentView] setMaterial: (NSVisualEffectMaterial) material];
+}
 
 @implementation PopupWindow : NSPanel
 - (BOOL) canBecomeKeyWindow
@@ -1203,10 +1207,6 @@ namespace Engine
             CGRect desktop_rect = [screen frame];
             double scale = GetScreenScale();
             NSWindowStyleMask style = NSWindowStyleMaskUtilityWindow;
-            if ((MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) &&
-                (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground)) {
-                style |= NSWindowStyleMaskFullSizeContentView;
-            }
             CGRect window_rect = NSMakeRect(0, 0, double(ClientArea.Right) / scale, double(ClientArea.Bottom) / scale);
             window_rect.origin.x = double(ClientBox.Left) / scale;
             window_rect.origin.y = desktop_rect.size.height - double(ClientBox.Bottom) / scale;
@@ -1222,7 +1222,6 @@ namespace Engine
             [window setAcceptsMouseMovedEvents: YES];
             [window setTabbingMode: NSWindowTabbingModeDisallowed];
             [window setDelegate: delegate];
-            [window setContentView: view];
             if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::EffectBackground) {
                 NSVisualEffectView * fx_view = [[NSVisualEffectView alloc] init];
                 [fx_view addSubview: view];

@@ -18,9 +18,14 @@ namespace Engine
                 DarkTheme           = 0x0010,
             };
         }
+        enum class EffectBackgroundMaterial
+        {
+            Titlebar, Selection, Menu, Popover, Sidebar, HeaderView, Sheet, WindowBackground, HUD, FullScreenUI, ToolTip
+        };
         void SetWindowCreationAttribute(int attribute);
         int GetWindowCreationAttribute(void);
         void SetWindowBackgroundColor(UI::Window * window, UI::Color color);
         void SetWindowTransparentcy(UI::Window * window, double value);
+        void SetEffectBackgroundMaterial(UI::Window * window, EffectBackgroundMaterial material);
     }
 }
