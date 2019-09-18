@@ -53,7 +53,7 @@ namespace Engine
 		public:
 			Array<string> Keywords;
 			Array<widechar> IsolatedChars;
-			Array<widechar> CombinableChars; // redo
+			Array<widechar> CombinableChars;
 			string BooleanFalseLiteral;
 			string BooleanTrueLiteral;
 			string InfinityLiteral;

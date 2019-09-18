@@ -166,16 +166,16 @@ namespace Engine
 					pos += spelling.CommentBlockOpeningWord.Length();
 					while (text[pos] && !(spelling.CommentBlockClosingWord.Length() && text.Length() - pos >= spelling.CommentBlockClosingWord.Length() && text.Fragment(pos, spelling.CommentBlockClosingWord.Length()) == spelling.CommentBlockClosingWord)) pos++;
 					if (text[pos]) pos += spelling.CommentBlockClosingWord.Length();
-				} else if (text[pos] == L'\"') {
+				} else if (text[pos] == L'\"' || text[pos] == L'\'') {
+					widechar opening = text[pos];
 					token.SourcePosition = pos;
 					token.Class = TokenClass::Constant;
-					token.ValueClass = TokenConstantClass::String;
 					DynamicString Text;
 					pos++;
 					do {
 						if (text[pos] == L'\n') throw ParserSpellingException(pos, L"Unexpected caret return inside string constant");
 						else if (text[pos] == 0) throw ParserSpellingException(pos, L"Unexpected end-of-stream inside string constant");
-						else if (text[pos] != L'\"') {
+						else if (text[pos] != opening) {
 							if (text[pos] == L'\\') {
 								pos++;
 								uint32 ucsdec = 0xFFFFFFFF;
@@ -251,9 +251,19 @@ namespace Engine
 								pos++;
 							}
 						}
-					} while (text[pos] != L'\"' && text[pos]);
-					if (text[pos] == L'\"') pos++;
-					token.Content = Text.ToString();
+					} while (text[pos] != opening && text[pos]);
+					if (text[pos] == opening) pos++;
+					if (opening == L'\"') {
+						token.Content = Text.ToString();
+						token.ValueClass = TokenConstantClass::String;
+					} else {
+						string str = Text.ToString();
+						if (str.GetEncodedLength(Encoding::UTF32) != 1) throw ParserSpellingException(pos, L"Invalid character constant");
+						uint32 chr;
+						str.Encode(&chr, Encoding::UTF32, false);
+						token.Content = string(chr);
+						token.ValueClass = TokenConstantClass::Numeric;
+					}
 					Result->Append(token);
 				} else if (spelling.IsIsolatedChars(text[pos])) {
 					token.SourcePosition = pos;
