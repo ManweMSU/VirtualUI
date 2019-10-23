@@ -1,5 +1,6 @@
 #include "FileApi.h"
 #include "../Syntax/Regular.h"
+#include "../Miscellaneous/DynamicString.h"
 
 #define _DARWIN_FEATURE_ONLY_64_BIT_INODE
 
@@ -30,11 +31,29 @@ namespace Engine
 		}
         string ExpandPath(const string & path)
         {
-            SafePointer<Array<uint8> > FullPath = new Array<uint8>(PATH_MAX);
-			FullPath->SetLength(PATH_MAX);
-            SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
-			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
-            return string(FullPath->GetBuffer(), -1, Encoding::UTF8);
+			string full;
+			if (path[0] == L'/' || path[0] == L'\\') full = path; else full = GetCurrentDirectory() + L"/" + path;
+			auto parts = full.Replace(L'\\', L'/').Split(L'/');
+			for (int i = 0; i < parts.Length(); i++) {
+				if (!parts[i].Length()) { parts.Remove(i); i--; continue; }
+				if (parts[i] == L".") { parts.Remove(i); i--; continue; }
+				if (parts[i] == L"..") {
+					if (i > 1) {
+						parts.Remove(i);
+						parts.Remove(i - 1);
+						i -= 2;
+						continue;
+					} else {
+						parts.Remove(i);
+						i--;
+						continue;
+					}
+				}
+			}
+			DynamicString result;
+			for (int i = 0; i < parts.Length(); i++) result << L"/" << parts[i];
+			if (!result.Length()) result << L"/";
+			return result.ToString();
         }
 		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode)
 		{

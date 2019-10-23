@@ -210,9 +210,10 @@ int Main(void)
     Console << string(tex) + IO::NewLineChar;
     Console << L"Text available : " << Clipboard::IsFormatAvailable(Clipboard::Format::Text) << IO::NewLineChar;
     Console << L"Image available: " << Clipboard::IsFormatAvailable(Clipboard::Format::Image) << IO::NewLineChar;
+	Console << IO::GetCurrentDirectory() << IO::NewLineChar;
 
     MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
-        MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::LightTheme);
+        MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::DarkTheme);
 
     auto Callback2 = new _cb2;
     auto templ = interface.Dialog[L"Test3"];
