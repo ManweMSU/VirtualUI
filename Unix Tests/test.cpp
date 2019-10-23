@@ -198,10 +198,18 @@ int Main(void)
         rd->DrawPolygon(line.GetBuffer(), line.Length(), Math::Color(0.0, 0.0, 0.0, 0.5), 10.0);
         rd->EndDraw();
         tex = rd->GetRenderTargetAsTexture();
+        SafePointer<Codec::Frame> frame = rd->GetRenderTargetAsFrame();
+        Console << L"Set clipboard data : " << Clipboard::SetData(frame) << IO::NewLineChar;
         rd->Release();
     }
+    // SafePointer<Codec::Frame> cframe;
+    // if (Clipboard::GetData(cframe.InnerRef())) {
+    //     tex = loader->LoadTexture(cframe);
+    // }
 
     Console << string(tex) + IO::NewLineChar;
+    Console << L"Text available : " << Clipboard::IsFormatAvailable(Clipboard::Format::Text) << IO::NewLineChar;
+    Console << L"Image available: " << Clipboard::IsFormatAvailable(Clipboard::Format::Image) << IO::NewLineChar;
 
     MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
         MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::LightTheme);
@@ -213,11 +221,6 @@ int Main(void)
     templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
     tex->Release();
     auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0);
-    auto a = string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤").EncodeSequence(Encoding::UTF16, false);
-    for (int i = 0; i < a->Length() / 2; i++) {
-        Console.WriteLine(string(uint32( *reinterpret_cast<uint16 *>(a->GetBuffer() + 2 * i) ), HexadecimalBase, 4));
-    }
-    a->Release();
     w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
     MacOSXSpecific::SetWindowBackgroundColor(w4, UI::Color(255, 0, 255, 128));
     MacOSXSpecific::SetEffectBackgroundMaterial(w4, MacOSXSpecific::EffectBackgroundMaterial::Popover);
