@@ -27,6 +27,7 @@ _obj/
 .stat/
 tools_windows/
 tools_macosx/
+*.ecsa
 
 # Visual Studio 2015 cache/options directory
 .vs/

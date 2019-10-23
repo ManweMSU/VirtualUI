@@ -126,7 +126,7 @@ int Main(void)
     IO::Console Console;
     try {
         UI::Windows::InitializeCodecCollection();
-        FileStream InputStream(IO::GetStandartInput());
+        FileStream InputStream(IO::GetStandardInput());
         TextReader Input(&InputStream, Encoding::UTF8);
         Console.SetTextColor(15);
         Console.SetBackgroundColor(0);
