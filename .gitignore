@@ -25,6 +25,8 @@ bld/
 _build/
 _obj/
 .stat/
+tools_windows/
+tools_macosx/
 
 # Visual Studio 2015 cache/options directory
 .vs/
