@@ -565,9 +565,16 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
     int * code;
     NSMenuItem * server;
     NSMenu * owner;
+	NSUInteger rect_tag;
+	bool state;
 }
+- (instancetype) init;
+- (void) setFrame : (NSRect) frame;
+- (void) setFrameSize: (NSSize) newSize;
 - (void) drawRect : (NSRect) dirtyRect;
 - (void) mouseUp: (NSEvent *) event;
+- (void) mouseEntered: (NSEvent *) event;
+- (void) mouseExited: (NSEvent *) event;
 @end
 @interface EngineRuntimeMenuSeparator : NSView
 {
@@ -577,7 +584,27 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 - (void) drawRect : (NSRect) dirtyRect;
 @end
+
 @implementation EngineRuntimeMenuItem
+- (instancetype) init
+{
+	[super init];
+	state = 0;
+	rect_tag = [self addTrackingRect: NSMakeRect(0.0, 0.0, 0.0, 0.0) owner: self userData: 0 assumeInside: NO];
+	return self;
+}
+- (void) setFrame : (NSRect) frame
+{
+    [super setFrame: frame];
+	[self removeTrackingRect: rect_tag];
+	rect_tag = [self addTrackingRect: NSMakeRect(0.0, 0.0, frame.size.width, frame.size.height) owner: self userData: 0 assumeInside: NO];
+}
+- (void) setFrameSize: (NSSize) newSize
+{
+    [super setFrameSize: newSize];
+	[self removeTrackingRect: rect_tag];
+	rect_tag = [self addTrackingRect: NSMakeRect(0.0, 0.0, newSize.width, newSize.height) owner: self userData: 0 assumeInside: NO];
+}
 - (void) drawRect : (NSRect) dirtyRect
 {
     auto rect = [self frame];
@@ -585,7 +612,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
     Engine::UI::Box box = Engine::UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
     CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
     device->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
-    item->Render(box, [server isHighlighted]);
+	item->Render(box, state != 0);
 }
 - (void) mouseUp: (NSEvent *) event
 {
@@ -593,6 +620,16 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
         *code = item->ID;
         [owner cancelTracking];
     }
+}
+- (void) mouseEntered: (NSEvent *) event
+{
+	state = 1;
+	[self setNeedsDisplay: YES];
+}
+- (void) mouseExited: (NSEvent *) event
+{
+	state = 0;
+	[self setNeedsDisplay: YES];
 }
 @end
 @implementation EngineRuntimeMenuSeparator
