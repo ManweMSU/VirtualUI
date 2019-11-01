@@ -33,27 +33,20 @@ namespace Engine
         }
         void OpenCommandPrompt(const string & working_directory)
         {
-            string path = IO::ExpandPath(working_directory).Replace(L' ', L"\\\\ ");
-            string script =
-                L"tell application \"Terminal\"\n"
-	            L"if it is running then\n"
-		        L"if ((count of windows) is 0) then\n"
-			    L"activate\n"
-			    L"do script \"cd " + path + "\"\n"
-		        L"else\n"
-			    L"do script \"cd " + path + "\"\n"
-			    L"activate\n"
-		        L"end if\n"
-	            L"else\n"
-		        L"activate\n"
-		        L"do script \"cd " + path + "\" in window 1\n"
-	            L"end if\n"
-                L"end tell\n";
-            NSString * Script = Cocoa::CocoaString(script);
-            NSAppleScript * AppleScript = [[NSAppleScript alloc] initWithSource: Script];
-            [AppleScript executeAndReturnError: NULL];
-            [Script release];
-            [AppleScript release];
+			@autoreleasepool {
+				NSArray<NSURL *> * apps = (NSArray<NSURL *> *) LSCopyApplicationURLsForBundleIdentifier((CFStringRef) @"com.apple.Terminal", 0);
+				if (![apps count]) return;
+				NSString * path = Cocoa::CocoaString(working_directory);
+				LSLaunchURLSpec spec;
+				spec.appURL = (CFURLRef) apps[0];
+				spec.asyncRefCon = 0;
+				spec.itemURLs = (CFArrayRef) [NSArray arrayWithObject: [NSURL fileURLWithPath: path]];
+				spec.launchFlags = kLSLaunchDefaults;
+				spec.passThruParams = 0;
+				LSOpenFromURLSpec(&spec, 0);
+				[apps release];
+				[path release];
+			}
         }
     }
 }
