@@ -226,28 +226,28 @@ namespace Engine
 			return *this;
 		}
 
-		virtual void Append(const V & v) { require(count + 1); append(v); }
-		virtual void Append(const Array & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
-		virtual void Append(const V * v, int Count) { if (!Count) return; if (data == v) throw InvalidArgumentException(); require(count + Count); for (int i = 0; i < Count; i++) append(v[i]); }
-		virtual void SwapAt(int i, int j) { swap(data[i], data[j]); }
-		virtual void Insert(const V & v, int IndexAt)
+		void Append(const V & v) { require(count + 1); append(v); }
+		void Append(const Array & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
+		void Append(const V * v, int Count) { if (!Count) return; if (data == v) throw InvalidArgumentException(); require(count + Count); for (int i = 0; i < Count; i++) append(v[i]); }
+		void SwapAt(int i, int j) { swap(data[i], data[j]); }
+		void Insert(const V & v, int IndexAt)
 		{
 			require(count + 1);
 			for (int i = count - 1; i >= IndexAt; i--) swap(data[i], data[i + 1]);
 			try { new (data + IndexAt) V(v); count++; }
 			catch (...) { for (int i = IndexAt; i < count; i++) swap(data[i], data[i + 1]); throw; }
 		}
-		virtual V & ElementAt(int index) { return data[index]; }
-		virtual const V & ElementAt(int index) const { return data[index]; }
-		virtual V & FirstElement(void) { return data[0]; }
-		virtual const V & FirstElement(void) const { return data[0]; }
-		virtual V & LastElement(void) { return data[count - 1]; }
-		virtual const V & LastElement(void) const { return data[count - 1]; }
-		virtual void Remove(int index) { data[index].V::~V(); for (int i = index; i < count - 1; i++) swap(data[i], data[i + 1]); count--; require(count, true); }
-		virtual void RemoveFirst(void) { Remove(0); }
-		virtual void RemoveLast(void) { Remove(count - 1); }
-		virtual void Clear(void) { for (int i = 0; i < count; i++) data[i].V::~V(); free(data); data = 0; count = 0; allocated = 0; }
-		virtual void SetLength(int length)
+		V & ElementAt(int index) { return data[index]; }
+		const V & ElementAt(int index) const { return data[index]; }
+		V & FirstElement(void) { return data[0]; }
+		const V & FirstElement(void) const { return data[0]; }
+		V & LastElement(void) { return data[count - 1]; }
+		const V & LastElement(void) const { return data[count - 1]; }
+		void Remove(int index) { data[index].V::~V(); for (int i = index; i < count - 1; i++) swap(data[i], data[i + 1]); count--; require(count, true); }
+		void RemoveFirst(void) { Remove(0); }
+		void RemoveLast(void) { Remove(count - 1); }
+		void Clear(void) { for (int i = 0; i < count; i++) data[i].V::~V(); free(data); data = 0; count = 0; allocated = 0; }
+		void SetLength(int length)
 		{
 			if (length > count) {
 				require(length); int i;
@@ -340,27 +340,27 @@ namespace Engine
 			return *this;
 		}
 
-		virtual void Append(const V & v) { require(count + 1); append(v); }
-		virtual void Append(const SafeArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(*src.data[i]); }
-		virtual void Append(const V * v, int Count) { require(count + Count); for (int i = 0; i < Count; i++) append(v[i]); }
-		virtual void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
-		virtual void Insert(const V & v, int IndexAt)
+		void Append(const V & v) { require(count + 1); append(v); }
+		void Append(const SafeArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(*src.data[i]); }
+		void Append(const V * v, int Count) { require(count + Count); for (int i = 0; i < Count; i++) append(v[i]); }
+		void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
+		void Insert(const V & v, int IndexAt)
 		{
 			require(count + 1);
 			for (int i = count - 1; i >= IndexAt; i--) safe_swap(data[i], data[i + 1]);
 			try { data[IndexAt] = new V(v); count++; } catch (...) { for (int i = IndexAt; i < count; i++) safe_swap(data[i], data[i + 1]); throw; }
 		}
-		virtual V & ElementAt(int index) { return *data[index]; }
-		virtual const V & ElementAt(int index) const { return *data[index]; }
-		virtual V & FirstElement(void) { return *data[0]; }
-		virtual const V & FirstElement(void) const { return *data[0]; }
-		virtual V & LastElement(void) { return *data[count - 1]; }
-		virtual const V & LastElement(void) const { return *data[count - 1]; }
-		virtual void Remove(int index) { delete data[index]; for (int i = index; i < count - 1; i++) safe_swap(data[i], data[i + 1]); count--; require(count, true); }
-		virtual void RemoveFirst(void) { Remove(0); }
-		virtual void RemoveLast(void) { Remove(count - 1); }
-		virtual void Clear(void) { for (int i = 0; i < count; i++) delete data[i]; free(data); data = 0; count = 0; allocated = 0; }
-		virtual void SetLength(int length)
+		V & ElementAt(int index) { return *data[index]; }
+		const V & ElementAt(int index) const { return *data[index]; }
+		V & FirstElement(void) { return *data[0]; }
+		const V & FirstElement(void) const { return *data[0]; }
+		V & LastElement(void) { return *data[count - 1]; }
+		const V & LastElement(void) const { return *data[count - 1]; }
+		void Remove(int index) { delete data[index]; for (int i = index; i < count - 1; i++) safe_swap(data[i], data[i + 1]); count--; require(count, true); }
+		void RemoveFirst(void) { Remove(0); }
+		void RemoveLast(void) { Remove(count - 1); }
+		void Clear(void) { for (int i = 0; i < count; i++) delete data[i]; free(data); data = 0; count = 0; allocated = 0; }
+		void SetLength(int length)
 		{
 			if (length > count) {
 				require(length); int i;
@@ -448,23 +448,23 @@ namespace Engine
 			return *this;
 		}
 
-		virtual void Append(V * v) { require(count + 1); append(v); }
-		virtual void Append(const ObjectArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
-		virtual void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
-		virtual void Insert(V * v, int IndexAt)
+		void Append(V * v) { require(count + 1); append(v); }
+		void Append(const ObjectArray & src) { if (&src == this) throw InvalidArgumentException(); require(count + src.count); for (int i = 0; i < src.count; i++) append(src.data[i]); }
+		void SwapAt(int i, int j) { safe_swap(data[i], data[j]); }
+		void Insert(V * v, int IndexAt)
 		{
 			require(count + 1);
 			for (int i = count - 1; i >= IndexAt; i--) safe_swap(data[i], data[i + 1]);
 			try { data[IndexAt] = v; if (v) v->Retain(); count++; } catch (...) { for (int i = IndexAt; i < count; i++) safe_swap(data[i], data[i + 1]); throw; }
 		}
-		virtual V * ElementAt(int index) const { return data[index]; }
-		virtual V * FirstElement(void) const { return data[0]; }
-		virtual V * LastElement(void) const { return data[count - 1]; }
-		virtual void Remove(int index) { if (data[index]) data[index]->Release(); for (int i = index; i < count - 1; i++) safe_swap(data[i], data[i + 1]); count--; require(count, true); }
-		virtual void RemoveFirst(void) { Remove(0); }
-		virtual void RemoveLast(void) { Remove(count - 1); }
-		virtual void Clear(void) { for (int i = 0; i < count; i++) if (data[i]) data[i]->Release(); free(data); data = 0; count = 0; allocated = 0; }
-		virtual void SetElement(V * v, int index) { if (data[index]) data[index]->Release(); data[index] = v; if (v) v->Retain(); }
+		V * ElementAt(int index) const { return data[index]; }
+		V * FirstElement(void) const { return data[0]; }
+		V * LastElement(void) const { return data[count - 1]; }
+		void Remove(int index) { if (data[index]) data[index]->Release(); for (int i = index; i < count - 1; i++) safe_swap(data[i], data[i + 1]); count--; require(count, true); }
+		void RemoveFirst(void) { Remove(0); }
+		void RemoveLast(void) { Remove(count - 1); }
+		void Clear(void) { for (int i = 0; i < count; i++) if (data[i]) data[i]->Release(); free(data); data = 0; count = 0; allocated = 0; }
+		void SetElement(V * v, int index) { if (data[index]) data[index]->Release(); data[index] = v; if (v) v->Retain(); }
 		int Length(void) const { return count; }
 
 		string ToString(void) const override
