@@ -156,8 +156,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	SetProcessDPIAware();
 
-	AllocConsole();
-	SetConsoleTitleW(L"ui tests");
+	if (GetStdHandle(STD_OUTPUT_HANDLE) == 0) {
+		AllocConsole();
+		SetConsoleTitleW(L"ui tests");
+	}
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandardOutput());
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
@@ -166,7 +168,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	cns.SetBackgroundColor(8);
 	cns.MoveCaret(5, 2);
 	cns.ClearScreen();
-	cns.Write(L"pidor");
+	cns.WriteLine(L"Привет!");
 
 	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
 	(*conout) << L"Full path      : " << IO::GetExecutablePath() << IO::NewLineChar;

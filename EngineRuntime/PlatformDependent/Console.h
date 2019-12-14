@@ -11,6 +11,7 @@ namespace Engine
             Streaming::TextWriter writer;
             handle file;
 			uint16 attr;
+			bool is_true_console;
         public:
             enum ConsoleColor {
                 ColorDefault = -1,

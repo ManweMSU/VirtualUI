@@ -94,7 +94,7 @@ namespace Engine
 		{
 			if (length > uint32(data.Length() - pointer)) {
 				if (length > 0x7FFFFFFF) throw InvalidArgumentException();
-				if (uint32(pointer) + length > 0x7FFFFFFF) throw FileAccessException();
+				if (uint32(pointer) + length > 0x7FFFFFFF) throw FileAccessException(Error::FileTooLarge);
 				data.SetLength(pointer + int(length));
 			}
 			MemoryCopy(data.GetBuffer() + pointer, _data, length);
@@ -162,7 +162,7 @@ namespace Engine
 			} catch (...) { inner->Seek(pos, Begin); throw; }
 			pointer += length;
 		}
-		void FragmentStream::Write(const void * data, uint32 length) { throw FileAccessException(); }
+		void FragmentStream::Write(const void * data, uint32 length) { throw FileAccessException(Error::IsReadOnly); }
 		int64 FragmentStream::Seek(int64 position, SeekOrigin origin)
 		{
 			int64 newpos = position;
@@ -173,7 +173,7 @@ namespace Engine
 			return pointer;
 		}
 		uint64 FragmentStream::Length(void) { return end - begin; }
-		void FragmentStream::SetLength(uint64 length) { throw FileAccessException(); }
+		void FragmentStream::SetLength(uint64 length) { throw FileAccessException(Error::IsReadOnly); }
 		void FragmentStream::Flush(void) {}
 		FragmentStream::~FragmentStream(void) { inner->Release(); }
 		string FragmentStream::ToString(void) const { return L"FragmentStream"; }

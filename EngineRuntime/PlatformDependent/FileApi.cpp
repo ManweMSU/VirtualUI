@@ -16,11 +16,49 @@ namespace Engine
 {
 	namespace IO
 	{
-		string FileAccessException::ToString(void) const { return L"FileAccessException"; }
+		FileAccessException::FileAccessException(uint ec) : code(ec) {}
+		FileAccessException::FileAccessException(void) : code(Error::Unknown) {}
+		string FileAccessException::ToString(void) const { return L"FileAccessException (" + string(code, HexadecimalBase, 8) + L")"; }
 		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
 		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
 		string DirectoryAlreadyExistsException::ToString(void) const { return L"DirectoryAlreadyExistsException"; }
 		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
+		uint WinErrorToEngineError(DWORD code)
+		{
+			if (code == ERROR_SUCCESS) return Error::Success;
+			else if (code == ERROR_FILE_NOT_FOUND) return Error::FileNotFound;
+			else if (code == ERROR_PATH_NOT_FOUND) return Error::PathNotFound;
+			else if (code == ERROR_TOO_MANY_OPEN_FILES) return Error::TooManyOpenFiles;
+			else if (code == ERROR_ACCESS_DENIED) return Error::AccessDenied;
+			else if (code == ERROR_INVALID_HANDLE) return Error::InvalidHandle;
+			else if (code == ERROR_NOT_ENOUGH_MEMORY) return Error::NotEnoughMemory;
+			else if (code == ERROR_OUTOFMEMORY) return Error::NotEnoughMemory;
+			else if (code == ERROR_INVALID_DRIVE) return Error::InvalidDevice;
+			else if (code == ERROR_CURRENT_DIRECTORY) return Error::DirectoryIsCurrent;
+			else if (code == ERROR_NOT_SAME_DEVICE) return Error::NotSameDevice;
+			else if (code == ERROR_WRITE_PROTECT) return Error::IsReadOnly;
+			else if (code == ERROR_BAD_UNIT) return Error::InvalidDevice;
+			else if (code == ERROR_WRITE_FAULT) return Error::WriteFailure;
+			else if (code == ERROR_READ_FAULT) return Error::ReadFailure;
+			else if (code == ERROR_SHARING_VIOLATION) return Error::AccessDenied;
+			else if (code == ERROR_LOCK_VIOLATION) return Error::AccessDenied;
+			else if (code == ERROR_HANDLE_DISK_FULL) return Error::NoDiskSpace;
+			else if (code == ERROR_NOT_SUPPORTED) return Error::NotImplemented;
+			else if (code == ERROR_DEV_NOT_EXIST) return Error::InvalidDevice;
+			else if (code == ERROR_FILE_EXISTS) return Error::FileExists;
+			else if (code == ERROR_CANNOT_MAKE) return Error::CreateFailure;
+			else if (code == ERROR_OPEN_FAILED) return Error::OpenFailure;
+			else if (code == ERROR_DISK_FULL) return Error::NoDiskSpace;
+			else if (code == ERROR_CALL_NOT_IMPLEMENTED) return Error::NotImplemented;
+			else if (code == ERROR_INVALID_NAME) return Error::BadPathName;
+			else if (code == ERROR_DIR_NOT_EMPTY) return Error::DirectoryNotEmpty;
+			else if (code == ERROR_BAD_PATHNAME) return Error::BadPathName;
+			else if (code == ERROR_ALREADY_EXISTS) return Error::FileExists;
+			else if (code == ERROR_FILENAME_EXCED_RANGE) return Error::FileNameTooLong;
+			else if (code == ERROR_FILE_TOO_LARGE) return Error::FileTooLarge;
+			else if (code == ERROR_DIRECTORY) return Error::BadPathName;
+			return Error::Unknown;
+		}
 		string NormalizePath(const string & path)
 		{
 			if (PathChar == L'\\') return path.Replace(L'/', L'\\');
@@ -60,7 +98,7 @@ namespace Engine
 			else if (mode == FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
 			DWORD Flags = FILE_ATTRIBUTE_NORMAL;
 			handle file = CreateFileW(NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
-			if (file == INVALID_HANDLE_VALUE) throw FileAccessException();
+			if (file == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return file;
 		}
 		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
@@ -85,49 +123,49 @@ namespace Engine
 			DWORD Flags = FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY;
 			if (delete_on_close) Flags |= FILE_FLAG_DELETE_ON_CLOSE;
 			handle file = CreateFileW(NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
-			if (file == INVALID_HANDLE_VALUE) throw FileAccessException();
+			if (file == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return file;
 		}
-		void CreatePipe(handle * pipe_in, handle * pipe_out) { if (!::CreatePipe(pipe_out, pipe_in, 0, 0)) throw Exception(); }
+		void CreatePipe(handle * pipe_in, handle * pipe_out) { if (!::CreatePipe(pipe_out, pipe_in, 0, 0)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		handle GetStandardOutput(void) { return GetStdHandle(STD_OUTPUT_HANDLE); }
 		handle GetStandardInput(void) { return GetStdHandle(STD_INPUT_HANDLE); }
 		handle GetStandardError(void) { return GetStdHandle(STD_ERROR_HANDLE); }
 		void SetStandardOutput(handle file)
 		{
 			handle dup;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
 			SetStdHandle(STD_OUTPUT_HANDLE, dup);
 		}
 		void SetStandardInput(handle file)
 		{
 			handle dup;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			CloseHandle(GetStdHandle(STD_INPUT_HANDLE));
 			SetStdHandle(STD_INPUT_HANDLE, dup);
 		}
 		void SetStandardError(handle file)
 		{
 			handle dup;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			CloseHandle(GetStdHandle(STD_ERROR_HANDLE));
 			SetStdHandle(STD_ERROR_HANDLE, dup);
 		}
 		handle CloneHandle(handle file)
 		{
 			handle result;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &result, 0, FALSE, DUPLICATE_SAME_ACCESS)) throw FileAccessException();
+			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &result, 0, FALSE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return result;
 		}
-		void CloseFile(handle file) { CloseHandle(file); }
-		void Flush(handle file) { if (!FlushFileBuffers(file)) throw FileAccessException(); }
+		void CloseFile(handle file) { if (!CloseHandle(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
+		void Flush(handle file) { if (!FlushFileBuffers(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		uint64 GetFileSize(handle file)
 		{
 			LARGE_INTEGER v;
-			if (!GetFileSizeEx(file, &v)) throw FileAccessException();
+			if (!GetFileSizeEx(file, &v)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return uint64(v.QuadPart);
 		}
-		void MoveFile(const string & from, const string & to) { if (!MoveFileW(NormalizePath(from), NormalizePath(to))) throw FileAccessException(); }
+		void MoveFile(const string & from, const string & to) { if (!MoveFileW(NormalizePath(from), NormalizePath(to))) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		bool FileExists(const string & path)
 		{
 			handle file = CreateFileW(NormalizePath(path), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
@@ -138,14 +176,14 @@ namespace Engine
 		void ReadFile(handle file, void * to, uint32 amount)
 		{
 			DWORD Read;
-			if (!::ReadFile(file, to, amount, &Read, 0) && GetLastError() != ERROR_BROKEN_PIPE) throw FileAccessException();
+			if (!::ReadFile(file, to, amount, &Read, 0) && GetLastError() != ERROR_BROKEN_PIPE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			if (Read != amount) throw FileReadEndOfFileException(Read);
 		}
 		void WriteFile(handle file, const void * data, uint32 amount)
 		{
 			DWORD Written;
-			if (!::WriteFile(file, data, amount, &Written, 0)) throw FileAccessException();
-			if (Written != amount) throw FileAccessException();
+			if (!::WriteFile(file, data, amount, &Written, 0)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (Written != amount) throw FileAccessException(Error::FileTooLarge);
 		}
 		int64 Seek(handle file, int64 position, SeekOrigin origin)
 		{
@@ -154,25 +192,25 @@ namespace Engine
 			DWORD org = FILE_BEGIN;
 			if (origin == SeekOrigin::Current) org = FILE_CURRENT;
 			else if (origin == SeekOrigin::End) org = FILE_END;
-			if (!SetFilePointerEx(file, set, &get, org)) throw FileAccessException();
+			if (!SetFilePointerEx(file, set, &get, org)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return get.QuadPart;
 		}
 		void SetFileSize(handle file, uint64 size)
 		{
 			LARGE_INTEGER pos, len;
 			len.QuadPart = int64(size);
-			if (!SetFilePointerEx(file, { 0, 0 }, &pos, FILE_CURRENT)) throw FileAccessException();
-			if (!SetFilePointerEx(file, len, 0, FILE_BEGIN)) throw FileAccessException();
-			if (!SetEndOfFile(file)) { SetFilePointerEx(file, pos, 0, FILE_BEGIN); throw FileAccessException(); }
+			if (!SetFilePointerEx(file, { 0, 0 }, &pos, FILE_CURRENT)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (!SetFilePointerEx(file, len, 0, FILE_BEGIN)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (!SetEndOfFile(file)) { SetFilePointerEx(file, pos, 0, FILE_BEGIN); throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 			SetFilePointerEx(file, pos, 0, FILE_BEGIN);
 		}
 		void RemoveFile(const string & path)
 		{
-			if (!DeleteFileW(NormalizePath(path))) throw FileAccessException();
+			if (!DeleteFileW(NormalizePath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		void SetCurrentDirectory(const string & path)
 		{
-			if (!SetCurrentDirectoryW(ExpandPath(path))) throw FileAccessException();
+			if (!SetCurrentDirectoryW(ExpandPath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		string GetCurrentDirectory(void)
 		{
@@ -190,16 +228,16 @@ namespace Engine
 		{
 			if (!CreateDirectoryW(NormalizePath(path), 0)) {
 				if (GetLastError() == ERROR_ALREADY_EXISTS) throw DirectoryAlreadyExistsException();
-				throw FileAccessException();
+				throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			}
 		}
 		void RemoveDirectory(const string & path)
 		{
-			if (!RemoveDirectoryW(NormalizePath(path))) throw FileAccessException();
+			if (!RemoveDirectoryW(NormalizePath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		void CreateSymbolicLink(const string & at, const string & to)
 		{
-			if (!CreateSymbolicLinkW(NormalizePath(at), NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException();
+			if (!CreateSymbolicLinkW(NormalizePath(at), NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		string GetExecutablePath(void)
 		{

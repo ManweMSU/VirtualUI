@@ -7,7 +7,35 @@ namespace Engine
 {
 	namespace IO
 	{
-		class FileAccessException : public Exception { public: string ToString(void) const override; };
+		namespace Error
+		{
+			enum IOError {
+				Success				= 0x0000,
+				Unknown				= 0x0001,
+				FileNotFound		= 0x0002,
+				PathNotFound		= 0x0003,
+				TooManyOpenFiles	= 0x0004,
+				AccessDenied		= 0x0005,
+				InvalidHandle		= 0x0006,
+				NotEnoughMemory		= 0x0007,
+				InvalidDevice		= 0x0008,
+				IsReadOnly			= 0x0009,
+				NoDiskSpace			= 0x000A,
+				FileExists			= 0x000B,
+				NotImplemented		= 0x000C,
+				DirectoryNotEmpty	= 0x000D,
+				DirectoryIsCurrent	= 0x000E,
+				NotSameDevice		= 0x000F,
+				BadPathName			= 0x0010,
+				FileNameTooLong		= 0x0011,
+				FileTooLarge		= 0x0012,
+				ReadFailure			= 0x0013,
+				WriteFailure		= 0x0014,
+				CreateFailure		= 0x0015,
+				OpenFailure			= 0x0016,
+			};
+		}
+		class FileAccessException : public Exception { public: uint code; FileAccessException(uint ec); FileAccessException(void); string ToString(void) const override; };
 		class FileReadEndOfFileException : public Exception { public: uint32 DataRead; FileReadEndOfFileException(uint32 data_read); string ToString(void) const override; };
 		class DirectoryAlreadyExistsException : public Exception { public: string ToString(void) const override; };
 		class FileFormatException : public Exception { public: string ToString(void) const override; };

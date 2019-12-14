@@ -55,9 +55,9 @@ namespace Engine
 			{
 				if (send(handle, reinterpret_cast<const char *>(data), length, 0) == SOCKET_ERROR) throw IO::FileAccessException();
 			}
-			virtual int64 Seek(int64 position, Streaming::SeekOrigin origin) override { throw IO::FileAccessException(); }
-			virtual uint64 Length(void) override { throw IO::FileAccessException(); }
-			virtual void SetLength(uint64 length) override { throw IO::FileAccessException(); }
+			virtual int64 Seek(int64 position, Streaming::SeekOrigin origin) override { throw IO::FileAccessException(IO::Error::NotImplemented); }
+			virtual uint64 Length(void) override { throw IO::FileAccessException(IO::Error::NotImplemented); }
+			virtual void SetLength(uint64 length) override { throw IO::FileAccessException(IO::Error::NotImplemented); }
 			virtual void Flush(void) override {}
 			virtual void Connect(const Address & address, uint16 port) override
 			{
