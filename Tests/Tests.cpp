@@ -48,6 +48,7 @@
 #include <Math/Complex.h>
 #include <Math/Vector.h>
 #include <Math/Matrix.h>
+#include <Math/Color.h>
 #include <PlatformSpecific/WindowsTaskbar.h>
 #include <PlatformSpecific/WindowsRegistry.h>
 #include <PlatformSpecific/WindowsShortcut.h>
@@ -246,6 +247,17 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	SafePointer<Codec::Frame> image_frame;
 	Clipboard::GetData(image_frame.InnerRef());
 	SafePointer<UI::ITexture> image = image_frame ? Device->LoadTexture(image_frame) : 0;
+
+	{
+		SafePointer<Codec::Frame> frame = new Codec::Frame(512, 512, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+		SafePointer<Streaming::Stream> stream = new Streaming::FileStream(L"hsv.png", Streaming::AccessReadWrite, Streaming::CreateAlways);
+		for (int y = 0; y < 512; y++) for (int x = 0; x < 512; x++) {
+			auto hsv = Math::ColorHSV(x / 512.0 * 2.0 * ENGINE_PI, (512 - y) / 512.0, 1.0, 1.0);
+			frame->SetPixel(x, y, UI::Color(hsv).Value);
+		}
+		Codec::EncodeFrame(stream, frame, L"PNG");
+	}
+
 	{
 		{
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
