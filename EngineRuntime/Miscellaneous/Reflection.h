@@ -18,7 +18,6 @@ namespace Engine
 			Array = 20, SafeArray = 21, Structure = 22,
 			Unknown = -1
 		};
-			//Integer = 0, Double = 1, Boolean = 2, Color = 3, String = 4, Texture = 5, Font = 6, Application = 7, Dialog = 8, Rectangle = 9, Unknown = -1 };
 		struct PropertyInfo
 		{
 			void * Address;
