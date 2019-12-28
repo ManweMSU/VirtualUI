@@ -264,7 +264,7 @@ namespace Engine
 			}
 			catch (FileReadEndOfFileException &) { eof = true; return 0xFFFFFFFF; }
 		}
-		string TextReader::ReadLine(void) const
+		string ITextReader::ReadLine(void) const
 		{
 			DynamicString result;
 			uint32 chr;
@@ -276,7 +276,7 @@ namespace Engine
 			} while (chr != 0xFFFFFFFF && chr != L'\n');
 			return result.ToString();
 		}
-		string TextReader::ReadAll(void) const
+		string ITextReader::ReadAll(void) const
 		{
 			DynamicString result;
 			uint32 chr;
@@ -288,7 +288,7 @@ namespace Engine
 			} while (chr != 0xFFFFFFFF);
 			return result.ToString();
 		}
-		bool TextReader::EofReached(void) const { return eof; }
+		bool ITextReader::EofReached(void) const { return eof; }
 		Encoding TextReader::GetEncoding(void) const { return coding; }
 		TextReader::~TextReader(void) { source->Release(); }
 		string TextReader::ToString(void) const { return L"TextReader"; }

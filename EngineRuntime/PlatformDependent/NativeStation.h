@@ -29,5 +29,6 @@ namespace Engine
 		double GetScreenScale(void);
 		void RunMainMessageLoop(void);
 		void ExitMainLoop(void);
+		Array<string> * GetFontFamilies(void);
 	}
 }

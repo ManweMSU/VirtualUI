@@ -6,12 +6,15 @@ namespace Engine
 {
     namespace IO
     {
-        class Console final : public Streaming::ITextWriter
+        class Console final : virtual public Streaming::ITextWriter, virtual public Streaming::ITextReader
         {
             Streaming::TextWriter writer;
+			Streaming::TextReader reader;
             handle file;
+			handle file_in;
 			uint16 attr;
 			bool is_true_console;
+			int console_in_mode;
         public:
             enum ConsoleColor {
                 ColorDefault = -1,
@@ -35,6 +38,7 @@ namespace Engine
 
             Console(void);
 			Console(handle output);
+			Console(handle output, handle input);
             virtual ~Console(void) override;
 			virtual void Write(const string & text) const override;
 			virtual void WriteLine(const string & text) const override;
@@ -49,8 +53,12 @@ namespace Engine
             void MoveCaret(int x, int y);
             void SetTitle(const string & title);
 
+			virtual uint32 ReadChar(void) const override;
+
 			Console & operator << (const string & text);
 			const Console & operator << (const string & text) const;
+			Console & operator >> (string & str);
+			const Console & operator >> (string & str) const;
         };
     }
 }

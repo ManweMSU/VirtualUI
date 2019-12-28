@@ -447,6 +447,35 @@ namespace Engine
 			}
 		}
 		void ExitMainLoop(void) { PostQuitMessage(0); }
+		Array<string> * GetFontFamilies(void)
+		{
+			Direct2D::InitializeFactory();
+			SafePointer<IDWriteFontCollection> collection;
+			if (Direct2D::DWriteFactory && Direct2D::DWriteFactory->GetSystemFontCollection(collection.InnerRef()) == S_OK) {
+				uint count = collection->GetFontFamilyCount();
+				SafePointer< Array<string> > result = new Array<string>(int(count));
+				for (uint i = 0; i < count; i++) {
+					SafePointer<IDWriteFontFamily> family;
+					if (collection->GetFontFamily(i, family.InnerRef()) == S_OK) {
+						SafePointer<IDWriteLocalizedStrings> strings;
+						if (family->GetFamilyNames(strings.InnerRef()) == S_OK) {
+							UINT32 index, length;
+							BOOL exists;
+							if (strings->FindLocaleName(L"en-us", &index, &exists) != S_OK || !exists) index = 0;
+							if (strings->GetStringLength(index, &length) == S_OK) {
+								DynamicString str;
+								str.ReserveLength(length + 1);
+								strings->GetString(index, str, length + 1);
+								result->Append(str.ToString());
+							}
+						}
+					}
+				}
+				result->Retain();
+				return result;
+			}
+			return 0;
+		}
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));

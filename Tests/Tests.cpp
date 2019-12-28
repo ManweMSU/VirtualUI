@@ -243,6 +243,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
+	{
+		cns.WriteLine(L"====================================");
+		SafePointer< Array<string> > fonts = UI::Windows::GetFontFamilies();
+		SortArray(*fonts);
+		for (int i = 0; i < fonts->Length(); i++) cns.WriteLine(fonts->ElementAt(i));
+		cns.WriteLine(L"====================================");
+	}
 
 	SafePointer<Codec::Frame> image_frame;
 	Clipboard::GetData(image_frame.InnerRef());

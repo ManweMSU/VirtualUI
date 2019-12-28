@@ -6,7 +6,7 @@ namespace Engine
 {
     namespace IO
     {
-		Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput())), file(GetStandardOutput())
+		Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput())), file(GetStandardOutput()), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput())
 		{
 			if (file == INVALID_HANDLE_VALUE || !file) throw FileAccessException(Error::InvalidHandle);
 			DWORD mode;
@@ -19,8 +19,11 @@ namespace Engine
 				is_true_console = false;
 				attr = 0;
 			}
+			if (file_in == INVALID_HANDLE_VALUE || !file_in) console_in_mode = 0;
+			else if (GetConsoleMode(file_in, &mode)) console_in_mode = 1;
+			else console_in_mode = 2;
 		}
-        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output)
+        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput())
 		{
 			if (file == INVALID_HANDLE_VALUE || !file) throw FileAccessException(Error::InvalidHandle);
 			DWORD mode;
@@ -33,6 +36,26 @@ namespace Engine
 				is_true_console = false;
 				attr = 0;
 			}
+			if (file_in == INVALID_HANDLE_VALUE || !file_in) console_in_mode = 0;
+			else if (GetConsoleMode(file_in, &mode)) console_in_mode = 1;
+			else console_in_mode = 2;
+		}
+		Console::Console(handle output, handle input) : writer(new Streaming::FileStream(output)), file(output), reader(new Streaming::FileStream(input), Encoding::UTF8), file_in(input)
+		{
+			if (file == INVALID_HANDLE_VALUE || !file) throw FileAccessException(Error::InvalidHandle);
+			DWORD mode;
+			if (GetConsoleMode(file, &mode)) {
+				is_true_console = true;
+				CONSOLE_SCREEN_BUFFER_INFO info;
+				GetConsoleScreenBufferInfo(file, &info);
+				attr = info.wAttributes;
+			} else {
+				is_true_console = false;
+				attr = 0;
+			}
+			if (file_in == INVALID_HANDLE_VALUE || !file_in) console_in_mode = 0;
+			else if (GetConsoleMode(file_in, &mode)) console_in_mode = 1;
+			else console_in_mode = 2;
 		}
         Console::~Console(void) {}
         void Console::Write(const string & text) const
@@ -109,8 +132,35 @@ namespace Engine
 			}
         }
 		void Console::SetTitle(const string & title) { SetConsoleTitleW(title); }
-
+		uint32 Console::ReadChar(void) const
+		{
+			if (console_in_mode) {
+				if (console_in_mode == 1) {
+					DWORD read;
+					uint32 code = 0;
+					widechar chr;
+					if (!ReadConsoleW(file_in, &chr, 1, &read, 0)) throw FileAccessException(Error::ReadFailure);
+					if (read == 1) {
+						if ((chr & 0xFC00) == 0xD800) {
+							code = chr & 0x03FF;
+							code <<= 10;
+							if (!ReadConsoleW(file_in, &chr, 1, &read, 0)) throw FileAccessException(Error::ReadFailure);
+							if (read == 0) { eof = true; return 0xFFFFFFFF; }
+							code |= (chr & 0x3FF);
+							code += 0x10000;
+							return code;
+						} else return chr;
+					} else { eof = true; return 0xFFFFFFFF; }
+				} else {
+					auto chr = reader.ReadChar();
+					eof = reader.EofReached();
+					return chr;
+				}
+			} else throw FileAccessException(Error::NotImplemented);
+		}
 		Console & Console::operator << (const string & text) { Write(text); return *this; }
         const Console & Console::operator << (const string & text) const { Write(text); return *this; }
+		Console & Console::operator >> (string & str) { str = ReadLine(); return *this; }
+		const Console & Console::operator >> (string & str) const { str = ReadLine(); return *this; }
     }
 }
