@@ -295,4 +295,28 @@ namespace Engine
 		TextReader & TextReader::operator >> (string & str) { str = ReadLine(); return *this; }
 		const TextReader & TextReader::operator >> (string & str) const { str = ReadLine(); return *this; }
 	}
+	namespace IO {
+		void CreateDirectoryTree(const string & path)
+		{
+			string full = ExpandPath(path);
+			for (int i = 0; i < full.Length(); i++) {
+				if (full[i] == L'/' || full[i] == L'\\') {
+					try { CreateDirectory(full.Fragment(0, i)); } catch (...) {}
+				}
+			}
+			try {
+				CreateDirectory(path);
+			}
+			catch (DirectoryAlreadyExistsException &) {}
+		}
+		void RemoveEntireDirectory(const string & path)
+		{
+			string full = ExpandPath(path);
+			SafePointer< Array<string> > files = Search::GetFiles(full + L"\\*");
+			for (int i = 0; i < files->Length(); i++) RemoveFile(full + L"\\" + files->ElementAt(i));
+			files = Search::GetDirectories(full + L"\\*");
+			for (int i = 0; i < files->Length(); i++) RemoveEntireDirectory(full + L"\\" + files->ElementAt(i));
+			RemoveDirectory(full);
+		}
+	}
 }

@@ -40,7 +40,7 @@ namespace Engine
 							if (read == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK) continue;
 							else if (read == SOCKET_ERROR) throw IO::FileAccessException();
 							else if (!read) throw IO::FileReadEndOfFileException(totally_read);
-							else if (read < length) {
+							else if (uint32(read) < length) {
 								cbuffer += read;
 								totally_read += read;
 								length -= read;

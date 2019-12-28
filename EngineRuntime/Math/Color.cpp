@@ -81,7 +81,12 @@ namespace Engine
 		}
 		bool operator==(const ColorHSV & a, const ColorHSV & b) noexcept { return (a.h == b.h) && (a.s == b.s) && (a.v == b.v) && (a.a == b.a); }
 		bool operator!=(const ColorHSV & a, const ColorHSV & b) noexcept { return (a.h != b.h) || (a.s != b.s) || (a.v != b.v) || (a.a != b.a); }
-		ColorHSV ColorHSV::Rotate(double shift) const noexcept { return ColorHSV(h + shift, s, v, a); }
+		ColorHSV ColorHSV::Rotate(double shift) const noexcept
+		{
+			auto clr  = ColorHSV(h + shift, s, v, a);
+			clr.ClampChannels();
+			return clr;
+		}
 		void ColorHSV::ClampChannels(void) noexcept
 		{
 			while (h >= 2.0 * ENGINE_PI) h -= 2.0 * ENGINE_PI;

@@ -128,4 +128,8 @@ namespace Engine
 			const TextReader & operator >> (string & str) const;
 		};
 	}
+	namespace IO {
+		void CreateDirectoryTree(const string & path);
+		void RemoveEntireDirectory(const string & path);
+	}
 }
