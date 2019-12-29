@@ -15,6 +15,9 @@
 
 using namespace Engine::UI;
 
+#define ENGINE_MAIN_WINDOW_CLASS	L"engine_runtime_main_class"
+#define ENGINE_POPUP_WINDOW_CLASS	L"engine_runtime_popup_class"
+
 namespace Engine
 {
 	namespace NativeWindows
@@ -68,12 +71,12 @@ namespace Engine
 					GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0));
 				Cls.hIconSm = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCEW(1), IMAGE_ICON,
 					GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
-				Cls.lpszClassName = L"engine_runtime_main_class";
+				Cls.lpszClassName = ENGINE_MAIN_WINDOW_CLASS;
 				RegisterClassExW(&Cls);
 				Cls.style = CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS | CS_GLOBALCLASS | CS_DROPSHADOW;
 				Cls.hIcon = 0;
 				Cls.hIconSm = 0;
-				Cls.lpszClassName = L"engine_runtime_popup_class";
+				Cls.lpszClassName = ENGINE_POPUP_WINDOW_CLASS;
 				RegisterClassExW(&Cls);
 				SystemInitialized = true;
 			}
@@ -295,7 +298,7 @@ namespace Engine
 			ClientBox.Right = ClientBox.Left + wRect.right - wRect.left;
 			ClientBox.Top = ParentBox.Top + (ParentBox.Bottom - ParentBox.Top - wRect.bottom + wRect.top) / 2;
 			ClientBox.Bottom = ClientBox.Top + wRect.bottom - wRect.top;
-			HWND Handle = CreateWindowExW(ExStyle, L"engine_runtime_main_class", props->Title, Style,
+			HWND Handle = CreateWindowExW(ExStyle, ENGINE_MAIN_WINDOW_CLASS, props->Title, Style,
 				ClientBox.Left, ClientBox.Top, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top,
 				ParentStation ? static_cast<NativeStation *>(ParentStation)->GetHandle() : 0,
 				0, 0, 0);
@@ -341,7 +344,7 @@ namespace Engine
 			ClientBox.Right = ClientBox.Left + wRect.right;
 			ClientBox.Top = ClientBox.Top + wRect.top;
 			ClientBox.Bottom = ClientBox.Top + wRect.bottom;
-			HWND Handle = CreateWindowExW(ExStyle, L"engine_runtime_popup_class", L"", Style,
+			HWND Handle = CreateWindowExW(ExStyle, ENGINE_POPUP_WINDOW_CLASS, L"", Style,
 				ClientBox.Left, ClientBox.Top, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top,
 				0, 0, 0, 0);
 			NativeStation::DesktopWindowFactory Factory(Template);
@@ -475,6 +478,37 @@ namespace Engine
 				return result;
 			}
 			return 0;
+		}
+		void SetApplicationIcon(Codec::Image * icon)
+		{
+			InitializeWindowSystem();
+			auto icon_sm_frame = icon->GetFrameBestSizeFit(GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON));
+			auto icon_nm_frame = icon->GetFrameBestSizeFit(GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON));
+			auto icon_sm_handle = UI::CreateWinIcon(icon_sm_frame);
+			auto icon_nm_handle = UI::CreateWinIcon(icon_nm_frame);
+			auto wnd = FindWindowExW(0, 0, ENGINE_MAIN_WINDOW_CLASS, 0);
+			HICON icon_sm_old = icon_sm_handle;
+			HICON icon_nm_old = icon_nm_handle;
+			if (wnd) {
+				icon_sm_old = (HICON) GetClassLongPtrW(wnd, GCLP_HICONSM);
+				icon_nm_old = (HICON) GetClassLongPtrW(wnd, GCLP_HICON);
+				SetClassLongPtrW(wnd, GCLP_HICONSM, (LONG_PTR) icon_sm_handle);
+				SetClassLongPtrW(wnd, GCLP_HICON, (LONG_PTR) icon_nm_handle);
+			} else {
+				WNDCLASSEXW cls;
+				cls.cbSize = sizeof(cls);
+				if (GetClassInfoExW(GetModuleHandleW(0), ENGINE_MAIN_WINDOW_CLASS, &cls)) {
+					if (UnregisterClassW(ENGINE_MAIN_WINDOW_CLASS, GetModuleHandleW(0))) {
+						icon_sm_old = cls.hIconSm;
+						icon_nm_old = cls.hIcon;
+						cls.hIconSm = icon_sm_handle;
+						cls.hIcon = icon_nm_handle;
+						RegisterClassExW(&cls);
+					}
+				}
+			}
+			if (icon_sm_old) DestroyIcon(icon_sm_old);
+			if (icon_nm_old) DestroyIcon(icon_nm_old);
 		}
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{

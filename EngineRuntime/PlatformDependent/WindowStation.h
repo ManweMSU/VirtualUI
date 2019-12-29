@@ -10,6 +10,7 @@ namespace Engine
 {
 	namespace UI
 	{
+		HICON CreateWinIcon(Codec::Frame * Source);
 		class HandleWindowStation : public WindowStation
 		{
 		protected:

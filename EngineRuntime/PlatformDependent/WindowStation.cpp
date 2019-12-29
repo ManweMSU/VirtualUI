@@ -260,5 +260,34 @@ namespace Engine
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);
 		}
+		HICON CreateWinIcon(Codec::Frame * Source)
+		{
+			SafePointer<Codec::Frame> Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+			BITMAPINFOHEADER hdr;
+			Array<uint32> Fake(0x100);
+			Fake.SetLength(Conv->GetWidth() * Conv->GetHeight());
+			ZeroMemory(Fake.GetBuffer(), 4 * Conv->GetWidth() * Conv->GetHeight());
+			ZeroMemory(&hdr, sizeof(hdr));
+			hdr.biSize = sizeof(hdr);
+			hdr.biWidth = Conv->GetWidth();
+			hdr.biHeight = Conv->GetHeight();
+			hdr.biBitCount = 32;
+			hdr.biPlanes = 1;
+			hdr.biSizeImage = 4 * Conv->GetWidth() * Conv->GetHeight();
+			HDC DC = GetDC(0);
+			HBITMAP ColorMap = CreateDIBitmap(DC, &hdr, CBM_INIT, Conv->GetData(), reinterpret_cast<LPBITMAPINFO>(&hdr), DIB_RGB_COLORS);
+			HBITMAP MaskMap = CreateDIBitmap(DC, &hdr, CBM_INIT, Fake.GetBuffer(), reinterpret_cast<LPBITMAPINFO>(&hdr), DIB_RGB_COLORS);
+			ICONINFO Icon;
+			Icon.fIcon = TRUE;
+			Icon.hbmColor = ColorMap;
+			Icon.hbmMask = MaskMap;
+			Icon.xHotspot = 0;
+			Icon.yHotspot = 0;
+			HICON IconHandle = CreateIconIndirect(&Icon);
+			DeleteObject(ColorMap);
+			DeleteObject(MaskMap);
+			ReleaseDC(0, DC);
+			return IconHandle;
+		}
 	}
 }

@@ -254,6 +254,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	SafePointer<Codec::Frame> image_frame;
 	Clipboard::GetData(image_frame.InnerRef());
 	SafePointer<UI::ITexture> image = image_frame ? Device->LoadTexture(image_frame) : 0;
+	Codec::Image icon;
 
 	{
 		SafePointer<Codec::Frame> frame = new Codec::Frame(512, 512, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
@@ -263,6 +264,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			frame->SetPixel(x, y, UI::Color(hsv).Value);
 		}
 		Codec::EncodeFrame(stream, frame, L"PNG");
+		icon.Frames.Append(frame);
 	}
 
 	{
@@ -606,6 +608,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}
 	}
+
+	NativeWindows::SetApplicationIcon(&icon);
 
 	NativeWindows::RunMainMessageLoop();
     

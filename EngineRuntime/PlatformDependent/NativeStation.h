@@ -30,5 +30,6 @@ namespace Engine
 		void RunMainMessageLoop(void);
 		void ExitMainLoop(void);
 		Array<string> * GetFontFamilies(void);
+		void SetApplicationIcon(Codec::Image * icon);
 	}
 }
