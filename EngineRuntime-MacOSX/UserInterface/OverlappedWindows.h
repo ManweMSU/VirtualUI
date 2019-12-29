@@ -52,6 +52,8 @@ namespace Engine
 			double GetScreenScale(void);
 			void RunMessageLoop(void);
 			void ExitMessageLoop(void);
+			Array<string> * GetFontFamilies(void);
+			void SetApplicationIcon(Codec::Image * icon);
 		}
 		namespace Controls
 		{

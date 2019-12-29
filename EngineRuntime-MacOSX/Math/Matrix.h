@@ -215,5 +215,9 @@ namespace Engine
 		typedef Matrix<Real, 2, 2> Matrix2x2;
 		typedef Matrix<Real, 3, 3> Matrix3x3;
 		typedef Matrix<Real, 4, 4> Matrix4x4;
+
+		typedef Matrix<ShortReal, 2, 2> Matrix2x2f;
+		typedef Matrix<ShortReal, 3, 3> Matrix3x3f;
+		typedef Matrix<ShortReal, 4, 4> Matrix4x4f;
 	}
 }

@@ -16,6 +16,7 @@ namespace Engine
 {
 	namespace CocoaProcess
 	{
+		void Handler(NSTask * task) {}
 		class Process : public Engine::Process
 		{
 			NSTask * process;
@@ -45,16 +46,19 @@ namespace Engine
 			}
 		}
 		NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::NormalizePath(image)));
-		@try {
-			@autoreleasepool {
-				NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
-				[task retain];
-				[app release];
-				[argv release];
-				return new CocoaProcess::Process(task);
+		@autoreleasepool {
+			NSURL * url = [NSURL fileURLWithPath: app];
+			if (url) {
+				NSError * error = 0;
+				NSTask * task = [NSTask launchedTaskWithExecutableURL: url arguments: argv error: &error terminationHandler: 0];
+				if (task) {
+					[task retain];
+					[app release];
+					[argv release];
+					return new CocoaProcess::Process(task);
+				}
 			}
 		}
-		@catch (NSException * e) {}
 		[app release];
 		[argv release];
 		return 0;
@@ -85,16 +89,19 @@ namespace Engine
 		}
 		for (int i = 0; i < search_list.Length(); i++) {
 			NSString * app = Cocoa::CocoaString(IO::NormalizePath(search_list[i]));
-			@try {
-				@autoreleasepool {
-					NSTask * task = [NSTask launchedTaskWithLaunchPath: app arguments: argv];
-					[task retain];
-					[app release];
-					[argv release];
-					return new CocoaProcess::Process(task);
+			@autoreleasepool {
+				NSURL * url = [NSURL fileURLWithPath: app];
+				if (url) {
+					NSError * error = 0;
+					NSTask * task = [NSTask launchedTaskWithExecutableURL: url arguments: argv error: &error terminationHandler: 0];
+					if (task) {
+						[task retain];
+						[app release];
+						[argv release];
+						return new CocoaProcess::Process(task);
+					}
 				}
 			}
-			@catch (NSException * e) {}
 			[app release];
 		}
 		[argv release];

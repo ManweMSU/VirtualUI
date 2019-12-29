@@ -575,6 +575,8 @@ namespace Engine
 			double GetScreenScale(void) { return NativeWindows::GetScreenScale(); }
 			void RunMessageLoop(void) { NativeWindows::RunMainMessageLoop(); }
 			void ExitMessageLoop(void) { NativeWindows::ExitMainLoop(); }
+			Array<string>* GetFontFamilies(void) { return NativeWindows::GetFontFamilies(); }
+			void SetApplicationIcon(Codec::Image * icon) { NativeWindows::SetApplicationIcon(icon); }
 		}
 	}
 }

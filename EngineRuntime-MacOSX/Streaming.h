@@ -85,14 +85,24 @@ namespace Engine
 			virtual string ToString(void) const override;
 		};
 
-		class ITextWriter : public Object
+		class ITextWriter : virtual public Object
 		{
 		public:
 			virtual void Write(const string & text) const = 0;
 			virtual void WriteLine(const string & text) const = 0;
 			virtual void WriteEncodingSignature(void) const = 0;
 		};
-		class TextWriter final : public ITextWriter
+		class ITextReader : virtual public Object
+		{
+		protected:
+			mutable bool eof;
+		public:
+			virtual uint32 ReadChar(void) const = 0;
+			string ReadLine(void) const;
+			string ReadAll(void) const;
+			bool EofReached(void) const;
+		};
+		class TextWriter final : virtual public ITextWriter
 		{
 			Stream * dest;
 			Encoding coding;
@@ -108,18 +118,14 @@ namespace Engine
 			TextWriter & operator << (const string & text);
 			const TextWriter & operator << (const string & text) const;
 		};
-		class TextReader final : public Object
+		class TextReader final : virtual public ITextReader
 		{
 			Stream * source;
 			mutable Encoding coding;
-			mutable bool eof;
 		public:
 			TextReader(Stream * Source);
 			TextReader(Stream * Source, Encoding encoding);
-			uint32 ReadChar(void) const;
-			string ReadLine(void) const;
-			string ReadAll(void) const;
-			bool EofReached(void) const;
+			virtual uint32 ReadChar(void) const override;
 			Encoding GetEncoding(void) const;
 			virtual ~TextReader(void) override;
 			virtual string ToString(void) const override;
@@ -127,5 +133,9 @@ namespace Engine
 			TextReader & operator >> (string & str);
 			const TextReader & operator >> (string & str) const;
 		};
+	}
+	namespace IO {
+		void CreateDirectoryTree(const string & path);
+		void RemoveEntireDirectory(const string & path);
 	}
 }

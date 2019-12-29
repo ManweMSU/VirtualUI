@@ -18,11 +18,44 @@ namespace Engine
 {
 	namespace IO
 	{
-        string FileAccessException::ToString(void) const { return L"FileAccessException"; }
+        FileAccessException::FileAccessException(uint ec) : code(ec) {}
+		FileAccessException::FileAccessException(void) : code(Error::Unknown) {}
+		string FileAccessException::ToString(void) const { return L"FileAccessException (" + string(code, HexadecimalBase, 8) + L")"; }
 		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
 		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
         string DirectoryAlreadyExistsException::ToString(void) const { return L"DirectoryAlreadyExistsException"; }
 		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
+		uint PosixErrorToEngineError(int code)
+		{
+			if (code == 0) return Error::Success;
+			else if (code == EACCES) return Error::AccessDenied;
+			else if (code == EDQUOT) return Error::NoDiskSpace;
+			else if (code == EEXIST) return Error::FileExists;
+			else if (code == EISDIR) return Error::FileExists;
+			else if (code == EMFILE) return Error::TooManyOpenFiles;
+			else if (code == ENAMETOOLONG) return Error::FileNameTooLong;
+			else if (code == ENFILE) return Error::NoDiskSpace;
+			else if (code == ENOENT) return Error::FileNotFound;
+			else if (code == ENOSPC) return Error::NoDiskSpace;
+			else if (code == ENOTDIR) return Error::PathNotFound;
+			else if (code == EOPNOTSUPP) return Error::NotImplemented;
+			else if (code == EROFS) return Error::IsReadOnly;
+			else if (code == ETXTBSY) return Error::AccessDenied;
+			else if (code == EILSEQ) return Error::BadPathName;
+			else if (code == EBADF) return Error::InvalidHandle;
+			else if (code == EINVAL) return Error::NotImplemented;
+			else if (code == ENOTEMPTY) return Error::DirectoryNotEmpty;
+			else if (code == ENOTDIR) return Error::PathNotFound;
+			else if (code == ENOTSUP) return Error::NotImplemented;
+			else if (code == EPERM) return Error::AccessDenied;
+			else if (code == EXDEV) return Error::NotSameDevice;
+			else if (code == ENOBUFS) return Error::NotEnoughMemory;
+			else if (code == ENOMEM) return Error::NotEnoughMemory;
+			else if (code == ENXIO) return Error::InvalidDevice;
+			else if (code == EFBIG) return Error::FileTooLarge;
+			else if (code == EBUSY) return Error::AccessDenied;
+			return Error::Unknown;
+		}
 		string NormalizePath(const string & path)
 		{
 			if (PathChar == L'\\') return path.Replace(L'/', L'\\');
@@ -69,7 +102,7 @@ namespace Engine
             else if (mode == TruncateExisting) flags |= O_TRUNC;
 			do {
 				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
-				if (result == -1 && errno != EINTR) throw FileAccessException();
+				if (result == -1 && errno != EINTR) throw FileAccessException(errno);
 			} while (result == -1);
             return handle(result);
 		}
@@ -92,7 +125,7 @@ namespace Engine
             else if (mode == TruncateExisting) flags |= O_TRUNC;
             do {
 				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
-				if (result == -1 && errno != EINTR) throw FileAccessException();
+				if (result == -1 && errno != EINTR) throw FileAccessException(errno);
 			} while (result == -1);
 			if (delete_on_close) {
 				unlink(reinterpret_cast<char *>(Path->GetBuffer()));
@@ -102,7 +135,7 @@ namespace Engine
 		void CreatePipe(handle * pipe_in, handle * pipe_out)
         {
             int result[2];
-            if (pipe(result) == -1) throw Exception();
+            if (pipe(result) == -1) throw FileAccessException(errno);
             *pipe_in = reinterpret_cast<handle>(result[1]);
             *pipe_out = reinterpret_cast<handle>(result[0]);
         }
@@ -115,7 +148,7 @@ namespace Engine
 		handle CloneHandle(handle file)
 		{
 			int new_file = dup(reinterpret_cast<intptr>(file));
-			if (new_file == -1) throw FileAccessException();
+			if (new_file == -1) throw FileAccessException(errno);
 			return handle(new_file);
 		}
 		void CloseFile(handle file) {
@@ -126,20 +159,20 @@ namespace Engine
 			int io;
 			do {
 				io = fsync(reinterpret_cast<intptr>(file));
-				if (io == -1 && errno != EINTR) throw FileAccessException();
+				if (io == -1 && errno != EINTR) throw FileAccessException(errno);
 			} while (io == -1);
 		}
 		uint64 GetFileSize(handle file)
 		{
             struct stat64 info;
-            if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException(errno);
             return info.st_size;
 		}
 		void MoveFile(const string & from, const string & to)
         {
             SafePointer<Array<uint8>> From = NormalizePath(from).EncodeSequence(Encoding::UTF8, true);
             SafePointer<Array<uint8>> To = NormalizePath(to).EncodeSequence(Encoding::UTF8, true);
-            if (rename(reinterpret_cast<char *>(From->GetBuffer()), reinterpret_cast<char *>(To->GetBuffer())) == -1) throw FileAccessException();
+            if (rename(reinterpret_cast<char *>(From->GetBuffer()), reinterpret_cast<char *>(To->GetBuffer())) == -1) throw FileAccessException(errno);
         }
 		bool FileExists(const string & path)
 		{
@@ -154,7 +187,7 @@ namespace Engine
 		{
 			do {
 				auto Read = read(reinterpret_cast<intptr>(file), to, amount);
-				if (Read == -1 && errno != EINTR) throw FileAccessException();
+				if (Read == -1 && errno != EINTR) throw FileAccessException(errno);
 				if (Read < amount) throw FileReadEndOfFileException(Read);
 				else if (Read == amount) return;
 			} while (true);
@@ -163,7 +196,7 @@ namespace Engine
 		{
 			do {
 				auto Written = write(reinterpret_cast<intptr>(file), data, amount);
-				if ((Written == -1 && errno != EINTR) || Written != amount) throw FileAccessException();
+				if ((Written == -1 && errno != EINTR) || Written != amount) throw FileAccessException(errno);
 				else if (Written == amount) return;
 			} while (true);
 		}
@@ -173,21 +206,21 @@ namespace Engine
             if (origin == Current) org = SEEK_CUR;
             else if (origin == End) org = SEEK_END;
             auto result = lseek(reinterpret_cast<intptr>(file), position, org);
-            if (result == -1) throw FileAccessException();
+            if (result == -1) throw FileAccessException(errno);
 			return result;
 		}
 		void SetFileSize(handle file, uint64 size)
 		{
 			do {
 				int io = ftruncate(reinterpret_cast<intptr>(file), size);
-				if (io == -1 && errno != EINTR) throw FileAccessException();
+				if (io == -1 && errno != EINTR) throw FileAccessException(errno);
 				else if (io != -1) return;
 			} while (true);
 		}
         void RemoveFile(const string & path)
         {
             SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
-            if (unlink(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException();
+            if (unlink(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException(errno);
         }
         void SetCurrentDirectory(const string & path)
         {
@@ -195,7 +228,7 @@ namespace Engine
 			FullPath->SetLength(PATH_MAX);
             SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
 			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
-            if (chdir(reinterpret_cast<char *>(FullPath->GetBuffer())) != 0) throw Exception();
+            if (chdir(reinterpret_cast<char *>(FullPath->GetBuffer())) != 0) throw FileAccessException(errno);
         }
 		string GetCurrentDirectory(void)
         {
@@ -205,7 +238,7 @@ namespace Engine
                 if (getcwd(reinterpret_cast<char *>(Path->GetBuffer()), Path->Length())) break;
                 if (errno == ENOENT) throw Exception();
                 else if (errno == ENOMEM) throw OutOfMemoryException();
-                else if (errno != ERANGE) throw Exception();
+                else if (errno != ERANGE) throw FileAccessException(errno);
                 Path->SetLength(Path->Length() * 2);
             } while(true);
             return string(Path->GetBuffer(), -1, Encoding::UTF8);
@@ -217,20 +250,20 @@ namespace Engine
                 if (errno == EEXIST) {
                     throw DirectoryAlreadyExistsException();
                 }
-                throw FileAccessException();
+                throw FileAccessException(errno);
             }
 		}
 		void RemoveDirectory(const string & path)
 		{
             SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
-            if (rmdir(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException();
+            if (rmdir(reinterpret_cast<char *>(Path->GetBuffer())) == -1) throw FileAccessException(errno);
 		}
 		void CreateSymbolicLink(const string & at, const string & to)
 		{
 			SafePointer< Array<uint8> > At = NormalizePath(at).EncodeSequence(Encoding::UTF8, true);
 			SafePointer< Array<uint8> > To = NormalizePath(to).EncodeSequence(Encoding::UTF8, true);
 			if (symlink(reinterpret_cast<char *>(To->GetBuffer()), reinterpret_cast<char *>(At->GetBuffer())) == -1) {
-				throw FileAccessException();
+				throw FileAccessException(errno);
 			}
 		}
 		string GetExecutablePath(void)
@@ -355,43 +388,43 @@ namespace Engine
 			Time GetFileCreationTime(handle file)
 			{
 				struct stat64 info;
-            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException(errno);
             	return Time::FromUnixTime(info.st_birthtimespec.tv_sec);
 			}
 			Time GetFileAccessTime(handle file)
 			{
 				struct stat64 info;
-            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException(errno);
             	return Time::FromUnixTime(info.st_atimespec.tv_sec);
 			}
 			Time GetFileAlterTime(handle file)
 			{
 				struct stat64 info;
-            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException(errno);
             	return Time::FromUnixTime(info.st_mtimespec.tv_sec);
 			}
 			void SetFileCreationTime(handle file, Time time) {}
 			void SetFileAccessTime(handle file, Time time)
 			{
 				struct stat64 info;
-            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException(errno);
 				struct timeval times[2];
 				times[0].tv_sec = time.ToUnixTime();
 				times[0].tv_usec = 0;
 				times[1].tv_sec = info.st_mtimespec.tv_sec;
 				times[1].tv_usec = info.st_mtimespec.tv_nsec / 1000;
-				if (futimes(reinterpret_cast<intptr>(file), times) == -1) throw FileAccessException();
+				if (futimes(reinterpret_cast<intptr>(file), times) == -1) throw FileAccessException(errno);
 			}
 			void SetFileAlterTime(handle file, Time time)
 			{
 				struct stat64 info;
-            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException();
+            	if (fstat64(reinterpret_cast<intptr>(file), &info) == -1) throw FileAccessException(errno);
 				struct timeval times[2];
 				times[0].tv_sec = info.st_atimespec.tv_sec;
 				times[0].tv_usec = info.st_atimespec.tv_nsec / 1000;
 				times[1].tv_sec = time.ToUnixTime();
 				times[1].tv_usec = 0;
-				if (futimes(reinterpret_cast<intptr>(file), times) == -1) throw FileAccessException();
+				if (futimes(reinterpret_cast<intptr>(file), times) == -1) throw FileAccessException(errno);
 			}
 		}
 	}

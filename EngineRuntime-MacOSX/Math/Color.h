@@ -32,5 +32,21 @@ namespace Engine
 			friend Color operator * (const Color & a, const Color & b) noexcept;
 			friend Color operator / (const Color & a, double b) noexcept;
 		};
+		class ColorHSV
+		{
+		public:
+			double h, s, v, a;
+			ColorHSV(void) noexcept;
+			ColorHSV(double _h, double _s, double _v, double _a = 1.0) noexcept;
+			ColorHSV(const Color & c) noexcept;
+			ColorHSV(UI::Color c) noexcept;
+			operator UI::Color(void) const noexcept;
+			operator Color(void) const noexcept;
+			friend bool operator == (const ColorHSV & a, const ColorHSV & b) noexcept;
+			friend bool operator != (const ColorHSV & a, const ColorHSV & b) noexcept;
+			ColorHSV Rotate(double shift) const noexcept;
+			void ClampChannels(void) noexcept;
+		};
+		typedef ColorHSV ColorHSB;
 	}
 }

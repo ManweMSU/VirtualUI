@@ -135,6 +135,7 @@ int Main(void)
 {
     //SafePointer<Streaming::FileStream> ConsoleOutStream = new Streaming::FileStream(IO::GetStandardOutput());
     //Streaming::TextWriter Console(ConsoleOutStream);
+
     IO::Console Console;
     SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandardInput());
     Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
@@ -201,7 +202,16 @@ int Main(void)
         SafePointer<Codec::Frame> frame = rd->GetRenderTargetAsFrame();
         Console << L"Set clipboard data : " << Clipboard::SetData(frame) << IO::NewLineChar;
         rd->Release();
+		Codec::Image icon;
+		icon.Frames.Append(frame);
+		UI::Windows::SetApplicationIcon(&icon);
     }
+	{
+		auto fonts = UI::Windows::GetFontFamilies();
+		for (int i = 0; i < fonts->Length(); i++) {
+			Console.WriteLine(fonts->ElementAt(i));
+		}
+	}
     // SafePointer<Codec::Frame> cframe;
     // if (Clipboard::GetData(cframe.InnerRef())) {
     //     tex = loader->LoadTexture(cframe);
@@ -211,6 +221,7 @@ int Main(void)
     Console << L"Text available : " << Clipboard::IsFormatAvailable(Clipboard::Format::Text) << IO::NewLineChar;
     Console << L"Image available: " << Clipboard::IsFormatAvailable(Clipboard::Format::Image) << IO::NewLineChar;
 	Console << IO::GetCurrentDirectory() << IO::NewLineChar;
+	Console << IO::ExpandPath(L"/pidor//pidor") << IO::NewLineChar;
 
     MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
         MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::DarkTheme);

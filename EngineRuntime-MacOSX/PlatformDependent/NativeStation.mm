@@ -1420,6 +1420,26 @@ namespace Engine
         {
             return static_cast<NativeStation *>(station)->GetWindow();
         }
+		Array<string> * GetFontFamilies(void)
+		{
+			NSArray * fonts = (NSArray *) CTFontManagerCopyAvailableFontFamilyNames();
+			SafePointer< Array<string> > result = new Array<string>([fonts count]);
+			for (int i = 0; i < [fonts count]; i++) result->Append(Cocoa::EngineString([fonts objectAtIndex: i]));
+			[fonts release];
+			result->Retain();
+			return result;
+		}
+		void SetApplicationIcon(Codec::Image * icon)
+		{
+			InitializeWindowSystem();
+			NSScreen * screen = [NSScreen mainScreen];
+            double scale = [screen backingScaleFactor];
+			NSSize icon_size = [[NSApp dockTile] size];
+			auto frame = icon->GetFrameBestSizeFit(icon_size.width * scale, icon_size.height * scale);
+			NSImage * image = Cocoa::CocoaImage(frame);
+			[NSApp setApplicationIconImage: image];
+			[image release];
+		}
 	}
 }
 

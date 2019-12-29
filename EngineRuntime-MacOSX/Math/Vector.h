@@ -31,6 +31,7 @@ namespace Engine
 			union {
 				F c[4];
 				struct { F x, y, z, w; };
+				struct { F r, g, b, a; };
 			};
 			Vector(void) noexcept {};
 			Vector(const F * source) noexcept { MemoryCopy(this, source, sizeof(*this)); };
@@ -109,17 +110,24 @@ namespace Engine
 		template <class F, int D> Vector<F, D> operator * (const Vector<F, D> & a, F b) noexcept { Vector<F, D> result; for (int i = 0; i < D; i++) result.c[i] = a.c[i] * b; return result; }
 		template <class F, int D> Vector<F, D> operator * (F b, const Vector<F, D> & a) noexcept { Vector<F, D> result; for (int i = 0; i < D; i++) result.c[i] = a.c[i] * b; return result; }
 		template <class F, int D> Vector<F, D> operator / (const Vector<F, D> & a, F b) noexcept { Vector<F, D> result; for (int i = 0; i < D; i++) result.c[i] = a.c[i] / b; return result; }
+		template <int D> ShortReal length(const Vector<ShortReal, D> & a) noexcept { ShortReal s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return sqrt(s); }
 		template <int D> Real length(const Vector<Real, D> & a) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return sqrt(s); }
 		template <int D> Real length(const Vector<Complex, D> & a) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += (a.c[i] * conjugate(a.c[i])).re; return sqrt(s); }
 		template <class F, int D> Vector<F, D> normalize(const Vector<F, D> & a) noexcept { return a / length(a); }
+		template <int D> ShortReal dot(const Vector<ShortReal, D> & a, const Vector<ShortReal, D> & b) noexcept { ShortReal s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * b.c[i]; return s; }
 		template <int D> Real dot(const Vector<Real, D> & a, const Vector<Real, D> & b) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * b.c[i]; return s; }
 		template <int D> Complex dot(const Vector<Complex, D> & a, const Vector<Complex, D> & b) noexcept { Complex s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * conjugate(b.c[i]); return s; }
 		template <class F, int D> F operator * (const Vector<F, D> & a, const Vector<F, D> & b) noexcept { return dot(a, b); }
 		Vector<Real, 3> cross(const Vector<Real, 3> & a, const Vector<Real, 3> & b) noexcept;
+		Vector<ShortReal, 3> cross(const Vector<ShortReal, 3> & a, const Vector<ShortReal, 3> & b) noexcept;
 
 		typedef Vector<Real, 4> Vector4;
 		typedef Vector<Real, 3> Vector3;
 		typedef Vector<Real, 2> Vector2;
+
+		typedef Vector<ShortReal, 4> Vector4f;
+		typedef Vector<ShortReal, 3> Vector3f;
+		typedef Vector<ShortReal, 2> Vector2f;
 
 		template <class F, int D> void ZeroVector(Vector<F, D> & a) { ZeroMemory(&a, sizeof(a)); }
 	}

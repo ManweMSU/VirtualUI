@@ -221,7 +221,7 @@ namespace Engine
 							SafePointer<Frame> Conv = image->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::BottomUp));
 							Array<uint8> Mask(0x100);
 							uint32 mask_scanline = ((Conv->GetWidth() + 31) / 32) * 4;
-							for (int s = 0; s < mask_scanline * Conv->GetHeight(); s++) Mask << uint8(0);
+							for (uint s = 0; s < mask_scanline * Conv->GetHeight(); s++) Mask << uint8(0);
 							WindowsBitmapInfoHeader bhdr;
 							ZeroMemory(&bhdr, sizeof(bhdr));
 							bhdr.struct_size = sizeof(bhdr);

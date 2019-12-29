@@ -94,7 +94,7 @@ namespace Engine
 		{
 			if (length > uint32(data.Length() - pointer)) {
 				if (length > 0x7FFFFFFF) throw InvalidArgumentException();
-				if (uint32(pointer) + length > 0x7FFFFFFF) throw FileAccessException();
+				if (uint32(pointer) + length > 0x7FFFFFFF) throw FileAccessException(Error::FileTooLarge);
 				data.SetLength(pointer + int(length));
 			}
 			MemoryCopy(data.GetBuffer() + pointer, _data, length);
@@ -162,7 +162,7 @@ namespace Engine
 			} catch (...) { inner->Seek(pos, Begin); throw; }
 			pointer += length;
 		}
-		void FragmentStream::Write(const void * data, uint32 length) { throw FileAccessException(); }
+		void FragmentStream::Write(const void * data, uint32 length) { throw FileAccessException(Error::IsReadOnly); }
 		int64 FragmentStream::Seek(int64 position, SeekOrigin origin)
 		{
 			int64 newpos = position;
@@ -173,7 +173,7 @@ namespace Engine
 			return pointer;
 		}
 		uint64 FragmentStream::Length(void) { return end - begin; }
-		void FragmentStream::SetLength(uint64 length) { throw FileAccessException(); }
+		void FragmentStream::SetLength(uint64 length) { throw FileAccessException(Error::IsReadOnly); }
 		void FragmentStream::Flush(void) {}
 		FragmentStream::~FragmentStream(void) { inner->Release(); }
 		string FragmentStream::ToString(void) const { return L"FragmentStream"; }
@@ -264,7 +264,7 @@ namespace Engine
 			}
 			catch (FileReadEndOfFileException &) { eof = true; return 0xFFFFFFFF; }
 		}
-		string TextReader::ReadLine(void) const
+		string ITextReader::ReadLine(void) const
 		{
 			DynamicString result;
 			uint32 chr;
@@ -276,7 +276,7 @@ namespace Engine
 			} while (chr != 0xFFFFFFFF && chr != L'\n');
 			return result.ToString();
 		}
-		string TextReader::ReadAll(void) const
+		string ITextReader::ReadAll(void) const
 		{
 			DynamicString result;
 			uint32 chr;
@@ -288,11 +288,35 @@ namespace Engine
 			} while (chr != 0xFFFFFFFF);
 			return result.ToString();
 		}
-		bool TextReader::EofReached(void) const { return eof; }
+		bool ITextReader::EofReached(void) const { return eof; }
 		Encoding TextReader::GetEncoding(void) const { return coding; }
 		TextReader::~TextReader(void) { source->Release(); }
 		string TextReader::ToString(void) const { return L"TextReader"; }
 		TextReader & TextReader::operator >> (string & str) { str = ReadLine(); return *this; }
 		const TextReader & TextReader::operator >> (string & str) const { str = ReadLine(); return *this; }
+	}
+	namespace IO {
+		void CreateDirectoryTree(const string & path)
+		{
+			string full = ExpandPath(path);
+			for (int i = 0; i < full.Length(); i++) {
+				if (full[i] == L'/' || full[i] == L'\\') {
+					try { CreateDirectory(full.Fragment(0, i)); } catch (...) {}
+				}
+			}
+			try {
+				CreateDirectory(path);
+			}
+			catch (DirectoryAlreadyExistsException &) {}
+		}
+		void RemoveEntireDirectory(const string & path)
+		{
+			string full = ExpandPath(path);
+			SafePointer< Array<string> > files = Search::GetFiles(full + L"\\*");
+			for (int i = 0; i < files->Length(); i++) RemoveFile(full + L"\\" + files->ElementAt(i));
+			files = Search::GetDirectories(full + L"\\*");
+			for (int i = 0; i < files->Length(); i++) RemoveEntireDirectory(full + L"\\" + files->ElementAt(i));
+			RemoveDirectory(full);
+		}
 	}
 }

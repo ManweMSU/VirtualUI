@@ -6,9 +6,10 @@ namespace Engine
 {
     namespace IO
     {
-        Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput())), file(GetStandardOutput()) {}
-        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output) {}
-        Console::~Console(void) {}
+        Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput())), file(GetStandardOutput()), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput()) {}
+        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput()) {}
+        Console::Console(handle output, handle input) : writer(new Streaming::FileStream(output)), file(output), reader(new Streaming::FileStream(input), Encoding::UTF8), file_in(input) {}
+		Console::~Console(void) {}
         void Console::Write(const string & text) const { writer.Write(text); }
         void Console::WriteLine(const string & text) const { writer.WriteLine(text); }
         void Console::WriteEncodingSignature(void) const { writer.WriteEncodingSignature(); }
@@ -88,8 +89,11 @@ namespace Engine
 				Write(val);
 			}
 		}
+		uint32 Console::ReadChar(void) const { return reader.ReadChar(); }
 
         Console & Console::operator << (const string & text) { writer << text; return *this; }
         const Console & Console::operator << (const string & text) const { writer << text; return *this; }
+		Console & Console::operator >> (string & str) { str = ReadLine(); return *this; }
+		const Console & Console::operator >> (string & str) const { str = ReadLine(); return *this; }
     }
 }
