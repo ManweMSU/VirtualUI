@@ -54,11 +54,6 @@ namespace Engine
             void SetTitle(const string & title);
 
 			virtual uint32 ReadChar(void) const override;
-
-			Console & operator << (const string & text);
-			const Console & operator << (const string & text) const;
-			Console & operator >> (string & str);
-			const Console & operator >> (string & str) const;
         };
     }
 }

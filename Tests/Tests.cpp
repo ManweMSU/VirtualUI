@@ -266,6 +266,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		Codec::EncodeFrame(stream, frame, L"PNG");
 		icon.Frames.Append(frame);
 	}
+	NativeWindows::SetApplicationIcon(&icon);
 
 	{
 		{
@@ -608,8 +609,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}
 	}
-
-	NativeWindows::SetApplicationIcon(&icon);
 
 	NativeWindows::RunMainMessageLoop();
     

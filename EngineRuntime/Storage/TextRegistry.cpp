@@ -86,7 +86,7 @@ namespace Engine
 			EncodeRegistryNodeToText(registry, result, L"", spelling);
 			return result.ToString();
 		}
-		void RegistryToText(Registry * registry, Streaming::TextWriter * output)
+		void RegistryToText(Registry * registry, Streaming::ITextWriter * output)
 		{
 			Syntax::Spelling spelling;
 			Storage::CreateTextRegistrySpelling(spelling);
@@ -210,7 +210,7 @@ namespace Engine
 			registry->Retain();
 			return registry;
 		}
-		Registry * CompileTextRegistry(Streaming::TextReader * input) { return CompileTextRegistry(input->ReadAll()); }
+		Registry * CompileTextRegistry(Streaming::ITextReader * input) { return CompileTextRegistry(input->ReadAll()); }
 		Registry * CompileTextRegistry(Streaming::Stream * input)
 		{
 			Streaming::TextReader reader(input);

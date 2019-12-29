@@ -158,9 +158,5 @@ namespace Engine
 				}
 			} else throw FileAccessException(Error::NotImplemented);
 		}
-		Console & Console::operator << (const string & text) { Write(text); return *this; }
-        const Console & Console::operator << (const string & text) const { Write(text); return *this; }
-		Console & Console::operator >> (string & str) { str = ReadLine(); return *this; }
-		const Console & Console::operator >> (string & str) const { str = ReadLine(); return *this; }
     }
 }
