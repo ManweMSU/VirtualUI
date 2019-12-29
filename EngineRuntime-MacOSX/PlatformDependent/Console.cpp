@@ -90,10 +90,5 @@ namespace Engine
 			}
 		}
 		uint32 Console::ReadChar(void) const { return reader.ReadChar(); }
-
-        Console & Console::operator << (const string & text) { writer << text; return *this; }
-        const Console & Console::operator << (const string & text) const { writer << text; return *this; }
-		Console & Console::operator >> (string & str) { str = ReadLine(); return *this; }
-		const Console & Console::operator >> (string & str) const { str = ReadLine(); return *this; }
     }
 }

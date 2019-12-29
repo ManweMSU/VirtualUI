@@ -138,8 +138,8 @@ namespace Engine
 		}
 		TextWriter::~TextWriter(void) { dest->Release(); }
 		string TextWriter::ToString(void) const { return L"TextWriter"; }
-		TextWriter & TextWriter::operator<<(const string & text) { Write(text); return *this; }
-		const TextWriter & TextWriter::operator<<(const string & text) const { Write(text); return *this; }
+		ITextWriter & ITextWriter::operator<<(const string & text) { Write(text); return *this; }
+		const ITextWriter & ITextWriter::operator<<(const string & text) const { Write(text); return *this; }
 		FragmentStream::FragmentStream(Stream * Inner, uint64 From, uint64 Length) : inner(Inner), begin(From), end(From + Length), pointer(0) { inner->Retain(); }
 		void FragmentStream::Read(void * buffer, uint32 length)
 		{
@@ -292,8 +292,8 @@ namespace Engine
 		Encoding TextReader::GetEncoding(void) const { return coding; }
 		TextReader::~TextReader(void) { source->Release(); }
 		string TextReader::ToString(void) const { return L"TextReader"; }
-		TextReader & TextReader::operator >> (string & str) { str = ReadLine(); return *this; }
-		const TextReader & TextReader::operator >> (string & str) const { str = ReadLine(); return *this; }
+		ITextReader & ITextReader::operator >> (string & str) { str = ReadLine(); return *this; }
+		const ITextReader & ITextReader::operator >> (string & str) const { str = ReadLine(); return *this; }
 	}
 	namespace IO {
 		void CreateDirectoryTree(const string & path)

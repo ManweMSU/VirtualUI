@@ -91,6 +91,9 @@ namespace Engine
 			virtual void Write(const string & text) const = 0;
 			virtual void WriteLine(const string & text) const = 0;
 			virtual void WriteEncodingSignature(void) const = 0;
+
+			ITextWriter & operator << (const string& text);
+			const ITextWriter & operator << (const string& text) const;
 		};
 		class ITextReader : virtual public Object
 		{
@@ -101,6 +104,9 @@ namespace Engine
 			string ReadLine(void) const;
 			string ReadAll(void) const;
 			bool EofReached(void) const;
+
+			ITextReader & operator >> (string& str);
+			const ITextReader & operator >> (string& str) const;
 		};
 		class TextWriter final : virtual public ITextWriter
 		{
@@ -114,9 +120,6 @@ namespace Engine
 			virtual void WriteLine(const string & text) const override;
 			virtual void WriteEncodingSignature(void) const override;
 			virtual string ToString(void) const override;
-
-			TextWriter & operator << (const string & text);
-			const TextWriter & operator << (const string & text) const;
 		};
 		class TextReader final : virtual public ITextReader
 		{
@@ -129,9 +132,6 @@ namespace Engine
 			Encoding GetEncoding(void) const;
 			virtual ~TextReader(void) override;
 			virtual string ToString(void) const override;
-
-			TextReader & operator >> (string & str);
-			const TextReader & operator >> (string & str) const;
 		};
 	}
 	namespace IO {
