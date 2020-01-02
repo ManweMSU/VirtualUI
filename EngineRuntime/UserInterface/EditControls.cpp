@@ -32,7 +32,7 @@ namespace Engine
 			void Edit::Render(const Box & at)
 			{
 				auto device = GetStation()->GetRenderingDevice();
-				if (_caret_width < 0) _caret_width = GetStation()->GetVisualStyles().CaretWidth;
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
 				Shape ** back = 0;
 				Template::Shape * source = 0;
 				UI::Color text_color;
@@ -116,11 +116,18 @@ namespace Engine
 				}
 				if (focused) {
 					if (!_inversion) {
-						_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+						if (CaretColor.a) {
+							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_use_color_caret = true;
+						} else {
+							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_use_color_caret = false;
+						}
 					}
 					Box caret_box = Box(at.Left + Border + LeftSpace + caret, at.Top + Border,
 						at.Left + Border + LeftSpace + caret + _caret_width, at.Bottom - Border);
-					device->ApplyInversion(_inversion, caret_box, true);
+					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret_box); }
+					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo *>(_inversion.Inner()), caret_box, true);
 				}
 				device->PopClip();
 			}
@@ -267,7 +274,7 @@ namespace Engine
 					ScrollToCaret();
 				}
 			}
-			void Edit::KeyDown(int key_code)
+			bool Edit::KeyDown(int key_code)
 			{
 				if (key_code == KeyCodes::Back && !ReadOnly && (_cp != _sp || _cp > 0)) {
 					if (_save) {
@@ -277,6 +284,7 @@ namespace Engine
 					if (_cp == _sp) _cp = _sp - 1;
 					Print(L"");
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Delete && !ReadOnly && (_cp != _sp || _cp < _text.Length())) {
 					if (_save) {
 						_undo.PushCurrentVersion();
@@ -285,39 +293,46 @@ namespace Engine
 					if (_cp == _sp) _cp = _sp + 1;
 					Print(L"");
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Left && _cp > 0) {
 					_save = true;
 					_cp--;
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Right && _cp < _text.Length()) {
 					_save = true;
 					_cp++;
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Escape) {
 					_save = true;
 					_sp = _cp;
+					return true;
 				} else if (key_code == KeyCodes::Home) {
 					_save = true;
 					_cp = 0;
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::End) {
 					_save = true;
 					_cp = _text.Length();
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) &&
 					Keyboard::IsKeyPressed(KeyCodes::Control) &&
 					!Keyboard::IsKeyPressed(KeyCodes::Alternative) &&
 					!Keyboard::IsKeyPressed(KeyCodes::System)) {
-					if (key_code == KeyCodes::Z) Undo();
-					else if (key_code == KeyCodes::X) Cut();
-					else if (key_code == KeyCodes::C) Copy();
-					else if (key_code == KeyCodes::V) Paste();
-					else if (key_code == KeyCodes::Y) Redo();
+					if (key_code == KeyCodes::Z) { Undo(); return true; }
+					else if (key_code == KeyCodes::X) { Cut(); return true; }
+					else if (key_code == KeyCodes::C) { Copy(); return true; }
+					else if (key_code == KeyCodes::V) { Paste(); return true; }
+					else if (key_code == KeyCodes::Y) { Redo(); return true; }
 				}
+				return false;
 			}
 			void Edit::CharDown(uint32 ucs_code)
 			{
@@ -517,7 +532,7 @@ namespace Engine
 			void MultiLineEdit::Render(const Box & at)
 			{
 				auto device = GetStation()->GetRenderingDevice();
-				if (_caret_width < 0) _caret_width = GetStation()->GetVisualStyles().CaretWidth;
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
 				Shape ** back = 0;
 				Template::Shape * source = 0;
 				UI::Color text_color;
@@ -624,11 +639,18 @@ namespace Engine
 				}
 				if (focused && caret_y >= -_fh) {
 					if (!_inversion) {
-						_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+						if (CaretColor.a) {
+							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_use_color_caret = true;
+						} else {
+							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_use_color_caret = false;
+						}
 					}
 					Box caret_box = Box(at.Left + Border + caret_x, at.Top + Border + caret_y,
 						at.Left + Border + caret_x + _caret_width, at.Top + Border + caret_y + _fh);
-					device->ApplyInversion(_inversion, caret_box, true);
+					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret_box); }
+					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo*>(_inversion.Inner()), caret_box, true);
 				}
 				device->PopClip();
 				ParentWindow::Render(at);
@@ -839,7 +861,7 @@ namespace Engine
 			}
 			void MultiLineEdit::ScrollVertically(double delta) { _vscroll->SetScrollerPositionSilent(_vscroll->Position + int(delta * double(_vscroll->Line))); }
 			void MultiLineEdit::ScrollHorizontally(double delta) { _hscroll->SetScrollerPositionSilent(_hscroll->Position + int(delta * double(_hscroll->Line))); }
-			void MultiLineEdit::KeyDown(int key_code)
+			bool MultiLineEdit::KeyDown(int key_code)
 			{
 				if (key_code == KeyCodes::Back && !ReadOnly && (_content.cp != _content.sp || _content.cp > EditorCoord())) {
 					if (_save) {
@@ -855,6 +877,7 @@ namespace Engine
 					}
 					Print(L"");
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Delete && !ReadOnly &&
 					(_content.cp != _content.sp || _content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1))) {
 					if (_save) {
@@ -870,6 +893,7 @@ namespace Engine
 					}
 					Print(L"");
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Left && _content.cp > EditorCoord()) {
 					_save = true;
 					if (_content.cp.x > 0) {
@@ -881,6 +905,7 @@ namespace Engine
 					}
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Right && _content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1)) {
 					_save = true;
 					if (_content.cp.x < _content.lines[_content.cp.y].text.Length()) {
@@ -892,21 +917,25 @@ namespace Engine
 					}
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Escape) {
 					_save = true;
 					_content.sp = _content.cp;
+					return true;
 				} else if (key_code == KeyCodes::Home) {
 					_save = true;
 					_content.cp.x = 0;
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::End) {
 					_save = true;
 					_content.cp.x = _content.lines[_content.cp.y].text.Length();
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Up) {
 					_save = true;
 					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
@@ -915,6 +944,7 @@ namespace Engine
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Down) {
 					_save = true;
 					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
@@ -923,6 +953,7 @@ namespace Engine
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::PageUp) {
 					_save = true;
 					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
@@ -932,6 +963,7 @@ namespace Engine
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::PageDown) {
 					_save = true;
 					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
@@ -941,19 +973,22 @@ namespace Engine
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					return true;
 				} else if (key_code == KeyCodes::Return) {
 					_save = true;
 					CharDown(L'\n');
+					return true;
 				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) &&
 					Keyboard::IsKeyPressed(KeyCodes::Control) &&
 					!Keyboard::IsKeyPressed(KeyCodes::Alternative) &&
 					!Keyboard::IsKeyPressed(KeyCodes::System)) {
-					if (key_code == KeyCodes::Z) Undo();
-					else if (key_code == KeyCodes::X) Cut();
-					else if (key_code == KeyCodes::C) Copy();
-					else if (key_code == KeyCodes::V) Paste();
-					else if (key_code == KeyCodes::Y) Redo();
+					if (key_code == KeyCodes::Z) { Undo(); return true; }
+					else if (key_code == KeyCodes::X) { Cut(); return true; }
+					else if (key_code == KeyCodes::C) { Copy(); return true; }
+					else if (key_code == KeyCodes::V) { Paste(); return true; }
+					else if (key_code == KeyCodes::Y) { Redo(); return true; }
 				}
+				return false;
 			}
 			void MultiLineEdit::CharDown(uint32 ucs_code)
 			{

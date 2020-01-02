@@ -576,11 +576,45 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
 			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
 
+			auto templ = ::Template->Dialog[L"Test4"];
+			{
+				auto bookmark_ctl_props = new Template::Controls::BookmarkView;
+				bookmark_ctl_props->ControlPosition = UI::Rectangle(
+					Coordinate(0, 5.0, 0), Coordinate(0, 5.0, 0), Coordinate(0, -5.0, 1.0), Coordinate(0, -5.0, 1.0)
+				);
+				bookmark_ctl_props->Font = ::Template->Font[L"NormalFont"];
+				bookmark_ctl_props->ID = 101;
+				bookmark_ctl_props->Invisible = false;
+				bookmark_ctl_props->TabHeight = int(Zoom * 28.0);
+				bookmark_ctl_props->ViewBackground = ::Template->Application[L"WaffleFrame"];
+				bookmark_ctl_props->ViewTabNormal = ::Template->Application[L"ButtonNormal"];
+				bookmark_ctl_props->ViewTabHot = ::Template->Application[L"ButtonHot"];
+				bookmark_ctl_props->ViewTabActive = ::Template->Application[L"ButtonPressed"];
+				bookmark_ctl_props->ViewTabActiveFocused = ::Template->Application[L"ButtonFocused"];
+				SafePointer<Template::ControlTemplate> bookmark_ctl = new Template::ControlTemplate(bookmark_ctl_props);
+				templ->Children.Append(bookmark_ctl);
+				auto bookmark1 = new Template::Controls::Bookmark;
+				auto bookmark2 = new Template::Controls::Bookmark;
+				auto bookmark3 = new Template::Controls::Bookmark;
+				bookmark1->ID = 1; bookmark2->ID = 2; bookmark3->ID = 3;
+				bookmark1->Text = L"kornevgen"; bookmark2->Text = L"pidor"; bookmark3->Text = L"Tab #3";
+				bookmark1->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
+				bookmark2->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
+				bookmark3->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
+				SafePointer<Template::ControlTemplate> bookmark_o1 = new Template::ControlTemplate(bookmark1);
+				SafePointer<Template::ControlTemplate> bookmark_o2 = new Template::ControlTemplate(bookmark2);
+				SafePointer<Template::ControlTemplate> bookmark_o3 = new Template::ControlTemplate(bookmark3);
+				bookmark_ctl->Children.Append(bookmark_o1); bookmark_ctl->Children.Append(bookmark_o2); bookmark_ctl->Children.Append(bookmark_o3);
+				bookmark_o1->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[2].Children[0]);
+				bookmark_o2->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[1].Children[0].Children[1].Children[0]);
+				bookmark_o3->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[1].Children[0].Children[0].Children[0]);
+			}
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
-			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
-			auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
+			//auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
+			//auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
+			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], 0, UI::Rectangle::Invalid(), 0);
 			//w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(UI::GetSystemColor(UI::SystemColor::Theme));
@@ -589,22 +623,27 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 			w->AddDialogStandardAccelerators();
 			w2->AddDialogStandardAccelerators();
-			w5->AddDialogStandardAccelerators();
+			w3->AddDialogStandardAccelerators();
+			//w5->AddDialogStandardAccelerators();
+			w6->AddDialogStandardAccelerators();
 
+			w->FindChild(101010)->As<Controls::Edit>()->CaretWidth = 4;
+			w->FindChild(101010)->As<Controls::Edit>()->CaretColor = UI::Color(64, 64, 128);
 			w->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
-			w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
+			//w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 			w3->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
-			w4->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
+			//w4->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
 
 			w->Show(true);
 			w2->Show(true);
 			w3->Show(true);
-			w4->Show(true);
-			w5->Show(true);
+			w6->Show(true);
+			//w4->Show(true);
+			//w5->Show(true);
 
-			WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
-			WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
-			WindowsSpecific::SetWindowTransparentcy(w4, 0.7);
+			//WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
+			//WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
+			//WindowsSpecific::SetWindowTransparentcy(w4, 0.7);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
 		}

@@ -32,7 +32,7 @@ namespace Engine
 				SafePointer<Menues::Menu> _menu;
 				SafePointer<ITextRenderingInfo> _text_info;
 				SafePointer<ITextRenderingInfo> _placeholder_info;
-				SafePointer<IInversionEffectRenderingInfo> _inversion;
+				SafePointer<Object> _inversion;
 				Array<uint32> _text;
 				UndoBuffer< Array<uint32> > _undo;
 				uint32 _mask_char = L'*';
@@ -43,6 +43,7 @@ namespace Engine
 				int _caret_width = -1;
 				bool _save = true;
 				bool _deferred_scroll = false;
+				bool _use_color_caret = false;
 				IEditHook * _hook = 0;
 			public:
 				Edit(Window * Parent, WindowStation * Station);
@@ -73,7 +74,7 @@ namespace Engine
 				virtual void RightButtonDown(Point at) override;
 				virtual void RightButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void SetCursor(Point at) override;
 				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
@@ -153,7 +154,7 @@ namespace Engine
 				SafePointer<Shape> _focused_readonly;
 				SafePointer<Shape> _disabled;
 				SafePointer<Menues::Menu> _menu;
-				SafePointer<IInversionEffectRenderingInfo> _inversion;
+				SafePointer<Object> _inversion;
 				EditorContent _content;
 				ObjectArray<ITextRenderingInfo> _text_info;
 				LimitedUndoBuffer<EditorContent> _undo;
@@ -162,6 +163,7 @@ namespace Engine
 				bool _save = true;
 				bool _deferred_scroll = false;
 				bool _deferred_update = false;
+				bool _use_color_caret = false;
 				int _caret_width = -1;
 				int _fh = 1, _fw = 1;
 				IMultiLineEditHook * _hook = 0;
@@ -195,7 +197,7 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual void ScrollVertically(double delta) override;
 				virtual void ScrollHorizontally(double delta) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;

@@ -372,52 +372,54 @@ namespace Engine
 			{
 				void ConstructChildren(Window * on, Template::ControlTemplate * source)
 				{
-					for (int i = 0; i < source->Children.Length(); i++) {
-						// Group controls
-						if (source->Children[i].Properties->GetTemplateClass() == L"ControlGroup") on->GetStation()->CreateWindow<ControlGroup>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"RadioButtonGroup") on->GetStation()->CreateWindow<RadioButtonGroup>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ScrollBox") on->GetStation()->CreateWindow<ScrollBox>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalSplitBox") on->GetStation()->CreateWindow<VerticalSplitBox>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalSplitBox") on->GetStation()->CreateWindow<HorizontalSplitBox>(on, &source->Children[i]);
-						// Button controls
-						else if (source->Children[i].Properties->GetTemplateClass() == L"Button") on->GetStation()->CreateWindow<Button>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"CheckBox") on->GetStation()->CreateWindow<CheckBox>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ToolButton") on->GetStation()->CreateWindow<ToolButton>(on, &source->Children[i]);
-						// Static controls
-						else if (source->Children[i].Properties->GetTemplateClass() == L"Static") on->GetStation()->CreateWindow<Static>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ColorView") on->GetStation()->CreateWindow<ColorView>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ProgressBar") on->GetStation()->CreateWindow<ProgressBar>(on, &source->Children[i]);
-						// Scrollable controls
-						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalScrollBar") on->GetStation()->CreateWindow<VerticalScrollBar>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalScrollBar") on->GetStation()->CreateWindow<HorizontalScrollBar>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"VerticalTrackBar") on->GetStation()->CreateWindow<VerticalTrackBar>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"HorizontalTrackBar") on->GetStation()->CreateWindow<HorizontalTrackBar>(on, &source->Children[i]);
-						// Edit controls
-						else if (source->Children[i].Properties->GetTemplateClass() == L"Edit") on->GetStation()->CreateWindow<Edit>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"MultiLineEdit") on->GetStation()->CreateWindow<MultiLineEdit>(on, &source->Children[i]);
-						// List controls
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ListBox") on->GetStation()->CreateWindow<ListBox>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"TreeView") on->GetStation()->CreateWindow<TreeView>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ListView") on->GetStation()->CreateWindow<ListView>(on, &source->Children[i]);
-						// Combined controls
-						else if (source->Children[i].Properties->GetTemplateClass() == L"ComboBox") on->GetStation()->CreateWindow<ComboBox>(on, &source->Children[i]);
-						else if (source->Children[i].Properties->GetTemplateClass() == L"TextComboBox") on->GetStation()->CreateWindow<TextComboBox>(on, &source->Children[i]);
+					for (int i = 0; i < source->Children.Length(); i++) CreateChildWindow(on, &source->Children[i]);
+				}
+				Window * CreateChildWindow(Window * on, Template::ControlTemplate * child)
+				{
+					// Group controls
+					if (child->Properties->GetTemplateClass() == L"ControlGroup") return on->GetStation()->CreateWindow<ControlGroup>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"RadioButtonGroup") return on->GetStation()->CreateWindow<RadioButtonGroup>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"ScrollBox") return on->GetStation()->CreateWindow<ScrollBox>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"VerticalSplitBox") return on->GetStation()->CreateWindow<VerticalSplitBox>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"HorizontalSplitBox") return on->GetStation()->CreateWindow<HorizontalSplitBox>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"BookmarkView") return on->GetStation()->CreateWindow<BookmarkView>(on, child);
+					// Button controls
+					else if (child->Properties->GetTemplateClass() == L"Button") return on->GetStation()->CreateWindow<Button>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"CheckBox") return on->GetStation()->CreateWindow<CheckBox>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"ToolButton") return on->GetStation()->CreateWindow<ToolButton>(on, child);
+					// Static controls
+					else if (child->Properties->GetTemplateClass() == L"Static") return on->GetStation()->CreateWindow<Static>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"ColorView") return on->GetStation()->CreateWindow<ColorView>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"ProgressBar") return on->GetStation()->CreateWindow<ProgressBar>(on, child);
+					// Scrollable controls
+					else if (child->Properties->GetTemplateClass() == L"VerticalScrollBar") return on->GetStation()->CreateWindow<VerticalScrollBar>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"HorizontalScrollBar") return on->GetStation()->CreateWindow<HorizontalScrollBar>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"VerticalTrackBar") return on->GetStation()->CreateWindow<VerticalTrackBar>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"HorizontalTrackBar") return on->GetStation()->CreateWindow<HorizontalTrackBar>(on, child);
+					// Edit controls
+					else if (child->Properties->GetTemplateClass() == L"Edit") return on->GetStation()->CreateWindow<Edit>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"MultiLineEdit") return on->GetStation()->CreateWindow<MultiLineEdit>(on, child);
+					// List controls
+					else if (child->Properties->GetTemplateClass() == L"ListBox") return on->GetStation()->CreateWindow<ListBox>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"TreeView") return on->GetStation()->CreateWindow<TreeView>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"ListView") return on->GetStation()->CreateWindow<ListView>(on, child);
+					// Combined controls
+					else if (child->Properties->GetTemplateClass() == L"ComboBox") return on->GetStation()->CreateWindow<ComboBox>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"TextComboBox") return on->GetStation()->CreateWindow<TextComboBox>(on, child);
 #pragma message("REALIZE ALL CONTROLS")
-						else throw InvalidArgumentException();
+					else throw InvalidArgumentException();
 
-						/*
-						NOT IMPLEMENTED:	
+					/*
+					NOT IMPLEMENTED:
 
-						CustomControl ???
+					RichEdit
+					CustomControl ???
 
-						FUTURE CONTROLS:
+					FUTURE CONTROLS:
 
-						MenuBar
-						RichTextView
-						TabControl
-						
-						*/
-					}
+					MenuBar
+
+					*/
 				}
 			}
 		}

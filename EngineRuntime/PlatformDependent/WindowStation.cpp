@@ -172,16 +172,18 @@ namespace Engine
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
+				bool processed;
 				if (WParam == VK_SHIFT) {
-					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyDown(KeyCodes::LeftShift);
-					else KeyDown(KeyCodes::RightShift);
+					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) processed = KeyDown(KeyCodes::LeftShift);
+					else processed = KeyDown(KeyCodes::RightShift);
 				} else if (WParam == VK_CONTROL) {
-					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyDown(KeyCodes::LeftControl);
-					else KeyDown(KeyCodes::RightControl);
+					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) processed = KeyDown(KeyCodes::LeftControl);
+					else processed = KeyDown(KeyCodes::RightControl);
 				} else if (WParam == VK_MENU) {
-					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyDown(KeyCodes::LeftAlternative);
-					else KeyDown(KeyCodes::RightAlternative);
-				} else KeyDown(int32(WParam));
+					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) processed = KeyDown(KeyCodes::LeftAlternative);
+					else processed = KeyDown(KeyCodes::RightAlternative);
+				} else processed = KeyDown(int32(WParam));
+				if (processed) return 0;
 			} else if (Msg == WM_KEYUP || Msg == WM_SYSKEYUP) {
 				if (WParam == VK_SHIFT) {
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftShift);
@@ -193,6 +195,7 @@ namespace Engine
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftAlternative);
 					else KeyUp(KeyCodes::RightAlternative);
 				} else KeyUp(int32(WParam));
+				return 0;
 			} else if (Msg == WM_CHAR) {
 				if ((WParam & 0xFC00) == 0xD800) {
 					_surrogate = ((WParam & 0x3FF) << 10) + 0x10000;

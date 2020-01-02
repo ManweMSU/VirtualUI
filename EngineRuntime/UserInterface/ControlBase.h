@@ -84,7 +84,7 @@ namespace Engine
 			virtual void MouseMove(Point at);
 			virtual void ScrollVertically(double delta);
 			virtual void ScrollHorizontally(double delta);
-			virtual void KeyDown(int key_code);
+			virtual bool KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
 			virtual bool TranslateAccelerators(int key_code);
 			virtual void CharDown(uint32 ucs_code);
@@ -255,7 +255,7 @@ namespace Engine
 			virtual void MouseMove(Point at);
 			virtual void ScrollVertically(double delta);
 			virtual void ScrollHorizontally(double delta);
-			virtual void KeyDown(int key_code);
+			virtual bool KeyDown(int key_code);
 			virtual void KeyUp(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual Point GetCursorPos(void);

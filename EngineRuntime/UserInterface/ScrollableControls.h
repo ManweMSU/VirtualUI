@@ -140,7 +140,7 @@ namespace Engine
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 
 				void SetTrackerPosition(int position);
 				void SetRange(int range_min, int range_max);
@@ -181,7 +181,7 @@ namespace Engine
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 
 				void SetTrackerPosition(int position);
 				void SetRange(int range_min, int range_max);

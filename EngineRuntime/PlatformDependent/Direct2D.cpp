@@ -1045,6 +1045,7 @@ namespace Engine
 		}
 		void D2DRenderDevice::SetTimerValue(uint32 time) noexcept { AnimationTimer = time; }
 		uint32 D2DRenderDevice::GetCaretBlinkHalfTime(void) noexcept { return HalfBlinkPeriod; }
+		bool D2DRenderDevice::CaretShouldBeVisible(void) noexcept { return (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod; }
 		void D2DRenderDevice::ClearCache(void) noexcept { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
 		Drawing::ICanvasRenderingDevice * D2DRenderDevice::QueryCanvasDevice(void) noexcept { return this; }
 		void D2DRenderDevice::DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept

@@ -171,6 +171,61 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual void SetCursor(Point at) override;
 			};
+			class BookmarkView : public ParentWindow, public Template::Controls::BookmarkView
+			{
+				struct Bookmark
+				{
+					int ID;
+					string Text;
+					Window * Group;
+					SafePointer<Shape> _view_normal;
+					SafePointer<Shape> _view_hot;
+					SafePointer<Shape> _view_active;
+					SafePointer<Shape> _view_active_focused;
+					int _width;
+				};
+				Array<Bookmark> _bookmarks;
+				int _active = -1;
+				int _hot = -1;
+				int _shift = 0;
+				SafePointer<Shape> _view_background;
+			public:
+				BookmarkView(Window * Parent, WindowStation * Station);
+				BookmarkView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				~BookmarkView(void) override;
+
+				virtual void Render(const Box & at) override;
+				virtual void ResetCache(void) override;
+				virtual void ArrangeChildren(void) override;
+				virtual void Show(bool visible) override;
+				virtual bool IsVisible(void) override;
+				virtual bool IsTabStop(void) override;
+				virtual void SetID(int ID) override;
+				virtual int GetID(void) override;
+				virtual void SetRectangle(const Rectangle & rect) override;
+				virtual Rectangle GetRectangle(void) override;
+				virtual void SetPosition(const Box & box) override;
+				virtual void CaptureChanged(bool got_capture) override;
+				virtual void LeftButtonDown(Point at) override;
+				virtual void MouseMove(Point at) override;
+				virtual bool KeyDown(int key_code) override;
+
+				int FindBookmark(int ID);
+				int GetBookmarkCount(void);
+				int GetBookmarkID(int index);
+				string GetBookmarkText(int index);
+				int GetBookmarkWidth(int index);
+				Window * GetBookmarkView(int index);
+				void SetBookmarkID(int index, int ID);
+				void SetBookmarkText(int index, const string & text);
+				void SetBookmarkWidth(int index, int width);
+				void OrderBookmark(int index, int new_index);
+				void RemoveBookmark(int index);
+				void AddBookmark(int width, int ID, const string & text);
+				void AddBookmark(int width, int ID, const string & text, Template::ControlTemplate * view_template);
+				int GetActiveBookmark(void);
+				void ActivateBookmark(int index);
+			};
 		}
 	}
 }
