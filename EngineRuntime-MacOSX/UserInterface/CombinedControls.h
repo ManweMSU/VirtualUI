@@ -51,7 +51,7 @@ namespace Engine
 					virtual void LeftButtonUp(Point at) override;
 					virtual void MouseMove(Point at) override;
 					virtual void ScrollVertically(double delta) override;
-					virtual void KeyDown(int key_code) override;
+					virtual bool KeyDown(int key_code) override;
 					virtual Window * HitTest(Point at) override;
 				};
 
@@ -91,7 +91,7 @@ namespace Engine
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
 				virtual void MouseMove(Point at) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 
 				void AddItem(const string & text, void * user = 0);
 				void AddItem(IArgumentProvider * provider, void * user = 0);
@@ -145,7 +145,7 @@ namespace Engine
 					virtual void LeftButtonUp(Point at) override;
 					virtual void MouseMove(Point at) override;
 					virtual void ScrollVertically(double delta) override;
-					virtual void KeyDown(int key_code) override;
+					virtual bool KeyDown(int key_code) override;
 					virtual Window * HitTest(Point at) override;
 				};
 
@@ -163,7 +163,7 @@ namespace Engine
 				SafePointer<ITextRenderingInfo> _text_info;
 				SafePointer<ITextRenderingInfo> _advice_info;
 				SafePointer<ITextRenderingInfo> _placeholder_info;
-				SafePointer<IInversionEffectRenderingInfo> _inversion;
+				SafePointer<Object> _inversion;
 				Array<uint32> _text;
 				UndoBuffer< Array<uint32> > _undo;
 				int _advice = -1;
@@ -173,6 +173,7 @@ namespace Engine
 				int _caret_width = -1;
 				bool _save = true;
 				bool _deferred_scroll = false;
+				bool _use_color_caret = false;
 
 				void find_advice(void);
 				void run_drop_down(void);
@@ -204,7 +205,7 @@ namespace Engine
 				virtual void RightButtonDown(Point at) override;
 				virtual void RightButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;

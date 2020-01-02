@@ -1,6 +1,7 @@
 #include "GroupControls.h"
 
 #include "ButtonControls.h"
+#include "../PlatformDependent/KeyCodes.h"
 
 namespace Engine
 {
@@ -8,6 +9,32 @@ namespace Engine
 	{
 		namespace Controls
 		{
+			namespace ArgumentService
+			{
+				class BookmarkArgumentProvider : public IArgumentProvider
+				{
+				public:
+					IFont * font;
+					const string * text;
+					BookmarkArgumentProvider(IFont * fnt, const string * txt) : font(fnt), text(txt) {}
+					virtual void GetArgument(const string & name, int * value) override { *value = 0; }
+					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
+					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
+					virtual void GetArgument(const string & name, string * value) override
+					{
+						if (name == L"Text") *value = *text;
+						else *value = L"";
+					}
+					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, IFont ** value) override
+					{
+						if (name == L"Font" && font) {
+							*value = font;
+							(*value)->Retain();
+						} else *value = 0;
+					}
+				};
+			}
 			ControlGroup::ControlGroup(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			ControlGroup::ControlGroup(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
 			{
@@ -546,6 +573,214 @@ namespace Engine
 				}
 			}
 			void HorizontalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight)); }
+			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _bookmarks(4) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _bookmarks(4)
+			{
+				if (Template->Properties->GetTemplateClass() != L"BookmarkView") throw InvalidArgumentException();
+				static_cast<Template::Controls::BookmarkView &>(*this) = static_cast<Template::Controls::BookmarkView &>(*Template->Properties);
+				for (int i = 0; i < Template->Children.Length(); i++) {
+					auto & bmt = Template->Children[i];
+					if (bmt.Children.Length() > 1 || bmt.Properties->GetTemplateClass() != L"Bookmark") throw InvalidArgumentException();
+					auto & props = static_cast<Template::Controls::Bookmark &>(*bmt.Properties);
+					int width = props.ControlPosition.Right.Absolute + int(props.ControlPosition.Right.Zoom * Zoom);
+					if (bmt.Children.Length()) {
+						AddBookmark(width, props.ID, props.Text, bmt.Children.FirstElement());
+					} else {
+						AddBookmark(width, props.ID, props.Text);
+					}
+				}
+				if (_bookmarks.Length()) ActivateBookmark(0);
+			}
+			BookmarkView::~BookmarkView(void) {}
+			void BookmarkView::Render(const Box & at)
+			{
+				auto device = GetStation()->GetRenderingDevice();
+				int tabs_width = 0;
+				int active_center = -1;
+				for (int i = 0; i < _bookmarks.Length(); i++) {
+					if (i == _active) active_center = tabs_width + _bookmarks[i]._width / 2;
+					tabs_width += _bookmarks[i]._width;
+				}
+				if (tabs_width > at.Right - at.Left) {
+					_shift = active_center - (at.Right - at.Left) / 2;
+					if (_shift < 0) _shift = 0;
+					if (tabs_width - _shift < at.Right - at.Left) _shift = tabs_width - at.Right + at.Left;
+				} else _shift = 0;
+				int last_edge = at.Left - _shift;
+				for (int i = 0; i < _bookmarks.Length(); i++) {
+					int next_edge = last_edge + _bookmarks[i]._width;
+					Box tab_box(last_edge, at.Top, next_edge, at.Top + TabHeight);
+					Template::Shape * templ = 0;
+					Shape ** shape = 0;
+					if (i != _active) {
+						if (i == _hot) {
+							templ = ViewTabHot;
+							shape = _bookmarks[i]._view_hot.InnerRef();
+						} else {
+							templ = ViewTabNormal;
+							shape = _bookmarks[i]._view_normal.InnerRef();
+						}
+					} else { last_edge = next_edge; continue; }
+					if (!(*shape) && templ) {
+						ArgumentService::BookmarkArgumentProvider provider(Font, &_bookmarks[i].Text);
+						*shape = templ->Initialize(&provider);
+					}
+					if (*shape) (*shape)->Render(device, tab_box);
+					last_edge = next_edge;
+				}
+				if (!_view_background && ViewBackground) {
+					ZeroArgumentProvider provider;
+					_view_background.SetReference(ViewBackground->Initialize(&provider));
+				}
+				if (_view_background) {
+					Box bk_box(at.Left, at.Top + TabHeight, at.Right, at.Bottom);
+					_view_background->Render(device, bk_box);
+				}
+				last_edge = at.Left - _shift;
+				for (int i = 0; i < _bookmarks.Length(); i++) {
+					int next_edge = last_edge + _bookmarks[i]._width;
+					Box tab_box(last_edge, at.Top, next_edge, at.Top + TabHeight);
+					Template::Shape * templ = 0;
+					Shape ** shape = 0;
+					if (i == _active) {
+						if (GetFocus() == this) {
+							templ = ViewTabActiveFocused;
+							shape = _bookmarks[i]._view_active_focused.InnerRef();
+						} else {
+							templ = ViewTabActive;
+							shape = _bookmarks[i]._view_active.InnerRef();
+						}
+					} else { last_edge = next_edge; continue; }
+					if (!(*shape) && templ) {
+						ArgumentService::BookmarkArgumentProvider provider(Font, &_bookmarks[i].Text);
+						*shape = templ->Initialize(&provider);
+					}
+					if (*shape) (*shape)->Render(device, tab_box);
+					last_edge = next_edge;
+				}
+				ParentWindow::Render(at);
+			}
+			void BookmarkView::ResetCache(void)
+			{
+				_view_background.SetReference(0);
+				for (int i = 0; i < _bookmarks.Length(); i++) {
+					_bookmarks[i]._view_normal.SetReference(0);
+					_bookmarks[i]._view_hot.SetReference(0);
+					_bookmarks[i]._view_active.SetReference(0);
+					_bookmarks[i]._view_active_focused.SetReference(0);
+				}
+				ParentWindow::ResetCache();
+			}
+			void BookmarkView::ArrangeChildren(void)
+			{
+				Box inner = Box(0, TabHeight, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				for (int i = 0; i < ChildrenCount(); i++) {
+					auto rect = Child(i)->GetRectangle();
+					if (rect.IsValid()) Child(i)->SetPosition(Box(rect, inner));
+				}
+			}
+			void BookmarkView::Show(bool visible) { Invisible = !visible; }
+			bool BookmarkView::IsVisible(void) { return !Invisible; }
+			bool BookmarkView::IsTabStop(void) { return true; }
+			void BookmarkView::SetID(int _ID) { ID = _ID; }
+			int BookmarkView::GetID(void) { return ID; }
+			void BookmarkView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Rectangle BookmarkView::GetRectangle(void) { return ControlPosition; }
+			void BookmarkView::SetPosition(const Box & box) { _hot = -1; ParentWindow::SetPosition(box); }
+			void BookmarkView::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
+			void BookmarkView::LeftButtonDown(Point at) { if (_hot >= 0) { ActivateBookmark(_hot); ReleaseCapture(); } }
+			void BookmarkView::MouseMove(Point at)
+			{
+				int w = WindowPosition.Right - WindowPosition.Left;
+				int h = WindowPosition.Bottom - WindowPosition.Top;
+				if (at.x >= 0 && at.x < w && at.y >= 0 && at.y < h && at.y < TabHeight) {
+					int x = at.x + _shift;
+					int oh = _hot; _hot = -1;
+					int right = 0;
+					for (int i = 0; i < _bookmarks.Length(); i++) {
+						right += _bookmarks[i]._width;
+						if (x < right) { _hot = i; break; }
+					}
+					if (oh == -1 && _hot != -1) SetCapture();
+					else if (oh != -1 && _hot == -1) ReleaseCapture();
+				} else {
+					if (_hot != -1) ReleaseCapture();
+				}
+			}
+			bool BookmarkView::KeyDown(int key_code)
+			{
+				if (key_code == KeyCodes::Left) {
+					if (_active > 0) ActivateBookmark(_active - 1);
+					else if (_active == -1 && _bookmarks.Length()) ActivateBookmark(0);
+					return true;
+				} else if (key_code == KeyCodes::Right) {
+					if (_active >= 0 && _active < _bookmarks.Length() - 1) ActivateBookmark(_active + 1);
+					else if (_active == -1 && _bookmarks.Length()) ActivateBookmark(0);
+					return true;
+				}
+				return false;
+			}
+			int BookmarkView::FindBookmark(int _ID) { for (int i = 0; i < _bookmarks.Length(); i++) if (_bookmarks[i].ID == _ID) return i; return -1; }
+			int BookmarkView::GetBookmarkCount(void) { return _bookmarks.Length(); }
+			int BookmarkView::GetBookmarkID(int index) { return _bookmarks[index].ID; }
+			string BookmarkView::GetBookmarkText(int index) { return _bookmarks[index].Text; }
+			int BookmarkView::GetBookmarkWidth(int index) { return _bookmarks[index]._width; }
+			Window * BookmarkView::GetBookmarkView(int index) { return _bookmarks[index].Group; }
+			void BookmarkView::SetBookmarkID(int index, int _ID) { _bookmarks[index].ID = _ID; }
+			void BookmarkView::SetBookmarkText(int index, const string & text)
+			{
+				_bookmarks[index].Text = text;
+				_bookmarks[index]._view_normal.SetReference(0);
+				_bookmarks[index]._view_hot.SetReference(0);
+				_bookmarks[index]._view_active.SetReference(0);
+				_bookmarks[index]._view_active_focused.SetReference(0);
+			}
+			void BookmarkView::SetBookmarkWidth(int index, int width) { _bookmarks[index]._width = width; _hot = -1; }
+			void BookmarkView::OrderBookmark(int index, int new_index)
+			{
+				if (_active == index) _active = new_index;
+				_hot = -1;
+				if (new_index < index) {
+					for (int i = index - 1; i >= new_index; i--) _bookmarks.SwapAt(i, i + 1);
+				} else if (new_index > index) {
+					for (int i = index; i < new_index; i++) _bookmarks.SwapAt(i, i + 1);
+				}
+			}
+			void BookmarkView::RemoveBookmark(int index)
+			{
+				if (_active == index) _active = -1;
+				_hot = -1;
+				_bookmarks[index].Group->Destroy();
+				_bookmarks.Remove(index);
+			}
+			void BookmarkView::AddBookmark(int width, int _ID, const string & text)
+			{
+				_bookmarks << Bookmark();
+				_bookmarks.LastElement()._width = width;
+				_bookmarks.LastElement().ID = _ID;
+				_bookmarks.LastElement().Text = text;
+				_bookmarks.LastElement().Group = GetStation()->CreateWindow<ControlGroup>(this);
+				_bookmarks.LastElement().Group->Show(false);
+				_hot = -1;
+			}
+			void BookmarkView::AddBookmark(int width, int _ID, const string & text, Template::ControlTemplate * view_template)
+			{
+				_bookmarks << Bookmark();
+				_bookmarks.LastElement()._width = width;
+				_bookmarks.LastElement().ID = _ID;
+				_bookmarks.LastElement().Text = text;
+				_bookmarks.LastElement().Group = Constructor::CreateChildWindow(this, view_template);
+				_bookmarks.LastElement().Group->Show(false);
+				_hot = -1;
+			}
+			int BookmarkView::GetActiveBookmark(void) { return _active; }
+			void BookmarkView::ActivateBookmark(int index)
+			{
+				if (index < 0 || index >= _bookmarks.Length()) return;
+				_active = index;
+				_hot = -1;
+				for (int i = 0; i < _bookmarks.Length(); i++) _bookmarks[i].Group->Show(i == index);
+			}
 		}
 	}
 }

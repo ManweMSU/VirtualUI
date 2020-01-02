@@ -685,6 +685,7 @@ namespace Engine
 
         void QuartzRenderingDevice::SetTimerValue(uint32 time) noexcept { _animation = time; }
         uint32 QuartzRenderingDevice::GetCaretBlinkHalfTime(void) noexcept { return 500; }
+        bool QuartzRenderingDevice::CaretShouldBeVisible(void) noexcept { return _animation % 1000 < 500; }
         void QuartzRenderingDevice::ClearCache(void) noexcept
         {
             BrushCache.Clear();

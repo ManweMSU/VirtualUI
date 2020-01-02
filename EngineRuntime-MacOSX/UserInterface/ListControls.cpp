@@ -530,9 +530,9 @@ namespace Engine
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
-			void ListBox::KeyDown(int key_code)
+			bool ListBox::KeyDown(int key_code)
 			{
-				if (!_elements.Length()) return;
+				if (!_elements.Length()) return true;
 				if (Tiled) {
 					int page = max((WindowPosition.Bottom - WindowPosition.Top - Border - Border) / ElementHeight, 1);
 					int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
@@ -570,6 +570,7 @@ namespace Engine
 						if (_current != -1) move_selection(_current - page); else move_selection(0);
 					}
 				}
+				return true;
 			}
 			Window * ListBox::HitTest(Point at)
 			{
@@ -1242,7 +1243,7 @@ namespace Engine
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
-			void TreeView::KeyDown(int key_code)
+			bool TreeView::KeyDown(int key_code)
 			{
 				if (key_code == KeyCodes::Down) {
 					if (_current) move_selection(_current->get_next());
@@ -1273,6 +1274,7 @@ namespace Engine
 						move_selection(current);
 					} else move_selection(_root.get_topmost());
 				}
+				return true;
 			}
 			Window * TreeView::HitTest(Point at)
 			{
@@ -1970,7 +1972,7 @@ namespace Engine
 					_hscroll->SetScrollerPosition(_hscroll->Position + int(delta * double(_hscroll->Line)));
 				}
 			}
-			void ListView::KeyDown(int key_code)
+			bool ListView::KeyDown(int key_code)
 			{
 				int page = max(_vscroll->Page / ElementHeight, 1);
 				if (key_code == KeyCodes::Down) {
@@ -1986,6 +1988,7 @@ namespace Engine
 				} else if (key_code == KeyCodes::PageUp) {
 					if (_current != -1) move_selection(_current - page); else move_selection(0);
 				}
+				return true;
 			}
 			void ListView::Timer(void)
 			{

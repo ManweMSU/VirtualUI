@@ -64,7 +64,7 @@ namespace Engine
 				virtual void RightButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void ScrollVertically(double delta) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 				virtual Window * HitTest(Point at) override;
 
 				void AddItem(const string & text, void * user = 0);
@@ -200,7 +200,7 @@ namespace Engine
 				virtual void RightButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void ScrollVertically(double delta) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 				virtual Window * HitTest(Point at) override;
 
 				TreeViewItem * GetRootItem(void);
@@ -297,7 +297,7 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual void ScrollVertically(double delta) override;
 				virtual void ScrollHorizontally(double delta) override;
-				virtual void KeyDown(int key_code) override;
+				virtual bool KeyDown(int key_code) override;
 				virtual void Timer(void) override;
 				virtual Window * HitTest(Point at) override;
 				virtual void SetCursor(Point at) override;

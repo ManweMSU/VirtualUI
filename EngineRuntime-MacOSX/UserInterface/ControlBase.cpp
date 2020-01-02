@@ -38,7 +38,7 @@ namespace Engine
 		void Window::MouseMove(Point at) {}
 		void Window::ScrollVertically(double delta) { if (Parent) Parent->ScrollVertically(delta); }
 		void Window::ScrollHorizontally(double delta) { if (Parent) Parent->ScrollHorizontally(delta); }
-		void Window::KeyDown(int key_code) {}
+		bool Window::KeyDown(int key_code) { return false; }
 		void Window::KeyUp(int key_code) {}
 		bool Window::TranslateAccelerators(int key_code) { return false; }
 		void Window::CharDown(uint32 ucs_code) {}
@@ -547,12 +547,13 @@ namespace Engine
 				if (Target) Target->ScrollHorizontally(delta);
 			}
 		}
-		void WindowStation::KeyDown(int key_code)
+		bool WindowStation::KeyDown(int key_code)
 		{
-			if (ExclusiveWindow || !ActiveWindow->TranslateAccelerators(key_code)) {
-				if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0);
-				if (FocusedWindow) FocusedWindow->KeyDown(key_code);
-			}
+			bool accells_passed = ExclusiveWindow ? false : ActiveWindow->TranslateAccelerators(key_code);
+			if (accells_passed) return true;
+			if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0);
+			if (FocusedWindow) return FocusedWindow->KeyDown(key_code);
+			return false;
 		}
 		void WindowStation::KeyUp(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }

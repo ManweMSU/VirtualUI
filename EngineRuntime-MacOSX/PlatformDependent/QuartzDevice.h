@@ -55,6 +55,7 @@ namespace Engine
 
 			virtual void SetTimerValue(uint32 time) noexcept override;
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override;
+			virtual bool CaretShouldBeVisible(void) noexcept override;
 			virtual void ClearCache(void) noexcept override;
 
 			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override;

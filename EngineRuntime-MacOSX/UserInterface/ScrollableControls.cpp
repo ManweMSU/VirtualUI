@@ -841,13 +841,16 @@ namespace Engine
 					SetTrackerPosition(np);
 				}
 			}
-			void VerticalTrackBar::KeyDown(int key_code)
+			bool VerticalTrackBar::KeyDown(int key_code)
 			{
 				if (key_code == KeyCodes::Up) {
 					SetTrackerPosition(Position - Step);
+					return true;
 				} else if (key_code == KeyCodes::Down) {
 					SetTrackerPosition(Position + Step);
+					return true;
 				}
+				return false;
 			}
 			Box VerticalTrackBar::GetTrackerPosition(const Box & at)
 			{
@@ -1005,13 +1008,16 @@ namespace Engine
 					SetTrackerPosition(np);
 				}
 			}
-			void HorizontalTrackBar::KeyDown(int key_code)
+			bool HorizontalTrackBar::KeyDown(int key_code)
 			{
 				if (key_code == KeyCodes::Left) {
 					SetTrackerPosition(Position - Step);
+					return true;
 				} else if (key_code == KeyCodes::Right) {
 					SetTrackerPosition(Position + Step);
+					return true;
 				}
+				return false;
 			}
 			Box HorizontalTrackBar::GetTrackerPosition(const Box & at)
 			{

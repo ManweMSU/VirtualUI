@@ -253,7 +253,7 @@ namespace Engine
 					SetCapture();
 				} else if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) ReleaseCapture();
 			}
-			void ComboBox::KeyDown(int key_code)
+			bool ComboBox::KeyDown(int key_code)
 			{
 				if (_state == 2) {
 					_list->KeyDown(key_code);
@@ -315,6 +315,7 @@ namespace Engine
 						}
 					}
 				}
+				return true;
 			}
 			void ComboBox::AddItem(const string & text, void * user) { InsertItem(text, _elements.Length(), user); }
 			void ComboBox::AddItem(IArgumentProvider * provider, void * user) { InsertItem(provider, _elements.Length(), user); }
@@ -501,7 +502,7 @@ namespace Engine
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
-			void ComboBox::ComboListBox::KeyDown(int key_code)
+			bool ComboBox::ComboListBox::KeyDown(int key_code)
 			{
 				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Space) {
@@ -519,6 +520,7 @@ namespace Engine
 				} else if (key_code == KeyCodes::PageUp) {
 					if (_owner->_current != -1) move_selection(_owner->_current - page); else move_selection(0);
 				}
+				return true;
 			}
 			Window * ComboBox::ComboListBox::HitTest(Point at)
 			{
@@ -594,7 +596,7 @@ namespace Engine
 			void TextComboBox::Render(const Box & at)
 			{
 				auto device = GetStation()->GetRenderingDevice();
-				if (_caret_width < 0) _caret_width = GetStation()->GetVisualStyles().CaretWidth;
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
 				Shape ** back = 0;
 				Template::Shape * source = 0;
 				UI::Color text_color;
@@ -663,10 +665,17 @@ namespace Engine
 				}
 				if (focused) {
 					if (!_inversion) {
-						_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+						if (CaretColor.a) {
+							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_use_color_caret = true;
+						} else {
+							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_use_color_caret = false;
+						}
 					}
 					Box caret_box = Box(field.Left + caret, field.Top, field.Left + caret + _caret_width, field.Bottom);
-					device->ApplyInversion(_inversion, caret_box, true);
+					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret_box); }
+					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo*>(_inversion.Inner()), caret_box, true);
 				}
 				device->PopClip();
 				Shape ** button;
@@ -845,12 +854,13 @@ namespace Engine
 					if (ocp != _cp) find_advice();
 				}
 			}
-			void TextComboBox::KeyDown(int key_code)
+			bool TextComboBox::KeyDown(int key_code)
 			{
 				if (_state != 4) {
 					if (key_code == KeyCodes::Down) {
 						_state = 4;
 						run_drop_down();
+						return true;
 					} else if (key_code == KeyCodes::Back && (_cp != _sp || _cp > 0)) {
 						if (_save) {
 							_undo.PushCurrentVersion();
@@ -859,6 +869,7 @@ namespace Engine
 						if (_cp == _sp) _cp = _sp - 1;
 						Print(L"");
 						_deferred_scroll = true;
+						return true;
 					} else if (key_code == KeyCodes::Delete && (_cp != _sp || _cp < _text.Length())) {
 						if (_save) {
 							_undo.PushCurrentVersion();
@@ -867,12 +878,14 @@ namespace Engine
 						if (_cp == _sp) _cp = _sp + 1;
 						Print(L"");
 						_deferred_scroll = true;
+						return true;
 					} else if (key_code == KeyCodes::Left && _cp > 0) {
 						_save = true;
 						_cp--;
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 						_deferred_scroll = true;
 						find_advice();
+						return true;
 					} else if (key_code == KeyCodes::Right) {
 						if (_cp < _text.Length()) {
 							_save = true;
@@ -903,33 +916,38 @@ namespace Engine
 								find_advice();
 							}
 						}
+						return true;
 					} else if (key_code == KeyCodes::Escape) {
 						_save = true;
 						_sp = _cp;
 						find_advice();
+						return true;
 					} else if (key_code == KeyCodes::Home) {
 						_save = true;
 						_cp = 0;
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 						_deferred_scroll = true;
 						find_advice();
+						return true;
 					} else if (key_code == KeyCodes::End) {
 						_save = true;
 						_cp = _text.Length();
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 						_deferred_scroll = true;
 						find_advice();
+						return true;
 					} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) &&
 						Keyboard::IsKeyPressed(KeyCodes::Control) &&
 						!Keyboard::IsKeyPressed(KeyCodes::Alternative) &&
 						!Keyboard::IsKeyPressed(KeyCodes::System)) {
-						if (key_code == KeyCodes::Z) Undo();
-						else if (key_code == KeyCodes::X) Cut();
-						else if (key_code == KeyCodes::C) Copy();
-						else if (key_code == KeyCodes::V) Paste();
-						else if (key_code == KeyCodes::Y) Redo();
+						if (key_code == KeyCodes::Z) { Undo(); return true; }
+						else if (key_code == KeyCodes::X) { Cut(); return true; }
+						else if (key_code == KeyCodes::C) { Copy(); return true; }
+						else if (key_code == KeyCodes::V) { Paste(); return true; }
+						else if (key_code == KeyCodes::Y) { Redo(); return true; }
 					}
-				} else _list->KeyDown(key_code);
+				} else return _list->KeyDown(key_code);
+				return false;
 			}
 			void TextComboBox::CharDown(uint32 ucs_code)
 			{
@@ -1256,7 +1274,7 @@ namespace Engine
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
-			void TextComboBox::TextComboListBox::KeyDown(int key_code)
+			bool TextComboBox::TextComboListBox::KeyDown(int key_code)
 			{
 				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Left) {
@@ -1274,6 +1292,7 @@ namespace Engine
 				} else if (key_code == KeyCodes::PageUp) {
 					if (_current != -1) move_selection(_current - page); else move_selection(0);
 				}
+				return true;
 			}
 			Window * TextComboBox::TextComboListBox::HitTest(Point at)
 			{

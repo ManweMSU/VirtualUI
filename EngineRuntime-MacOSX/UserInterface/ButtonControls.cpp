@@ -214,13 +214,15 @@ namespace Engine
 					}
 				}
 			}
-			void Button::KeyDown(int key_code)
+			bool Button::KeyDown(int key_code)
 			{
 				if (key_code == L' ') {
 					if (_state != 0x2 && _state != 0x12) {
 						_state = 0x12;
 					}
+					return true;
 				}
+				return false;
 			}
 			void Button::KeyUp(int key_code)
 			{
@@ -355,13 +357,15 @@ namespace Engine
 					}
 				}
 			}
-			void CheckBox::KeyDown(int key_code)
+			bool CheckBox::KeyDown(int key_code)
 			{
 				if (key_code == L' ') {
 					if (_state != 0x2 && _state != 0x12) {
 						_state = 0x12;
 					}
+					return true;
 				}
+				return false;
 			}
 			void CheckBox::KeyUp(int key_code)
 			{
@@ -499,13 +503,15 @@ namespace Engine
 					}
 				}
 			}
-			void RadioButton::KeyDown(int key_code)
+			bool RadioButton::KeyDown(int key_code)
 			{
 				if (key_code == L' ') {
 					if (_state != 0x2 && _state != 0x12) {
 						_state = 0x12;
 					}
+					return true;
 				}
+				return false;
 			}
 			void RadioButton::KeyUp(int key_code)
 			{

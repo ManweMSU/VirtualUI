@@ -217,6 +217,7 @@ namespace Engine
 			virtual void EndLayer(void) noexcept = 0;
 			virtual void SetTimerValue(uint32 time) noexcept = 0;
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept = 0;
+			virtual bool CaretShouldBeVisible(void) noexcept = 0;
 			virtual void ClearCache(void) noexcept = 0;
 			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept;
 			virtual ~IRenderingDevice(void);

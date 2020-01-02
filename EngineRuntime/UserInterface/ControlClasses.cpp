@@ -42,6 +42,9 @@ namespace Engine
 					else TEST_CLASS(TextComboBox)
 					else TEST_CLASS(HorizontalTrackBar)
 					else TEST_CLASS(VerticalTrackBar)
+					else TEST_CLASS(BookmarkView)
+					else TEST_CLASS(Bookmark)
+					else TEST_CLASS(RichEdit)
 					else TEST_CLASS(CustomControl)
 
 					else TEST_CLASS(TouchBar)

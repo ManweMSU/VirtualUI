@@ -152,6 +152,7 @@ namespace Engine
 			namespace Constructor
 			{
 				void ConstructChildren(Window * on, Template::ControlTemplate * source);
+				Window * CreateChildWindow(Window * on, Template::ControlTemplate * child);
 			}
 		}
 	}

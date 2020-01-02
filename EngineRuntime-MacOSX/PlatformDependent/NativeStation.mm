@@ -366,18 +366,19 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
     if (Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Control) || Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Alternative) ||
         Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::System)) dead = true;
     if (key && station) {
-        station->KeyDown(key);
-        if (!dead) {
-            Engine::string etext;
-            if (key == Engine::KeyCodes::Tab) {
-                etext = L"\t";
-            } else if (key == Engine::KeyCodes::Space) {
-                etext = L" ";
-            } else {
-                NSString * text = [event characters];
-                etext = Engine::Cocoa::EngineString(text);
-            }        
-            for (int i = 0; i < etext.Length(); i++) station->CharDown(etext[i]);
+        if (!station->KeyDown(key)) {
+            if (!dead) {
+                Engine::string etext;
+                if (key == Engine::KeyCodes::Tab) {
+                    etext = L"\t";
+                } else if (key == Engine::KeyCodes::Space) {
+                    etext = L" ";
+                } else {
+                    NSString * text = [event characters];
+                    etext = Engine::Cocoa::EngineString(text);
+                }        
+                for (int i = 0; i < etext.Length(); i++) station->CharDown(etext[i]);
+            }
         }
         [self setNeedsDisplay: YES];
     }
