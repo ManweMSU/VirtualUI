@@ -129,6 +129,10 @@ namespace Engine
 		typedef Vector<ShortReal, 3> Vector3f;
 		typedef Vector<ShortReal, 2> Vector2f;
 
+		typedef Vector<Complex, 4> Vector4c;
+		typedef Vector<Complex, 3> Vector3c;
+		typedef Vector<Complex, 2> Vector2c;
+
 		template <class F, int D> void ZeroVector(Vector<F, D> & a) { ZeroMemory(&a, sizeof(a)); }
 	}
 }
