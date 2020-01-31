@@ -27,7 +27,9 @@ namespace Engine
 				}
 				catch (InvalidFormatException &) {
 					Source->Seek(0, Streaming::Begin);
-					LoadUserInterfaceFromBinaryLegacy(Template, Source, ResourceLoader, ResourceResolver);
+					SafePointer<IResourceLoader> loader;
+					if (ResourceLoader) loader.SetRetain(ResourceLoader); else loader = Windows::CreateNativeCompatibleResourceLoader();
+					LoadUserInterfaceFromBinaryLegacy(Template, Source, loader, ResourceResolver);
 				}
 			}
 		}

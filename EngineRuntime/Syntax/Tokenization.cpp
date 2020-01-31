@@ -189,6 +189,9 @@ namespace Engine
 								} else if (escc == L'b' || escc == L'B') {
 									Text += L'\b';
 									pos++;
+								} else if (escc == L'e' || escc == L'E') {
+									Text += L'\33';
+									pos++;
 								} else if (escc == L'f' || escc == L'F') {
 									Text += L'\f';
 									pos++;
@@ -323,6 +326,8 @@ namespace Engine
 						result += L"\\r";
 					} else if (ucs[i] == L'\t') {
 						result += L"\\t";
+					} else if (ucs[i] == L'\33') {
+						result += L"\\e";
 					} else {
 						result += L"\\" + string(ucs[i], L"01234567", 3);
 					}

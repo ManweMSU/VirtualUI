@@ -2,8 +2,6 @@
 
 #include "../Math/MathBase.h"
 
-using namespace Engine::Math;
-
 namespace Engine
 {
 	namespace Syntax
@@ -118,37 +116,37 @@ namespace Engine
 							return (value > 0) ? value : -value;
 						} else if (func == L"sin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(sin(value));
+							return int64(Engine::Math::sin(value));
 						} else if (func == L"cos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(cos(value));
+							return int64(Engine::Math::cos(value));
 						} else if (func == L"tg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(tg(value));
+							return int64(Engine::Math::tg(value));
 						} else if (func == L"ctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(ctg(value));
+							return int64(Engine::Math::ctg(value));
 						} else if (func == L"arcsin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(arcsin(value));
+							return int64(Engine::Math::arcsin(value));
 						} else if (func == L"arccos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(arccos(value));
+							return int64(Engine::Math::arccos(value));
 						} else if (func == L"arctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(arctg(value));
+							return int64(Engine::Math::arctg(value));
 						} else if (func == L"arcctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(arcctg(value));
+							return int64(Engine::Math::arcctg(value));
 						} else if (func == L"ln") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(ln(value));
+							return int64(Engine::Math::ln(value));
 						} else if (func == L"exp") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(exp(value));
+							return int64(Engine::Math::exp(value));
 						} else if (func == L"sqrt") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return int64(sqrt(value));
+							return int64(Engine::Math::sqrt(value));
 						}
 						return 0;
 					} else {
@@ -201,37 +199,37 @@ namespace Engine
 							return (value > 0.0) ? value : -value;
 						} else if (func == L"sin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return sin(value);
+							return Engine::Math::sin(value);
 						} else if (func == L"cos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return cos(value);
+							return Engine::Math::cos(value);
 						} else if (func == L"tg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return tg(value);
+							return Engine::Math::tg(value);
 						} else if (func == L"ctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return ctg(value);
+							return Engine::Math::ctg(value);
 						} else if (func == L"arcsin") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return arcsin(value);
+							return Engine::Math::arcsin(value);
 						} else if (func == L"arccos") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return arccos(value);
+							return Engine::Math::arccos(value);
 						} else if (func == L"arctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return arctg(value);
+							return Engine::Math::arctg(value);
 						} else if (func == L"arcctg") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return arcctg(value);
+							return Engine::Math::arcctg(value);
 						} else if (func == L"ln") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return ln(value);
+							return Engine::Math::ln(value);
 						} else if (func == L"exp") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return exp(value);
+							return Engine::Math::exp(value);
 						} else if (func == L"sqrt") {
 							double value = CalculateDoubleValue(expression.Subnodes[2], variables);
-							return sqrt(value);
+							return Engine::Math::sqrt(value);
 						}
 						return 0.0;
 					} else {

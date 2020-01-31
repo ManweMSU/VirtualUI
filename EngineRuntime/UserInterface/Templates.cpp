@@ -122,7 +122,10 @@ namespace Engine
 			Engine::UI::Shape * FrameShape::Initialize(IArgumentProvider * provider) const
 			{
 				SafePointer<Engine::UI::FrameShape> New = new Engine::UI::FrameShape(Position.Initialize(provider), RenderMode, Opacity.Initialize(provider));
-				for (int i = 0; i < Children.Length(); i++) New->Children << Children[i].Initialize(provider);
+				for (int i = 0; i < Children.Length(); i++) {
+					SafePointer<Engine::UI::Shape> child = Children[i].Initialize(provider);
+					New->Children.Append(child);
+				}
 				New->Retain();
 				return New;
 			}
