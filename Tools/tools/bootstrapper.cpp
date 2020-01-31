@@ -1,4 +1,3 @@
-int Main(void);
 #ifdef ENGINE_WINDOWS
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "ole32.lib")
@@ -6,6 +5,7 @@ int Main(void);
 #include <CommCtrl.h>
 #include <objbase.h>
 #ifdef ENGINE_SUBSYSTEM_CONSOLE
+int Main(void);
 int wmain(void)
 {
 	InitCommonControls();
@@ -15,6 +15,7 @@ int wmain(void)
 }
 #endif
 #ifdef ENGINE_SUBSYSTEM_GUI
+int Main(void);
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 	InitCommonControls();
@@ -26,9 +27,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 #endif
 #ifdef ENGINE_MACOSX
 #ifdef ENGINE_SUBSYSTEM_CONSOLE
+int Main(void);
 int main(void) { return Main(); }
 #endif
 #ifdef ENGINE_SUBSYSTEM_GUI
+int Main(void);
 int main(void) { return Main(); }
+#endif
+#ifdef ENGINE_SUBSYSTEM_LIBRARY
+void LibraryLoaded(void);
+void LibraryUnloaded(void);
+__attribute__((constructor)) static void _lib_init(void) { LibraryLoaded(); }
+__attribute__((destructor)) static void _lib_uninit(void) { LibraryUnloaded(); }
 #endif
 #endif

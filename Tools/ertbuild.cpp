@@ -24,6 +24,7 @@ handle console_output;
 handle error_output;
 bool clean = false;
 bool errlog = false;
+bool outpath = false;
 string rt_path;
 Array<string> inc_paths(0x10);
 SafePointer<RegistryNode> sys_cfg;
@@ -44,10 +45,9 @@ string compile_subsystem = L"console";
 void print_error(handle from)
 {
     FileStream From(from);
-    FileStream To(error_output);
     From.Seek(0, Begin);
     TextReader FromReader(&From);
-    TextWriter ToWriter(&To);
+	IO::Console ToWriter(error_output);
     ToWriter.Write(FromReader.ReadAll());
 }
 void try_create_directory(const string & path)
@@ -87,7 +87,7 @@ bool copy_file_nothrow(const string & source, const string & dest)
     catch (...) { return false; }
     return true;
 }
-bool compile(const string & source, const string & object, const string & log, TextWriter & console)
+bool compile(const string & source, const string & object, const string & log, ITextWriter & console)
 {
     bool vcheck = true;
     handle source_handle;
@@ -175,7 +175,10 @@ bool compile(const string & source, const string & object, const string & log, T
     if (compile_subsystem == L"console") {
         clang_args << argdef;
         clang_args << L"ENGINE_SUBSYSTEM_CONSOLE=1";
-    } else {
+	} else if (compile_subsystem == L"library") {
+		clang_args << argdef;
+        clang_args << L"ENGINE_SUBSYSTEM_LIBRARY=1";
+    } else if (compile_subsystem == L"gui") {
         clang_args << argdef;
         clang_args << L"ENGINE_SUBSYSTEM_GUI=1";
     }
@@ -206,7 +209,7 @@ bool compile(const string & source, const string & object, const string & log, T
     console << L"Succeed" << IO::NewLineChar;
     return true;
 }
-bool link(const Array<string> & objs, const string & exe, const string & real_exe, const string & log, TextWriter & console)
+bool link(const Array<string> & objs, const string & exe, const string & real_exe, const string & log, ITextWriter & console)
 {
     console << L"Linking " << IO::Path::GetFileName(real_exe) << L"...";
     Array<string> clang_args(0x80);
@@ -253,7 +256,7 @@ bool link(const Array<string> & objs, const string & exe, const string & real_ex
     console << L"Succeed" << IO::NewLineChar;
     return true;
 }
-bool BuildRuntime(TextWriter & console)
+bool BuildRuntime(ITextWriter & console)
 {
     try {
         try {
@@ -311,7 +314,7 @@ bool BuildRuntime(TextWriter & console)
     }
     return true;
 }
-bool run_restool(const string & prj, const string & out_path, const string & bundle_path, TextWriter & console)
+bool run_restool(const string & prj, const string & out_path, const string & bundle_path, ITextWriter & console)
 {
     Array<string> rt_args(0x10);
     rt_args << prj;
@@ -340,7 +343,7 @@ bool run_restool(const string & prj, const string & out_path, const string & bun
     console << IO::NewLineChar;
     return true;
 }
-bool copy_attachments(const string & out_path, const string & base_path, const string & obj_path, TextWriter & console, RegistryNode * node)
+bool copy_attachments(const string & out_path, const string & base_path, const string & obj_path, ITextWriter & console, RegistryNode * node)
 {
     auto & res = node->GetSubnodes();
     for (int i = 0; i < res.Length(); i++) {
@@ -363,7 +366,7 @@ bool copy_attachments(const string & out_path, const string & base_path, const s
     }
     return true;
 }
-bool copy_attachments(const string & out_path, const string & base_path, const string & obj_path, TextWriter & console)
+bool copy_attachments(const string & out_path, const string & base_path, const string & obj_path, ITextWriter & console)
 {
     SafePointer<RegistryNode> node = prj_cfg->OpenNode(L"Attachments");
     SafePointer<RegistryNode> node_os_local = prj_cfg->OpenNode(L"Attachments-" + compile_system);
@@ -419,7 +422,7 @@ Array<string> * parse_command(const string & cmd)
     parts->Retain();
     return parts;
 }
-bool do_invokations(const string & base_path, const string & obj_path, TextWriter & console)
+bool do_invokations(const string & base_path, const string & obj_path, ITextWriter & console)
 {
     IO::SetCurrentDirectory(base_path);
     SafePointer<RegistryNode> base = prj_cfg->OpenNode(L"Invoke");
@@ -457,46 +460,43 @@ int Main(void)
 {
     console_output = IO::CloneHandle(IO::GetStandardOutput());
     error_output = IO::CloneHandle(IO::GetStandardError());
-    FileStream console_stream(console_output);
-    TextWriter console(&console_stream);
+	IO::Console console(console_output);
 
     SafePointer< Array<string> > args = GetCommandLine();
-
-    console << ENGINE_VI_APPNAME << IO::NewLineChar;
-    console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::NewLineChar;
-    console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
-    
+	for (int i = 1; i < args->Length(); i++) {
+		if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
+		else if (string::CompareIgnoreCase(args->ElementAt(i), L":x64") == 0) compile_architecture = L"x64";
+		else if (string::CompareIgnoreCase(args->ElementAt(i), L":errlog") == 0) errlog = true;
+		else if (string::CompareIgnoreCase(args->ElementAt(i), L":outpath") == 0) outpath = true;
+	}
+	if (!outpath) {
+		console << ENGINE_VI_APPNAME << IO::NewLineChar;
+		console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::NewLineChar;
+		console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
+	}
     if (args->Length() < 2) {
         console << L"Command line syntax:" << IO::NewLineChar;
-        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean] [:x64] [:errlog]" << IO::NewLineChar;
+        console << L"  " << ENGINE_VI_APPSYSNAME << L" <project config.ini> [:clean] [:x64] [:errlog] [:outpath]" << IO::NewLineChar;
         console << L"    to build your project" << IO::NewLineChar;
         console << L"  " << ENGINE_VI_APPSYSNAME << L" :asmrt [:clean] [:x64] [:errlog]" << IO::NewLineChar;
         console << L"    to rebuild runtime object cache" << IO::NewLineChar;
         console << L"  use :clean to recompile all the sources," << IO::NewLineChar;
-        console << L"  use :errlog to print logs of failed operations into error stream." << IO::NewLineChar;
+        console << L"  use :errlog to print logs of failed operations into error stream," << IO::NewLineChar;
+		console << L"  use :outpath to print full output file path without building." << IO::NewLineChar;
         console << IO::NewLineChar;
     } else {
-        for (int i = 1; i < args->Length(); i++) {
-            if (string::CompareIgnoreCase(args->ElementAt(i), L":clean") == 0) clean = true;
-            else if (string::CompareIgnoreCase(args->ElementAt(i), L":x64") == 0) compile_architecture = L"x64";
-            else if (string::CompareIgnoreCase(args->ElementAt(i), L":errlog") == 0) errlog = true;
-        }
         if (string::CompareIgnoreCase(args->ElementAt(1), L":asmrt") == 0) {
             prj_ver.UseDefines = false;
             if (!BuildRuntime(console)) return 1;
         } else {
             try {
-                console << L"Building " << IO::Path::GetFileName(args->ElementAt(1)) << L" on ";
-                if (compile_architecture == L"x64") console << L"64-bit "; else console << L"32-bit ";
-                if (compile_system == L"windows") console << L"Windows";
-                else if (compile_system == L"macosx") console << L"Mac OS X";
-                console << IO::NewLineChar;
                 string bootstrapper;
                 try {
                     FileStream sys_cfg_src(IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/ertbuild.ini", AccessRead, OpenExisting);
                     FileStream prj_cfg_src(IO::ExpandPath(args->ElementAt(1)), AccessRead, OpenExisting);
                     sys_cfg = CompileTextRegistry(&sys_cfg_src);
                     prj_cfg = CompileTextRegistry(&prj_cfg_src);
+					if (prj_cfg && prj_cfg->GetValueBoolean(L"Build64")) compile_architecture = L"x64";
                     if (sys_cfg) {
                         SafePointer<RegistryNode> target = sys_cfg->OpenNode(compile_system + L"-" + compile_architecture);
                         sys_cfg.SetRetain(target);
@@ -506,9 +506,10 @@ int Main(void)
                     string ss = prj_cfg->GetValueString(L"Subsystem");
                     if (string::CompareIgnoreCase(ss, L"console") == 0 || ss.Length() == 0) compile_subsystem = L"console";
                     else if (string::CompareIgnoreCase(ss, L"gui") == 0) compile_subsystem = L"gui";
+					else if (string::CompareIgnoreCase(ss, L"library") == 0) compile_subsystem = L"library";
                     else if (string::CompareIgnoreCase(ss, L"object") == 0) compile_subsystem = L"object";
                     else {
-                        console << L"Unknown subsystem \"" + ss + L"\". Use CONSOLE or GUI." << IO::NewLineChar;
+                        console << L"Unknown subsystem \"" + ss + L"\". Use CONSOLE, GUI or LIBRARY." << IO::NewLineChar;
                         return 1;
                     }
                     bootstrapper = IO::Path::GetDirectory(IO::GetExecutablePath()) + L"/" + sys_cfg->GetValueString(L"Bootstrapper");
@@ -517,6 +518,13 @@ int Main(void)
                     console << L"Failed to open project or runtime configuration." << IO::NewLineChar;
                     return 1;
                 }
+				if (!outpath) {
+					console << L"Building " << IO::Path::GetFileName(args->ElementAt(1)) << L" on ";
+					if (compile_architecture == L"x64") console << L"64-bit "; else console << L"32-bit ";
+					if (compile_system == L"windows") console << L"Windows";
+					else if (compile_system == L"macosx") console << L"Mac OS X";
+					console << IO::NewLineChar;
+				}
                 prj_ver.InternalName = prj_cfg->GetValueString(L"VersionInformation/InternalName");
                 if (prj_cfg->GetValueBoolean(L"UseVersionDefines")) {
                     prj_ver.UseDefines = true;
@@ -537,12 +545,12 @@ int Main(void)
                         console << L"Invalid application version notation." << IO::NewLineChar;
                         return 1;
                     }
-                    if (!prj_ver.InternalName.Length()) {
-                        prj_ver.InternalName = IO::Path::GetFileNameWithoutExtension(args->ElementAt(1));
-                        int dot = prj_ver.InternalName.FindFirst(L'.');
-                        if (dot != -1) prj_ver.InternalName = prj_ver.InternalName.Fragment(0, dot);
-                    }
                 } else prj_ver.UseDefines = false;
+				if (!prj_ver.InternalName.Length()) {
+					prj_ver.InternalName = IO::Path::GetFileNameWithoutExtension(args->ElementAt(1));
+					int dot = prj_ver.InternalName.FindFirst(L'.');
+					if (dot != -1) prj_ver.InternalName = prj_ver.InternalName.Fragment(0, dot);
+				}
                 Array<string> object_list(0x80);
                 Array<string> source_list(0x80);
                 string prj_cfg_path = IO::Path::GetDirectory(IO::ExpandPath(args->ElementAt(1)));
@@ -564,7 +572,7 @@ int Main(void)
                     string obj_path = rt_path + L"/" + sys_cfg->GetValueString(L"ObjectPath");
                     SafePointer< Array<string> > files = IO::Search::GetFiles(obj_path + L"/*." + sys_cfg->GetValueString(L"ObjectExtension"), true);
                     if (!files->Length()) {
-                        console << L"No object files in Runtime cache! Recompile Runtime! (ertbuild :asmrt)" << IO::NewLineChar;
+                        if (!outpath) console << L"No object files in Runtime cache! Recompile Runtime! (ertbuild :asmrt)" << IO::NewLineChar;
                     }
                     for (int i = 0; i < files->Length(); i++) {
                         object_list << obj_path + L"/" + files->ElementAt(i);
@@ -573,7 +581,7 @@ int Main(void)
                 if (prj_cfg->GetValueBoolean(L"CompileAll")) {
                     SafePointer< Array<string> > files = IO::Search::GetFiles(prj_path + L"/" + sys_cfg->GetValueString(L"CompileFilter"), true);
                     for (int i = 0; i < files->Length(); i++) {
-                        source_list << prj_path + L"/" + files->ElementAt(i);
+						if (IO::Path::GetFileName(files->ElementAt(i))[0] != L'.') source_list << prj_path + L"/" + files->ElementAt(i);
                     }
                 } else {
                     SafePointer<RegistryNode> list = prj_cfg->OpenNode(L"CompileList");
@@ -591,47 +599,55 @@ int Main(void)
                 string bitness = compile_architecture == L"x64" ? L"64" : L"32";
                 string platform_path = prj_cfg->GetValueString(L"OutputLocation" + compile_system + bitness);
                 if (platform_path.Length()) out_path += string(IO::PathChar) + platform_path;
-                try_create_directory_full(out_path);
-                if (clean) clear_directory(out_path);
-                try_create_directory(out_path + L"/_obj");
+				if (!outpath) {
+					try_create_directory_full(out_path);
+					if (clean) clear_directory(out_path);
+					try_create_directory(out_path + L"/_obj");
+					if (compile_subsystem != L"object") {
+						string obj = out_path + L"/_obj/_bootstrapper." + sys_cfg->GetValueString(L"ObjectExtension");
+						string log = out_path + L"/_obj/_bootstrapper.log";
+						if (!compile(bootstrapper, obj, log, console)) return 1;
+						object_list << obj;
+					}
+					for (int i = 0; i < source_list.Length(); i++) {
+						string obj;
+						if (compile_subsystem != L"object") {
+							obj = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
+						} else obj = out_path + L"/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
+						string log = obj + L"log";
+						obj += sys_cfg->GetValueString(L"ObjectExtension");
+						if (!compile(source_list[i], obj, log, console)) return 1;
+						object_list << obj;
+					}
+				}
                 if (compile_subsystem != L"object") {
-                    string obj = out_path + L"/_obj/_bootstrapper." + sys_cfg->GetValueString(L"ObjectExtension");
-                    string log = out_path + L"/_obj/_bootstrapper.log";
-                    if (!compile(bootstrapper, obj, log, console)) return 1;
-                    object_list << obj;
-                }
-                for (int i = 0; i < source_list.Length(); i++) {
-                    string obj;
-                    if (compile_subsystem != L"object") {
-                        obj = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
-                    } else obj = out_path + L"/" + IO::Path::GetFileNameWithoutExtension(source_list[i]) + L".";
-                    string log = obj + L"log";
-                    obj += sys_cfg->GetValueString(L"ObjectExtension");
-                    if (!compile(source_list[i], obj, log, console)) return 1;
-                    object_list << obj;
-                }
-                if (compile_subsystem != L"object") {
-                    string last_wd = IO::GetCurrentDirectory();
-                    if (!do_invokations(prj_path, out_path + L"/_obj", console)) return 1;
-                    IO::SetCurrentDirectory(last_wd);
+					if (!outpath) {
+						string last_wd = IO::GetCurrentDirectory();
+                    	if (!do_invokations(prj_path, out_path + L"/_obj", console)) return 1;
+						IO::SetCurrentDirectory(last_wd);
+					}
                     string out_file = out_path + L"/" + prj_cfg->GetValueString(L"OutputName");
-                    string exe_ext = sys_cfg->GetValueString(L"ExecutableExtension");
+                    string exe_ext = (compile_subsystem == L"library") ? sys_cfg->GetValueString(L"LibraryExtension") : sys_cfg->GetValueString(L"ExecutableExtension");
                     if (exe_ext.Length() && string::CompareIgnoreCase(IO::Path::GetExtension(out_file), exe_ext)) out_file += L"." + exe_ext;
                     if (sys_cfg->GetValueString(L"ResourceTool").Length()) {
                         if (compile_system == L"windows") {
                             string project = IO::ExpandPath(args->ElementAt(1));
-                            if (!run_restool(project, out_path + L"/_obj", L"", console)) return 1;
-                            object_list << out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(project) + L".res";
+							if (!outpath) {
+                            	if (!run_restool(project, out_path + L"/_obj", L"", console)) return 1;
+                            	object_list << out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(project) + L".res";
+							}
                         } else if (compile_system == L"macosx" && compile_subsystem == L"gui") {
                             string project = IO::ExpandPath(args->ElementAt(1));
                             string bundle = out_file;
                             if (string::CompareIgnoreCase(IO::Path::GetExtension(out_file), L"app")) out_file += L".app";
-                            if (!run_restool(project, out_path + L"/_obj", out_file, console)) return 1;
+							if (!outpath) {
+                            	if (!run_restool(project, out_path + L"/_obj", out_file, console)) return 1;
+							}
                             out_file += L"/Contents/MacOS/" + prj_ver.InternalName;
-                        } else if (compile_system == L"macosx" && compile_subsystem == L"console") {
+                        } else if (compile_system == L"macosx" && (compile_subsystem == L"console" || compile_subsystem == L"library")) {
                             SafePointer<RegistryNode> res = prj_cfg->OpenNode(L"Resources");
                             if (res) {
-                                console << L"NOTE: Assembly Resources are not supported on console Unix applications!" << IO::NewLineChar;
+                                console << L"NOTE: Assembly Resources are not supported on console Unix applications and dynamic libraries!" << IO::NewLineChar;
                             }
                         }
                     } else {
@@ -641,19 +657,24 @@ int Main(void)
                         }
                         if (compile_system == L"macosx" && compile_subsystem == L"gui") {
                             console << L"NOTE: Can't build Mac OS X Application Bundle without Resource Tool!" << IO::NewLineChar;
+							return 1;
                         }
                     }
-                    string out_internal = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".tmp";
-                    if (!copy_attachments(IO::Path::GetDirectory(out_file), prj_path, out_path + L"/_obj", console)) return 1;
-                    if (!link(object_list, out_internal, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
-                    try {
-                        FileStream src(out_internal, AccessRead, OpenExisting);
-                        FileStream out(out_file, AccessReadWrite, CreateAlways);
-                        src.CopyTo(&out);
-                    } catch (...) {
-                        console << L"Failed to substitute the executable." << IO::NewLineChar;
-                        return 1;
-                    }
+					if (outpath) {
+						console.WriteLine(IO::ExpandPath(out_file));
+					} else {
+						string out_internal = out_path + L"/_obj/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".tmp";
+						if (!copy_attachments(IO::Path::GetDirectory(out_file), prj_path, out_path + L"/_obj", console)) return 1;
+						if (!link(object_list, out_internal, out_file, out_path + L"/_obj/linker-output.log", console)) return 1;
+						try {
+							FileStream src(out_internal, AccessRead, OpenExisting);
+							FileStream out(out_file, AccessReadWrite, CreateAlways);
+							src.CopyTo(&out);
+						} catch (...) {
+							console << L"Failed to substitute the executable." << IO::NewLineChar;
+							return 1;
+						}
+					}
                 }
             }
             catch (Exception & ex) {
