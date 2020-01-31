@@ -24,6 +24,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	return result;
 }
 #endif
+#ifdef ENGINE_SUBSYSTEM_LIBRARY
+void LibraryLoaded(void);
+void LibraryUnloaded(void);
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD Reason, LPVOID Reserved)
+{
+	if (Reason == DLL_PROCESS_ATTACH) LibraryLoaded();
+	else if (Reason == DLL_PROCESS_DETACH) LibraryUnloaded();
+	return TRUE;
+}
+#endif
 #endif
 #ifdef ENGINE_MACOSX
 #ifdef ENGINE_SUBSYSTEM_CONSOLE
