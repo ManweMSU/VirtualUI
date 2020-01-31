@@ -31,7 +31,10 @@ struct FileFormat
     string Extension;
     string Description;
     string Icon;
+	int IconIndex;
+	int UniqueIndex;
     bool CanCreate;
+	bool UniqueIcon;
 };
 
 handle error_output;
@@ -49,10 +52,9 @@ bool errlog = false;
 void print_error(handle from)
 {
     FileStream From(from);
-    FileStream To(error_output);
     From.Seek(0, Begin);
     TextReader FromReader(&From);
-    TextWriter ToWriter(&To);
+    IO::Console ToWriter(error_output);
     ToWriter.Write(FromReader.ReadAll());
 }
 void try_create_directory(const string & path)
@@ -89,7 +91,7 @@ bool copy_file_nothrow(const string & source, const string & dest)
     catch (...) { return false; }
     return true;
 }
-bool validate_resources(TextWriter & console)
+bool validate_resources(ITextWriter & console)
 {
     for (int i = 0; i < reslist.Length(); i++) {
         for (int j = 0; j < reslist[i].Name.Length(); j++) {
@@ -103,7 +105,7 @@ bool validate_resources(TextWriter & console)
     return true;
 }
 string make_lexem(const string & str) { return str.Replace(L'\\', L"\\\\").Replace(L'\"', L"\\\""); }
-bool compile_resource(const string & rc, const string & res, const string & log, TextWriter & console)
+bool compile_resource(const string & rc, const string & res, const string & log, ITextWriter & console)
 {
     try {
         Time src_time = 0;
@@ -155,7 +157,7 @@ bool compile_resource(const string & rc, const string & res, const string & log,
     catch (...) { return false; }
     return true;
 }
-bool asm_icon(const string & source, const string & output, TextWriter & console)
+bool asm_icon(const string & source, const string & output, ITextWriter & console)
 {
     try {
         Time src_time = 0;
@@ -199,7 +201,7 @@ bool asm_icon(const string & source, const string & output, TextWriter & console
     catch (...) { return false; }
     return true;
 }
-bool asm_resscript(const string & manifest, const Array<string> & icons, const string & rc, TextWriter & console)
+bool asm_resscript(const string & manifest, const Array<string> & icons, const string & app_icon, const string & rc, bool is_lib, ITextWriter & console)
 {
     try {
         Time max_time = 0;
@@ -231,12 +233,13 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
             script.WriteEncodingSignature();
             script << L"#include <Windows.h>" << IO::NewLineChar << IO::NewLineChar;
             script << L"CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST \"" + manifest + L"\"" << IO::NewLineChar << IO::NewLineChar;
-            if (icons.Length()) {
-                for (int i = 0; i < icons.Length(); i++) {
-                    script << string(i + 1) + L" ICON \"" + icons[i] + L"\"" << IO::NewLineChar;
-                }
-                script << IO::NewLineChar;
-            }
+			if (app_icon.Length()) {
+				script << string(1) + L" ICON \"" + IO::Path::GetFileName(app_icon) + L"\"" << IO::NewLineChar;
+			}
+			for (int i = 0; i < formats.Length(); i++) if (formats[i].UniqueIcon) {
+                script << string(formats[i].UniqueIndex + 1) + L" ICON \"" + IO::Path::GetFileName(formats[i].Icon) + L"\"" << IO::NewLineChar;
+			}
+            if (icons.Length()) script << IO::NewLineChar;
             if (reslist.Length()) {
                 for (int i = 0; i < reslist.Length(); i++) {
                     string inner_name = reslist[i].Locale.Length() ? (reslist[i].Name + L"-" + reslist[i].Locale) : reslist[i].Name;
@@ -253,7 +256,11 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
                 script << L"FILEFLAGSMASK 0x3fL" << IO::NewLineChar;
                 script << L"FILEFLAGS 0x0L" << IO::NewLineChar;
                 script << L"FILEOS VOS_NT_WINDOWS32" << IO::NewLineChar;
-                script << L"FILETYPE VFT_APP" << IO::NewLineChar;
+				if (is_lib) {
+					script << L"FILETYPE VFT_DLL" << IO::NewLineChar;
+				} else {
+                	script << L"FILETYPE VFT_APP" << IO::NewLineChar;
+				}
                 script << L"FILESUBTYPE VFT2_UNKNOWN" << IO::NewLineChar;
                 script << L"BEGIN" << IO::NewLineChar;
                 script << L"\tBLOCK \"StringFileInfo\"" << IO::NewLineChar;
@@ -283,7 +290,7 @@ bool asm_resscript(const string & manifest, const Array<string> & icons, const s
     catch (...) { return false; }
     return true;
 }
-bool asm_manifest(const string & output, TextWriter & console)
+bool asm_manifest(const string & output, ITextWriter & console)
 {
     try {
         Time man_time = 0;
@@ -332,7 +339,7 @@ bool asm_manifest(const string & output, TextWriter & console)
     catch (...) { return false; }
     return true;
 }
-bool asm_plist(const string & output, bool with_icon, TextWriter & console)
+bool asm_plist(const string & output, bool with_icon, ITextWriter & console)
 {
     try {
         Time list_time = 0;
@@ -398,6 +405,9 @@ bool asm_plist(const string & output, bool with_icon, TextWriter & console)
                 list << L"\t<key>CFBundleDocumentTypes</key>" << IO::NewLineChar;
                 list << L"\t<array>" << IO::NewLineChar;
                 for (int i = 0; i < formats.Length(); i++) {
+					string icon_file;
+					if (formats[i].UniqueIndex) icon_file = L"FileIcon" + string(formats[i].UniqueIndex) + L".icns";
+					else icon_file = L"AppIcon.icns";
                     list << L"\t\t<dict>" << IO::NewLineChar;
                     list << L"\t\t\t<key>CFBundleTypeExtensions</key>" << IO::NewLineChar;
                     list << L"\t\t\t<array>" << IO::NewLineChar;
@@ -406,7 +416,7 @@ bool asm_plist(const string & output, bool with_icon, TextWriter & console)
                     list << L"\t\t\t<key>CFBundleTypeName</key>" << IO::NewLineChar;
                     list << L"\t\t\t<string>" << formats[i].Description << L"</string>" << IO::NewLineChar;
                     list << L"\t\t\t<key>CFBundleTypeIconFile</key>" << IO::NewLineChar;
-                    list << L"\t\t\t<string>FileIcon" << string(i + 1) << L".icns</string>" << IO::NewLineChar;
+                    list << L"\t\t\t<string>" << icon_file << L"</string>" << IO::NewLineChar;
                     list << L"\t\t\t<key>CFBundleTypeRole</key>" << IO::NewLineChar;
                     list << L"\t\t\t<string>" << (formats[i].CanCreate ? L"Editor" : L"Viewer") << L"</string>" << IO::NewLineChar;
                     list << L"\t\t</dict>" << IO::NewLineChar;
@@ -422,7 +432,7 @@ bool asm_plist(const string & output, bool with_icon, TextWriter & console)
     catch (...) { return false; }
     return true;
 }
-bool build_bundle(const string & plist, const Array<string> & icons, const string & bundle, TextWriter & console)
+bool build_bundle(const string & plist, const string & app_icon, const string & bundle, ITextWriter & console)
 {
     console << L"Building Mac OS X Application Bundle " + IO::Path::GetFileName(bundle) + L"...";
     try_create_directory(bundle);
@@ -443,11 +453,9 @@ bool build_bundle(const string & plist, const Array<string> & icons, const strin
     }
     try {
         copy_file(plist, bundle + L"/Contents/Info.plist");
-        if (icons.Length()) {
-            copy_file(icons[0], bundle + L"/Contents/Resources/AppIcon.icns");
-            for (int i = 1; i < icons.Length(); i++) {
-                copy_file(icons[i], bundle + L"/Contents/Resources/FileIcon" + string(i) + L".icns");
-            }
+        if (app_icon.Length()) copy_file(app_icon, bundle + L"/Contents/Resources/AppIcon.icns");
+		for (int i = 0; i < formats.Length(); i++) if (formats[i].UniqueIcon) {
+            copy_file(formats[i].Icon, bundle + L"/Contents/Resources/FileIcon" + string(formats[i].UniqueIndex) + L".icns");
         }
         for (int i = 0; i < reslist.Length(); i++) {
             string inner_name = reslist[i].Locale.Length() ? (reslist[i].Name + L"-" + reslist[i].Locale) : reslist[i].Name;
@@ -490,24 +498,50 @@ void index_resources(const string & base_path, const string & obj_path, Registry
         index_resources(base_path, obj_path, resnode, local_locale);
     }
 }
-bool index_file_formats(const string & base_path, const string & obj_path, RegistryNode * node, TextWriter & console)
+bool index_file_formats(const string & app_icon, const string & app_icon_src, const string & base_path, const string & obj_path, RegistryNode * node, ITextWriter & console)
 {
     auto & dirs = node->GetSubnodes();
+	Array<string> src_paths(0x10);
     for (int i = 0; i < dirs.Length(); i++) {
         SafePointer<RegistryNode> sub = node->OpenNode(dirs[i]);
         formats << FileFormat();
         formats.LastElement().Extension = sub->GetValueString(L"Extension");
         formats.LastElement().Description = sub->GetValueString(L"Description");
-        formats.LastElement().Icon = sub->GetValueString(L"Icon");
+        formats.LastElement().Icon = IO::ExpandPath(base_path + L"/" + sub->GetValueString(L"Icon"));
         formats.LastElement().CanCreate = sub->GetValueBoolean(L"CanCreate");
-        string src = IO::ExpandPath(base_path + L"/" + formats.LastElement().Icon);
-        string conv = obj_path + L"/" + IO::Path::GetFileNameWithoutExtension(src) + L"." + sys_cfg->GetValueString(L"IconExtension");
-        if (!asm_icon(src, conv, console)) return false;
-        formats.LastElement().Icon = conv;
+		src_paths << formats.LastElement().Icon;
+		if (formats.LastElement().Icon == app_icon_src) {
+			formats.LastElement().Icon = app_icon;
+			formats.LastElement().IconIndex = 0;
+			formats.LastElement().UniqueIcon = false;
+		} else {
+			bool found = false;
+			for (int i = 0; i < src_paths.Length() - 1; i++) {
+				if (formats.LastElement().Icon == src_paths[i]) {
+					formats.LastElement().Icon = formats[i].Icon;
+					formats.LastElement().IconIndex = i + 1;
+					formats.LastElement().UniqueIcon = false;
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				string conv = obj_path + L"/" + IO::Path::GetFileNameWithoutExtension(formats.LastElement().Icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
+				if (!asm_icon(formats.LastElement().Icon, conv, console)) return false;
+				formats.LastElement().Icon = conv;
+				formats.LastElement().IconIndex = formats.Length();
+				formats.LastElement().UniqueIcon = true;
+			}
+		}
     }
+	int counter = 1;
+	for (int i = 0; i < formats.Length(); i++) {
+		if (formats[i].UniqueIcon) { formats[i].UniqueIndex = counter; counter++; }
+		else { if (formats[i].IconIndex) formats[i].UniqueIndex = formats[formats[i].IconIndex - 1].UniqueIcon; else formats[i].UniqueIndex = 0; }
+	}
     return true;
 }
-bool asm_format_manifest(const string & name, TextWriter & console)
+bool asm_format_manifest(const string & name, ITextWriter & console)
 {
     try {
         Time man_time = 0;
@@ -527,7 +561,7 @@ bool asm_format_manifest(const string & name, TextWriter & console)
                 fmt->CreateValue(L"Description", RegistryValueType::String);
                 fmt->SetValue(L"Description", formats[i].Description);
                 fmt->CreateValue(L"IconIndex", RegistryValueType::Integer);
-                fmt->SetValue(L"IconIndex", i + 1);
+                fmt->SetValue(L"IconIndex", formats[i].UniqueIndex);
                 fmt->CreateValue(L"CanCreate", RegistryValueType::Boolean);
                 fmt->SetValue(L"CanCreate", formats[i].CanCreate);
             }
@@ -548,8 +582,7 @@ int Main(void)
     UI::Windows::InitializeCodecCollection();
     handle console_output = IO::CloneHandle(IO::GetStandardOutput());
     error_output = IO::CloneHandle(IO::GetStandardError());
-    FileStream console_stream(console_output);
-    TextWriter console(&console_stream);
+	IO::Console console(console_output);
 
     SafePointer< Array<string> > args = GetCommandLine();
 
@@ -641,6 +674,17 @@ int Main(void)
                 return 1;
             }
             if (target_system == L"windows") {
+				Array<string> icons(0x10);
+                string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
+				string app_icon_src;
+                if (app_icon.Length()) {
+                    app_icon_src = app_icon = IO::ExpandPath(IO::Path::GetDirectory(args->ElementAt(1)) + L"/" + app_icon);
+                    string conv_icon = IO::Path::GetFileNameWithoutExtension(app_icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
+                    conv_icon = args->ElementAt(2) + L"/" + conv_icon;
+                    if (!asm_icon(app_icon, conv_icon, console)) return 1;
+                    app_icon = conv_icon;
+                    icons << IO::Path::GetFileName(app_icon);
+                }
                 {
                     SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
                     index_resources(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), resdir, L"");
@@ -649,25 +693,16 @@ int Main(void)
                 {
                     SafePointer<RegistryNode> frmdir = prj_cfg->OpenNode(L"FileFormats");
                     if (frmdir) {
-                        if (!index_file_formats(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
+                        if (!index_file_formats(app_icon, app_icon_src, IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
                     }
                 }
                 string manifest = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".manifest";
                 if (!asm_manifest(manifest, console)) return 1;
-                Array<string> icons(0x10);
-                string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
-                if (app_icon.Length()) {
-                    app_icon = IO::ExpandPath(IO::Path::GetDirectory(args->ElementAt(1)) + L"/" + app_icon);
-                    string conv_icon = IO::Path::GetFileNameWithoutExtension(app_icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
-                    conv_icon = args->ElementAt(2) + L"/" + conv_icon;
-                    if (!asm_icon(app_icon, conv_icon, console)) return 1;
-                    app_icon = conv_icon;
-                    icons << IO::Path::GetFileName(app_icon);
-                }
                 for (int i = 0; i < formats.Length(); i++) icons << IO::Path::GetFileName(formats[i].Icon);
                 string rc = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".rc";
                 manifest = IO::Path::GetFileName(manifest);
-                if (!asm_resscript(manifest, icons, rc, console)) return 1;
+				bool is_lib = (string::CompareIgnoreCase(prj_cfg->GetValueString(L"Subsystem"), L"library") == 0);
+                if (!asm_resscript(manifest, icons, app_icon, rc, is_lib, console)) return 1;
                 string res = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".res";
                 string res_log = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".log";
                 if (!compile_resource(rc, res, res_log, console)) return 1;
@@ -675,6 +710,15 @@ int Main(void)
                     if (!asm_format_manifest(args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".formats.ini", console)) return 1;
                 }
             } else if (target_system == L"macosx") {
+				string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
+				string app_icon_src;
+                if (app_icon.Length()) {
+                    app_icon_src = app_icon = IO::ExpandPath(IO::Path::GetDirectory(args->ElementAt(1)) + L"/" + app_icon);
+                    string conv_icon = IO::Path::GetFileNameWithoutExtension(app_icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
+                    conv_icon = args->ElementAt(2) + L"/" + conv_icon;
+                    if (!asm_icon(app_icon, conv_icon, console)) return 1;
+                    app_icon = conv_icon;
+                }
                 {
                     SafePointer<RegistryNode> resdir = prj_cfg->OpenNode(L"Resources");
                     index_resources(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), resdir, L"");
@@ -683,24 +727,13 @@ int Main(void)
                 {
                     SafePointer<RegistryNode> frmdir = prj_cfg->OpenNode(L"FileFormats");
                     if (frmdir) {
-                        if (!index_file_formats(IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
+                        if (!index_file_formats(app_icon, app_icon_src, IO::Path::GetDirectory(args->ElementAt(1)), args->ElementAt(2), frmdir, console)) return 1;
                     }
                 }
-                string app_icon = prj_cfg->GetValueString(L"ApplicationIcon");
                 string plist = args->ElementAt(2) + L"/" + IO::Path::GetFileNameWithoutExtension(args->ElementAt(1)) + L".plist";
                 if (!asm_plist(plist, app_icon.Length(), console)) return 1;
-                Array<string> icons(0x10);
-                if (app_icon.Length()) {
-                    app_icon = IO::ExpandPath(IO::Path::GetDirectory(args->ElementAt(1)) + L"/" + app_icon);
-                    string conv_icon = IO::Path::GetFileNameWithoutExtension(app_icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
-                    conv_icon = args->ElementAt(2) + L"/" + conv_icon;
-                    if (!asm_icon(app_icon, conv_icon, console)) return 1;
-                    app_icon = conv_icon;
-                    icons << app_icon;
-                }
-                for (int i = 0; i < formats.Length(); i++) icons << formats[i].Icon;
                 if (bundle_path.Length()) {
-                    if (!build_bundle(plist, icons, bundle_path, console)) return 1;
+                    if (!build_bundle(plist, app_icon, bundle_path, console)) return 1;
                 }
             } else {
                 console << L"Invalid target system." << IO::NewLineChar;
