@@ -4,7 +4,7 @@ using namespace Engine;
 using namespace Engine::Streaming;
 using namespace Engine::Codec;
 
-bool Save(Image * image, const string & as, const string & codec, TextWriter & console)
+bool Save(Image * image, const string & as, const string & codec, ITextWriter & console)
 {
     try {
         console << L"Writing \"" << as << L"\"...";
@@ -31,8 +31,7 @@ bool Save(Image * image, const string & as, const string & codec, TextWriter & c
 }
 int Main(void)
 {
-    FileStream console_stream(IO::GetStandardOutput());
-    TextWriter console(&console_stream);
+	IO::Console console;
 
     SafePointer< Array<string> > args = GetCommandLine();
 

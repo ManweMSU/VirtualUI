@@ -250,7 +250,7 @@ public:
         catch (...) { return false; }
         return true;
     }
-    bool Archive(TextWriter & console)
+    bool Archive(IO::Console & console)
     {
         Time started = Time::GetCurrentTime();
         console << L"Archivation started at " << started.ToLocal().ToString() << L"." << IO::NewLineChar;
@@ -399,7 +399,7 @@ ArchiveList list;
 Array<int> selection(0x10);
 Syntax::Spelling command_spelling;
 
-bool Execute(Array<Syntax::Token> & command, TextWriter & console)
+bool Execute(Array<Syntax::Token> & command, IO::Console & console)
 {
     if (command.Length() > 0) {
         if (command[0].Class == Syntax::TokenClass::CharCombo && command[0].Content == L"?") {
@@ -588,9 +588,10 @@ bool Execute(Array<Syntax::Token> & command, TextWriter & console)
                 SafePointer< Array<string> > files = IO::Search::GetFiles(command[1].Content, rec);
                 int count = 0;
                 for (int i = 0; i < files->Length(); i++) {
+					string name = files->ElementAt(i);
+					if (IO::Path::GetFileName(name)[0] == L'.') continue;
                     string base = IO::Path::GetDirectory(command[1].Content);
                     string src = IO::ExpandPath((base.Length() ? (base + L"/") : L"") + files->ElementAt(i));
-                    string name = files->ElementAt(i);
                     if (string::CompareIgnoreCase(src.Fragment(0, prefix.Length()), prefix) == 0) src = L"<ListPath>" + src.Fragment(prefix.Length(), -1);
                     ArchiveEntity ent;
                     ent.SourceFile = src;
@@ -769,9 +770,7 @@ bool Execute(Array<Syntax::Token> & command, TextWriter & console)
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandardOutput());
-    FileStream console_stream(console_output);
-    TextWriter console(&console_stream);
+    IO::Console console;
 
     SafePointer< Array<string> > args = GetCommandLine();
 
@@ -794,6 +793,7 @@ int Main(void)
         bool create = false;
         bool prompt = true;
         bool archive = false;
+		bool break_on_error = false;
         string list_file;
         for (int i = 1; i < args->Length(); i++) {
             if (string::CompareIgnoreCase(args->ElementAt(i), L":create") == 0) {
@@ -807,6 +807,7 @@ int Main(void)
                     IO::SetStandardInput(input);
                     IO::CloseFile(input);
                     prompt = false;
+					break_on_error = true;
                 }
                 catch (...) {
                     console << L"Failed to attach command source." << IO::NewLineChar;
@@ -839,23 +840,28 @@ int Main(void)
                 if (!list.Archive(console)) return 1;
                 return 0;
             }
-            FileStream InputStream(IO::GetStandardInput());
-            TextReader Input(&InputStream, IO::TextFileEncoding);
+            IO::Console new_console;
             command_spelling.IsolatedChars << L'?';
-            while (!Input.EofReached()) {
+            while (!new_console.EofReached()) {
                 if (prompt) {
-                    console << IO::NewLineChar << IO::Path::GetFileName(list.ListName).UpperCase() << L"> ";
+                    new_console << IO::NewLineChar << IO::Path::GetFileName(list.ListName).UpperCase() << L"> ";
                 }
-                string command = Input.ReadLine();
+                string command = new_console.ReadLine();
                 SafePointer<Array<Syntax::Token>> decomposed;
                 try {
                     decomposed = Syntax::ParseText(command, command_spelling);
                     decomposed->RemoveLast();
-                    if (!Execute(*decomposed, console)) break;
+                    if (!Execute(*decomposed, new_console)) {
+						if (break_on_error) break;
+						else throw Exception();
+					}
                 }
                 catch (Syntax::ParserSpellingException & e) {
-                    console << L"Invalid command syntax. Type \"?\"." << IO::NewLineChar;
+                    new_console << L"Invalid command syntax. Type \"?\"." << IO::NewLineChar;
                 }
+				catch (...) {
+					new_console << L"Failed to execute the command." << IO::NewLineChar;
+				}
             }
         }
         catch (...) {

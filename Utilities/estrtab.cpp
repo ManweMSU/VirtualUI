@@ -38,7 +38,7 @@ StringTable * compile_string_table(Stream * stream)
     table->Retain();
     return table;
 }
-void string_table_to_text(StringTable * table, TextWriter & output)
+void string_table_to_text(StringTable * table, ITextWriter & output)
 {
     SafePointer< Array<int> > index = table->GetIndex();
     int mid = 0;
@@ -56,9 +56,7 @@ void string_table_to_text(StringTable * table, TextWriter & output)
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandardOutput());
-    FileStream console_stream(console_output);
-    TextWriter console(&console_stream);
+    IO::Console console;
 
     SafePointer< Array<string> > args = GetCommandLine();
 

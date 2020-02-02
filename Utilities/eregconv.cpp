@@ -9,9 +9,7 @@ enum class Operation { View, ToText, ToBinary };
 
 int Main(void)
 {
-    handle console_output = IO::CloneHandle(IO::GetStandardOutput());
-    FileStream console_stream(console_output);
-    TextWriter console(&console_stream);
+    IO::Console console;
 
     SafePointer< Array<string> > args = GetCommandLine();
 
