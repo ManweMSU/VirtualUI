@@ -94,7 +94,10 @@ bool compile(const string & source, const string & object, const string & log, I
     handle object_handle;
     try {
         source_handle = IO::CreateFile(source, IO::AccessRead, IO::OpenExisting);
-    } catch (...) { return false; }
+    } catch (...) {
+		console << L"Failed to open a source file \"" + IO::ExpandPath(source) + L"\"." << IO::NewLineChar;
+		return false;
+	}
     try {
         object_handle = IO::CreateFile(object, IO::AccessRead, IO::OpenExisting);
     } catch (...) { vcheck = false; IO::CloseFile(source_handle); }
