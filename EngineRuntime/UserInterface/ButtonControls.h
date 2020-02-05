@@ -2,7 +2,7 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
-#include "Menues.h"
+#include "Menus.h"
 
 namespace Engine
 {
@@ -171,7 +171,7 @@ namespace Engine
 				SafePointer<Shape> _disabled_semihot_checked;
 				SafePointer<Shape> _hot_checked;
 				SafePointer<Shape> _pressed_checked;
-				SafePointer<Menues::Menu> _menu;
+				SafePointer<Menus::Menu> _menu;
 				int _state;
 			public:
 				ToolButtonPart(Window * Parent, WindowStation * Station);
@@ -200,8 +200,8 @@ namespace Engine
 				virtual ITexture * GetNormalImage(void);
 				virtual void SetGrayedImage(ITexture * Image);
 				virtual ITexture * GetGrayedImage(void);
-				virtual void SetDropDownMenu(Menues::Menu * Menu);
-				virtual Menues::Menu * GetDropDownMenu(void);
+				virtual void SetDropDownMenu(Menus::Menu * Menu);
+				virtual Menus::Menu * GetDropDownMenu(void);
 			};
 		}
 	}

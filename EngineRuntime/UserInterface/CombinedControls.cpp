@@ -590,7 +590,7 @@ namespace Engine
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_chars_enabled.SetLength(CharactersEnabled.GetEncodedLength(Encoding::UTF32));
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
-				_menu.SetReference(ContextMenu ? new Menues::Menu(ContextMenu) : 0);
+				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
 			}
 			TextComboBox::~TextComboBox(void) {}
 			void TextComboBox::Render(const Box & at)
@@ -1070,8 +1070,8 @@ namespace Engine
 				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
 			string TextComboBox::GetCharacterFilter(void) { return CharactersEnabled; }
-			void TextComboBox::SetContextMenu(Menues::Menu * menu) { _menu.SetRetain(menu); }
-			Menues::Menu * TextComboBox::GetContextMenu(void) { return _menu; }
+			void TextComboBox::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
+			Menus::Menu * TextComboBox::GetContextMenu(void) { return _menu; }
 			string TextComboBox::FilterInput(const string & input)
 			{
 				string conv = input;

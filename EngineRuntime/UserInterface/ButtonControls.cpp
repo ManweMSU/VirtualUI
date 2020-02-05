@@ -610,7 +610,7 @@ namespace Engine
 			{
 				if (Template->Properties->GetTemplateClass() != L"ToolButtonPart") throw InvalidArgumentException();
 				static_cast<Template::Controls::ToolButtonPart &>(*this) = static_cast<Template::Controls::ToolButtonPart &>(*Template->Properties);
-				if (DropDownMenu) _menu.SetReference(new Menues::Menu(DropDownMenu));
+				if (DropDownMenu) _menu.SetReference(new Menus::Menu(DropDownMenu));
 			}
 			ToolButtonPart::~ToolButtonPart(void) {}
 			void ToolButtonPart::Render(const Box & at)
@@ -771,8 +771,8 @@ namespace Engine
 			ITexture * ToolButtonPart::GetNormalImage(void) { return ImageNormal; }
 			void ToolButtonPart::SetGrayedImage(ITexture * Image) { ImageGrayed.SetRetain(Image); ResetCache(); }
 			ITexture * ToolButtonPart::GetGrayedImage(void) { return ImageGrayed; }
-			void ToolButtonPart::SetDropDownMenu(Menues::Menu * Menu) { _menu.SetRetain(Menu); }
-			Menues::Menu * ToolButtonPart::GetDropDownMenu(void) { return _menu; }
+			void ToolButtonPart::SetDropDownMenu(Menus::Menu * Menu) { _menu.SetRetain(Menu); }
+			Menus::Menu * ToolButtonPart::GetDropDownMenu(void) { return _menu; }
 		}
 	}
 }

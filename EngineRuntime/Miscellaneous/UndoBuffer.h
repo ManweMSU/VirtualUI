@@ -4,14 +4,29 @@
 
 namespace Engine
 {
+	template <class V> class IUndoProperty : public Object
+	{
+	public:
+		virtual V GetCurrentValue(void) = 0;
+		virtual void SetCurrentValue(const V & value) = 0;
+	};
+	template <class V> class VariableUndoProperty : public IUndoProperty<V>
+	{
+		V & CurrentStorage;
+	public:
+		VariableUndoProperty(V & storage) : CurrentStorage(storage) {}
+		virtual V GetCurrentValue(void) override { return CurrentStorage; }
+		virtual void SetCurrentValue(const V & value) override { CurrentStorage = value; }
+	};
 	template <class V> class UndoBuffer : public Object
 	{
 	protected:
 		SafeArray<V> VersionPool = SafeArray<V>(0x10);
-		V & CurrentStorage;
+		SafePointer< IUndoProperty<V> > Property;
 		int PreviousPointer = -1;
 	public:
-		UndoBuffer(V & storage) : CurrentStorage(storage) {}
+		UndoBuffer(V & storage) { Property = new VariableUndoProperty<V>(storage); }
+		UndoBuffer(IUndoProperty<V> * property) { Property.SetRetain(property); }
 		~UndoBuffer(void) override {}
 
 		bool CanUndo(void) const { return PreviousPointer >= 0; }
@@ -21,9 +36,10 @@ namespace Engine
 		void RemoveAllVersions(void) { VersionPool.Clear(); PreviousPointer = -1; }
 		virtual void PushCurrentVersion(void)
 		{
-			if (PreviousPointer == -1 || CurrentStorage != VersionPool[PreviousPointer]) {
+			auto value = Property->GetCurrentValue();
+			if (PreviousPointer == -1 || value != VersionPool[PreviousPointer]) {
 				RemoveFutureVersions();
-				VersionPool << CurrentStorage;
+				VersionPool << value;
 				PreviousPointer++;
 			}
 		}
@@ -31,14 +47,18 @@ namespace Engine
 		void Undo(void)
 		{
 			if (PreviousPointer >= 0) {
-				swap(VersionPool[PreviousPointer], CurrentStorage);
+				auto value = Property->GetCurrentValue();
+				Property->SetCurrentValue(VersionPool[PreviousPointer]);
+				VersionPool[PreviousPointer] = value;
 				PreviousPointer--;
 			}
 		}
 		void Redo(void)
 		{
 			if (PreviousPointer < VersionPool.Length() - 1) {
-				swap(VersionPool[PreviousPointer + 1], CurrentStorage);
+				auto value = Property->GetCurrentValue();
+				Property->SetCurrentValue(VersionPool[PreviousPointer + 1]);
+				VersionPool[PreviousPointer + 1] = value;
 				PreviousPointer++;
 			}
 		}
@@ -48,6 +68,7 @@ namespace Engine
 		int MaxDepth;
 	public:
 		LimitedUndoBuffer(V & storage, int max_depth) : UndoBuffer<V>(storage), MaxDepth(max_depth) {}
+		LimitedUndoBuffer(IUndoProperty<V> * property, int max_depth) : UndoBuffer<V>(property), MaxDepth(max_depth) {}
 		~LimitedUndoBuffer(void) override {}
 
 		virtual void PushCurrentVersion(void) override

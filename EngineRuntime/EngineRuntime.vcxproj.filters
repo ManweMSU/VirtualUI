@@ -94,9 +94,6 @@
     <ClInclude Include="PlatformDependent\KeyCodes.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
-    <ClInclude Include="UserInterface\Menues.h">
-      <Filter>UserInterface</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\OverlappedWindows.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -256,6 +253,12 @@
     <ClInclude Include="PlatformDependent\Console.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\RichEditControl.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\Menus.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -305,9 +308,6 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\KeyCodes.cpp">
       <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="UserInterface\Menues.cpp">
-      <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\OverlappedWindows.cpp">
       <Filter>UserInterface</Filter>
@@ -461,6 +461,12 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\Console.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\RichEditControl.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\Menus.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

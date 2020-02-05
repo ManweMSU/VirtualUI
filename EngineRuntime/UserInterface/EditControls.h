@@ -2,7 +2,7 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
-#include "Menues.h"
+#include "Menus.h"
 #include "ScrollableControls.h"
 
 #include "../Miscellaneous/UndoBuffer.h"
@@ -29,7 +29,7 @@ namespace Engine
 				SafePointer<Shape> _normal_readonly;
 				SafePointer<Shape> _focused_readonly;
 				SafePointer<Shape> _disabled;
-				SafePointer<Menues::Menu> _menu;
+				SafePointer<Menus::Menu> _menu;
 				SafePointer<ITextRenderingInfo> _text_info;
 				SafePointer<ITextRenderingInfo> _placeholder_info;
 				SafePointer<Object> _inversion;
@@ -92,8 +92,8 @@ namespace Engine
 				string GetPlaceholder(void);
 				void SetCharacterFilter(const string & filter);
 				string GetCharacterFilter(void);
-				void SetContextMenu(Menues::Menu * menu);
-				Menues::Menu * GetContextMenu(void);
+				void SetContextMenu(Menus::Menu * menu);
+				Menus::Menu * GetContextMenu(void);
 				void SetPasswordMode(bool hide);
 				bool GetPasswordMode(void);
 				void SetPasswordChar(uint32 ucs);
@@ -153,7 +153,7 @@ namespace Engine
 				SafePointer<Shape> _normal_readonly;
 				SafePointer<Shape> _focused_readonly;
 				SafePointer<Shape> _disabled;
-				SafePointer<Menues::Menu> _menu;
+				SafePointer<Menus::Menu> _menu;
 				SafePointer<Object> _inversion;
 				EditorContent _content;
 				ObjectArray<ITextRenderingInfo> _text_info;
@@ -216,8 +216,8 @@ namespace Engine
 				void ScrollToCaret(void);
 				void SetCharacterFilter(const string & filter);
 				string GetCharacterFilter(void);
-				void SetContextMenu(Menues::Menu * menu);
-				Menues::Menu * GetContextMenu(void);
+				void SetContextMenu(Menus::Menu * menu);
+				Menus::Menu * GetContextMenu(void);
 				void SetHook(IMultiLineEditHook * hook);
 				IMultiLineEditHook * GetHook(void);
 				const Array<uint32> & GetRawLine(int line_index);

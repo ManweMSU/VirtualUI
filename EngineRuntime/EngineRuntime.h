@@ -47,7 +47,7 @@
 #include "UserInterface/EditControls.h"
 #include "UserInterface/GroupControls.h"
 #include "UserInterface/ListControls.h"
-#include "UserInterface/Menues.h"
+#include "UserInterface/Menus.h"
 #include "UserInterface/OverlappedWindows.h"
 #include "UserInterface/RichEditControl.h"
 #include "UserInterface/ScrollableControls.h"

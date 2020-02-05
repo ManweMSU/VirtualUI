@@ -23,13 +23,13 @@ namespace Engine
 	namespace NativeWindows
 	{
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);
-		void FillWinapiMenu(HMENU Menu, ObjectArray<Menues::MenuElement> & Elements)
+		void FillWinapiMenu(HMENU Menu, ObjectArray<Menus::MenuElement> & Elements)
 		{
 			for (int i = 0; i < Elements.Length(); i++) {
 				if (Elements[i].IsSeparator()) {
 					AppendMenuW(Menu, MF_OWNERDRAW | MF_DISABLED | MF_GRAYED, 0, reinterpret_cast<LPCWSTR>(Elements.ElementAt(i)));
 				} else {
-					Menues::MenuItem * item = static_cast<Menues::MenuItem *>(Elements.ElementAt(i));
+					Menus::MenuItem * item = static_cast<Menus::MenuItem *>(Elements.ElementAt(i));
 					uint flags = MF_OWNERDRAW;
 					if (item->Checked) flags |= MF_CHECKED;
 					if (item->Disabled) flags |= MF_DISABLED | MF_GRAYED;
@@ -403,7 +403,7 @@ namespace Engine
 			GetWindowRect(reinterpret_cast<NativeStation *>(Station)->GetHandle(), &Rect);
 			return UI::Box(Rect.left, Rect.top, Rect.right, Rect.bottom);
 		}
-		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at)
+		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at)
 		{
 			POINT p = { at.x, at.y };
 			HWND server = static_cast<NativeStation *>(owner->GetStation())->GetHandle();
@@ -573,7 +573,7 @@ namespace Engine
 			} else if (Msg == WM_MEASUREITEM) {
 				LPMEASUREITEMSTRUCT mis = reinterpret_cast<LPMEASUREITEMSTRUCT>(LParam);
 				if (mis->CtlType == ODT_MENU) {
-					auto item = reinterpret_cast<Menues::MenuElement *>(mis->itemData);
+					auto item = reinterpret_cast<Menus::MenuElement *>(mis->itemData);
 					mis->itemWidth = item->GetWidth();
 					mis->itemHeight = item->GetHeight();
 				}
@@ -581,7 +581,7 @@ namespace Engine
 			} else if (Msg == WM_DRAWITEM) {
 				LPDRAWITEMSTRUCT dis = reinterpret_cast<LPDRAWITEMSTRUCT>(LParam);
 				if (dis->CtlType == ODT_MENU) {
-					auto item = reinterpret_cast<Menues::MenuElement *>(dis->itemData);
+					auto item = reinterpret_cast<Menus::MenuElement *>(dis->itemData);
 					auto box = Box(0, 0, dis->rcItem.right - dis->rcItem.left, dis->rcItem.bottom - dis->rcItem.top);
 					auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderDevice *>(item->GetRenderingDevice())->GetRenderTarget());
 					target->BindDC(dis->hDC, &dis->rcItem);
