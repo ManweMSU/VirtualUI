@@ -6,7 +6,7 @@ namespace Engine
 {
     namespace IO
     {
-		Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput())), file(GetStandardOutput()), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput())
+		Console::Console(void) : writer(new Streaming::FileStream(GetStandardOutput()), Encoding::UTF8), file(GetStandardOutput()), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput())
 		{
 			if (file == INVALID_HANDLE_VALUE || !file) throw FileAccessException(Error::InvalidHandle);
 			DWORD mode;
@@ -23,7 +23,7 @@ namespace Engine
 			else if (GetConsoleMode(file_in, &mode)) console_in_mode = 1;
 			else console_in_mode = 2;
 		}
-        Console::Console(handle output) : writer(new Streaming::FileStream(output)), file(output), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput())
+        Console::Console(handle output) : writer(new Streaming::FileStream(output), Encoding::UTF8), file(output), reader(new Streaming::FileStream(GetStandardInput()), Encoding::UTF8), file_in(GetStandardInput())
 		{
 			if (file == INVALID_HANDLE_VALUE || !file) throw FileAccessException(Error::InvalidHandle);
 			DWORD mode;
@@ -40,7 +40,7 @@ namespace Engine
 			else if (GetConsoleMode(file_in, &mode)) console_in_mode = 1;
 			else console_in_mode = 2;
 		}
-		Console::Console(handle output, handle input) : writer(new Streaming::FileStream(output)), file(output), reader(new Streaming::FileStream(input), Encoding::UTF8), file_in(input)
+		Console::Console(handle output, handle input) : writer(new Streaming::FileStream(output), Encoding::UTF8), file(output), reader(new Streaming::FileStream(input), Encoding::UTF8), file_in(input)
 		{
 			if (file == INVALID_HANDLE_VALUE || !file) throw FileAccessException(Error::InvalidHandle);
 			DWORD mode;

@@ -113,7 +113,7 @@ namespace Engine
 		template <int D> ShortReal length(const Vector<ShortReal, D> & a) noexcept { ShortReal s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return sqrt(s); }
 		template <int D> Real length(const Vector<Real, D> & a) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return sqrt(s); }
 		template <int D> Real length(const Vector<Complex, D> & a) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += (a.c[i] * conjugate(a.c[i])).re; return sqrt(s); }
-		template <class F, int D> Vector<F, D> normalize(const Vector<F, D> & a) noexcept { return a / length(a); }
+		template <class F, int D> Vector<F, D> normalize(const Vector<F, D> & a) noexcept { return a / F(length(a)); }
 		template <int D> ShortReal dot(const Vector<ShortReal, D> & a, const Vector<ShortReal, D> & b) noexcept { ShortReal s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * b.c[i]; return s; }
 		template <int D> Real dot(const Vector<Real, D> & a, const Vector<Real, D> & b) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * b.c[i]; return s; }
 		template <int D> Complex dot(const Vector<Complex, D> & a, const Vector<Complex, D> & b) noexcept { Complex s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * conjugate(b.c[i]); return s; }

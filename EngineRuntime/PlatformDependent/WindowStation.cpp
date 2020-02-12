@@ -183,7 +183,8 @@ namespace Engine
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) processed = KeyDown(KeyCodes::LeftAlternative);
 					else processed = KeyDown(KeyCodes::RightAlternative);
 				} else processed = KeyDown(int32(WParam));
-				if (processed) return 0;
+				DefWindowProcW(_window, Msg, WParam, LParam);
+				if (processed) return 0; else return 1;
 			} else if (Msg == WM_KEYUP || Msg == WM_SYSKEYUP) {
 				if (WParam == VK_SHIFT) {
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftShift);
@@ -195,6 +196,7 @@ namespace Engine
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) KeyUp(KeyCodes::LeftAlternative);
 					else KeyUp(KeyCodes::RightAlternative);
 				} else KeyUp(int32(WParam));
+				DefWindowProcW(_window, Msg, WParam, LParam);
 				return 0;
 			} else if (Msg == WM_CHAR) {
 				if ((WParam & 0xFC00) == 0xD800) {

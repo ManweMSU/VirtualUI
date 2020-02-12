@@ -445,8 +445,10 @@ namespace Engine
 		{
 			MSG Msg;
 			while (GetMessageW(&Msg, 0, 0, 0)) {
-				TranslateMessage(&Msg);
-				DispatchMessageW(&Msg);
+				auto result = DispatchMessageW(&Msg);
+				if (Msg.message == WM_KEYDOWN || Msg.message == WM_KEYUP || Msg.message == WM_SYSKEYDOWN || Msg.message == WM_SYSKEYUP) {
+					if (result) TranslateMessage(&Msg);
+				}
 			}
 		}
 		void ExitMainLoop(void) { PostQuitMessage(0); }
