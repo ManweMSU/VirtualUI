@@ -26,7 +26,7 @@ namespace Engine
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 				SafePointer< Array<uint8> > mask = PasswordCharacter.EncodeSequence(Encoding::UTF32, true);
 				MemoryCopy(&_mask_char, mask->GetBuffer(), sizeof(uint32));
-				_menu.SetReference(ContextMenu ? new Menues::Menu(ContextMenu) : 0);
+				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
 			}
 			Edit::~Edit(void) {}
 			void Edit::Render(const Box & at)
@@ -264,6 +264,7 @@ namespace Engine
 					if (paste) paste->Disabled = ReadOnly || !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
 					if (remove) remove->Disabled = ReadOnly || _cp == _sp;
 					_state = 2;
+					if (_hook) _hook->InitializeContextMenu(_menu, this);
 					_menu->RunPopup(this, pos);
 				}
 			}
@@ -448,8 +449,8 @@ namespace Engine
 				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
 			string Edit::GetCharacterFilter(void) { return CharactersEnabled; }
-			void Edit::SetContextMenu(Menues::Menu * menu) { _menu.SetRetain(menu); }
-			Menues::Menu * Edit::GetContextMenu(void) { return _menu; }
+			void Edit::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
+			Menus::Menu * Edit::GetContextMenu(void) { return _menu; }
 			void Edit::SetPasswordMode(bool hide) { Password = hide; _text_info.SetReference(0); }
 			bool Edit::GetPasswordMode(void) { return Password; }
 			void Edit::SetPasswordChar(uint32 ucs)
@@ -506,6 +507,7 @@ namespace Engine
 				_text_info.SetReference(0);
 				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 			}
+			void Edit::IEditHook::InitializeContextMenu(Menus::Menu * menu, Edit * sender) {}
 			string Edit::IEditHook::Filter(Edit * sender, const string & input) { return input; }
 			Array<uint8> * Edit::IEditHook::ColorHighlight(Edit * sender, const Array<uint32>& text) { return 0; }
 			Array<UI::Color>* Edit::IEditHook::GetPalette(Edit * sender) { return 0; }
@@ -523,7 +525,7 @@ namespace Engine
 			{
 				if (Template->Properties->GetTemplateClass() != L"MultiLineEdit") throw InvalidArgumentException();
 				static_cast<Template::Controls::MultiLineEdit &>(*this) = static_cast<Template::Controls::MultiLineEdit &>(*Template->Properties);
-				_menu.SetReference(ContextMenu ? new Menues::Menu(ContextMenu) : 0);
+				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
 				ResetCache(); _chars_enabled.SetLength(CharactersEnabled.GetEncodedLength(Encoding::UTF32));
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 				SetText(Text);
@@ -840,6 +842,7 @@ namespace Engine
 					if (paste) paste->Disabled = ReadOnly || !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
 					if (remove) remove->Disabled = ReadOnly || _content.cp == _content.sp;
 					_state = 2;
+					if (_hook) _hook->InitializeContextMenu(_menu, this);
 					_menu->RunPopup(this, pos);
 				}
 			}
@@ -1128,8 +1131,8 @@ namespace Engine
 				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
 			string MultiLineEdit::GetCharacterFilter(void) { return CharactersEnabled; }
-			void MultiLineEdit::SetContextMenu(Menues::Menu * menu) { _menu.SetRetain(menu); }
-			Menues::Menu * MultiLineEdit::GetContextMenu(void) { return _menu; }
+			void MultiLineEdit::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
+			Menus::Menu * MultiLineEdit::GetContextMenu(void) { return _menu; }
 			void MultiLineEdit::SetHook(IMultiLineEditHook * hook) { _hook = hook; for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i); }
 			MultiLineEdit::IMultiLineEditHook * MultiLineEdit::GetHook(void) { return _hook; }
 			const Array<uint32>& MultiLineEdit::GetRawLine(int line_index) { return _content.lines[line_index].text; }
@@ -1230,6 +1233,7 @@ namespace Engine
 				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 			}
 
+			void MultiLineEdit::IMultiLineEditHook::InitializeContextMenu(Menus::Menu * menu, MultiLineEdit * sender) {}
 			string MultiLineEdit::IMultiLineEditHook::Filter(MultiLineEdit * sender, const string & input, Point insert_at) { return input; }
 			Array<uint8>* MultiLineEdit::IMultiLineEditHook::ColorHighlight(MultiLineEdit * sender, const Array<uint32>& text, int line) { return 0; }
 			Array<UI::Color>* MultiLineEdit::IMultiLineEditHook::GetPalette(MultiLineEdit * sender) { return 0; }

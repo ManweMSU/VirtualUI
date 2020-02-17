@@ -3,7 +3,7 @@
 #include "ControlBase.h"
 #include "ControlClasses.h"
 #include "ScrollableControls.h"
-#include "Menues.h"
+#include "Menus.h"
 #include "../Miscellaneous/UndoBuffer.h"
 
 namespace Engine
@@ -159,7 +159,7 @@ namespace Engine
 				SafePointer<Shape> _view_button_hot;
 				SafePointer<Shape> _view_button_pressed;
 				SafePointer<Shape> _view_button_disabled;
-				SafePointer<Menues::Menu> _menu;
+				SafePointer<Menus::Menu> _menu;
 				SafePointer<ITextRenderingInfo> _text_info;
 				SafePointer<ITextRenderingInfo> _advice_info;
 				SafePointer<ITextRenderingInfo> _placeholder_info;
@@ -224,8 +224,8 @@ namespace Engine
 				string GetPlaceholder(void);
 				void SetCharacterFilter(const string & filter);
 				string GetCharacterFilter(void);
-				void SetContextMenu(Menues::Menu * menu);
-				Menues::Menu * GetContextMenu(void);
+				void SetContextMenu(Menus::Menu * menu);
+				Menus::Menu * GetContextMenu(void);
 				string FilterInput(const string & input);
 				void Print(const string & text);
 

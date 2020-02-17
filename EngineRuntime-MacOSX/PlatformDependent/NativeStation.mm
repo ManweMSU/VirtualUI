@@ -562,7 +562,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 {
 @public
 	Engine::Cocoa::QuartzRenderingDevice * device;
-	Engine::UI::Menues::MenuItem * item;
+	Engine::UI::Menus::MenuItem * item;
 	int * code;
 	NSMenuItem * server;
 	NSMenu * owner;
@@ -581,7 +581,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 {
 @public
 	Engine::Cocoa::QuartzRenderingDevice * device;
-	Engine::UI::Menues::MenuSeparator * item;
+	Engine::UI::Menus::MenuSeparator * item;
 }
 - (void) drawRect : (NSRect) dirtyRect;
 @end
@@ -645,7 +645,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 @end
 
-NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menues::MenuItem * item, NSMenuItem * server)
+NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuItem * item, NSMenuItem * server)
 {
 	double scale = Engine::UI::Windows::GetScreenScale();
 	EngineRuntimeMenuItem * obj = [[EngineRuntimeMenuItem alloc] init];
@@ -657,7 +657,7 @@ NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, Engine::
 	obj->owner = owner;
 	return obj;
 }
-NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menues::MenuSeparator * item)
+NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuSeparator * item)
 {
 	double scale = Engine::UI::Windows::GetScreenScale();
 	EngineRuntimeMenuSeparator * obj = [[EngineRuntimeMenuSeparator alloc] init];
@@ -666,7 +666,7 @@ NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingD
 	obj->item = item;
 	return obj;
 }
-NSMenu * build_engine_menu(NSMenu * owner, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menues::MenuElement> & elements)
+NSMenu * build_engine_menu(NSMenu * owner, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menus::MenuElement> & elements)
 {
 	NSMenu * result = [[NSMenu alloc] initWithTitle: @""];
 	[result setAutoenablesItems: NO];
@@ -676,10 +676,10 @@ NSMenu * build_engine_menu(NSMenu * owner, int * code, Engine::Cocoa::QuartzRend
 		if (w > width) width = w;
 	}
 	for (int i = 0; i < elements.Length(); i++) {
-		Engine::UI::Menues::MenuItem * src_item = 0;
-		Engine::UI::Menues::MenuSeparator * src_sep = 0;
-		if (elements[i].IsSeparator()) src_sep = static_cast<Engine::UI::Menues::MenuSeparator *>(elements.ElementAt(i));
-		else src_item = static_cast<Engine::UI::Menues::MenuItem *>(elements.ElementAt(i));
+		Engine::UI::Menus::MenuItem * src_item = 0;
+		Engine::UI::Menus::MenuSeparator * src_sep = 0;
+		if (elements[i].IsSeparator()) src_sep = static_cast<Engine::UI::Menus::MenuSeparator *>(elements.ElementAt(i));
+		else src_item = static_cast<Engine::UI::Menus::MenuItem *>(elements.ElementAt(i));
 		NSMenuItem * item = [[NSMenuItem alloc] initWithTitle: @"" action: nil keyEquivalent: @""];
 		if (src_sep || src_item->Disabled) [item setEnabled: NO];
 		if (src_item && src_item->Checked) [item setState: NSControlStateValueOn];
@@ -1380,7 +1380,7 @@ namespace Engine
 			int y = int((srect.size.height - wrect.origin.y - wrect.size.height) * scale);
 			return UI::Box(x, y, x + int(wrect.size.width * scale), y + int(wrect.size.height * scale));
 		}
-		int RunMenuPopup(UI::Menues::Menu * menu, UI::Window * owner, UI::Point at)
+		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at)
 		{
 			NSWindow * window = static_cast<NativeStation *>(owner->GetStation())->GetWindow();
 			double scale = [window backingScaleFactor];

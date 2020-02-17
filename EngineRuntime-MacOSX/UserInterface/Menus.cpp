@@ -1,4 +1,4 @@
-#include "Menues.h"
+#include "Menus.h"
 
 #include "../PlatformDependent/NativeStation.h"
 
@@ -6,7 +6,7 @@ namespace Engine
 {
 	namespace UI
 	{
-		namespace Menues
+		namespace Menus
 		{
 			namespace ArgumentService
 			{

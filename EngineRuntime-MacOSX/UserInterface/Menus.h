@@ -7,7 +7,7 @@ namespace Engine
 {
 	namespace UI
 	{
-		namespace Menues
+		namespace Menus
 		{
 			class MenuElement;
 			class MenuItem;
