@@ -55,6 +55,7 @@
     <ClInclude Include="PlatformSpecific\WindowsRegistry.h" />
     <ClInclude Include="PlatformSpecific\WindowsShortcut.h" />
     <ClInclude Include="PlatformSpecific\WindowsTaskbar.h" />
+    <ClInclude Include="Processes\DynamicLibrary.h" />
     <ClInclude Include="Processes\Process.h" />
     <ClInclude Include="Processes\Shell.h" />
     <ClInclude Include="Processes\Threading.h" />
@@ -128,6 +129,7 @@
     <ClCompile Include="PlatformSpecific\WindowsRegistry.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsShortcut.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsTaskbar.cpp" />
+    <ClCompile Include="Processes\DynamicLibrary.cpp" />
     <ClCompile Include="Processes\Process.cpp" />
     <ClCompile Include="Processes\Shell.cpp" />
     <ClCompile Include="Processes\Threading.cpp" />

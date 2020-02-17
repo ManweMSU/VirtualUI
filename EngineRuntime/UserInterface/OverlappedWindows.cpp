@@ -7,6 +7,7 @@
 #include "EditControls.h"
 #include "ListControls.h"
 #include "CombinedControls.h"
+#include "RichEditControl.h"
 
 #include "../PlatformDependent/NativeStation.h"
 #include "../PlatformDependent/KeyCodes.h"
@@ -399,6 +400,7 @@ namespace Engine
 					// Edit controls
 					else if (child->Properties->GetTemplateClass() == L"Edit") return on->GetStation()->CreateWindow<Edit>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"MultiLineEdit") return on->GetStation()->CreateWindow<MultiLineEdit>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"RichEdit") return on->GetStation()->CreateWindow<RichEdit>(on, child);
 					// List controls
 					else if (child->Properties->GetTemplateClass() == L"ListBox") return on->GetStation()->CreateWindow<ListBox>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"TreeView") return on->GetStation()->CreateWindow<TreeView>(on, child);
@@ -412,7 +414,6 @@ namespace Engine
 					/*
 					NOT IMPLEMENTED:
 
-					RichEdit
 					CustomControl ???
 
 					FUTURE CONTROLS:

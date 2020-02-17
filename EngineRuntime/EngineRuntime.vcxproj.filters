@@ -259,6 +259,9 @@
     <ClInclude Include="UserInterface\Menus.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
+    <ClInclude Include="Processes\DynamicLibrary.h">
+      <Filter>Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -467,6 +470,9 @@
     </ClCompile>
     <ClCompile Include="UserInterface\Menus.cpp">
       <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="Processes\DynamicLibrary.cpp">
+      <Filter>Processes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -264,6 +264,7 @@ namespace Engine
 					if (paste) paste->Disabled = ReadOnly || !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
 					if (remove) remove->Disabled = ReadOnly || _cp == _sp;
 					_state = 2;
+					if (_hook) _hook->InitializeContextMenu(_menu, this);
 					_menu->RunPopup(this, pos);
 				}
 			}
@@ -506,6 +507,7 @@ namespace Engine
 				_text_info.SetReference(0);
 				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 			}
+			void Edit::IEditHook::InitializeContextMenu(Menus::Menu * menu, Edit * sender) {}
 			string Edit::IEditHook::Filter(Edit * sender, const string & input) { return input; }
 			Array<uint8> * Edit::IEditHook::ColorHighlight(Edit * sender, const Array<uint32>& text) { return 0; }
 			Array<UI::Color>* Edit::IEditHook::GetPalette(Edit * sender) { return 0; }
@@ -840,6 +842,7 @@ namespace Engine
 					if (paste) paste->Disabled = ReadOnly || !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
 					if (remove) remove->Disabled = ReadOnly || _content.cp == _content.sp;
 					_state = 2;
+					if (_hook) _hook->InitializeContextMenu(_menu, this);
 					_menu->RunPopup(this, pos);
 				}
 			}
@@ -1230,6 +1233,7 @@ namespace Engine
 				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 			}
 
+			void MultiLineEdit::IMultiLineEditHook::InitializeContextMenu(Menus::Menu * menu, MultiLineEdit * sender) {}
 			string MultiLineEdit::IMultiLineEditHook::Filter(MultiLineEdit * sender, const string & input, Point insert_at) { return input; }
 			Array<uint8>* MultiLineEdit::IMultiLineEditHook::ColorHighlight(MultiLineEdit * sender, const Array<uint32>& text, int line) { return 0; }
 			Array<UI::Color>* MultiLineEdit::IMultiLineEditHook::GetPalette(MultiLineEdit * sender) { return 0; }

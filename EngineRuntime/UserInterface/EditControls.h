@@ -19,6 +19,7 @@ namespace Engine
 				class IEditHook
 				{
 				public:
+					virtual void InitializeContextMenu(Menus::Menu * menu, Edit * sender);
 					virtual string Filter(Edit * sender, const string & input);
 					virtual Array<uint8> * ColorHighlight(Edit * sender, const Array<uint32> & text);
 					virtual Array<UI::Color> * GetPalette(Edit * sender);
@@ -109,6 +110,7 @@ namespace Engine
 				class IMultiLineEditHook
 				{
 				public:
+					virtual void InitializeContextMenu(Menus::Menu * menu, MultiLineEdit * sender);
 					virtual string Filter(MultiLineEdit * sender, const string & input, Point insert_at);
 					virtual Array<uint8> * ColorHighlight(MultiLineEdit * sender, const Array<uint32> & text, int line);
 					virtual Array<UI::Color> * GetPalette(MultiLineEdit * sender);

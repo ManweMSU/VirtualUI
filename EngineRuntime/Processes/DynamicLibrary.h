@@ -3,6 +3,7 @@
 #include "../EngineBase.h"
 
 #define ENGINE_EXPORT_API extern "C" __declspec(dllexport)
+#define ENGINE_LIBRARY_EXTENSION L"dll"
 
 namespace Engine
 {

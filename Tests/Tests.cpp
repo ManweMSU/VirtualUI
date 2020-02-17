@@ -18,11 +18,12 @@
 #include <UserInterface/StaticControls.h>
 #include <UserInterface/ButtonControls.h>
 #include <UserInterface/GroupControls.h>
-#include <UserInterface/Menues.h>
+#include <UserInterface/Menus.h>
 #include <UserInterface/OverlappedWindows.h>
 #include <UserInterface/EditControls.h>
 #include <UserInterface/ListControls.h>
 #include <UserInterface/CombinedControls.h>
+#include <UserInterface/RichEditControl.h>
 #include <Syntax/Tokenization.h>
 #include <Syntax/Grammar.h>
 #include <Syntax/MathExpression.h>
@@ -106,7 +107,7 @@ SafePointer<Engine::UI::InterfaceTemplate> Template;
 
 UI::IInversionEffectRenderingInfo * Inversion = 0;
 
-SafePointer<Menues::Menu> menu;
+SafePointer<Menus::Menu> menu;
 
 ENGINE_PACKED_STRUCTURE(TestPacked)
 	uint8 foo;
@@ -381,7 +382,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			wb->RenderMode = FrameShape::FrameRenderMode::Layering;
 			station->GetVisualStyles().WindowDefaultBackground.SetRetain(wb);
 
-			menu = new Menues::Menu(::Template->Dialog[L"Menu"]);
+			menu = new Menus::Menu(::Template->Dialog[L"Menu"]);
 
 			class _cb : public Windows::IWindowEventCallback
 			{
@@ -571,6 +572,233 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto Callback2 = new _cb2;
 			auto Hook = new _thl;
 			auto Hook2 = new _thl2;
+			class _cb3 : public Windows::IWindowEventCallback
+			{
+			public:
+				virtual void OnInitialized(UI::Window * window) override
+				{
+					auto wnd = window->As<Controls::OverlappedWindow>();
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10001, KeyCodes::B);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10002, KeyCodes::I);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10003, KeyCodes::U);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10004, KeyCodes::S);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10005, KeyCodes::D1);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10006, KeyCodes::D2);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10007, KeyCodes::D3);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10008, KeyCodes::D4);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10009, KeyCodes::D5);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10010, KeyCodes::L);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10011, KeyCodes::M);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10012, KeyCodes::D6);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10013, KeyCodes::D7);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10014, KeyCodes::R);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10015, KeyCodes::E);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10016, KeyCodes::T);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10017, KeyCodes::Left, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10018, KeyCodes::Right, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10019, KeyCodes::Up, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10020, KeyCodes::Down, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10021, KeyCodes::Left, true, false, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10022, KeyCodes::Right, true, false, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10023, KeyCodes::Up, true, false, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10024, KeyCodes::Down, true, false, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10025, KeyCodes::W);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10026, KeyCodes::W, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10027, KeyCodes::W, true, false, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10028, KeyCodes::O);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10029, KeyCodes::D8);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10030, KeyCodes::D9);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10031, KeyCodes::D0);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10032, KeyCodes::O, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10033, KeyCodes::H);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10034, KeyCodes::H, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10035, KeyCodes::G);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10036, KeyCodes::G, true, true);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10037, KeyCodes::J);
+					wnd->GetAcceleratorTable() << Accelerators::AcceleratorCommand(10038, KeyCodes::J, true, true);
+				}
+				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
+				{
+					if (ID == 898911 && event == UI::Window::Event::ValueChange) {
+						auto re = sender->As<Controls::RichEdit>();
+						if (re) {
+							//MessageBoxW(0, re->GetAttributedText(), L"", 0);
+						}
+					} else if (ID == 10001) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto stl = re->GetSelectedTextStyle();
+						if (stl & Controls::RichEdit::StyleBold) stl = Controls::RichEdit::StyleNone; else stl = Controls::RichEdit::StyleBold;
+						re->SetSelectedTextStyle(stl, Controls::RichEdit::StyleBold);
+					} else if (ID == 10002) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto stl = re->GetSelectedTextStyle();
+						if (stl & Controls::RichEdit::StyleItalic) stl = Controls::RichEdit::StyleNone; else stl = Controls::RichEdit::StyleItalic;
+						re->SetSelectedTextStyle(stl, Controls::RichEdit::StyleItalic);
+					} else if (ID == 10003) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto stl = re->GetSelectedTextStyle();
+						if (stl & Controls::RichEdit::StyleUnderline) stl = Controls::RichEdit::StyleNone; else stl = Controls::RichEdit::StyleUnderline;
+						re->SetSelectedTextStyle(stl, Controls::RichEdit::StyleUnderline);
+					} else if (ID == 10004) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto stl = re->GetSelectedTextStyle();
+						if (stl & Controls::RichEdit::StyleStrikeout) stl = Controls::RichEdit::StyleNone; else stl = Controls::RichEdit::StyleStrikeout;
+						re->SetSelectedTextStyle(stl, Controls::RichEdit::StyleStrikeout);
+					} else if (ID == 10005) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTextAlignment(Controls::RichEdit::TextAlignment::Left);
+					} else if (ID == 10006) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTextAlignment(Controls::RichEdit::TextAlignment::Center);
+					} else if (ID == 10007) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTextAlignment(Controls::RichEdit::TextAlignment::Right);
+					} else if (ID == 10008) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTextAlignment(Controls::RichEdit::TextAlignment::Stretch);
+					} else if (ID == 10009) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						if (re->GetSelectedTextFontFamily() == L"Segoe UI") re->SetSelectedTextFontFamily(L"Times New Roman");
+						else re->SetSelectedTextFontFamily(L"Segoe UI");
+					} else if (ID == 10010) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int h = re->GetSelectedTextHeight();
+						if (h < 100) h += 10;
+						re->SetSelectedTextHeight(h);
+					} else if (ID == 10011) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int h = re->GetSelectedTextHeight();
+						if (h > 19) h -= 10;
+						re->SetSelectedTextHeight(h);
+					} else if (ID == 10012) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTextColor(0xFF444444);
+					} else if (ID == 10013) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTextColor(0xFFFF0044);
+					} else if (ID == 10014) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->TransformSelectionIntoLink(re->SerializeSelection());
+					} else if (ID == 10015) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->DetransformSelectedLink();
+					} else if (ID == 10016) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->InsertTable(Point(1, 1));
+					} else if (ID == 10017) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->InsertSelectedTableColumn(cell.x);
+					} else if (ID == 10018) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->InsertSelectedTableColumn(cell.x + 1);
+					} else if (ID == 10019) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->InsertSelectedTableRow(cell.y);
+					} else if (ID == 10020) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->InsertSelectedTableRow(cell.y + 1);
+					} else if (ID == 10021) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->RemoveSelectedTableColumn(cell.x);
+					} else if (ID == 10022) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->RemoveSelectedTableColumn(cell.x);
+					} else if (ID == 10023) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->RemoveSelectedTableRow(cell.y);
+					} else if (ID == 10024) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto cell = re->GetSelectedTableCell();
+						if (cell.x >= 0) re->RemoveSelectedTableRow(cell.y);
+					} else if (ID == 10025) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableColumnWidth(re->GetSelectedTableCell().x);
+						re->SetSelectedTableColumnWidth(w + 50);
+					} else if (ID == 10026) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableColumnWidth(re->GetSelectedTableCell().x);
+						re->SetSelectedTableColumnWidth(max(w - 50, 50));
+					} else if (ID == 10027) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->AdjustSelectedTableColumnWidth();
+					} else if (ID == 10028) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto c = re->GetSelectedTableCellBackground(re->GetSelectedTableCell());
+						if (c.a) re->SetSelectedTableCellBackground(0);
+						else re->SetSelectedTableCellBackground(Color(100, 200, 255, 128));
+					} else if (ID == 10029) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTableCellVerticalAlignment(Controls::RichEdit::TextVerticalAlignment::Top);
+					} else if (ID == 10030) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTableCellVerticalAlignment(Controls::RichEdit::TextVerticalAlignment::Center);
+					} else if (ID == 10031) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						re->SetSelectedTableCellVerticalAlignment(Controls::RichEdit::TextVerticalAlignment::Bottom);
+					} else if (ID == 10032) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						auto c = re->GetSelectedTableBorderColor();
+						if (c == re->DefaultTextColor) re->SetSelectedTableBorderColor(Color(255, 128, 0, 255));
+						else re->SetSelectedTableBorderColor(re->DefaultTextColor);
+					} else if (ID == 10033) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableBorderWidth();
+						re->SetSelectedTableBorderWidth(w + 1);
+					} else if (ID == 10034) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableBorderWidth();
+						re->SetSelectedTableBorderWidth(max(w - 1, 0));
+					} else if (ID == 10035) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableVerticalBorderWidth();
+						re->SetSelectedTableVerticalBorderWidth(w + 1);
+					} else if (ID == 10036) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableVerticalBorderWidth();
+						re->SetSelectedTableVerticalBorderWidth(max(w - 1, 0));
+					} else if (ID == 10037) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableHorizontalBorderWidth();
+						re->SetSelectedTableHorizontalBorderWidth(w + 1);
+					} else if (ID == 10038) {
+						auto re = window->FindChild(898911)->As<Controls::RichEdit>();
+						int w = re->GetSelectedTableHorizontalBorderWidth();
+						re->SetSelectedTableHorizontalBorderWidth(max(w - 1, 0));
+					}
+				}
+				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
+				{
+					if (event == Windows::FrameEvent::Close) window->Destroy();
+				}
+			};
+			auto Callback3 = new _cb3;
+			class _thl3 : public Controls::RichEdit::IRichEditHook
+			{
+			public:
+				virtual void InitializeContextMenu(Menus::Menu * menu, Controls::RichEdit * sender) override
+				{
+
+				}
+				virtual void LinkPressed(const string & resource, Controls::RichEdit * sender) override
+				{
+					IO::Console Console;
+					Console.SetTextColor(IO::Console::ColorGreen);
+					Console.WriteLine(L"RichEdit LinkPressed(): " + resource);
+					Console.SetTextColor(IO::Console::ColorDefault);
+				}
+				virtual void CaretPositionChanged(Controls::RichEdit * sender) override
+				{
+
+				}
+			};
+			auto Hook3 = new _thl3;
 
 			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
 			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
@@ -596,25 +824,67 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				auto bookmark1 = new Template::Controls::Bookmark;
 				auto bookmark2 = new Template::Controls::Bookmark;
 				auto bookmark3 = new Template::Controls::Bookmark;
-				bookmark1->ID = 1; bookmark2->ID = 2; bookmark3->ID = 3;
-				bookmark1->Text = L"kornevgen"; bookmark2->Text = L"pidor"; bookmark3->Text = L"Tab #3";
+				auto bookmark4 = new Template::Controls::Bookmark;
+				bookmark1->ID = 1; bookmark2->ID = 2; bookmark3->ID = 3; bookmark4->ID = 4;
+				bookmark1->Text = L"Rich Edit";  bookmark2->Text = L"kornevgen"; bookmark3->Text = L"pidor"; bookmark4->Text = L"Tab #3";
 				bookmark1->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
 				bookmark2->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
 				bookmark3->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
+				bookmark4->ControlPosition.Right = Coordinate(0, 100.0, 0.0);
 				SafePointer<Template::ControlTemplate> bookmark_o1 = new Template::ControlTemplate(bookmark1);
 				SafePointer<Template::ControlTemplate> bookmark_o2 = new Template::ControlTemplate(bookmark2);
 				SafePointer<Template::ControlTemplate> bookmark_o3 = new Template::ControlTemplate(bookmark3);
-				bookmark_ctl->Children.Append(bookmark_o1); bookmark_ctl->Children.Append(bookmark_o2); bookmark_ctl->Children.Append(bookmark_o3);
-				bookmark_o1->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[2].Children[0]);
-				bookmark_o2->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[1].Children[0].Children[1].Children[0]);
-				bookmark_o3->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[1].Children[0].Children[0].Children[0]);
+				SafePointer<Template::ControlTemplate> bookmark_o4 = new Template::ControlTemplate(bookmark4);
+				bookmark_ctl->Children.Append(bookmark_o1); bookmark_ctl->Children.Append(bookmark_o2);
+				bookmark_ctl->Children.Append(bookmark_o3); bookmark_ctl->Children.Append(bookmark_o4);
+				auto richedit_props = new Template::Controls::RichEdit;
+				richedit_props->ControlPosition = UI::Rectangle(UI::Coordinate(0, 5, 0), UI::Coordinate(0, 5, 0),
+					UI::Coordinate(0, -5, 1), UI::Coordinate(0, -5, 1));
+				Reflection::PropertyZeroInitializer initializer;
+				richedit_props->EnumerateProperties(initializer);
+				richedit_props->ViewScrollBarDownButtonNormal.SetRetain(::Template->Application[L"VerticalScrollDownNormal"]);
+				richedit_props->ViewScrollBarDownButtonHot.SetRetain(::Template->Application[L"VerticalScrollDownHot"]);
+				richedit_props->ViewScrollBarDownButtonPressed.SetRetain(::Template->Application[L"VerticalScrollDownPressed"]);
+				richedit_props->ViewScrollBarScrollerNormal.SetRetain(::Template->Application[L"VerticalScrollScrollerNormal"]);
+				richedit_props->ViewScrollBarScrollerHot.SetRetain(::Template->Application[L"VerticalScrollScrollerHot"]);
+				richedit_props->ViewScrollBarScrollerPressed.SetRetain(::Template->Application[L"VerticalScrollScrollerPressed"]);
+				richedit_props->ViewScrollBarUpButtonNormal.SetRetain(::Template->Application[L"VerticalScrollUpNormal"]);
+				richedit_props->ViewScrollBarUpButtonHot.SetRetain(::Template->Application[L"VerticalScrollUpHot"]);
+				richedit_props->ViewScrollBarUpButtonPressed.SetRetain(::Template->Application[L"VerticalScrollUpPressed"]);
+				richedit_props->BackgroundColor = UI::Color(255, 255, 230);
+				richedit_props->DefaultFontFace = L"Times New Roman";
+				richedit_props->DefaultFontHeight = 20;
+				richedit_props->DefaultTextColor = UI::Color(0, 0, 0);
+				richedit_props->HyperlinkColor = UI::Color(0, 0, 255);
+				richedit_props->HyperlinkHotColor = UI::Color(128, 128, 255);
+				richedit_props->ID = 898911;
+				richedit_props->ScrollSize = 32;
+				richedit_props->SelectionColor = UI::Color(255, 0, 255);
+				richedit_props->Border = 10;
+				richedit_props->ContextMenu.SetRetain(::Template->Dialog[L"EditContextMenu"]);
+				//richedit_props->ReadOnly = true;
+				richedit_props->Text = L"\33X\33nSegoe UI\33e\33n*\33e\33f00\33cFF444444\33h001E\33a4"
+					L"\tkornevgen \33bpi\33idor\33e\33e \33cFFFF0000kornev\33cFFFF0088gen\33e \33ipidor\33e\33e kornevgen \33upi\33edor kor\33snev\33egen pidor\nkornevgen \33h0030pidor\33e \33f01kornevgen\33e pidor kornevgen pidor \33lRESOURCE\33kornevgen pidor\33e kornevgen pidor kornevgen pidor"
+					L"\33e" L"\n\33a2TITLE\n\33e\33a3Right Text\n\33e"
+					L"\33t00020002040201FF88440000800100"
+					L"000000001pidor\n123\33e"
+					L"440000FF2kor\33lPIDOR\33nevgen\33e\33e"
+					L"4400FF003kornevgen\33e"
+					L"888888881pidor\n456\33e"
+					L"\33e"
+					L"\33e\33e\33e";
+				SafePointer<Template::ControlTemplate> richedit = new Template::ControlTemplate(richedit_props);
+				bookmark_o1->Children.Append(richedit);
+				bookmark_o2->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[2].Children[0]);
+				bookmark_o3->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[1].Children[0].Children[1].Children[0]);
+				bookmark_o4->Children.Append(&::Template->Dialog[L"Test2"]->Children[0].Children[1].Children[0].Children[0].Children[0]);
 			}
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
 			//auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
 			//auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
-			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], 0, UI::Rectangle::Invalid(), 0);
+			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], Callback3, UI::Rectangle::Invalid(), 0);
 			//w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(UI::GetSystemColor(UI::SystemColor::Theme));
@@ -626,6 +896,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w3->AddDialogStandardAccelerators();
 			//w5->AddDialogStandardAccelerators();
 			w6->AddDialogStandardAccelerators();
+			auto re = w6->FindChild(898911)->As<Controls::RichEdit>();
+			if (re) {
+				re->SetHook(Hook3);
+				//MessageBoxW(0, re->GetAttributedText(), L"", 0);
+			}
 
 			w->FindChild(101010)->As<Controls::Edit>()->CaretWidth = 4;
 			w->FindChild(101010)->As<Controls::Edit>()->CaretColor = UI::Color(64, 64, 128);
