@@ -34,6 +34,8 @@ void configure(const string & rt_path, const string & tools)
         x64_node->SetValue(L"ObjectPath", string(L"_build"));
         x64_node->CreateValue(L"ExecutableExtension", RegistryValueType::String);
         x64_node->SetValue(L"ExecutableExtension", string(L""));
+        x64_node->CreateValue(L"LibraryExtension", RegistryValueType::String);
+        x64_node->SetValue(L"LibraryExtension", string(L"dylib"));
         x64_node->CreateNode(L"Compiler");
         x64_node->CreateNode(L"Linker");
         SafePointer<RegistryNode> compiler = x64_node->OpenNode(L"Compiler");
@@ -56,9 +58,11 @@ void configure(const string & rt_path, const string & tools)
         compiler->CreateValue(L"Arguments/04", RegistryValueType::String);
         compiler->SetValue(L"Arguments/04", string(L"-v"));
         compiler->CreateValue(L"Arguments/05", RegistryValueType::String);
-        compiler->SetValue(L"Arguments/05", string(L"-fmodules"));
+        compiler->SetValue(L"Arguments/05", string(L"-fvisibility=hidden"));
         compiler->CreateValue(L"Arguments/06", RegistryValueType::String);
-        compiler->SetValue(L"Arguments/06", string(L"-fcxx-modules"));
+        compiler->SetValue(L"Arguments/06", string(L"-fmodules"));
+        compiler->CreateValue(L"Arguments/07", RegistryValueType::String);
+        compiler->SetValue(L"Arguments/07", string(L"-fcxx-modules"));
         linker->CreateValue(L"Path", RegistryValueType::String);
         linker->SetValue(L"Path", string(L"clang++"));
         linker->CreateValue(L"OutputArgument", RegistryValueType::String);
@@ -70,6 +74,11 @@ void configure(const string & rt_path, const string & tools)
         linker->SetValue(L"Arguments/02", string(L"-v"));
         linker->CreateValue(L"Arguments/03", RegistryValueType::String);
         linker->SetValue(L"Arguments/03", string(L"-s"));
+        linker->CreateValue(L"Arguments/04", RegistryValueType::String);
+        linker->SetValue(L"Arguments/04", string(L"-fvisibility=hidden"));
+        linker->CreateNode(L"ArgumentsLibrary");
+        linker->CreateValue(L"ArgumentsLibrary/01", RegistryValueType::String);
+        linker->SetValue(L"ArgumentsLibrary/01", string(L"-dynamiclib"));
         SafePointer<Stream> bld_stream = new FileStream(tools + L"/ertbuild.ini", AccessReadWrite, CreateAlways);
         RegistryToText(ertbuild, bld_stream, Encoding::UTF8);
     }
@@ -154,6 +163,7 @@ int Main(void)
                 if (usr == 1) local_name = L"Runtime/" + local_name;
                 else if (usr == 2) local_name = L"Tools/" + local_name;
                 else if (usr == 3) local_name = L"Test/" + local_name;
+                else if (usr == 4) local_name = L"UIML/" + local_name;
                 else local_name = L"Misc/" + local_name;
                 try_create_file_directory(local_name);
                 SafePointer<Stream> source = arc->QueryFileStream(i);

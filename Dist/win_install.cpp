@@ -23,6 +23,7 @@ struct compiler_toolset
     string vc_include;
     string vc_lib_x86;
     string vc_lib_x64;
+    string win10_sdk_ver;
 };
 compiler_toolset toolset;
 Array<string> search_for_msvc(void)
@@ -125,6 +126,7 @@ Array<string> get_include(void)
         SafePointer< Array<string> > vers = IO::Search::GetDirectories(w10_root + L"*");
         SortArray(*vers);
         w10_root += vers->LastElement() + L"\\";
+        toolset.win10_sdk_ver = vers->LastElement();
         SafePointer< Array<string> > parts = IO::Search::GetDirectories(w10_root + L"*");
         for (int i = 0; i < parts->Length(); i++) inc << w10_root + parts->ElementAt(i);
         inc << toolset.vc_include;
@@ -168,8 +170,12 @@ string get_rc_path(void)
         SafePointer<WindowsSpecific::RegistryKey> win_root = microsoft_root ? microsoft_root->OpenKey(L"Windows Kits", WindowsSpecific::RegistryKeyAccess::ReadOnly) : 0;
         SafePointer<WindowsSpecific::RegistryKey> kits_root = win_root ? win_root->OpenKey(L"Installed Roots", WindowsSpecific::RegistryKeyAccess::ReadOnly) : 0;
         if (!kits_root) return L"";
-        string w10_root = kits_root->GetValueString(L"KitsRoot10") + L"bin\\";
-        return w10_root + L"x86\\rc.exe";
+        string w10_root = kits_root->GetValueString(L"KitsRoot10");
+        SafePointer< Array<string> > rcs = IO::Search::GetFiles(w10_root + L"rc.exe", true);
+        if (!rcs->Length()) return L"";
+        string path;
+        for (int i = 0; i < rcs->Length(); i++) if (rcs->ElementAt(i).FindFirst(L"x86") != -1) { path = rcs->ElementAt(i); break; }
+        return w10_root + path;
     } catch (...) { return L""; }
 }
 void local_configure(RegistryNode * node, const string & rt_path, const string & tools, bool x64)
@@ -190,6 +196,8 @@ void local_configure(RegistryNode * node, const string & rt_path, const string &
     node->SetValue(L"ObjectPath", string(L"_build/win") + (x64 ? string(L"64") : string(L"32")));
     node->CreateValue(L"ExecutableExtension", RegistryValueType::String);
     node->SetValue(L"ExecutableExtension", string(L"exe"));
+    node->CreateValue(L"LibraryExtension", RegistryValueType::String);
+    node->SetValue(L"LibraryExtension", string(L"dll"));
     node->CreateNode(L"Compiler");
     node->CreateNode(L"Linker");
     SafePointer<RegistryNode> compiler = node->OpenNode(L"Compiler");
@@ -268,10 +276,16 @@ void local_configure(RegistryNode * node, const string & rt_path, const string &
     linker->CreateNode(L"Arguments");
     linker->CreateNode(L"ArgumentsConsole");
     linker->CreateNode(L"ArgumentsGUI");
+    linker->CreateNode(L"ArgumentsLibrary");
+    string os = x64 ? L"6.00" : L"5.01";
     linker->CreateValue(L"ArgumentsConsole/01", RegistryValueType::String);
-    linker->SetValue(L"ArgumentsConsole/01", string(L"/SUBSYSTEM:CONSOLE"));
+    linker->SetValue(L"ArgumentsConsole/01", string(L"/SUBSYSTEM:CONSOLE,") + os);
     linker->CreateValue(L"ArgumentsGUI/01", RegistryValueType::String);
-    linker->SetValue(L"ArgumentsGUI/01", string(L"/SUBSYSTEM:WINDOWS"));
+    linker->SetValue(L"ArgumentsGUI/01", string(L"/SUBSYSTEM:WINDOWS,") + os);
+    linker->CreateValue(L"ArgumentsLibrary/01", RegistryValueType::String);
+    linker->SetValue(L"ArgumentsLibrary/01", string(L"/SUBSYSTEM:WINDOWS,") + os);
+    linker->CreateValue(L"ArgumentsLibrary/02", RegistryValueType::String);
+    linker->SetValue(L"ArgumentsLibrary/02", string(L"/DLL"));
     linker->CreateValue(L"Arguments/01", RegistryValueType::String);
     linker->SetValue(L"Arguments/01", string(L"/LTCG:INCREMENTAL"));
     linker->CreateValue(L"Arguments/02", RegistryValueType::String);
@@ -340,6 +354,15 @@ void configure(const string & rt_path, const string & tools)
         }
         SafePointer<Stream> bld_stream = new FileStream(tools + L"/ertbuild.ini", AccessReadWrite, CreateAlways);
         RegistryToText(ertbuild, bld_stream, Encoding::UTF8);
+    }
+    {
+        SafePointer<Registry> envconf = CreateRegistry();
+        envconf->CreateValue(L"Compiler", RegistryValueType::String);
+        envconf->SetValue(L"Compiler", get_cl_path(false));
+        envconf->CreateValue(L"SDK", RegistryValueType::String);
+        envconf->SetValue(L"SDK", toolset.win10_sdk_ver);
+        SafePointer<Stream> conf_stream = new FileStream(tools + L"/envconf.ini", AccessReadWrite, CreateAlways);
+        RegistryToText(envconf, conf_stream, Encoding::UTF8);
     }
     {
         SafePointer<Registry> ertres = CreateRegistry();
@@ -467,6 +490,7 @@ int Main(void)
                 if (usr == 1) local_name = L"Runtime/" + local_name;
                 else if (usr == 2) local_name = L"Tools/" + local_name;
                 else if (usr == 3) local_name = L"Test/" + local_name;
+                else if (usr == 4) local_name = L"UIML/" + local_name;
                 else local_name = L"Misc/" + local_name;
                 try_create_file_directory(local_name);
                 SafePointer<Stream> source = arc->QueryFileStream(i);
@@ -478,6 +502,10 @@ int Main(void)
         Console << L"Configuring...";
         configure(L"../Runtime", path + L"/Tools");
         Console << L"Succeed!" << IO::NewLineChar;
+        Console << L"The configuration was produces by a robot." << IO::NewLineChar;
+        Console << L"Please, validate Tools\\ertbuild.ini and Tools\\ertres.ini." << IO::NewLineChar;
+        Console << L"Press \"RETURN\" to continue..." << IO::NewLineChar;
+        Input.ReadLine();
         {
             IO::SetStandardOutput(OutputClone);
             IO::SetStandardError(OutputClone);
