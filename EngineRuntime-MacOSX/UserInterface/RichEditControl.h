@@ -245,14 +245,6 @@ namespace Engine
 				int GetSelectedTableVerticalBorderWidth(void);
 				void SetSelectedTableHorizontalBorderWidth(int width);
 				int GetSelectedTableHorizontalBorderWidth(void);
-
-/*
-Commands and cases of their use
-4. If the selection is inside a table
-    - set general border weight
-    - set vertical border weight
-    - set horizontal border weight
-*/
 			};
 		}
 	}
