@@ -332,7 +332,7 @@ namespace Engine
 				};
 				class TableContents : public RichEdit::ContentBox
 				{
-					friend class RichEdit;
+					friend class ::Engine::UI::Controls::RichEdit;
 					RichEdit * _edit;
 					RichEdit::ContentBox * _parent;
 					ObjectArray<RichEdit::ContentBox> _cells;
@@ -1181,7 +1181,7 @@ namespace Engine
 									for (int j = 1; j < 8; j++) dg[j] = dg[j - 1] ? text[pos + j] : 0;
 									dg[8] = 0;
 									string clr_code = string(&dg, -1, Encoding::UTF32);
-									uint64 clr = (clr_code == L"********") ? _edit->DefaultTextColor : clr_code.ToUInt32(HexadecimalBase);
+									uint64 clr = (clr_code == L"********") ? uint32(_edit->DefaultTextColor) : clr_code.ToUInt32(HexadecimalBase);
 									pos += 8;
 									if (is_link) DeserializeFromPlainTextRecurrent(index, text, pos, at, attr_lo, attr_hi);
 									else DeserializeFromPlainTextRecurrent(index, text, pos, at, attr_lo, clr);
@@ -1318,7 +1318,7 @@ namespace Engine
 						Array<int> index(2);
 						int pos = 0, local_at = at;
 						bool is_link = _parent && _parent->GetBoxType() == 3;
-						DeserializeFromPlainTextRecurrent(index, text, pos, local_at, 0, is_link ? _edit->HyperlinkColor : 0);
+						DeserializeFromPlainTextRecurrent(index, text, pos, local_at, 0, is_link ? uint32(_edit->HyperlinkColor) : 0);
 						for (int i = local_at; i < _text.Length(); i++) if (_text[i].lo & FlagLargeObject) _objs[_text[i].lo & MaskUcsCode].pos = i;
 						*box_end = this;
 						*pos_end = local_at;
@@ -2822,7 +2822,7 @@ namespace Engine
 					auto align = tab->_cell_aligns[cell.x + cell.y * tab->_size_x];
 					if (align == 1) return RichEdit::TextVerticalAlignment::Center;
 					else if (align == 2) return RichEdit::TextVerticalAlignment::Bottom;
-					else RichEdit::TextVerticalAlignment::Top;
+					else return RichEdit::TextVerticalAlignment::Top;
 				}
 				return RichEdit::TextVerticalAlignment::Top;
 			}
