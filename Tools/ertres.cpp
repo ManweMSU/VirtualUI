@@ -43,6 +43,8 @@ SafePointer<RegistryNode> sys_cfg;
 SafePointer<RegistryNode> prj_cfg;
 Time prj_time;
 VersionInfo prj_ver;
+bool disable_hi_dpi = false;
+bool disable_dock_icon = false;
 string bundle_path;
 Array<Resource> reslist(0x10);
 Array<FileFormat> formats(0x10);
@@ -319,9 +321,11 @@ bool asm_manifest(const string & output, ITextWriter & console)
             manifest << L"</dependentAssembly></dependency>" << IO::NewLineChar;
             // Make application DPI-aware, enable very long paths
             manifest << L"<application xmlns=\"urn:schemas-microsoft-com:asm.v3\">" << IO::NewLineChar;
-            manifest << L"\t<windowsSettings>" << IO::NewLineChar;
-            manifest << L"\t\t<dpiAware xmlns=\"http://schemas.microsoft.com/SMI/2005/WindowsSettings\">true</dpiAware>" << IO::NewLineChar;
-            manifest << L"\t</windowsSettings>" << IO::NewLineChar;
+			if (!disable_hi_dpi) {
+				manifest << L"\t<windowsSettings>" << IO::NewLineChar;
+				manifest << L"\t\t<dpiAware xmlns=\"http://schemas.microsoft.com/SMI/2005/WindowsSettings\">true</dpiAware>" << IO::NewLineChar;
+				manifest << L"\t</windowsSettings>" << IO::NewLineChar;
+			}
             manifest << L"\t<windowsSettings xmlns:ws2=\"http://schemas.microsoft.com/SMI/2016/WindowsSettings\">" << IO::NewLineChar;
             manifest << L"\t\t<ws2:longPathAware>true</ws2:longPathAware>" << IO::NewLineChar;
             manifest << L"\t</windowsSettings>" << IO::NewLineChar;
@@ -391,12 +395,22 @@ bool asm_plist(const string & output, bool with_icon, ITextWriter & console)
             list << L"\t<string>6.0</string>" << IO::NewLineChar;
             list << L"\t<key>NSHumanReadableCopyright</key>" << IO::NewLineChar;
             list << L"\t<string>" << prj_ver.Copyright << L"</string>" << IO::NewLineChar;
-            list << L"\t<key>NSHighResolutionMagnifyAllowed</key>" << IO::NewLineChar;
-            list << L"\t<false/>" << IO::NewLineChar;
+			if (!disable_hi_dpi) {
+				list << L"\t<key>NSHighResolutionMagnifyAllowed</key>" << IO::NewLineChar;
+				list << L"\t<false/>" << IO::NewLineChar;
+			}
             list << L"\t<key>LSMinimumSystemVersion</key>" << IO::NewLineChar;
             list << L"\t<string>10.10</string>" << IO::NewLineChar;
             list << L"\t<key>NSHighResolutionCapable</key>" << IO::NewLineChar;
-            list << L"\t<true/>" << IO::NewLineChar;
+			if (disable_hi_dpi) {
+				list << L"\t<false/>" << IO::NewLineChar;
+			} else {
+				list << L"\t<true/>" << IO::NewLineChar;
+			}
+			if (disable_dock_icon) {
+				list << L"\t<key>LSUIElement</key>" << IO::NewLineChar;
+				list << L"\t<true/>" << IO::NewLineChar;
+			}
             list << L"\t<key>CFBundleSupportedPlatforms</key>" << IO::NewLineChar;
             list << L"\t<array>" << IO::NewLineChar;
             list << L"\t\t<string>MacOSX</string>" << IO::NewLineChar;
@@ -645,6 +659,8 @@ int Main(void)
                     prj_ver.AppIdent = prj_cfg->GetValueString(L"VersionInformation/ApplicationIdentifier");
                     prj_ver.ComIdent = prj_cfg->GetValueString(L"VersionInformation/CompanyIdentifier");
                     prj_ver.Description = prj_cfg->GetValueString(L"VersionInformation/Description");
+					disable_hi_dpi = prj_cfg->GetValueBoolean(L"NoHiDPI");
+					disable_dock_icon = prj_cfg->GetValueBoolean(L"NoDockIcon");
                     try {
                         auto verind = prj_cfg->GetValueString(L"VersionInformation/Version").Split(L'.');
                         if (verind.Length() > 0 && verind[0].Length()) prj_ver.VersionMajor = verind[0].ToUInt32(); else prj_ver.VersionMajor = 0;

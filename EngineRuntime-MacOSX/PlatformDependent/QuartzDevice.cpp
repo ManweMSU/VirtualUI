@@ -588,7 +588,7 @@ namespace Engine
 			int width, height;
 			Info->GetExtent(width, height);
 			int shift_x = 0;
-			int shift_y = (info->font->height - info->font->zoomed_height) / double(_scale);
+			int shift_y = (info->font->height - info->font->zoomed_height) / 2 / double(_scale);
 			if (info->halign == 1) shift_x += (At.Right - At.Left - width) / 2;
 			else if (info->halign == 2) shift_x += (At.Right - At.Left - width);
 			if (info->valign == 1) shift_y += (At.Bottom - At.Top - height) / 2;

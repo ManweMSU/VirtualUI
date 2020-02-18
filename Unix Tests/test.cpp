@@ -217,11 +217,12 @@ int Main(void)
     //     tex = loader->LoadTexture(cframe);
     // }
 
-    Console << string(tex) + IO::NewLineChar;
-    Console << L"Text available : " << Clipboard::IsFormatAvailable(Clipboard::Format::Text) << IO::NewLineChar;
-    Console << L"Image available: " << Clipboard::IsFormatAvailable(Clipboard::Format::Image) << IO::NewLineChar;
-	Console << IO::GetCurrentDirectory() << IO::NewLineChar;
-	Console << IO::ExpandPath(L"/pidor//pidor") << IO::NewLineChar;
+    //Console << string(tex) + IO::NewLineChar;
+    //Console << L"Text available : " << Clipboard::IsFormatAvailable(Clipboard::Format::Text) << IO::NewLineChar;
+    //Console << L"Image available: " << Clipboard::IsFormatAvailable(Clipboard::Format::Image) << IO::NewLineChar;
+	//Console << IO::GetCurrentDirectory() << IO::NewLineChar;
+	//Console << IO::ExpandPath(L"/pidor//pidor") << IO::NewLineChar;
+	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
 
     MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
         MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::DarkTheme);
