@@ -767,136 +767,140 @@ namespace Engine
 							}
 						}
 						if (_aabb.Length() != _text.Length()) _aabb.SetLength(_text.Length());
-						int pos = 0;
-						_width = _height = 0;
-						int y = 0;
-						while (pos < _words.Length()) {
-							int lbegin = 0;
-							int dfh = int(_edit->DefaultFontHeight * Zoom);
-							int min_space = dfh / 2;
-							int dy = dfh;
-							int align = 0;
-							int tsp, tep, tl = dfh * 3;
-							if (_words[pos].embedded_object_index == -3) {
-								int tc = 0;
-								tsp = pos;
-								while (pos < _words.Length() && _words[pos].embedded_object_index == -3) { pos++; tc++; }
-								if (pos < _words.Length() && _words[pos].embedded_object_index >= -1) tl = _words[pos].height * 3;
-								lbegin = tl * tc; tep = pos;
-							} else { tsp = tep = 0; }
-							for (int p = pos; p < _words.Length(); p++) if (_words[p].text.Length()) {
-								int f = int(_text[_words[p].range_left].hi >> 32);
-								IFont * fnt = _edit->GetCachedFont(f);
-								min_space = fnt->GetWidth();
-								dy = fnt->GetHeight();
-								align = _words[p].align;
-								break;
-							}
-							int cw = lbegin - min_space;
-							int sp = pos;
-							if (pos < _words.Length() && _words[pos].embedded_object_index != -2) {
-								cw += min_space + _words[pos].width;
-								pos++;
-							}
-							while (pos < _words.Length() && _words[pos].embedded_object_index != -2 && cw + min_space + _words[pos].width <= box_width) {
-								cw += min_space + _words[pos].width;
-								pos++;
-							}
-							if (cw > _width) _width = cw;
-							int ep = pos;
-							int nlc = -1;
-							for (int i = sp; i < ep; i++) if (_words[i].height > dy) dy = _words[i].height;
-							if (pos >= _words.Length()) { if (align == 3) align = 0; }
-							else if (_words[pos].embedded_object_index == -2) { nlc = pos; if (align == 3) align = 0; pos++; }
-							for (int i = tsp; i < tep; i++) {
-								_words[i].align_rect = Box((i - tsp) * tl, y, (i - tsp + 1) * tl, y + dy);
-							}
-							if (align == 0) {
-								cw = lbegin - min_space;
-								for (int i = sp; i < ep; i++) {
-									int lw = (_words[i].embedded_object_index == -3) ? tl : _words[i].width;
-									_words[i].align_rect = Box(cw + min_space, y, cw + min_space + lw, y + dy);
-									if (_words[i].embedded_object_index >= 0) {
-										_objs[_words[i].embedded_object_index].inner->SetAbsoluteOrigin(_org_x + _words[i].align_rect.Left, _org_y + _words[i].align_rect.Top);
-										_objs[_words[i].embedded_object_index].inner->AlignContents(device, _words[i].width);
-										_objs[_words[i].embedded_object_index].align_rect = _words[i].align_rect;
-									}
-									cw += min_space + lw;
-								}
-								if (nlc != -1) _words[nlc].align_rect = Box(cw, y, cw, y + dy);
-							} else if (align == 1) {
-								cw = (box_width - cw) / 2 - min_space;
-								for (int i = sp; i < ep; i++) {
-									int lw = (_words[i].embedded_object_index == -3) ? tl : _words[i].width;
-									_words[i].align_rect = Box(cw + min_space, y, cw + min_space + lw, y + dy);
-									cw += min_space + lw;
-									if (_words[i].embedded_object_index >= 0) {
-										_objs[_words[i].embedded_object_index].inner->SetAbsoluteOrigin(_org_x + _words[i].align_rect.Left, _org_y + _words[i].align_rect.Top);
-										_objs[_words[i].embedded_object_index].inner->AlignContents(device, _words[i].width);
-										_objs[_words[i].embedded_object_index].align_rect = _words[i].align_rect;
-									}
-								}
-								if (nlc != -1) _words[nlc].align_rect = Box(cw, y, cw, y + dy);
-							} else if (align == 2) {
-								cw = box_width - cw - min_space;
-								for (int i = sp; i < ep; i++) {
-									int lw = (_words[i].embedded_object_index == -3) ? tl : _words[i].width;
-									_words[i].align_rect = Box(cw + min_space, y, cw + min_space + lw, y + dy);
-									cw += min_space + lw;
-									if (_words[i].embedded_object_index >= 0) {
-										_objs[_words[i].embedded_object_index].inner->SetAbsoluteOrigin(_org_x + _words[i].align_rect.Left, _org_y + _words[i].align_rect.Top);
-										_objs[_words[i].embedded_object_index].inner->AlignContents(device, _words[i].width);
-										_objs[_words[i].embedded_object_index].align_rect = _words[i].align_rect;
-									}
-								}
-								if (nlc != -1) _words[nlc].align_rect = Box(cw, y, cw, y + dy);
-							} else if (align == 3) {
-								cw = lbegin;
-								int wtl = 0;
-								for (int i = sp; i < ep; i++) { int lw = (_words[i].embedded_object_index == -3) ? tl : _words[i].width; wtl += lw; }
-								int spl = box_width - lbegin - wtl;
-								for (int i = sp; i < ep; i++) {
-									int lw = (_words[i].embedded_object_index == -3) ? tl : _words[i].width;
-									_words[i].align_rect = Box(cw, y, cw + lw, y + dy);
-									cw += lw;
-									if (_words[i].embedded_object_index >= 0) {
-										_objs[_words[i].embedded_object_index].inner->SetAbsoluteOrigin(_org_x + _words[i].align_rect.Left, _org_y + _words[i].align_rect.Top);
-										_objs[_words[i].embedded_object_index].inner->AlignContents(device, _words[i].width);
-										_objs[_words[i].embedded_object_index].align_rect = _words[i].align_rect;
-									}
-									if (i < ep - 1) {
-										int ls = spl / (ep - i - 1);
-										spl -= ls; cw += ls;
-									}
-								}
-								if (nlc != -1) _words[nlc].align_rect = Box(box_width, y, box_width, y + dy);
-							}
-							y += dy;
+						int wpos = 0;
+						int tpos = 0;
+						int caret_y = 0;
+						_width = _height = _act_width = 0;
+						int space, tab, align, font_height;
+						int last_line_top = 0;
+						int last_line_end = 0;
+						IFont * fnt;
+						if (tpos < _text.Length()) {
+							int f = int(_text[tpos].hi >> 32);
+							fnt = _edit->GetCachedFont(f);
+							align = _words[wpos].align;
+						} else {
+							int ff = _edit->RegisterFontFace(_edit->DefaultFontFace);
+							int f = _edit->RegisterFont(ff, _edit->DefaultFontHeight, 0);
+							fnt = _edit->GetCachedFont(f);
+							align = 0;
 						}
-						_height = y; pos = 0;
-						int txp = 0;
-						_act_width = 0;
-						while (pos < _words.Length()) {
-							int sp = pos;
-							int ry = _words[pos].align_rect.Top;
-							while (pos < _words.Length() && _words[pos].align_rect.Top == ry) pos++;
-							int lx = 0;
-							for (int w = sp; w < pos; w++) {
-								if (_words[w].align_rect.Right > _act_width) _act_width = _words[w].align_rect.Right;
-								int gap_end = _words[w].range_left;
-								int gap_size = _words[w].align_rect.Left - lx;
-								for (int i = txp; i < gap_end; i++) {
-									int prev_ofs = (i - txp) * gap_size / (gap_end - txp);
-									int ofs = (i + 1 - txp) * gap_size / (gap_end - txp);
-									if (ofs == prev_ofs) ofs = prev_ofs + 1;
-									_aabb[i] = Box(lx + prev_ofs, _words[w].align_rect.Top, lx + ofs, _words[w].align_rect.Bottom);
+						space = fnt->GetWidth();
+						font_height = fnt->GetHeight();
+						tab = font_height * 3;
+						while (wpos < _words.Length()) {
+							last_line_top = caret_y;
+							int caret_x = 0;
+							if (tpos < _text.Length()) {
+								int f = int(_text[tpos].hi >> 32);
+								fnt = _edit->GetCachedFont(f);
+								align = _words[wpos].align;
+							} else {
+								int ff = _edit->RegisterFontFace(_edit->DefaultFontFace);
+								int f = _edit->RegisterFont(ff, _edit->DefaultFontHeight, 0);
+								fnt = _edit->GetCachedFont(f);
+								align = 0;
+							}
+							space = fnt->GetWidth();
+							font_height = fnt->GetHeight();
+							tab = font_height * 3;
+							int line_height = 0;
+							int swpos = wpos;
+							int stpos = tpos;
+							int spaces_count = 0;
+							Array<int> advances(0x80);
+							while (wpos < _words.Length()) {
+								int new_caret_x = caret_x;
+								int space_shift = space * (_words[wpos].range_left - tpos);
+								new_caret_x += space_shift;
+								if (_words[wpos].embedded_object_index == -3) {
+									int old_caret_x = new_caret_x;
+									new_caret_x = ((new_caret_x / tab) + 1) * tab;
+									_words[wpos].width = new_caret_x - old_caret_x;
 								}
-								lx = _words[w].align_rect.Left;
+								else new_caret_x += _words[wpos].width;
+								bool force_linebreak = _words[wpos].embedded_object_index == -2;
+								if (wpos == swpos || new_caret_x <= box_width) {
+									spaces_count += _words[wpos].range_left - tpos;
+									advances << caret_x + space_shift;
+									caret_x = new_caret_x;
+									if (_words[wpos].height > line_height) line_height = _words[wpos].height;
+									tpos = _words[wpos].range_right;
+									wpos++;
+								} else {
+									if (space_shift) tpos++;
+									break;
+								}
+								if (force_linebreak) { if (align == 3) align = 0; break; }
+							}
+							if (caret_x > _width) _width = caret_x;
+							int line_start = 0;
+							if (align == 0) {
+								for (int w = swpos; w < wpos; w++) {
+									_words[w].align_rect.Left = advances[w - swpos];
+									_words[w].align_rect.Right = _words[w].align_rect.Left + _words[w].width;
+									_words[w].align_rect.Top = caret_y;
+									_words[w].align_rect.Bottom = _words[w].align_rect.Top + line_height;
+								}
+							} else if (align == 1) {
+								int dx = line_start = (box_width - caret_x) / 2;
+								for (int w = swpos; w < wpos; w++) {
+									_words[w].align_rect.Left = advances[w - swpos] + dx;
+									_words[w].align_rect.Right = _words[w].align_rect.Left + _words[w].width;
+									_words[w].align_rect.Top = caret_y;
+									_words[w].align_rect.Bottom = _words[w].align_rect.Top + line_height;
+								}
+							} else if (align == 2) {
+								int dx = line_start = box_width - caret_x;
+								for (int w = swpos; w < wpos; w++) {
+									_words[w].align_rect.Left = advances[w - swpos] + dx;
+									_words[w].align_rect.Right = _words[w].align_rect.Left + _words[w].width;
+									_words[w].align_rect.Top = caret_y;
+									_words[w].align_rect.Bottom = _words[w].align_rect.Top + line_height;
+								}
+							} else if (align == 3) {
+								int uncovered = box_width - caret_x;
+								int spaces = spaces_count;
+								int ltpos = stpos;
+								int dx = line_start = 0;
+								for (int w = swpos; w < wpos; w++) {
+									int local_spaces = _words[w].range_left - ltpos;
+									int space_width = uncovered * local_spaces / spaces;
+									dx += space_width;
+									uncovered -= space_width;
+									spaces -= local_spaces;
+									ltpos = _words[w].range_right;
+									_words[w].align_rect.Left = advances[w - swpos] + dx;
+									_words[w].align_rect.Right = _words[w].align_rect.Left + _words[w].width;
+									_words[w].align_rect.Top = caret_y;
+									_words[w].align_rect.Bottom = _words[w].align_rect.Top + line_height;
+								}
+							}
+							for (int w = swpos; w < wpos; w++) if (_words[w].embedded_object_index >= 0) {
+								_objs[_words[w].embedded_object_index].align_rect = _words[w].align_rect;
+								_objs[_words[w].embedded_object_index].inner->SetAbsoluteOrigin(_org_x + _words[w].align_rect.Left, _org_y + _words[w].align_rect.Top);
+								_objs[_words[w].embedded_object_index].inner->AlignContents(device, _words[w].width);
+							}
+							int ltpos = stpos;
+							int ladv = line_start;
+							for (int w = swpos; w < wpos; w++) {
+								if (_words[w].range_left > ltpos) {
+									int space_width = _words[w].align_rect.Left - ladv;
+									int space_num = _words[w].range_left - ltpos;
+									for (int c = ltpos; c < _words[w].range_left; c++) {
+										int i = c - ltpos;
+										_aabb[c].Top = caret_y;
+										_aabb[c].Bottom = caret_y + line_height;
+										_aabb[c].Left = ladv + i * space_width / space_num;
+										_aabb[c].Right = ladv + (i + 1) * space_width / space_num;
+									}
+								}
+								ladv = _words[w].align_rect.Left;
 								if (_words[w].embedded_object_index == -1) {
 									int prev_adv = 0;
 									for (int i = 0; i < _words[w].advances.Length(); i++) {
-										_aabb[_words[w].range_left + i] = Box(lx + prev_adv, _words[w].align_rect.Top,
-											lx + _words[w].advances[i] + ((_words[w].advances[i] == prev_adv) ? 1 : 0), _words[w].align_rect.Bottom);
+										_aabb[_words[w].range_left + i] = Box(ladv + prev_adv, caret_y,
+											ladv + _words[w].advances[i] + ((_words[w].advances[i] == prev_adv) ? 1 : 0), caret_y + line_height);
 										prev_adv = _words[w].advances[i];
 									}
 								} else {
@@ -904,16 +908,33 @@ namespace Engine
 									for (int i = _words[w].range_left; i < _words[w].range_right; i++) {
 										int prev_ofs = (i - _words[w].range_left) * width / (_words[w].range_right - _words[w].range_left);
 										int ofs = (i + 1 - _words[w].range_left) * width / (_words[w].range_right - _words[w].range_left);
-										_aabb[i] = Box(lx + prev_ofs, _words[w].align_rect.Top, lx + ofs, _words[w].align_rect.Bottom);
+										_aabb[i] = Box(ladv + prev_ofs, caret_y, ladv + ofs, caret_y + line_height);
 									}
 								}
-								lx = _words[w].align_rect.Right;
-								txp = _words[w].range_right;
+								ltpos = _words[w].range_right;
+								ladv = _words[w].align_rect.Right;
 							}
-							if (txp < _text.Length() && !(_text[txp].lo & FlagLargeObject) && ((_text[txp].lo & MaskUcsCode) == 32)) {
-								_aabb[txp] = Box(lx, _words[pos - 1].align_rect.Top, lx, _words[pos - 1].align_rect.Bottom);
-								txp++;
+							if (ltpos < tpos) {
+								for (int i = ltpos; i < tpos - 1; i++) {
+									_aabb[i] = Box(ladv, caret_y, ladv + space, caret_y + line_height);
+									ladv += space;
+								}
+								_aabb[tpos - 1] = Box(ladv, caret_y, ladv, caret_y + line_height);
 							}
+							caret_y += line_height;
+							_height = caret_y;
+							last_line_end = _aabb[tpos - 1].Right;
+						}
+						if (!_words.Length() || _words.LastElement().embedded_object_index == -2) {
+							last_line_top = _height; last_line_end = 0;
+							_height += font_height;
+						}
+						for (int i = tpos; i < _aabb.Length(); i++) {
+							_aabb[i].Top = last_line_top;
+							_aabb[i].Bottom = _height;
+							_aabb[i].Left = last_line_end;
+							_aabb[i].Right = last_line_end + space;
+							last_line_end += space;
 						}
 					}
 					virtual int GetContentsOriginX(void) override { return _org_x; }
