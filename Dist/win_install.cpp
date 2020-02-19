@@ -619,6 +619,7 @@ int Main(void)
         }
         Console << L"The Runtime has been successfully installed and tested." << IO::NewLineChar;
         Console << L"Do you want to install the Runtime tools into the PATH environment variable? (yes/no)" << IO::NewLineChar;
+		Console << L"In case of 'YES' please restart your user session after the installation's end." << IO::NewLineChar;
         string ans = Input.ReadLine();
         if (string::CompareIgnoreCase(ans, L"yes") == 0) {
             Console << L"We need the root elevation to do it...";
