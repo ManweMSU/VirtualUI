@@ -804,7 +804,7 @@ namespace Engine
 							space = fnt->GetWidth();
 							font_height = fnt->GetHeight();
 							tab = font_height * 3;
-							int line_height = 0;
+							int line_height = font_height;
 							int swpos = wpos;
 							int stpos = tpos;
 							int spaces_count = 0;
@@ -936,6 +936,7 @@ namespace Engine
 							_aabb[i].Right = last_line_end + space;
 							last_line_end += space;
 						}
+						for (int i = 0; i < _aabb.Length(); i++) if (_aabb[i].Right > _act_width) _act_width = _aabb[i].Right;
 					}
 					virtual int GetContentsOriginX(void) override { return _org_x; }
 					virtual int GetContentsOriginY(void) override { return _org_y; }
