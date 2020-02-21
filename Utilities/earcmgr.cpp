@@ -398,6 +398,7 @@ string com_lexem(ArchiveEntity & ent)
 ArchiveList list;
 Array<int> selection(0x10);
 Syntax::Spelling command_spelling;
+bool exiting = false;
 
 bool Execute(Array<Syntax::Token> & command, IO::Console & console)
 {
@@ -488,14 +489,17 @@ bool Execute(Array<Syntax::Token> & command, IO::Console & console)
                 console << L"Type \"? <command>\" to get additional information on command (if present)." << IO::NewLineChar;
             }
         } else if (command[0].Class == Syntax::TokenClass::Identifier) {
-            if (string::CompareIgnoreCase(command[0].Content, L"exit") == 0) return false;
-            else if (string::CompareIgnoreCase(command[0].Content, L"save") == 0) {
+            if (string::CompareIgnoreCase(command[0].Content, L"exit") == 0) {
+				exiting = true;
+				return false;
+            } else if (string::CompareIgnoreCase(command[0].Content, L"save") == 0) {
                 console << L"Saving the archive list...";
                 if (list.Save()) console << L"Succeed." << IO::NewLineChar; else console << L"Failed." << IO::NewLineChar;
             } else if (string::CompareIgnoreCase(command[0].Content, L"finish") == 0) {
                 console << L"Saving the archive list...";
                 if (list.Save()) {
                     console << L"Succeed." << IO::NewLineChar;
+					exiting = true;
                     return false;
                 } else console << L"Failed." << IO::NewLineChar;
             } else if (string::CompareIgnoreCase(command[0].Content, L"rename") == 0 && command.Length() >= 2) {
@@ -852,7 +856,7 @@ int Main(void)
                     decomposed = Syntax::ParseText(command, command_spelling);
                     decomposed->RemoveLast();
                     if (!Execute(*decomposed, new_console)) {
-						if (break_on_error) break;
+						if (break_on_error || exiting) break;
 						else throw Exception();
 					}
                 }
