@@ -35,6 +35,7 @@ namespace Engine
 
 		class D2DRenderDevice : public Drawing::ITextureRenderingDevice
 		{
+			struct tex_pair { ITexture * base; ITexture * spec; };
 			ID2D1DeviceContext * ExtendedTarget;
 			ID2D1RenderTarget * Target;
 			Array<ID2D1Layer *> Layers;
@@ -44,7 +45,7 @@ namespace Engine
 			uint32 HalfBlinkPeriod;
 			Dictionary::ObjectCache<Color, IBarRenderingInfo> BrushCache;
 			Dictionary::ObjectCache<double, IBlurEffectRenderingInfo> BlurCache;
-			Dictionary::ObjectCache<ITexture *, ITexture> TextureCache;
+			Array<tex_pair> TextureCache;
 			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
 			SafePointer<IWICBitmap> BitmapTarget;
 			int BitmapTargetState;
@@ -55,12 +56,14 @@ namespace Engine
 			~D2DRenderDevice(void) override;
 
 			ID2D1RenderTarget * GetRenderTarget(void) const noexcept;
+			virtual void TextureWasDestroyed(ITexture * texture) noexcept override;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept override;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override;
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept override;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept override;
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
 			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept override;
@@ -69,6 +72,7 @@ namespace Engine
 			virtual ITexture * LoadTexture(Engine::Codec::Image * Source) override;
 			virtual ITexture * LoadTexture(Engine::Codec::Frame * Source) override;
 			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
+			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept override;

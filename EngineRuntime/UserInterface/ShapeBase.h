@@ -3,6 +3,7 @@
 #include "../EngineBase.h"
 #include "../Streaming.h"
 #include "../ImageCodec/CodecBase.h"
+#include "../Graphics/Graphics.h"
 
 namespace Engine
 {
@@ -175,26 +176,32 @@ namespace Engine
 		public:
 			virtual int GetWidth(void) const noexcept = 0;
 			virtual int GetHeight(void) const noexcept = 0;
-			virtual bool IsDynamic(void) const noexcept = 0;
-			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) = 0;
-			virtual void Reload(IRenderingDevice * Device, Codec::Image * Source) = 0;
-			virtual void Reload(IRenderingDevice * Device, Codec::Frame * Source) = 0;
+			virtual void VersionWasDestroyed(ITexture * texture) noexcept = 0;
+			virtual void DeviceWasDestroyed(IRenderingDevice * device) noexcept = 0;
+			virtual void AddDeviceVersion(IRenderingDevice * device, ITexture * texture) noexcept = 0;
+			virtual bool IsDeviceSpecific(void) const noexcept = 0;
+			virtual IRenderingDevice * GetParentDevice(void) const noexcept = 0;
+			virtual ITexture * GetDeviceVersion(IRenderingDevice * target_device) noexcept = 0;
+			virtual void Reload(Codec::Frame * source) = 0;
+			virtual void Reload(ITexture * device_independent) = 0;
 		};
 		class IFont : public Object
 		{
 		public:
 			virtual int GetWidth(void) const noexcept = 0;
 			virtual int GetHeight(void) const noexcept = 0;
-			virtual void Reload(IRenderingDevice * Device) = 0;
 		};
 		class IRenderingDevice : public Object
 		{
 		public:
+			virtual void TextureWasDestroyed(ITexture * texture) noexcept = 0;
+
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) noexcept = 0;
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept = 0;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept = 0;
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept = 0;
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept = 0;
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept  = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept = 0;
 			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept = 0;
@@ -203,6 +210,7 @@ namespace Engine
 			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
 			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
+			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) = 0;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept = 0;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept = 0;

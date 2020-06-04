@@ -78,7 +78,7 @@ namespace Engine
 			SwapChainDescription.Scaling = DXGI_SCALING_NONE;
 			SwapChainDescription.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
 			SwapChainDescription.Flags = 0;
-			SwapChainDescription.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			SwapChainDescription.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 			SwapChainDescription.Scaling = DXGI_SCALING_STRETCH;
 
 			SafePointer<IDXGIAdapter> Adapter;
@@ -91,7 +91,7 @@ namespace Engine
 			DXGIDevice->SetMaximumFrameLatency(1);
 
 			D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-				D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f);
+				D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
 			SafePointer<IDXGISurface> Surface;
 			if (SwapChainResult->GetBuffer(0, IID_PPV_ARGS(Surface.InnerRef())) != S_OK) {
 				throw Exception();
@@ -115,7 +115,7 @@ namespace Engine
 					throw Exception();
 				}
 				D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-					D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f);
+					D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
 				SafePointer<IDXGISurface> Surface;
 				if (SwapChain->GetBuffer(0, IID_PPV_ARGS(Surface.InnerRef())) != S_OK) {
 					throw Exception();

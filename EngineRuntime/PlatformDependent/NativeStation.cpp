@@ -93,14 +93,8 @@ namespace Engine
 			NativeResourceLoader(void) {}
 			~NativeResourceLoader(void) override {}
 
-			virtual ITexture * LoadTexture(Streaming::Stream * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
-			virtual ITexture * LoadTexture(Codec::Image * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
 			virtual ITexture * LoadTexture(Codec::Frame * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
 			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return Direct2D::StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
-			virtual void ReloadTexture(ITexture * Texture, Streaming::Stream * Source) override {}
-			virtual void ReloadTexture(ITexture * Texture, Codec::Image * Source) override {}
-			virtual void ReloadTexture(ITexture * Texture, Codec::Frame * Source) override {}
-			virtual void ReloadFont(UI::IFont * Font) override {}
 		};
 		IResourceLoader * CreateCompatibleResourceLoader(void)
 		{
@@ -444,7 +438,9 @@ namespace Engine
 		void RunMainMessageLoop(void)
 		{
 			MSG Msg;
-			while (GetMessageW(&Msg, 0, 0, 0)) {
+			BOOL Error;
+			while (Error = GetMessageW(&Msg, 0, 0, 0)) {
+				if (Error == -1) break;
 				auto result = DispatchMessageW(&Msg);
 				if (Msg.message == WM_KEYDOWN || Msg.message == WM_KEYUP || Msg.message == WM_SYSKEYDOWN || Msg.message == WM_SYSKEYUP) {
 					if (result) TranslateMessage(&Msg);

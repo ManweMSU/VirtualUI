@@ -20,9 +20,9 @@ namespace Engine
 		using namespace Codec;
 		using namespace Streaming;
 
+		class WICTexture;
 		class D2DTexture;
-		class D2DTextureDD;
-		class D2DFont;
+		class DWFont;
 		class D2DRenderDevice;
 
 		ID2D1Factory1 * D2DFactory1 = 0;
@@ -241,12 +241,12 @@ namespace Engine
 		};
 		struct TextureRenderingInfo : public ITextureRenderingInfo
 		{
-			SafePointer<D2DTextureDD> Texture;
+			SafePointer<D2DTexture> Texture;
 			Box From;
-			Array<ID2D1BitmapBrush *> Brushes;
+			SafePointer<ID2D1BitmapBrush> Brush;
 			bool Fill;
-			TextureRenderingInfo(void) : Brushes(0x20) {}
-			~TextureRenderingInfo(void) override { for (int i = 0; i < Brushes.Length(); i++) Brushes[i]->Release(); }
+			TextureRenderingInfo(void) {}
+			~TextureRenderingInfo(void) override {}
 		};
 		struct TextRenderingInfo : public ITextRenderingInfo
 		{
@@ -256,7 +256,7 @@ namespace Engine
 				int RightEdge;
 				BarRenderingInfo * Brush;
 			};
-			D2DFont * Font;
+			DWFont * Font;
 			Array<uint32> CharString;
 			Array<uint16> GlyphString;
 			Array<float> GlyphAdvances;
@@ -367,78 +367,103 @@ namespace Engine
 			SafePointer<IBarRenderingInfo> BlackBar;
 			virtual ~InversionEffectRenderingInfo(void) override {}
 		};
+		class WICTexture : public ITexture
+		{
+			struct dev_pair { ITexture * dev_tex; IRenderingDevice * dev_ptr; };
+		public:
+			Array<dev_pair> variants;
+			IWICBitmap * bitmap;
+			int w, h;
+			WICTexture(void) : variants(0x10), bitmap(0) {}
+			virtual ~WICTexture(void)
+			{
+				if (bitmap) bitmap->Release();
+				for (int i = 0; i < variants.Length(); i++) {
+					variants[i].dev_tex->VersionWasDestroyed(0);
+					variants[i].dev_ptr->TextureWasDestroyed(this);
+				}
+			}
+			virtual int GetWidth(void) const noexcept override { return w; }
+			virtual int GetHeight(void) const noexcept override { return h; }
+
+			virtual void VersionWasDestroyed(ITexture * texture) noexcept override
+			{
+				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_tex == texture) { variants.Remove(i); break; }
+			}
+			virtual void DeviceWasDestroyed(IRenderingDevice * device) noexcept override
+			{
+				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == device) { variants.Remove(i); break; }
+			}
+			virtual void AddDeviceVersion(IRenderingDevice * device, ITexture * texture) noexcept override
+			{
+				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == device) return;
+				variants << dev_pair{ texture, device };
+			}
+			virtual bool IsDeviceSpecific(void) const noexcept override { return false; }
+			virtual IRenderingDevice * GetParentDevice(void) const noexcept override { return 0; }
+			virtual ITexture * GetDeviceVersion(IRenderingDevice * target_device) noexcept override
+			{
+				if (!target_device) return this;
+				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == target_device) return variants[i].dev_tex;
+				return 0;
+			}
+
+			virtual void Reload(Codec::Frame * source) override
+			{
+				if (bitmap) bitmap->Release();
+				SafePointer<WICTexture> new_texture = static_cast<WICTexture *>(StandaloneDevice::LoadTexture(source));
+				bitmap = new_texture->bitmap;
+				w = new_texture->w; h = new_texture->h;
+				new_texture->bitmap = 0;
+				for (int i = 0; i < variants.Length(); i++) variants[i].dev_tex->Reload(this);
+			}
+			virtual void Reload(ITexture * device_independent) override {}
+			virtual string ToString(void) const override { return L"Engine.Direct2D.WICTexture"; }
+		};
 		class D2DTexture : public ITexture
 		{
 		public:
-			Array<IWICBitmap *> Frames;
-			Array<uint32> FrameDuration;
-			uint32 TotalDuration;
+			WICTexture * base;
+			IRenderingDevice * factory_device;
+			ID2D1Bitmap * bitmap;
 			int w, h;
-			D2DTexture(void) : Frames(0x20) {}
+			D2DTexture(void) : base(0), factory_device(0), bitmap(0) {}
 			virtual ~D2DTexture(void)
 			{
-				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
+				if (bitmap) bitmap->Release();
+				if (factory_device) factory_device->TextureWasDestroyed(this);
+				if (base) base->VersionWasDestroyed(this);
 			}
 			virtual int GetWidth(void) const noexcept override { return w; }
 			virtual int GetHeight(void) const noexcept override { return h; }
-			virtual bool IsDynamic(void) const noexcept override { return false; }
-			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override
+
+			virtual void VersionWasDestroyed(ITexture * texture) noexcept override { if (texture == base) { base = 0; factory_device = 0; } }
+			virtual void DeviceWasDestroyed(IRenderingDevice * device) noexcept override { if (device == factory_device) { base = 0; factory_device = 0; } }
+			virtual void AddDeviceVersion(IRenderingDevice * device, ITexture * texture) noexcept override {}
+			virtual bool IsDeviceSpecific(void) const noexcept override { return true; }
+			virtual IRenderingDevice * GetParentDevice(void) const noexcept override { return factory_device; }
+			virtual ITexture * GetDeviceVersion(IRenderingDevice * target_device) noexcept override
 			{
-				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
-				auto New = static_cast<D2DTexture *>(Device->LoadTexture(Source));
-				Frames = New->Frames;
-				FrameDuration = New->FrameDuration;
-				TotalDuration = New->TotalDuration;
-				w = New->w;
-				h = New->h;
-				New->Frames.Clear();
-				New->Release();
+				if (factory_device && target_device == factory_device) return this;
+				else if (!target_device) return base;
+				return 0;
 			}
-			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Image * Source) override
+
+			virtual void Reload(Codec::Frame * source) override { SafePointer<ITexture> base = StandaloneDevice::LoadTexture(source); Reload(base); }
+			virtual void Reload(ITexture * device_independent) override
 			{
-				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
-				auto New = static_cast<D2DTexture *>(Device->LoadTexture(Source));
-				Frames = New->Frames;
-				FrameDuration = New->FrameDuration;
-				TotalDuration = New->TotalDuration;
-				w = New->w;
-				h = New->h;
-				New->Frames.Clear();
-				New->Release();
+				WICTexture * source = static_cast<WICTexture *>(device_independent);
+				w = source->w; h = source->h;
+				SafePointer<ID2D1Bitmap> texture;
+				auto device = static_cast<D2DRenderDevice *>(factory_device);
+				auto render_target = device->GetRenderTarget();
+				if (render_target->CreateBitmapFromWicBitmap(source->bitmap, texture.InnerRef()) != S_OK) throw Exception();
+				texture->AddRef();
+				bitmap = texture;
 			}
-			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Frame * Source) override
-			{
-				for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release();
-				auto New = static_cast<D2DTexture *>(Device->LoadTexture(Source));
-				Frames = New->Frames;
-				FrameDuration = New->FrameDuration;
-				TotalDuration = New->TotalDuration;
-				w = New->w;
-				h = New->h;
-				New->Frames.Clear();
-				New->Release();
-			}
-			virtual string ToString(void) const override { return L"D2DTextureDeviceIndependent"; }
+			virtual string ToString(void) const override { return L"Engine.Direct2D.D2DTexture"; }
 		};
-		class D2DTextureDD : public ITexture
-		{
-		public:
-			SafePointer<D2DTexture> Source;
-			Array<ID2D1Bitmap *> Frames;
-			Array<uint32> FrameDuration;
-			uint32 TotalDuration;
-			int w, h;
-			D2DTextureDD(void) : Frames(0x20) {}
-			virtual ~D2DTextureDD(void) { for (int i = 0; i < Frames.Length(); i++) Frames[i]->Release(); }
-			virtual int GetWidth(void) const noexcept override { return w; }
-			virtual int GetHeight(void) const noexcept override { return h; }
-			virtual bool IsDynamic(void) const noexcept override { return false; }
-			virtual void Reload(IRenderingDevice * Device, Streaming::Stream * Source) override {}
-			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Image * Source) override {}
-			virtual void Reload(IRenderingDevice * Device, Engine::Codec::Frame * Source) override {}
-			virtual string ToString(void) const override { return L"D2DTextureDeviceDependent"; }
-		};
-		class D2DFont : public IFont
+		class DWFont : public IFont
 		{
 		public:
 			IDWriteFontFace * FontFace;
@@ -449,7 +474,7 @@ namespace Engine
 			bool Italic, Underline, Strikeout;
 			DWRITE_FONT_METRICS FontMetrics;
 			DWRITE_FONT_METRICS AltMetrics;
-			virtual ~D2DFont(void) override { if (FontFace) FontFace->Release(); if (AlternativeFace) AlternativeFace->Release(); }
+			virtual ~DWFont(void) override { if (FontFace) FontFace->Release(); if (AlternativeFace) AlternativeFace->Release(); }
 			virtual int GetWidth(void) const noexcept override
 			{
 				uint16 SpaceGlyph;
@@ -460,19 +485,7 @@ namespace Engine
 				return int(float(SpaceMetrics.advanceWidth) * float(Height) / float(FontMetrics.designUnitsPerEm));
 			}
 			virtual int GetHeight(void) const noexcept override { return ActualHeight; }
-			virtual void Reload(IRenderingDevice * Device) override
-			{
-				if (FontFace) FontFace->Release();
-				if (AlternativeFace) AlternativeFace->Release();
-				auto New = static_cast<D2DFont *>(Device->LoadFont(FontName, ActualHeight, Weight, Italic, Underline, Strikeout));
-				FontFace = New->FontFace;
-				FontMetrics = New->FontMetrics;
-				AlternativeFace = New->AlternativeFace;
-				New->FontFace = 0;
-				New->AlternativeFace = 0;
-				New->Release();
-			}
-			virtual string ToString(void) const override { return L"D2DFont"; }
+			virtual string ToString(void) const override { return L"Engine.Direct2D.DWFont"; }
 		};
 
 		namespace StandaloneDevice
@@ -486,61 +499,25 @@ namespace Engine
 			ITexture * LoadTexture(Engine::Codec::Image * Source)
 			{
 				if (!Source->Frames.Length()) throw InvalidArgumentException();
-				int32 w = Source->Frames[0].GetWidth();
-				int32 h = Source->Frames[0].GetHeight();
-				for (int i = 1; i < Source->Frames.Length(); i++) {
-					if (Source->Frames[i].GetWidth() != w || Source->Frames[i].GetHeight() != h) throw InvalidArgumentException();
-				}
-				D2DTexture * Texture = new (std::nothrow) D2DTexture;
-				if (!Texture) { throw OutOfMemoryException(); }
-				try {
-					Texture->w = w; Texture->h = h;
-					for (int i = 0; i < Source->Frames.Length(); i++) {
-						SafePointer<IWICBitmap> Bitmap;
-						if (WICFactory->CreateBitmap(w, h, GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) throw Exception();
-						SafePointer<Frame> conv = Source->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
-						IWICBitmapLock * Lock;
-						Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock);
-						UINT len;
-						uint8 * data;
-						Lock->GetDataPointer(&len, &data);
-						MemoryCopy(data, conv->GetData(), conv->GetScanLineLength() * conv->GetHeight());
-						Lock->Release();
-						Bitmap->AddRef();
-						Texture->Frames << Bitmap;
-						Texture->FrameDuration << Source->Frames[i].Duration;
-					}
-				} catch (...) {
-					if (Texture) Texture->Release();
-					throw;
-				}
-				Texture->TotalDuration = Texture->FrameDuration[0];
-				for (int i = 1; i < Texture->FrameDuration.Length(); i++) {
-					auto v = Texture->FrameDuration[i];
-					Texture->FrameDuration[i] = Texture->TotalDuration;
-					Texture->TotalDuration += v;
-				}
-				return Texture;
+				return LoadTexture(Source->GetFrameBestDpiFit(Zoom));
 			}
 			ITexture * LoadTexture(Engine::Codec::Frame * Source)
 			{
 				SafePointer<IWICBitmap> Bitmap;
 				if (WICFactory->CreateBitmap(Source->GetWidth(), Source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) throw Exception();
-				SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown));
+				SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, Codec::AlphaFormat::Premultiplied, LineDirection::TopDown));
 				IWICBitmapLock * Lock;
 				Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock);
 				UINT len;
 				uint8 * data;
 				Lock->GetDataPointer(&len, &data);
-				MemoryCopy(data, conv->GetData(), conv->GetScanLineLength() * conv->GetHeight());
+				MemoryCopy(data, conv->GetData(), intptr(conv->GetScanLineLength()) * intptr(conv->GetHeight()));
 				Lock->Release();
-				D2DTexture * Texture = new (std::nothrow) D2DTexture;
+				WICTexture * Texture = new (std::nothrow) WICTexture;
 				if (!Texture) { throw OutOfMemoryException(); }
 				try {
-					Texture->Frames.Append(Bitmap);
 					Bitmap->AddRef();
-					Texture->FrameDuration << Source->Duration;
-					Texture->TotalDuration = Source->Duration;
+					Texture->bitmap = Bitmap;
 					Texture->w = Source->GetWidth();
 					Texture->h = Source->GetHeight();
 				} catch (...) {
@@ -551,7 +528,7 @@ namespace Engine
 			}
 			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
 			{
-				D2DFont * Font = new D2DFont;
+				DWFont * Font = new DWFont;
 				Font->AlternativeFace = 0;
 				Font->FontFace = 0;
 				Font->FontName = FaceName;
@@ -606,15 +583,33 @@ namespace Engine
 		}
 
 		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
-			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
+			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
+			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
+			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) :
-			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
+			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
+			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
+			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
-		D2DRenderDevice::~D2DRenderDevice(void) { Target->Release(); }
+		D2DRenderDevice::~D2DRenderDevice(void)
+		{
+			Target->Release();
+			for (int i = 0; i < TextureCache.Length(); i++) {
+				TextureCache[i].base->DeviceWasDestroyed(this);
+				TextureCache[i].spec->DeviceWasDestroyed(this);
+			}
+		}
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const noexcept { return Target; }
+		void D2DRenderDevice::TextureWasDestroyed(ITexture * texture) noexcept
+		{
+			for (int i = 0; i < TextureCache.Length(); i++) {
+				if (TextureCache[i].base == texture || TextureCache[i].spec == texture) {
+					TextureCache.Remove(i);
+					break;
+				}
+			}
+		}
 		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept
 		{
 			try {
@@ -712,52 +707,52 @@ namespace Engine
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept
 		{
 			try {
-				auto * Info = new (std::nothrow) TextureRenderingInfo;
-				auto CachedTexture = TextureCache.ElementByKey(texture);
-				if (CachedTexture) {
-					Info->Texture.SetRetain(static_cast<D2DTextureDD *>(CachedTexture));
+				SafePointer<D2DTexture> device_texture;
+				if (texture->IsDeviceSpecific()) {
+					if (texture->GetParentDevice() == this) device_texture.SetRetain(static_cast<D2DTexture *>(texture));
+					else return 0;
 				} else {
-					D2DTexture * src = static_cast<D2DTexture *>(texture);
-					D2DTextureDD * dd = new (std::nothrow) D2DTextureDD;
-					if (!dd) throw OutOfMemoryException();
-					dd->Source.SetRetain(src);
-					dd->w = src->w; dd->h = src->h;
-					dd->TotalDuration = src->TotalDuration;
-					dd->FrameDuration = src->FrameDuration;
-					for (int i = 0; i < src->Frames.Length(); i++) {
-						SafePointer<ID2D1Bitmap> d2d_texture;
-						if (Target->CreateBitmapFromWicBitmap(src->Frames[i], d2d_texture.InnerRef()) != S_OK) { delete dd; throw Exception(); }
-						d2d_texture->AddRef();
-						dd->Frames.Append(d2d_texture);
-					}
-					Info->Texture.SetReference(dd);
-					TextureCache.Append(texture, dd);
+					ITexture * cached = texture->GetDeviceVersion(this);
+					if (!cached) {
+						device_texture.SetReference(new (std::nothrow) D2DTexture);
+						if (!device_texture) return 0;
+						texture->AddDeviceVersion(this, device_texture);
+						TextureCache << tex_pair{ texture, device_texture };
+						device_texture->base = static_cast<WICTexture *>(texture);
+						device_texture->factory_device = this;
+						device_texture->Reload(texture);
+					} else device_texture.SetRetain(static_cast<D2DTexture *>(cached));
 				}
+				auto * Info = new (std::nothrow) TextureRenderingInfo;
+				if (!Info) return 0;
+				Info->Texture = device_texture;
 				Info->From = take_area;
 				Info->Fill = fill_pattern;
-				if (fill_pattern && !texture->IsDynamic()) {
-					for (int i = 0; i < Info->Texture->Frames.Length(); i++) {
-						ID2D1Bitmap * Fragment;
-						if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
-							Fragment = Info->Texture->Frames[i];
-							Fragment->AddRef();
-						} else {
-							if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
-								D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), &Fragment) != S_OK) {
-								Info->Release(); throw Exception();
-							}
-							if (Fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->Frames[i], &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
-							{ Fragment->Release(); Info->Release(); throw Exception(); }
+				if (fill_pattern) {
+					SafePointer<ID2D1Bitmap> fragment;
+					if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
+						fragment.SetReference(Info->Texture->bitmap);
+						fragment->AddRef();
+					} else {
+						if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
+							D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), fragment.InnerRef()) != S_OK) {
+							Info->Release(); throw Exception();
 						}
-						ID2D1BitmapBrush * Brush;
-						if (Target->CreateBitmapBrush(Fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
-						{ Fragment->Release(); Info->Release(); throw Exception(); }
-						Fragment->Release();
-						try { Info->Brushes << Brush; } catch (...) { Brush->Release(); Info->Release(); throw; }
+						if (fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->bitmap, &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
+						{ Info->Release(); throw Exception(); }
 					}
+					ID2D1BitmapBrush * Brush;
+					if (Target->CreateBitmapBrush(fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
+					{ Info->Release(); throw Exception(); }
+					Info->Brush.SetReference(Brush);
 				}
 				return Info;
 			} catch (...) { return 0; }
+		}
+		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
 		}
 		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept
 		{
@@ -768,7 +763,7 @@ namespace Engine
 				array << GradientPoint(color, 0.0);
 				Info->halign = horizontal_align;
 				Info->valign = vertical_align;
-				Info->Font = static_cast<D2DFont *>(font);
+				Info->Font = static_cast<DWFont *>(font);
 				Info->RenderTarget = Target;
 				Info->Device = this;
 				Info->HighlightBrush = 0;
@@ -802,7 +797,7 @@ namespace Engine
 				array << GradientPoint(color, 0.0);
 				Info->halign = horizontal_align;
 				Info->valign = vertical_align;
-				Info->Font = static_cast<D2DFont *>(font);
+				Info->Font = static_cast<DWFont *>(font);
 				Info->RenderTarget = Target;
 				Info->Device = this;
 				Info->HighlightBrush = 0;
@@ -849,6 +844,11 @@ namespace Engine
 		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source) { return StandaloneDevice::LoadTexture(Source); }
 		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source) { return StandaloneDevice::LoadTexture(Source); }
 		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
+		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
 		{
 			if (!Info) return;
@@ -859,37 +859,17 @@ namespace Engine
 				int w = At.Right - At.Left, h = At.Bottom - At.Top;
 				if (!w || !h) return;
 				D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES bp;
-				if (fabs(info->prop_w) > fabs(info->prop_h)) {
-					double aspect = info->prop_h / info->prop_w;
-					if (fabs(aspect) > double(h) / double(w)) {
-						int dx = int(h / fabs(aspect) * sgn(info->prop_w));
-						bp.startPoint.x = float(At.Left + (w - dx) / 2);
-						bp.startPoint.y = float((info->prop_h > 0.0) ? At.Bottom : At.Top);
-						bp.endPoint.x = float(At.Left + (w + dx) / 2);
-						bp.endPoint.y = float((info->prop_h > 0.0) ? At.Top : At.Bottom);
-					} else {
-						int dy = int(w * fabs(aspect) * sgn(info->prop_h));
-						bp.startPoint.x = float((info->prop_w > 0.0) ? At.Left : At.Right);
-						bp.startPoint.y = float(At.Top + (h + dy) / 2);
-						bp.endPoint.x = float((info->prop_w > 0.0) ? At.Right : At.Left);
-						bp.endPoint.y = float(At.Top + (h - dy) / 2);
-					}
-				} else {
-					double aspect = info->prop_w / info->prop_h;
-					if (fabs(aspect) > double(w) / double(h)) {
-						int dy = int(w / fabs(aspect) * sgn(info->prop_h));
-						bp.startPoint.x = float((info->prop_w > 0.0) ? At.Left : At.Right);
-						bp.startPoint.y = float(At.Top + (h + dy) / 2);
-						bp.endPoint.x = float((info->prop_w > 0.0) ? At.Right : At.Left);
-						bp.endPoint.y = float(At.Top + (h - dy) / 2);
-					} else {
-						int dx = int(h * fabs(aspect) * sgn(info->prop_w));
-						bp.startPoint.x = float(At.Left + (w - dx) / 2);
-						bp.startPoint.y = float((info->prop_h > 0.0) ? At.Bottom : At.Top);
-						bp.endPoint.x = float(At.Left + (w + dx) / 2);
-						bp.endPoint.y = float((info->prop_h > 0.0) ? At.Top : At.Bottom);
-					}
-				}
+				double cx = double(At.Right + At.Left) / 2.0;
+				double cy = double(At.Top + At.Bottom) / 2.0;
+				double rx = double(w) / 2.0;
+				double ry = double(h) / 2.0;
+				double mx = max(abs(info->prop_w), abs(info->prop_h));
+				double boundary_sx = info->prop_w / mx;
+				double boundary_sy = info->prop_h / mx;
+				bp.startPoint.x = float(cx - rx * boundary_sx);
+				bp.startPoint.y = float(cy + ry * boundary_sy);
+				bp.endPoint.x = float(cx + rx * boundary_sx);
+				bp.endPoint.y = float(cy - ry * boundary_sy);
 				ID2D1LinearGradientBrush * Brush;
 				if (Target->CreateLinearGradientBrush(bp, info->Collection, &Brush) == S_OK) {
 					Target->FillRectangle(D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom)), Brush);
@@ -901,14 +881,12 @@ namespace Engine
 		{
 			if (!Info) return;
 			auto info = static_cast<TextureRenderingInfo *>(Info);
-			int frame = 0;
-			if (info->Texture->Frames.Length() > 1) frame = max(BinarySearchLE(info->Texture->FrameDuration, AnimationTimer % info->Texture->TotalDuration), 0);
 			D2D1_RECT_F To = D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom));
 			if (info->Fill) {
-				Target->FillRectangle(To, info->Brushes[frame]);
+				Target->FillRectangle(To, info->Brush);
 			} else {
 				D2D1_RECT_F From = D2D1::RectF(float(info->From.Left), float(info->From.Top), float(info->From.Right), float(info->From.Bottom));
-				Target->DrawBitmap(info->Texture->Frames[frame], To, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, From);
+				Target->DrawBitmap(info->Texture->bitmap, To, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, From);
 			}
 		}
 		void D2DRenderDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept
@@ -973,7 +951,7 @@ namespace Engine
 				Box Corrected = At;
 				if (Corrected.Left < 0) Corrected.Left = 0;
 				if (Corrected.Top < 0) Corrected.Top = 0;
-				if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+				if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
 					for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
 					Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
 					for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
@@ -992,7 +970,7 @@ namespace Engine
 					Box Corrected = At;
 					if (Corrected.Left < 0) Corrected.Left = 0;
 					if (Corrected.Top < 0) Corrected.Top = 0;
-					if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
+					if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
 						for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
 						Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
 						for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
@@ -1131,10 +1109,9 @@ namespace Engine
 		UI::ITexture * D2DRenderDevice::GetRenderTargetAsTexture(void) noexcept
 		{
 			if (!BitmapTarget || BitmapTargetState) return 0;
-			SafePointer<D2DTexture> result = new D2DTexture;
-			result->Frames.Append(BitmapTarget);
-			result->FrameDuration.Append(0);
-			result->TotalDuration = 0;
+			SafePointer<WICTexture> result = new (std::nothrow) WICTexture;
+			if (!result) return 0;
+			result->bitmap = BitmapTarget;
 			result->w = BitmapTargetResX;
 			result->h = BitmapTargetResY;
 			result->Retain();

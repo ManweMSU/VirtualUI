@@ -35,6 +35,9 @@
     <Filter Include="PlatformSpecific">
       <UniqueIdentifier>{70776db3-808a-4edb-be5e-81b91374b43c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Graphics">
+      <UniqueIdentifier>{2e027b94-63ae-403c-9519-778c5398fcde}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -262,6 +265,9 @@
     <ClInclude Include="Processes\DynamicLibrary.h">
       <Filter>Processes</Filter>
     </ClInclude>
+    <ClInclude Include="Graphics\Graphics.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -473,6 +479,12 @@
     </ClCompile>
     <ClCompile Include="Processes\DynamicLibrary.cpp">
       <Filter>Processes</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Graphics.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\Canvas.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

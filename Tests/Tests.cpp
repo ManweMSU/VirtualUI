@@ -800,9 +800,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			};
 			auto Hook3 = new _thl3;
 
-			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
-			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
-			//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
+			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
+			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
+			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
 
 			auto templ = ::Template->Dialog[L"Test4"];
 			{
@@ -859,10 +859,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				richedit_props->HyperlinkHotColor = UI::Color(128, 128, 255);
 				richedit_props->ID = 898911;
 				richedit_props->ScrollSize = 32;
-				richedit_props->SelectionColor = UI::Color(255, 0, 255);
+				richedit_props->SelectionColor = UI::Color(255, 0, 0, 128);
 				richedit_props->Border = 10;
 				richedit_props->ContextMenu.SetRetain(::Template->Dialog[L"EditContextMenu"]);
-				//richedit_props->ReadOnly = true;
 				richedit_props->Text = L"\33X\33nSegoe UI\33e\33n*\33e\33f00\33cFF444444\33h001E\33a4"
 					L"\tkornevgen \33bpi\33idor\33e\33e \33cFFFF0000kornev\33cFFFF0088gen\33e \33ipidor\33e\33e kornevgen \33upi\33edor kor\33snev\33egen pidor\nkornevgen \33h0030pidor\33e \33f01kornevgen\33e pidor kornevgen pidor \33lRESOURCE\33kornevgen pidor\33e kornevgen pidor kornevgen pidor"
 					L"\33e" L"\n\33a2TITLE\n\33e\33a3Right Text\n\33e"
@@ -882,7 +881,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
-			//auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
+			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
 			//auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
 			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], Callback3, UI::Rectangle::Invalid(), 0);
 			//w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
@@ -907,17 +906,18 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 			//w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 			w3->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
-			//w4->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
+			w4->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
 
 			w->Show(true);
 			w2->Show(true);
 			w3->Show(true);
 			w6->Show(true);
-			//w4->Show(true);
+			w4->Show(true);
 			//w5->Show(true);
 
-			//WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
-			//WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
+			WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
+			WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
+			WindowsSpecific::ExtendFrameIntoClient(w4, -1, -1, -1, -1);
 			//WindowsSpecific::SetWindowTransparentcy(w4, 0.7);
 
 			(*conout) << L"Done!" << IO::NewLineChar;
