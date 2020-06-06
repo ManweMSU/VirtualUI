@@ -376,6 +376,37 @@ namespace Engine
 			SetWindowPos(reinterpret_cast<NativeStation *>(Station)->GetHandle(), 0,
 				position.Left, position.Top, position.Right - position.Left, position.Bottom - position.Top, SWP_NOZORDER);
 		}
+		void ActivateWindow(UI::WindowStation * Station)
+		{
+			if (!IsWindowVisible(Station)) return;
+			SetActiveWindow(reinterpret_cast<NativeStation *>(Station)->GetHandle());
+		}
+		void MaximizeWindow(UI::WindowStation * Station)
+		{
+			if (!IsWindowVisible(Station)) return;
+			ShowWindow(reinterpret_cast<NativeStation *>(Station)->GetHandle(), SW_MAXIMIZE);
+		}
+		void MinimizeWindow(UI::WindowStation * Station)
+		{
+			if (!IsWindowVisible(Station)) return;
+			ShowWindow(reinterpret_cast<NativeStation *>(Station)->GetHandle(), SW_MINIMIZE);
+		}
+		void RestoreWindow(UI::WindowStation * Station)
+		{
+			if (!IsWindowVisible(Station)) return;
+			ShowWindow(reinterpret_cast<NativeStation *>(Station)->GetHandle(), SW_SHOWNORMAL);
+		}
+		void RequestForAttention(UI::WindowStation * Station)
+		{
+			if (!IsWindowVisible(Station)) return;
+			FLASHWINFO info;
+			info.cbSize = sizeof(info);
+			info.hwnd = reinterpret_cast<NativeStation *>(Station)->GetHandle();
+			info.dwFlags = FLASHW_ALL;
+			info.uCount = 1;
+			info.dwTimeout = 0;
+			FlashWindowEx(&info);
+		}
 		bool IsWindowVisible(UI::WindowStation * Station)
 		{
 			return ::IsWindowVisible(reinterpret_cast<NativeStation *>(Station)->GetHandle()) != 0;
@@ -396,6 +427,18 @@ namespace Engine
 			RECT Rect;
 			GetWindowRect(reinterpret_cast<NativeStation *>(Station)->GetHandle(), &Rect);
 			return UI::Box(Rect.left, Rect.top, Rect.right, Rect.bottom);
+		}
+		bool IsWindowActive(UI::WindowStation * Station)
+		{
+			return GetActiveWindow() == reinterpret_cast<NativeStation *>(Station)->GetHandle();
+		}
+		bool IsWindowMinimized(UI::WindowStation * Station)
+		{
+			return ::IsIconic(reinterpret_cast<NativeStation *>(Station)->GetHandle());
+		}
+		bool IsWindowMaximized(UI::WindowStation * Station)
+		{
+			return ::IsZoomed(reinterpret_cast<NativeStation *>(Station)->GetHandle());
 		}
 		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at)
 		{
@@ -545,7 +588,16 @@ namespace Engine
 					station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Help);
 				} else {
 					Result = DefWindowProcW(Wnd, Msg, WParam, LParam);
+					if (WParam == SC_MAXIMIZE) station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Maximize);
+					else if (WParam == SC_MINIMIZE) station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Minimize);
+					else if (WParam == SC_RESTORE) station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Restore);
 				}
+			} else if (Msg == WM_QUERYENDSESSION) {
+				station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::SessionEnding);
+				Result = TRUE;
+			} else if (Msg == WM_ENDSESSION) {
+				station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::SessionEnd);
+				Result = 0;
 			} else if (Msg == WM_TIMER) {
 				if (station) {
 					Result = station->ProcessWindowEvents(Msg, WParam, LParam);
@@ -556,8 +608,10 @@ namespace Engine
 				if (station) {
 					if (WParam == WA_INACTIVE) {
 						station->AnimationStateChanged();
+						station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Deactivate);
 					} else {
 						station->AnimationStateChanged();
+						station->GetDesktop()->As<Controls::OverlappedWindow>()->RaiseFrameEvent(Windows::FrameEvent::Activate);
 					}
 				}
 			} else if (Msg == WM_PAINT) {

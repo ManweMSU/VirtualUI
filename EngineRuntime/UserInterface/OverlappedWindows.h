@@ -33,7 +33,11 @@ namespace Engine
 		}
 		namespace Windows
 		{
-			enum class FrameEvent { Close, Move, Maximize, Minimize, Help, PopupMenuCancelled, Timer };
+			enum class FrameEvent {
+				Close, Move, Maximize, Minimize, Restore,
+				SessionEnding, SessionEnd,
+				Help, Activate, Deactivate, PopupMenuCancelled, Timer
+			};
 			class IWindowEventCallback
 			{
 			public:
@@ -54,6 +58,15 @@ namespace Engine
 			void ExitMessageLoop(void);
 			Array<string> * GetFontFamilies(void);
 			void SetApplicationIcon(Codec::Image * icon);
+
+			void ActivateWindow(Window * window);
+			void MaximizeWindow(Window * window);
+			void MinimizeWindow(Window * window);
+			void RestoreWindow(Window * window);
+			void RequestForAttention(Window * window);
+			bool IsWindowActive(Window * window);
+			bool IsWindowMinimized(Window * window);
+			bool IsWindowMaximized(Window * window);
 		}
 		namespace Controls
 		{

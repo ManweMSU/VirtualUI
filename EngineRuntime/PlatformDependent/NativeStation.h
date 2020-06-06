@@ -20,10 +20,18 @@ namespace Engine
 		void EnableWindow(UI::WindowStation * Station, bool Enable);
 		void SetWindowTitle(UI::WindowStation * Station, const string & Title);
 		void SetWindowPosition(UI::WindowStation * Station, const UI::Box & position);
+		void ActivateWindow(UI::WindowStation * Station);
+		void MaximizeWindow(UI::WindowStation * Station);
+		void MinimizeWindow(UI::WindowStation * Station);
+		void RestoreWindow(UI::WindowStation * Station);
+		void RequestForAttention(UI::WindowStation * Station);
 		bool IsWindowVisible(UI::WindowStation * Station);
 		bool IsWindowEnabled(UI::WindowStation * Station);
 		string GetWindowTitle(UI::WindowStation * Station);
 		UI::Box GetWindowPosition(UI::WindowStation * Station);
+		bool IsWindowActive(UI::WindowStation * Station);
+		bool IsWindowMinimized(UI::WindowStation * Station);
+		bool IsWindowMaximized(UI::WindowStation * Station);
 		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at);
 		UI::Box GetScreenDimensions(void);
 		double GetScreenScale(void);

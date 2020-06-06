@@ -518,7 +518,55 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				}
 				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
 				{
-					if (event == Windows::FrameEvent::Close) window->Destroy();
+					IO::Console console;
+					if (event == Windows::FrameEvent::Close) {
+						window->Destroy();
+						return;
+					} else if (event == Windows::FrameEvent::Move) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Move Window");
+					} else if (event == Windows::FrameEvent::Minimize) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Minimize Window");
+					} else if (event == Windows::FrameEvent::Maximize) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Maximize Window");
+					} else if (event == Windows::FrameEvent::Restore) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Restore Window");
+					} else if (event == Windows::FrameEvent::Activate) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Activate Window");
+					} else if (event == Windows::FrameEvent::Deactivate) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Deactivate Window");
+					} else if (event == Windows::FrameEvent::SessionEnding) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Session is ending");
+					} else if (event == Windows::FrameEvent::SessionEnd) {
+						console.SetTextColor(14);
+						console.WriteLine(L"End session");
+					}
+					if (NativeWindows::IsWindowActive(window->GetStation())) {
+						console.SetTextColor(10);
+					} else {
+						console.SetTextColor(12);
+					}
+					console.Write(L"A");
+					if (NativeWindows::IsWindowMaximized(window->GetStation())) {
+						console.SetTextColor(10);
+					} else {
+						console.SetTextColor(12);
+					}
+					console.Write(L"Z");
+					if (NativeWindows::IsWindowMinimized(window->GetStation())) {
+						console.SetTextColor(10);
+					} else {
+						console.SetTextColor(12);
+					}
+					console.Write(L"I");
+					console.SetTextColor(-1);
+					console.WriteLine(L"");
 				}
 			};
 			class _thl : public Controls::Edit::IEditHook
@@ -800,9 +848,22 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			};
 			auto Hook3 = new _thl3;
 
-			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
-			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
-			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
+			{
+				SafePointer<UI::Template::FrameShape> root = new UI::Template::FrameShape;
+				SafePointer<UI::Template::BarShape> left = new UI::Template::BarShape;
+
+				root->Position = Template::Rectangle(Template::Coordinate(0, 0.0, 0.0), Template::Coordinate(0, 0.0, 0.0),
+					Template::Coordinate(0, 0.0, 1.0), Template::Coordinate(0, 0.0, 1.0));
+				root->Children.Append(left);
+				left->Position = Template::Rectangle(Template::Coordinate(0, 0.0, 0.0), Template::Coordinate(0, 0.0, 0.0),
+					Template::Coordinate(0, 0.0, 0.5), Template::Coordinate(0, 0.0, 1.0));
+				left->Gradient << Template::GradientPoint(UI::Color(255, 255, 255, 128), 0.0);
+
+				::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
+				//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
+				::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Get<SafePointer<UI::Template::Shape>>().SetRetain(root.Inner());
+				::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
+			}
 
 			auto templ = ::Template->Dialog[L"Test4"];
 			{

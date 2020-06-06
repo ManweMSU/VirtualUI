@@ -558,6 +558,7 @@ namespace Engine
 		void WindowStation::KeyUp(int key_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->KeyUp(key_code); }
 		void WindowStation::CharDown(uint32 ucs_code) { if (FocusedWindow && !FocusedWindow->IsAvailable()) SetFocus(0); if (FocusedWindow) FocusedWindow->CharDown(ucs_code); }
 		Point WindowStation::GetCursorPos(void) { return Point(0, 0); }
+		void WindowStation::SetCursorPos(Point pos) {}
 		ICursor * WindowStation::LoadCursor(Streaming::Stream * Source) { return 0; }
 		ICursor * WindowStation::LoadCursor(Codec::Image * Source) { return 0; }
 		ICursor * WindowStation::LoadCursor(Codec::Frame * Source) { return 0; }

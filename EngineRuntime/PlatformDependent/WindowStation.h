@@ -42,6 +42,7 @@ namespace Engine
 			virtual void SetExclusiveWindow(Window * window) override;
 			virtual Window * GetExclusiveWindow(void) override;
 			virtual Point GetCursorPos(void) override;
+			virtual void SetCursorPos(Point pos) override;
 			virtual bool NativeHitTest(const Point & at) override;
 			virtual ICursor * LoadCursor(Streaming::Stream * Source) override;
 			virtual ICursor * LoadCursor(Codec::Image * Source) override;

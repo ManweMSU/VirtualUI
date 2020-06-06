@@ -70,6 +70,12 @@ namespace Engine
 			ScreenToClient(_window, &p);
 			return Point(p.x, p.y);
 		}
+		void HandleWindowStation::SetCursorPos(Point pos)
+		{
+			POINT p; p.x = pos.x; p.y = pos.y;
+			ClientToScreen(_window, &p);
+			::SetCursorPos(p.x, p.y);
+		}
 		bool HandleWindowStation::NativeHitTest(const Point & at)
 		{
 			POINT p = { at.x, at.y };

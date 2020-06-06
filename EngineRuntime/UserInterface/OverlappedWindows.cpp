@@ -580,6 +580,14 @@ namespace Engine
 			void ExitMessageLoop(void) { NativeWindows::ExitMainLoop(); }
 			Array<string>* GetFontFamilies(void) { return NativeWindows::GetFontFamilies(); }
 			void SetApplicationIcon(Codec::Image * icon) { NativeWindows::SetApplicationIcon(icon); }
+			void ActivateWindow(Window * window) { NativeWindows::ActivateWindow(window->GetStation()); }
+			void MaximizeWindow(Window * window) { NativeWindows::MaximizeWindow(window->GetStation()); }
+			void MinimizeWindow(Window * window) { NativeWindows::MinimizeWindow(window->GetStation()); }
+			void RestoreWindow(Window * window) { NativeWindows::RestoreWindow(window->GetStation()); }
+			void RequestForAttention(Window * window) { NativeWindows::RequestForAttention(window->GetStation()); }
+			bool IsWindowActive(Window * window) { return NativeWindows::IsWindowActive(window->GetStation()); }
+			bool IsWindowMinimized(Window * window) { return NativeWindows::IsWindowMinimized(window->GetStation()); }
+			bool IsWindowMaximized(Window * window) { return NativeWindows::IsWindowMaximized(window->GetStation()); }
 		}
 	}
 }

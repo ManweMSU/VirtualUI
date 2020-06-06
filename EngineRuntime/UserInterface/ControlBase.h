@@ -259,6 +259,7 @@ namespace Engine
 			virtual void KeyUp(int key_code);
 			virtual void CharDown(uint32 ucs_code);
 			virtual Point GetCursorPos(void);
+			virtual void SetCursorPos(Point pos);
 			virtual ICursor * LoadCursor(Streaming::Stream * Source);
 			virtual ICursor * LoadCursor(Codec::Image * Source);
 			virtual ICursor * LoadCursor(Codec::Frame * Source);

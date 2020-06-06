@@ -230,9 +230,29 @@ namespace Engine
 				SocketAddressDomain _domain;
 				Address _address;
 				uint32 _port;
-				SafePointer<Socket> _connection;
 			public:
-				HttpConnection(const string & agent, const string & address) : _agent(agent), _host(address)
+				HttpConnection(const string & agent, const string & address) : _agent(agent), _host(address) { ResetConnection(); }
+				virtual ~HttpConnection(void) override {}
+				virtual HttpRequest * CreateRequest(const string & object, HttpVerb verb) override
+				{
+					SafePointer<Socket> connection = CreateSocket(_domain, SocketProtocol::TCP);
+					if (!connection) throw Exception();
+					connection->Connect(_address, _port);
+					const widechar * Verb = L"GET";
+					if (verb == HttpVerb::Options) Verb = L"OPTIONS";
+					else if (verb == HttpVerb::Get) Verb = L"GET";
+					else if (verb == HttpVerb::Head) Verb = L"HEAD";
+					else if (verb == HttpVerb::Post) Verb = L"POST";
+					else if (verb == HttpVerb::Put) Verb = L"PUT";
+					else if (verb == HttpVerb::Patch) Verb = L"PATCH";
+					else if (verb == HttpVerb::Delete) Verb = L"DELETE";
+					else if (verb == HttpVerb::Trace) Verb = L"TRACE";
+					else if (verb == HttpVerb::Connect) Verb = L"CONNECT";
+					try {
+						return new HttpRequest(_agent, _host, object, Verb, verb, connection);
+					} catch (...) { return 0; }
+				}
+				virtual void ResetConnection(void) override
 				{
 					string server;
 					uint16 port;
@@ -257,36 +277,9 @@ namespace Engine
 					}
 					SafePointer< Array<AddressEntity> > addr = GetAddressByHost(server, port, SocketAddressDomain::IPv6, SocketProtocol::TCP);
 					if (!addr->Length()) throw InvalidArgumentException();
-					_connection = CreateSocket(addr->ElementAt(0).EntityDomain, SocketProtocol::TCP);
-					if (!_connection) throw Exception();
-					_connection->Connect(addr->ElementAt(0).EntityAddress, port);
 					_domain = addr->ElementAt(0).EntityDomain;
 					_address = addr->ElementAt(0).EntityAddress;
 					_port = port;
-				}
-				virtual ~HttpConnection(void) override {}
-				virtual HttpRequest * CreateRequest(const string & object, HttpVerb verb) override
-				{
-					const widechar * Verb = L"GET";
-					if (verb == HttpVerb::Options) Verb = L"OPTIONS";
-					else if (verb == HttpVerb::Get) Verb = L"GET";
-					else if (verb == HttpVerb::Head) Verb = L"HEAD";
-					else if (verb == HttpVerb::Post) Verb = L"POST";
-					else if (verb == HttpVerb::Put) Verb = L"PUT";
-					else if (verb == HttpVerb::Patch) Verb = L"PATCH";
-					else if (verb == HttpVerb::Delete) Verb = L"DELETE";
-					else if (verb == HttpVerb::Trace) Verb = L"TRACE";
-					else if (verb == HttpVerb::Connect) Verb = L"CONNECT";
-					try {
-						return new HttpRequest(_agent, _host, object, Verb, verb, _connection);
-					} catch (...) { return 0; }
-				}
-				virtual void ResetConnection(void) override
-				{
-					_connection.SetReference(0);
-					_connection = CreateSocket(_domain, SocketProtocol::TCP);
-					if (!_connection) throw Exception();
-					_connection->Connect(_address, _port);
 				}
 			};
 			class HttpSession : public Network::HttpSession
