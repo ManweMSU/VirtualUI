@@ -130,6 +130,7 @@ namespace Engine
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
 				virtual void Timer(void) override;
+				virtual string GetControlClass(void) override;
 
 				ContentFrame * GetContentFrame(void);
 				Windows::IWindowEventCallback * GetCallback(void);
@@ -160,6 +161,7 @@ namespace Engine
 				virtual void ArrangeChildren(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual string GetControlClass(void) override;
 			};
 
 			namespace Constructor

@@ -193,6 +193,7 @@ namespace Engine
 							}
 						}
 					}
+					virtual string GetControlClass(void) override { return L"MenuList"; }
 				};
 				class MenuHolder : public ParentWindow
 				{
@@ -229,6 +230,7 @@ namespace Engine
 						Destroy();
 						owner->RaiseEvent(ID, event, sender);
 					}
+					virtual string GetControlClass(void) override { return L"MenuHolder"; }
 				};
 			}
 

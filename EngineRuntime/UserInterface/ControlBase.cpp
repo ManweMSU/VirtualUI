@@ -47,6 +47,7 @@ namespace Engine
 		Window * Window::HitTest(Point at) { return this; }
 		void Window::SetCursor(Point at) { Station->SetCursor(Station->GetSystemCursor(SystemCursor::Arrow)); }
 		Window::RefreshPeriod Window::FocusedRefreshPeriod(void) { return RefreshPeriod::None; }
+		string Window::GetControlClass(void) { return L"Window"; }
 		Window * Window::GetParent(void) { return Parent; }
 		WindowStation * Window::GetStation(void) { return Station; }
 		void Window::SetOrder(DepthOrder order)
@@ -578,6 +579,7 @@ namespace Engine
 		void WindowStation::DeferredDestroy(Window * window) {}
 		void WindowStation::DeferredRaiseEvent(Window * window, int ID) {}
 		void WindowStation::PostJob(Tasks::ThreadJob * job) {}
+		handle WindowStation::GetOSHandle(void) { return 0; }
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
@@ -626,6 +628,7 @@ namespace Engine
 			}
 			return this;
 		}
+		string ParentWindow::GetControlClass(void) { return L"ParentWindow"; }
 
 		TopLevelWindow::TopLevelWindow(Window * parent, WindowStation * station) : ParentWindow(parent, station) {}
 		TopLevelWindow::~TopLevelWindow(void) {}
@@ -645,6 +648,7 @@ namespace Engine
 		Box TopLevelWindow::GetPosition(void) { return GetStation()->GetBox(); }
 		bool TopLevelWindow::IsOverlapped(void) { return true; }
 		bool TopLevelWindow::IsNeverActive(void) { return false; }
+		string TopLevelWindow::GetControlClass(void) { return L"TopLevelWindow"; }
 
 		ZeroArgumentProvider::ZeroArgumentProvider(void) {}
 		void ZeroArgumentProvider::GetArgument(const string & name, int * value) { *value = 0; }

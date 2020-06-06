@@ -54,6 +54,7 @@ namespace Engine
 			virtual void DeferredDestroy(Window * window) override;
 			virtual void DeferredRaiseEvent(Window * window, int ID) override;
 			virtual void PostJob(Tasks::ThreadJob * job) override;
+			virtual handle GetOSHandle(void) override;
 
 			HWND Handle(void);
 			bool & ClearBackgroundFlag(void);

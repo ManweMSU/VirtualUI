@@ -58,6 +58,7 @@
 #include <PlatformDependent/Console.h>
 #include <Storage/JSON.h>
 #include <Storage/Object.h>
+#include <PlatformDependent/Notifications.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -269,6 +270,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	}
 	NativeWindows::SetApplicationIcon(&icon);
 
+	SafePointer<Windows::StatusBarIcon> sb_icon = Windows::CreateStatusBarIcon();
+	sb_icon->SetIcon(&icon);
+	sb_icon->SetTooltip(L"pidor");
+	sb_icon->PresentIcon(true);
+	sb_icon->SetEventID(891);
+
+	Windows::PushUserNotification(L"privet!", L"kornevgen pidor", &icon);
+
 	{
 		{
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
@@ -394,6 +403,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 				{
 					(*conout) << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
+					if (!window) return;
 					if (event == Window::Event::Command || event == Window::Event::MenuCommand) {
 						if (ID == 876) {
 							menu->RunPopup(sender, station->GetCursorPos());
@@ -433,6 +443,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				}
 			};
 			auto Callback = new _cb;
+			sb_icon->SetCallback(Callback);
 			class _cb2 : public Windows::IWindowEventCallback
 			{
 			public:

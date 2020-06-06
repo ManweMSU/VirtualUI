@@ -320,16 +320,16 @@ namespace Engine
 				UI::Rectangle superrect(superbox.Left, superbox.Top, superbox.Right, superbox.Bottom);
 				UI::Controls::OverlappedWindow * dialog = UI::Windows::CreateFramedDialog(Template, Callback, superrect, 0);
 				if (Parent) {
-					SetWindowLongPtrW(static_cast<UI::HandleWindowStation *>(dialog->GetStation())->Handle(),
-						GWLP_HWNDPARENT, eint(static_cast<UI::HandleWindowStation *>(Parent->GetStation())->Handle()));
+					SetWindowLongPtrW(reinterpret_cast<HWND>(dialog->GetStation()->GetOSHandle()),
+						GWLP_HWNDPARENT, eint(reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle())));
 					dialog->Show(true);
-					SetForegroundWindow(static_cast<UI::HandleWindowStation *>(dialog->GetStation())->Handle());
-					SetActiveWindow(static_cast<UI::HandleWindowStation *>(dialog->GetStation())->Handle());
+					SetForegroundWindow(reinterpret_cast<HWND>(dialog->GetStation()->GetOSHandle()));
+					SetActiveWindow(reinterpret_cast<HWND>(dialog->GetStation()->GetOSHandle()));
 					Parent->Enable(false);
 					return dialog;
 				} else {
 					dialog->Show(true);
-					BEGIN_GLOBAL_MODAL_SESSION(static_cast<UI::HandleWindowStation *>(dialog->GetStation())->Handle())
+					BEGIN_GLOBAL_MODAL_SESSION(reinterpret_cast<HWND>(dialog->GetStation()->GetOSHandle()))
 					UI::Windows::RunMessageLoop();
 					END_GLOBAL_MODAL_SESSION
 					dialog->Destroy();
@@ -341,7 +341,7 @@ namespace Engine
 				if (OnExit) OnExit->Retain();
 				OpenFileStruct * data = new OpenFileStruct;
 				data->Info = Info;
-				data->Owner = Parent ? static_cast<UI::HandleWindowStation *>(Parent->GetStation())->Handle() : 0;
+				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
 				data->Job = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
@@ -357,7 +357,7 @@ namespace Engine
 				if (OnExit) OnExit->Retain();
 				SaveFileStruct * data = new SaveFileStruct;
 				data->Info = Info;
-				data->Owner = Parent ? static_cast<UI::HandleWindowStation *>(Parent->GetStation())->Handle() : 0;
+				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
 				data->Job = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
@@ -373,7 +373,7 @@ namespace Engine
 				if (OnExit) OnExit->Retain();
 				ChooseDirectoryStruct * data = new ChooseDirectoryStruct;
 				data->Info = Info;
-				data->Owner = Parent ? static_cast<UI::HandleWindowStation *>(Parent->GetStation())->Handle() : 0;
+				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
 				data->Job = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
@@ -393,7 +393,7 @@ namespace Engine
 				data->Title = Title;
 				data->Buttons = Buttons;
 				data->Style = Style;
-				data->Owner = Parent ? static_cast<UI::HandleWindowStation *>(Parent->GetStation())->Handle() : 0;
+				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
 				data->Job = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
@@ -419,7 +419,7 @@ namespace Engine
 			}
 			virtual void ExitModalSession(UI::Window * modal) override
 			{
-				HWND parent = GetWindow(static_cast<UI::HandleWindowStation *>(modal->GetStation())->Handle(), GW_OWNER);
+				HWND parent = GetWindow(reinterpret_cast<HWND>(modal->GetStation()->GetOSHandle()), GW_OWNER);
 				if (parent) {
 					NativeWindows::EnableWindow(reinterpret_cast<UI::WindowStation *>(GetWindowLongPtrW(parent, 0)), true);
 					modal->Destroy();

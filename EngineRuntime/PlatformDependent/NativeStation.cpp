@@ -440,11 +440,12 @@ namespace Engine
 		{
 			return ::IsZoomed(reinterpret_cast<NativeStation *>(Station)->GetHandle());
 		}
-		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at)
+		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at) { return RunMenuPopup(menu, owner->GetStation()->GetOSHandle(), at, false); }
+		int RunMenuPopup(UI::Menus::Menu * menu, handle os_window, UI::Point at, bool global_coord)
 		{
 			POINT p = { at.x, at.y };
-			HWND server = static_cast<NativeStation *>(owner->GetStation())->GetHandle();
-			ClientToScreen(server, &p);
+			HWND server = reinterpret_cast<HWND>(os_window);
+			if (!global_coord) ClientToScreen(server, &p);
 			SafePointer<ID2D1DCRenderTarget> RenderTarget;
 			D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
 			RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -551,6 +552,34 @@ namespace Engine
 			if (icon_sm_old) DestroyIcon(icon_sm_old);
 			if (icon_nm_old) DestroyIcon(icon_nm_old);
 		}
+		LRESULT WINAPI HandleEngineMenuMessages(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+		{
+			if (Msg == WM_MEASUREITEM) {
+				LPMEASUREITEMSTRUCT mis = reinterpret_cast<LPMEASUREITEMSTRUCT>(LParam);
+				if (mis->CtlType == ODT_MENU) {
+					auto item = reinterpret_cast<Menus::MenuElement *>(mis->itemData);
+					mis->itemWidth = item->GetWidth();
+					mis->itemHeight = item->GetHeight();
+				}
+				return 1;
+			} else if (Msg == WM_DRAWITEM) {
+				LPDRAWITEMSTRUCT dis = reinterpret_cast<LPDRAWITEMSTRUCT>(LParam);
+				if (dis->CtlType == ODT_MENU) {
+					auto item = reinterpret_cast<Menus::MenuElement *>(dis->itemData);
+					auto box = Box(0, 0, dis->rcItem.right - dis->rcItem.left, dis->rcItem.bottom - dis->rcItem.top);
+					auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderDevice *>(item->GetRenderingDevice())->GetRenderTarget());
+					target->BindDC(dis->hDC, &dis->rcItem);
+					target->BeginDraw();
+					if (dis->itemState & ODS_SELECTED) {
+						item->Render(box, true);
+					} else {
+						item->Render(box, false);
+					}
+					target->EndDraw();
+				}
+				return 1;
+			} else return 0;
+		}
 		LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			NativeStation * station = reinterpret_cast<NativeStation *>(GetWindowLongPtrW(Wnd, 0));
@@ -623,29 +652,9 @@ namespace Engine
 				if (GetWindowLongPtr(Wnd, GWL_EXSTYLE) & WS_EX_NOACTIVATE) return MA_NOACTIVATE;
 				else return MA_ACTIVATE;
 			} else if (Msg == WM_MEASUREITEM) {
-				LPMEASUREITEMSTRUCT mis = reinterpret_cast<LPMEASUREITEMSTRUCT>(LParam);
-				if (mis->CtlType == ODT_MENU) {
-					auto item = reinterpret_cast<Menus::MenuElement *>(mis->itemData);
-					mis->itemWidth = item->GetWidth();
-					mis->itemHeight = item->GetHeight();
-				}
-				Result = 1;
+				Result = HandleEngineMenuMessages(Wnd, Msg, WParam, LParam);
 			} else if (Msg == WM_DRAWITEM) {
-				LPDRAWITEMSTRUCT dis = reinterpret_cast<LPDRAWITEMSTRUCT>(LParam);
-				if (dis->CtlType == ODT_MENU) {
-					auto item = reinterpret_cast<Menus::MenuElement *>(dis->itemData);
-					auto box = Box(0, 0, dis->rcItem.right - dis->rcItem.left, dis->rcItem.bottom - dis->rcItem.top);
-					auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderDevice *>(item->GetRenderingDevice())->GetRenderTarget());
-					target->BindDC(dis->hDC, &dis->rcItem);
-					target->BeginDraw();
-					if (dis->itemState & ODS_SELECTED) {
-						item->Render(box, true);
-					} else {
-						item->Render(box, false);
-					}
-					target->EndDraw();
-				}
-				Result = 1;
+				Result = HandleEngineMenuMessages(Wnd, Msg, WParam, LParam);
 			} else if (Msg == WM_GETMINMAXINFO) {
 				if (station) {
 					LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(LParam);

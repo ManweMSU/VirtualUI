@@ -173,6 +173,7 @@ namespace Engine
 		void HandleWindowStation::DeferredDestroy(Window * window) { PostMessageW(_window, ERTM_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
 		void HandleWindowStation::DeferredRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERTM_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
 		void HandleWindowStation::PostJob(Tasks::ThreadJob * job) { job->Retain(); PostMessageW(_window, ERTM_EXECUTEJOB, 0, reinterpret_cast<eint>(job)); }
+		handle HandleWindowStation::GetOSHandle(void) { return _window; }
 		HWND HandleWindowStation::Handle(void) { return _window; }
 		bool & HandleWindowStation::ClearBackgroundFlag(void) { return _clear_background; }
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
@@ -273,7 +274,11 @@ namespace Engine
 		}
 		HICON CreateWinIcon(Codec::Frame * Source)
 		{
-			SafePointer<Codec::Frame> Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+			SafePointer<Codec::Frame> Conv;
+			if (Source->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8 || Source->GetAlphaFormat() != Codec::AlphaFormat::Normal ||
+				Source->GetLineDirection() != Codec::LineDirection::BottomUp || Source->GetScanLineLength() != 4 * Source->GetWidth()) {
+				Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+			} else Conv.SetRetain(Source);
 			BITMAPINFOHEADER hdr;
 			Array<uint32> Fake(0x100);
 			Fake.SetLength(Conv->GetWidth() * Conv->GetHeight());

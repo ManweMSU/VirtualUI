@@ -293,6 +293,7 @@ namespace Engine
 					}
 				}
 			}
+			string VerticalScrollBar::GetControlClass(void) { return L"VerticalScrollBar"; }
 			Box VerticalScrollBar::GetScrollerBox(const Box & at)
 			{
 				if (_state == 2 && _part == 3) {
@@ -642,6 +643,7 @@ namespace Engine
 					}
 				}
 			}
+			string HorizontalScrollBar::GetControlClass(void) { return L"HorizontalScrollBar"; }
 			Box HorizontalScrollBar::GetScrollerBox(const Box & at)
 			{
 				if (_state == 2 && _part == 3) {
@@ -852,6 +854,7 @@ namespace Engine
 				}
 				return false;
 			}
+			string VerticalTrackBar::GetControlClass(void) { return L"VerticalTrackBar"; }
 			Box VerticalTrackBar::GetTrackerPosition(const Box & at)
 			{
 				int le = TrackerWidth >> 1;
@@ -1019,6 +1022,7 @@ namespace Engine
 				}
 				return false;
 			}
+			string HorizontalTrackBar::GetControlClass(void) { return L"HorizontalTrackBar"; }
 			Box HorizontalTrackBar::GetTrackerPosition(const Box & at)
 			{
 				int le = TrackerWidth >> 1;

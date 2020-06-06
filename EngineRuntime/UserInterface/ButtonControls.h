@@ -44,6 +44,7 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual bool KeyDown(int key_code) override;
 				virtual void KeyUp(int key_code) override;
+				virtual string GetControlClass(void) override;
 
 				virtual void SetNormalImage(ITexture * Image);
 				virtual ITexture * GetNormalImage(void);
@@ -89,6 +90,7 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual bool KeyDown(int key_code) override;
 				virtual void KeyUp(int key_code) override;
+				virtual string GetControlClass(void) override;
 			};
 			class RadioButton : public Window, public Template::Controls::RadioButton
 			{
@@ -129,6 +131,7 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual bool KeyDown(int key_code) override;
 				virtual void KeyUp(int key_code) override;
+				virtual string GetControlClass(void) override;
 			};
 			class ToolButton : public ParentWindow, public Template::Controls::ToolButton
 			{
@@ -155,6 +158,7 @@ namespace Engine
 				virtual Rectangle GetRectangle(void) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void MouseMove(Point at) override;
+				virtual string GetControlClass(void) override;
 			};
 			class ToolButtonPart : public Window, public Template::Controls::ToolButtonPart
 			{
@@ -195,6 +199,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void PopupMenuCancelled(void) override;
+				virtual string GetControlClass(void) override;
 
 				virtual void SetNormalImage(ITexture * Image);
 				virtual ITexture * GetNormalImage(void);

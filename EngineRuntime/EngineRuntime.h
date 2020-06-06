@@ -21,6 +21,7 @@
 #include "PlatformDependent/Clipboard.h"
 #include "PlatformDependent/Console.h"
 #include "PlatformDependent/KeyCodes.h"
+#include "PlatformDependent/Notifications.h"
 #include "PlatformSpecific/MacTouchBar.h"
 #include "PlatformSpecific/WindowsRegistry.h"
 #include "PlatformSpecific/WindowsShortcut.h"

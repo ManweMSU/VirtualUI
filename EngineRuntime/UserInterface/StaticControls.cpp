@@ -111,6 +111,7 @@ namespace Engine
 			Rectangle Static::GetRectangle(void) { return ControlPosition; }
 			void Static::SetText(const string & text) { Text = text; ResetCache(); }
 			string Static::GetText(void) { return Text; }
+			string Static::GetControlClass(void) { return L"Static"; }
 			void Static::SetImage(ITexture * image) { Image.SetRetain(image); ResetCache(); }
 			ITexture * Static::GetImage(void) { return Image; }
 
@@ -149,6 +150,7 @@ namespace Engine
 				GetParent()->ArrangeChildren();
 			}
 			Rectangle ProgressBar::GetRectangle(void) { return ControlPosition; }
+			string ProgressBar::GetControlClass(void) { return L"ProgressBar"; }
 			void ProgressBar::SetValue(double progress) { Progress = progress; ResetCache(); }
 			double ProgressBar::GetValue(void) { return Progress; }
 
@@ -187,6 +189,7 @@ namespace Engine
 				GetParent()->ArrangeChildren();
 			}
 			Rectangle ColorView::GetRectangle(void) { return ControlPosition; }
+			string ColorView::GetControlClass(void) { return L"ColorView"; }
 			void ColorView::SetColor(UI::Color color) { Color = color; ResetCache(); }
 			UI::Color ColorView::GetColor(void) { return Color; }
 		}

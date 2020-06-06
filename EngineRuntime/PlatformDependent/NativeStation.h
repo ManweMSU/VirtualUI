@@ -33,6 +33,7 @@ namespace Engine
 		bool IsWindowMinimized(UI::WindowStation * Station);
 		bool IsWindowMaximized(UI::WindowStation * Station);
 		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at);
+		int RunMenuPopup(UI::Menus::Menu * menu, handle os_window, UI::Point at, bool global_coord);
 		UI::Box GetScreenDimensions(void);
 		double GetScreenScale(void);
 		void RunMainMessageLoop(void);

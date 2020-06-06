@@ -49,6 +49,7 @@
     <ClInclude Include="PlatformDependent\FileApi.h" />
     <ClInclude Include="PlatformDependent\KeyCodes.h" />
     <ClInclude Include="PlatformDependent\NativeStation.h" />
+    <ClInclude Include="PlatformDependent\Notifications.h" />
     <ClInclude Include="PlatformDependent\StringConvert.h" />
     <ClInclude Include="PlatformDependent\SystemColors.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
@@ -124,6 +125,7 @@
     <ClCompile Include="PlatformDependent\FileApi.cpp" />
     <ClCompile Include="PlatformDependent\KeyCodes.cpp" />
     <ClCompile Include="PlatformDependent\NativeStation.cpp" />
+    <ClCompile Include="PlatformDependent\Notifications.cpp" />
     <ClCompile Include="PlatformDependent\StringConvert.cpp" />
     <ClCompile Include="PlatformDependent\SystemColors.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />

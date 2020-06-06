@@ -295,6 +295,7 @@ namespace Engine
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(Cursor));
 			}
 			void OverlappedWindow::Timer(void) { if (_callback) _callback->OnFrameEvent(this, FrameEvent::Timer); }
+			string OverlappedWindow::GetControlClass(void) { return L"OverlappedWindow"; }
 			ContentFrame * OverlappedWindow::GetContentFrame(void) { return _inner; }
 			IWindowEventCallback * OverlappedWindow::GetCallback(void) { return _callback; }
 			void OverlappedWindow::SetCallback(IWindowEventCallback * callback) { _callback = callback; }
@@ -368,6 +369,7 @@ namespace Engine
 			void ContentFrame::ArrangeChildren(void) { if (static_cast<OverlappedWindow *>(GetParent())->_initialized) ParentWindow::ArrangeChildren(); }
 			void ContentFrame::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle ContentFrame::GetRectangle(void) { return ControlPosition; }
+			string ContentFrame::GetControlClass(void) { return L"ContentFrame"; }
 
 			namespace Constructor
 			{
@@ -408,19 +410,8 @@ namespace Engine
 					// Combined controls
 					else if (child->Properties->GetTemplateClass() == L"ComboBox") return on->GetStation()->CreateWindow<ComboBox>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"TextComboBox") return on->GetStation()->CreateWindow<TextComboBox>(on, child);
-#pragma message("REALIZE ALL CONTROLS")
+					// That's all
 					else throw InvalidArgumentException();
-
-					/*
-					NOT IMPLEMENTED:
-
-					CustomControl ???
-
-					FUTURE CONTROLS:
-
-					MenuBar
-
-					*/
 				}
 			}
 		}

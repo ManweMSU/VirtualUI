@@ -30,6 +30,7 @@ namespace Engine
 				virtual int GetID(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual string GetControlClass(void) override;
 
 				void SetInnerControls(Template::ControlTemplate * Template);
 			};
@@ -52,6 +53,7 @@ namespace Engine
 				virtual int GetID(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual string GetControlClass(void) override;
 
 				void CheckRadioButton(Window * window);
 				void CheckRadioButton(int ID);
@@ -65,6 +67,7 @@ namespace Engine
 
 				virtual void SetPosition(const Box & box) override;
 				virtual void ArrangeChildren(void) override;
+				virtual string GetControlClass(void) override;
 			};
 			class ScrollBox : public ParentWindow, public Template::Controls::ScrollBox
 			{
@@ -95,6 +98,7 @@ namespace Engine
 				virtual void ScrollVertically(double delta) override;
 				virtual void ScrollHorizontally(double delta) override;
 				virtual Window * HitTest(Point at) override;
+				virtual string GetControlClass(void) override;
 
 				Window * GetVirtualGroup(void);
 			};
@@ -110,6 +114,7 @@ namespace Engine
 				virtual int GetID(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual string GetControlClass(void) override;
 			};
 			class VerticalSplitBox : public ParentWindow, public Template::Controls::VerticalSplitBox
 			{
@@ -140,6 +145,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void SetCursor(Point at) override;
+				virtual string GetControlClass(void) override;
 			};
 			class HorizontalSplitBox : public ParentWindow, public Template::Controls::HorizontalSplitBox
 			{
@@ -170,6 +176,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void SetCursor(Point at) override;
+				virtual string GetControlClass(void) override;
 			};
 			class BookmarkView : public ParentWindow, public Template::Controls::BookmarkView
 			{
@@ -209,6 +216,7 @@ namespace Engine
 				virtual void LeftButtonDown(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual bool KeyDown(int key_code) override;
+				virtual string GetControlClass(void) override;
 
 				int FindBookmark(int ID);
 				int GetBookmarkCount(void);

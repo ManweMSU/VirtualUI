@@ -93,6 +93,7 @@ namespace Engine
 			virtual Window * HitTest(Point at);
 			virtual void SetCursor(Point at);
 			virtual RefreshPeriod FocusedRefreshPeriod(void);
+			virtual string GetControlClass(void);
 
 			Window * GetParent(void);
 			WindowStation * GetStation(void);
@@ -279,6 +280,7 @@ namespace Engine
 			virtual void DeferredDestroy(Window * window);
 			virtual void DeferredRaiseEvent(Window * window, int ID);
 			virtual void PostJob(Tasks::ThreadJob * job);
+			virtual handle GetOSHandle(void);
 
 			VisualStyles & GetVisualStyles(void);
 		};
@@ -291,6 +293,7 @@ namespace Engine
 			virtual void ArrangeChildren(void) override;
 			virtual void SetPosition(const Box & box) override;
 			virtual Window * HitTest(Point at) override;
+			virtual string GetControlClass(void) override;
 		};
 		class TopLevelWindow : public ParentWindow
 		{
@@ -307,6 +310,7 @@ namespace Engine
 			virtual Box GetPosition(void) override;
 			virtual bool IsOverlapped(void) override;
 			virtual bool IsNeverActive(void) override;
+			virtual string GetControlClass(void) override;
 		};
 		class ZeroArgumentProvider : public IArgumentProvider
 		{

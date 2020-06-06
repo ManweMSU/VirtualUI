@@ -66,6 +66,7 @@ namespace Engine
 				virtual void ScrollVertically(double delta) override;
 				virtual bool KeyDown(int key_code) override;
 				virtual Window * HitTest(Point at) override;
+				virtual string GetControlClass(void) override;
 
 				void AddItem(const string & text, void * user = 0);
 				void AddItem(IArgumentProvider * provider, void * user = 0);
@@ -202,6 +203,7 @@ namespace Engine
 				virtual void ScrollVertically(double delta) override;
 				virtual bool KeyDown(int key_code) override;
 				virtual Window * HitTest(Point at) override;
+				virtual string GetControlClass(void) override;
 
 				TreeViewItem * GetRootItem(void);
 				void ClearItems(void);
@@ -301,6 +303,7 @@ namespace Engine
 				virtual void Timer(void) override;
 				virtual Window * HitTest(Point at) override;
 				virtual void SetCursor(Point at) override;
+				virtual string GetControlClass(void) override;
 
 				void AddColumn(const string & title, int id, int width, int minimal_width, Template::Shape * cell_normal, Template::Shape * cell_disabled);
 				void OrderColumn(int ID, int index);
