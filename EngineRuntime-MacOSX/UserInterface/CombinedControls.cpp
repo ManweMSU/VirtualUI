@@ -317,6 +317,7 @@ namespace Engine
 				}
 				return true;
 			}
+			string ComboBox::GetControlClass(void) { return L"ComboBox"; }
 			void ComboBox::AddItem(const string & text, void * user) { InsertItem(text, _elements.Length(), user); }
 			void ComboBox::AddItem(IArgumentProvider * provider, void * user) { InsertItem(provider, _elements.Length(), user); }
 			void ComboBox::AddItem(Reflection::Reflected & object, void * user) { InsertItem(object, _elements.Length(), user); }
@@ -531,6 +532,7 @@ namespace Engine
 				}
 				return this;
 			}
+			string ComboBox::ComboListBox::GetControlClass(void) { return L"ComboListBox"; }
 
 			void TextComboBox::find_advice(void)
 			{
@@ -973,6 +975,7 @@ namespace Engine
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
 			}
 			Window::RefreshPeriod TextComboBox::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
+			string TextComboBox::GetControlClass(void) { return L"TextComboBox"; }
 			void TextComboBox::Undo(void)
 			{
 				if (_undo.CanUndo()) {
@@ -1303,6 +1306,7 @@ namespace Engine
 				}
 				return this;
 			}
+			string TextComboBox::TextComboListBox::GetControlClass(void) { return L"TextComboListBox"; }
 		}
 	}
 }

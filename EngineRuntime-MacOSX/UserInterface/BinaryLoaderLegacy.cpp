@@ -188,23 +188,24 @@ namespace Engine
 						}
 					}
 					if (TextureSource.Inner()) {
-						string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
-						if (Result.Texture.ElementPresent(Name)) {
-							ResourceLoader->ReloadTexture(Result.Texture[Name], TextureSource);
-						} else {
-							SafePointer<ITexture> New = ResourceLoader->LoadTexture(TextureSource);
-							if (New.Inner()) {
-								Result.Texture.Append(Name, New);
-							} else throw InvalidFormatException();
+						SafePointer<Codec::Frame> TextureFrame = Codec::DecodeFrame(TextureSource);
+						if (TextureFrame.Inner()) {
+							string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
+							if (Result.Texture.ElementPresent(Name)) {
+								Result.Texture[Name]->Reload(TextureFrame);
+							} else {
+								SafePointer<ITexture> New = ResourceLoader->LoadTexture(TextureFrame);
+								if (New.Inner()) {
+									Result.Texture.Append(Name, New);
+								} else throw InvalidFormatException();
+							}
 						}
 					}
 				}
 				void LoadFont(Font * Source, uint8 * Data, uint Size, IResourceLoader * ResourceLoader, InterfaceTemplate & Result)
 				{
 					string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
-					if (Result.Font.ElementPresent(Name)) {
-						ResourceLoader->ReloadFont(Result.Font[Name]);
-					} else {
+					if (!Result.Font.ElementPresent(Name)) {
 						string FontFace = string(Data + Source->FaceOffset, -1, Encoding::UTF16);
 						SafePointer<IFont> New = ResourceLoader->LoadFont(FontFace, Source->HeightA + int(Source->HeightZ * Zoom), Source->Weight, (Source->Flags & 0x01) != 0, (Source->Flags & 0x02) != 0, (Source->Flags & 0x04) != 0);
 						if (New.Inner()) {

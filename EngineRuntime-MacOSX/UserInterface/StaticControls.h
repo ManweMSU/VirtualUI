@@ -31,6 +31,7 @@ namespace Engine
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetText(const string & text) override;
 				virtual string GetText(void) override;
+				virtual string GetControlClass(void) override;
 
 				virtual void SetImage(ITexture * Image);
 				virtual ITexture * GetImage(void);
@@ -55,6 +56,7 @@ namespace Engine
 				virtual Window * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual string GetControlClass(void) override;
 
 				virtual void SetValue(double progress);
 				virtual double GetValue(void);
@@ -79,6 +81,7 @@ namespace Engine
 				virtual Window * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual string GetControlClass(void) override;
 
 				virtual void SetColor(UI::Color color);
 				virtual UI::Color GetColor(void);

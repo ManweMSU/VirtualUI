@@ -14,6 +14,9 @@ namespace Engine
 			virtual void DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept = 0;
 			virtual void FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept = 0;
 			virtual ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept = 0;
+
+			void DrawImage(UI::ITexture * image, int left, int top, int right, int bottom);
+			void DrawText(const string & text, UI::IFont * font, const Math::Color & color, int left, int top);
 		};
 		class ITextureRenderingDevice : public ICanvasRenderingDevice
 		{

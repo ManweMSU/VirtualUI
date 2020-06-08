@@ -295,6 +295,7 @@ namespace Engine
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(Cursor));
 			}
 			void OverlappedWindow::Timer(void) { if (_callback) _callback->OnFrameEvent(this, FrameEvent::Timer); }
+			string OverlappedWindow::GetControlClass(void) { return L"OverlappedWindow"; }
 			ContentFrame * OverlappedWindow::GetContentFrame(void) { return _inner; }
 			IWindowEventCallback * OverlappedWindow::GetCallback(void) { return _callback; }
 			void OverlappedWindow::SetCallback(IWindowEventCallback * callback) { _callback = callback; }
@@ -368,6 +369,7 @@ namespace Engine
 			void ContentFrame::ArrangeChildren(void) { if (static_cast<OverlappedWindow *>(GetParent())->_initialized) ParentWindow::ArrangeChildren(); }
 			void ContentFrame::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle ContentFrame::GetRectangle(void) { return ControlPosition; }
+			string ContentFrame::GetControlClass(void) { return L"ContentFrame"; }
 
 			namespace Constructor
 			{
@@ -408,19 +410,8 @@ namespace Engine
 					// Combined controls
 					else if (child->Properties->GetTemplateClass() == L"ComboBox") return on->GetStation()->CreateWindow<ComboBox>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"TextComboBox") return on->GetStation()->CreateWindow<TextComboBox>(on, child);
-#pragma message("REALIZE ALL CONTROLS")
+					// That's all
 					else throw InvalidArgumentException();
-
-					/*
-					NOT IMPLEMENTED:
-
-					CustomControl ???
-
-					FUTURE CONTROLS:
-
-					MenuBar
-
-					*/
 				}
 			}
 		}
@@ -580,6 +571,14 @@ namespace Engine
 			void ExitMessageLoop(void) { NativeWindows::ExitMainLoop(); }
 			Array<string>* GetFontFamilies(void) { return NativeWindows::GetFontFamilies(); }
 			void SetApplicationIcon(Codec::Image * icon) { NativeWindows::SetApplicationIcon(icon); }
+			void ActivateWindow(Window * window) { NativeWindows::ActivateWindow(window->GetStation()); }
+			void MaximizeWindow(Window * window) { NativeWindows::MaximizeWindow(window->GetStation()); }
+			void MinimizeWindow(Window * window) { NativeWindows::MinimizeWindow(window->GetStation()); }
+			void RestoreWindow(Window * window) { NativeWindows::RestoreWindow(window->GetStation()); }
+			void RequestForAttention(Window * window) { NativeWindows::RequestForAttention(window->GetStation()); }
+			bool IsWindowActive(Window * window) { return NativeWindows::IsWindowActive(window->GetStation()); }
+			bool IsWindowMinimized(Window * window) { return NativeWindows::IsWindowMinimized(window->GetStation()); }
+			bool IsWindowMaximized(Window * window) { return NativeWindows::IsWindowMaximized(window->GetStation()); }
 		}
 	}
 }

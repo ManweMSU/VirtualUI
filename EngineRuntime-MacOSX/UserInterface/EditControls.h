@@ -79,6 +79,7 @@ namespace Engine
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void SetCursor(Point at) override;
 				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
+				virtual string GetControlClass(void) override;
 
 				void Undo(void);
 				void Redo(void);
@@ -204,6 +205,7 @@ namespace Engine
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
 				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
+				virtual string GetControlClass(void) override;
 
 				void Undo(void);
 				void Redo(void);

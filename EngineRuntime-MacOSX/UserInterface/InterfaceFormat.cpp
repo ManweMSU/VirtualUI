@@ -424,8 +424,12 @@ namespace Engine
 						auto & name = asset.Textures[i].Name;
 						auto image = Textures.ElementByKey(asset.Textures[i].ImageID);
 						if (image) {
-							SafePointer<ITexture> texture = Loader->LoadTexture(image->Frames.FirstElement());
-							Template.Texture.Append(name, texture);
+							if (Template.Texture.ElementPresent(name)) {
+								Template.Texture[name]->Reload(image->Frames.FirstElement());
+							} else {
+								SafePointer<ITexture> texture = Loader->LoadTexture(image->Frames.FirstElement());
+								Template.Texture.Append(name, texture);
+							}
 						}
 					}
 				}

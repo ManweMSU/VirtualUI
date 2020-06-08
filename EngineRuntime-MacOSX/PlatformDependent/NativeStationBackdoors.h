@@ -3,6 +3,8 @@
 @import Foundation;
 @import AppKit;
 
+#include "../UserInterface/Menus.h"
+
 @interface EngineRuntimeApplicationDelegate : NSObject<NSApplicationDelegate>
 - (void) close_all: (id) sender;
 - (void) applicationDidFinishLaunching: (NSNotification *) notification;
@@ -22,5 +24,7 @@ namespace Engine
         void InternalShowWindow(UI::WindowStation * Station, bool Show);
         void SetTouchBarObject(UI::WindowStation * Station, Object * Bar);
         NSWindow * GetWindowObject(UI::WindowStation * station);
+		NSMenu * CreateCocoaMenu(UI::Menus::Menu * menu, int * result, id target, SEL action, UI::IRenderingDevice * quartz_device);
+		void DestroyCocoaMenu(UI::Menus::Menu * menu, NSMenu * cocoa_menu);
     }
 }

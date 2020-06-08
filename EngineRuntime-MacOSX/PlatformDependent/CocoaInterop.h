@@ -12,7 +12,7 @@ namespace Engine
     {
         NSString * CocoaString(const string & str) __attribute((ns_returns_retained));
         string EngineString(NSString * str);
-        NSImage * CocoaImage(Codec::Frame * frame) __attribute((ns_returns_retained));
+        NSImage * CocoaImage(Codec::Frame * frame, double scale_factor = 1.0) __attribute((ns_returns_retained));
         Codec::Frame * EngineImage(NSImage * image);
     }
 }

@@ -357,6 +357,7 @@ namespace Engine
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
 			}
 			Window::RefreshPeriod Edit::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
+			string Edit::GetControlClass(void) { return L"Edit"; }
 			void Edit::Undo(void)
 			{
 				if (!ReadOnly && _undo.CanUndo()) {
@@ -1017,6 +1018,7 @@ namespace Engine
 				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
 			}
 			Window::RefreshPeriod MultiLineEdit::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
+			string MultiLineEdit::GetControlClass(void) { return L"MultiLineEdit"; }
 			void MultiLineEdit::Undo(void)
 			{
 				if (!ReadOnly && _undo.CanUndo()) {

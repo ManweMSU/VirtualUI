@@ -29,6 +29,15 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 	ox = int(rect.origin.x * scale);
 	oy = int((frame.size.height - rect.origin.y) * scale);
 }
+static void ViewToScreen(int ox, int oy, NSView * view, double & sx, double & sy)
+{
+	double scale = [[view window] backingScaleFactor];
+	CGRect frame = [view frame];
+	CGRect rect = NSMakeRect(double(ox) / scale, frame.size.height - double(oy) / scale, 0.0, 0.0);
+	rect = [[view window] convertRectToScreen: [view convertRect: rect toView: nil]];
+	sx = rect.origin.x;
+	sy = rect.origin.y;
+}
 
 @interface PopupWindow : NSPanel
 @property(readonly) BOOL canBecomeKeyWindow;
@@ -119,6 +128,13 @@ static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy
 - (void) windowDidResignKey: (NSNotification *) notification;
 - (void) windowWillBeginSheet: (NSNotification *) notification;
 - (void) windowDidEndSheet: (NSNotification *) notification;
+- (void) windowDidMiniaturize: (NSNotification *) notification;
+- (void) windowDidDeminiaturize: (NSNotification *) notification;
+- (void) windowDidEnterFullScreen: (NSNotification *) notification;
+- (void) windowDidExitFullScreen: (NSNotification *) notification;
+- (void) windowDidBecomeMain: (NSNotification *) notification;
+- (void) windowDidResignMain: (NSNotification *) notification;
+- (void) windowDidMove: (NSNotification *) notification;
 @end
 EngineRuntimeContentView * __GetEngineViewFromWindow(NSWindow * window)
 {
@@ -567,15 +583,21 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	NSMenuItem * server;
 	NSMenu * owner;
 	NSUInteger rect_tag;
+	id target;
+	SEL action;
 	bool state;
 }
 - (instancetype) init;
+- (void) prepareForReuse;
 - (void) setFrame : (NSRect) frame;
 - (void) setFrameSize: (NSSize) newSize;
 - (void) drawRect : (NSRect) dirtyRect;
+- (void) mouseMoved: (NSEvent *) event;
+- (void) mouseDown: (NSEvent *) event;
 - (void) mouseUp: (NSEvent *) event;
 - (void) mouseEntered: (NSEvent *) event;
 - (void) mouseExited: (NSEvent *) event;
+- (void) viewDidMoveToWindow;
 @end
 @interface EngineRuntimeMenuSeparator : NSView
 {
@@ -615,11 +637,15 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	device->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
 	item->Render(box, state != 0);
 }
+- (void) mouseMoved: (NSEvent *) event {}
+- (void) mouseDown: (NSEvent *) event {}
 - (void) mouseUp: (NSEvent *) event
 {
 	if (!item->Disabled) {
 		*code = item->ID;
 		[owner cancelTracking];
+		state = 0;
+		if (target) [target performSelector: action withObject: nil];
 	}
 }
 - (void) mouseEntered: (NSEvent *) event
@@ -631,6 +657,11 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 {
 	state = 0;
 	[self setNeedsDisplay: YES];
+}
+- (void) viewDidMoveToWindow
+{
+	state = 0;
+	if ([self window]) [[self window] becomeKeyWindow];
 }
 @end
 @implementation EngineRuntimeMenuSeparator
@@ -645,7 +676,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 @end
 
-NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuItem * item, NSMenuItem * server)
+NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, id target, SEL action, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuItem * item, NSMenuItem * server)
 {
 	double scale = Engine::UI::Windows::GetScreenScale();
 	EngineRuntimeMenuItem * obj = [[EngineRuntimeMenuItem alloc] init];
@@ -653,6 +684,8 @@ NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, Engine::
 	obj->device = device;
 	obj->item = item;
 	obj->code = code;
+	obj->target = target;
+	obj->action = action;
 	obj->server = server;
 	obj->owner = owner;
 	return obj;
@@ -666,7 +699,7 @@ NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingD
 	obj->item = item;
 	return obj;
 }
-NSMenu * build_engine_menu(NSMenu * owner, int * code, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menus::MenuElement> & elements)
+NSMenu * build_engine_menu(NSMenu * owner, int * code, id target, SEL action, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menus::MenuElement> & elements)
 {
 	NSMenu * result = [[NSMenu alloc] initWithTitle: @""];
 	[result setAutoenablesItems: NO];
@@ -685,14 +718,14 @@ NSMenu * build_engine_menu(NSMenu * owner, int * code, Engine::Cocoa::QuartzRend
 		if (src_item && src_item->Checked) [item setState: NSControlStateValueOn];
 		NSView * view = 0;
 		if (src_item) {
-			view = create_engine_menu_item(owner ? owner : result, width, code, device, src_item, item);
+			view = create_engine_menu_item(owner ? owner : result, width, code, target, action, device, src_item, item);
 		} else if (src_sep) {
 			view = create_engine_menu_separator(width, device, src_sep);
 		}
 		[item setView: view];
 		[view release];
 		if (src_item && src_item->Children.Length()) {
-			NSMenu * sub = build_engine_menu(owner ? owner : result, code, device, src_item->Children);
+			NSMenu * sub = build_engine_menu(owner ? owner : result, code, target, action, device, src_item->Children);
 			[item setSubmenu: sub];
 			[sub release];
 		}
@@ -792,6 +825,14 @@ namespace Engine
 				int x, y;
 				ScreenToView(pos.x, pos.y, __GetEngineViewFromWindow(_window), x, y);
 				return UI::Point(x, y);
+			}
+			virtual void SetCursorPos(UI::Point pos) override
+			{
+				double x, y;
+				ViewToScreen(pos.x, pos.y, __GetEngineViewFromWindow(_window), x, y);
+				CGDirectDisplayID display = [[[[_window screen] deviceDescription] objectForKey: @"NSScreenNumber"] unsignedIntValue];
+				auto screen_rect = [[_window screen] frame];
+				CGDisplayMoveCursorToPoint(display, CGPointMake(x, screen_rect.size.height - y));
 			}
 			virtual bool NativeHitTest(const UI::Point & at) override
 			{
@@ -943,6 +984,7 @@ namespace Engine
 				job->Retain();
 				[event performSelectorOnMainThread: @selector(queue_event:) withObject: __GetEngineViewFromWindow(_window) waitUntilDone: NO];
 			}
+			virtual handle GetOSHandle(void) override { return _window; }
 
 			bool IsOnScreen(void) const { if (_parent) return _parent->IsOnScreen() && _visible; else return _visible; }
 			void SetParent(NativeStation * new_parent) { _parent = new_parent; new_parent->_slaves << this; }
@@ -1014,6 +1056,7 @@ namespace Engine
 				[NSApplication sharedApplication];
 				EngineRuntimeApplicationDelegate * delegate = [[EngineRuntimeApplicationDelegate alloc] init];
 				[NSApp setDelegate: delegate];
+				[NSApp disableRelaunchOnLogin];
 				NSMenu * menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
 				NSMenuItem * main_item = [[NSMenuItem alloc] initWithTitle: @"Application Menu" action: NULL keyEquivalent: @""];
 				NSMenu * main_menu = [[NSMenu alloc] initWithTitle: @"Main Menu"];
@@ -1119,17 +1162,11 @@ namespace Engine
 			NativeResourceLoader(IRenderingDevice * device) { _device.SetRetain(device); }
 			~NativeResourceLoader(void) override {}
 
-			virtual UI::ITexture * LoadTexture(Streaming::Stream * Source) override { return _device->LoadTexture(Source); }
-			virtual UI::ITexture * LoadTexture(Codec::Image * Source) override { return _device->LoadTexture(Source); }
 			virtual UI::ITexture * LoadTexture(Codec::Frame * Source) override { return _device->LoadTexture(Source); }
 			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
 			{
 				return _device->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
 			}
-			virtual void ReloadTexture(UI::ITexture * Texture, Streaming::Stream * Source) override { Texture->Reload(_device, Source); }
-			virtual void ReloadTexture(UI::ITexture * Texture, Codec::Image * Source) override { Texture->Reload(_device, Source); }
-			virtual void ReloadTexture(UI::ITexture * Texture, Codec::Frame * Source) override { Texture->Reload(_device, Source); }
-			virtual void ReloadFont(UI::IFont * Font) override { Font->Reload(_device); }
 		};
 		UI::IResourceLoader * CreateCompatibleResourceLoader(void)
 		{
@@ -1360,6 +1397,29 @@ namespace Engine
 				setFrame: NSMakeRect(double(position.Left) / scale, srect.size.height - double(position.Bottom) / scale,
 				double(position.Right - position.Left) / scale, double(position.Bottom - position.Top) / scale) display: YES];
 		}
+		void ActivateWindow(UI::WindowStation * Station)
+		{
+			[(NSWindow *) Station->GetOSHandle() orderFront: nil];
+			[(NSWindow *) Station->GetOSHandle() makeMainWindow];
+			[(NSWindow *) Station->GetOSHandle() makeKeyWindow];
+		}
+		void MaximizeWindow(UI::WindowStation * Station)
+		{
+			if (!IsWindowMaximized(Station)) [(NSWindow *) Station->GetOSHandle() toggleFullScreen: nil];
+		}
+		void MinimizeWindow(UI::WindowStation * Station)
+		{
+			[(NSWindow *) Station->GetOSHandle() miniaturize: nil];
+		}
+		void RestoreWindow(UI::WindowStation * Station)
+		{
+			if (IsWindowMaximized(Station)) [(NSWindow *) Station->GetOSHandle() toggleFullScreen: nil];
+			if (IsWindowMinimized(Station)) [(NSWindow *) Station->GetOSHandle() deminiaturize: nil];
+		}
+		void RequestForAttention(UI::WindowStation * Station)
+		{
+			[NSApp requestUserAttention: NSInformationalRequest];
+		}
 		bool IsWindowVisible(UI::WindowStation * Station)
 		{
 			return [static_cast<NativeStation *>(Station)->GetWindow() isVisible] != 0;
@@ -1380,6 +1440,30 @@ namespace Engine
 			int y = int((srect.size.height - wrect.origin.y - wrect.size.height) * scale);
 			return UI::Box(x, y, x + int(wrect.size.width * scale), y + int(wrect.size.height * scale));
 		}
+		bool IsWindowActive(UI::WindowStation * Station)
+		{
+			return [(NSWindow *) Station->GetOSHandle() isMainWindow] != 0;
+		}
+		bool IsWindowMinimized(UI::WindowStation * Station)
+		{
+			return [(NSWindow *) Station->GetOSHandle() isMiniaturized] != 0;
+		}
+		bool IsWindowMaximized(UI::WindowStation * Station)
+		{
+			return ([(NSWindow *) Station->GetOSHandle() styleMask] & NSFullScreenWindowMask) == NSFullScreenWindowMask;
+		}
+		NSMenu * CreateCocoaMenu(UI::Menus::Menu * menu, int * result, id target, SEL action, UI::IRenderingDevice * quartz_device)
+		{
+			auto device = static_cast<Cocoa::QuartzRenderingDevice *>(quartz_device);
+			device->SetTimerValue(0);
+			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(device);
+			return build_engine_menu(0, result, target, action, device, menu->Children);
+		}
+		void DestroyCocoaMenu(UI::Menus::Menu * menu, NSMenu * cocoa_menu)
+		{
+			[cocoa_menu release];
+			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();
+		}
 		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at)
 		{
 			NSWindow * window = static_cast<NativeStation *>(owner->GetStation())->GetWindow();
@@ -1391,7 +1475,7 @@ namespace Engine
 			device->SetTimerValue(0);
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(device);
 			int result = 0;
-			NSMenu * popup = build_engine_menu(0, &result, device, menu->Children);
+			NSMenu * popup = build_engine_menu(0, &result, 0, 0, device, menu->Children);
 			[popup popUpMenuPositioningItem: nil atLocation: point inView: server];
 			[popup release];
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();
@@ -1492,5 +1576,40 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 {
 	if (!station) return;
 	Engine::NativeWindows::ShowSlaves(station, true);
+}
+- (void) windowDidMiniaturize: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Minimize);
+}
+- (void) windowDidDeminiaturize: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Restore);
+}
+- (void) windowDidEnterFullScreen: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Maximize);
+}
+- (void) windowDidExitFullScreen: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Restore);
+}
+- (void) windowDidBecomeMain: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Activate);
+}
+- (void) windowDidResignMain: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Deactivate);
+}
+- (void) windowDidMove: (NSNotification *) notification
+{
+	if (!station) return;
+	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Move);
 }
 @end

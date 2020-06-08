@@ -2002,6 +2002,7 @@ namespace Engine
 				else GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::Beam));
 			}
 			Window::RefreshPeriod RichEdit::FocusedRefreshPeriod(void) { return ReadOnly ? Window::RefreshPeriod::None : Window::RefreshPeriod::CaretBlink; }
+			string RichEdit::GetControlClass(void) { return L"RichEdit"; }
 			void RichEdit::Undo(void)
 			{
 				if (!ReadOnly && _undo.CanUndo()) {

@@ -59,6 +59,7 @@ namespace Engine
 			int ControlGroup::GetID(void) { return ID; }
 			void ControlGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle ControlGroup::GetRectangle(void) { return ControlPosition; }
+			string ControlGroup::GetControlClass(void) { return L"ControlGroup"; }
 			void ControlGroup::SetInnerControls(Template::ControlTemplate * Template)
 			{
 				while (ChildrenCount()) Child(0)->Destroy();
@@ -91,6 +92,7 @@ namespace Engine
 			int RadioButtonGroup::GetID(void) { return ID; }
 			void RadioButtonGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle RadioButtonGroup::GetRectangle(void) { return ControlPosition; }
+			string RadioButtonGroup::GetControlClass(void) { return L"RadioButtonGroup"; }
 			void RadioButtonGroup::CheckRadioButton(Window * window) { for (int i = 0; i < ChildrenCount(); i++) static_cast<RadioButton *>(Child(i))->Checked = window == Child(i); }
 			void RadioButtonGroup::CheckRadioButton(int ID) { for (int i = 0; i < ChildrenCount(); i++) static_cast<RadioButton *>(Child(i))->Checked = ID == Child(i)->GetID(); }
 			int RadioButtonGroup::GetCheckedButton(void)
@@ -103,6 +105,7 @@ namespace Engine
 			ScrollBoxVirtual::~ScrollBoxVirtual(void) {}
 			void ScrollBoxVirtual::SetPosition(const Box & box) { WindowPosition = box; }
 			void ScrollBoxVirtual::ArrangeChildren(void) { GetParent()->ArrangeChildren(); }
+			string ScrollBoxVirtual::GetControlClass(void) { return L"ScrollBoxVirtual"; }
 
 			ScrollBox::ScrollBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station)
 			{
@@ -270,6 +273,7 @@ namespace Engine
 				}
 				return this;
 			}
+			string ScrollBox::GetControlClass(void) { return L"ScrollBox"; }
 			Window * ScrollBox::GetVirtualGroup(void) { return _virtual; }
 
 			SplitBoxPart::SplitBoxPart(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Size = 0; }
@@ -285,6 +289,7 @@ namespace Engine
 			int SplitBoxPart::GetID(void) { return ID; }
 			void SplitBoxPart::SetRectangle(const Rectangle & rect) { ControlPosition = rect; }
 			Rectangle SplitBoxPart::GetRectangle(void) { return ControlPosition; }
+			string SplitBoxPart::GetControlClass(void) { return L"SplitBoxPart"; }
 
 			VerticalSplitBox::VerticalSplitBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
 			VerticalSplitBox::VerticalSplitBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
@@ -429,6 +434,7 @@ namespace Engine
 				}
 			}
 			void VerticalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeUpDown)); }
+			string VerticalSplitBox::GetControlClass(void) { return L"VerticalSplitBox"; }
 
 			HorizontalSplitBox::HorizontalSplitBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
 			HorizontalSplitBox::HorizontalSplitBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
@@ -573,6 +579,7 @@ namespace Engine
 				}
 			}
 			void HorizontalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight)); }
+			string HorizontalSplitBox::GetControlClass(void) { return L"HorizontalSplitBox"; }
 			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _bookmarks(4) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _bookmarks(4)
 			{
@@ -720,6 +727,7 @@ namespace Engine
 				}
 				return false;
 			}
+			string BookmarkView::GetControlClass(void) { return L"BookmarkView"; }
 			int BookmarkView::FindBookmark(int _ID) { for (int i = 0; i < _bookmarks.Length(); i++) if (_bookmarks[i].ID == _ID) return i; return -1; }
 			int BookmarkView::GetBookmarkCount(void) { return _bookmarks.Length(); }
 			int BookmarkView::GetBookmarkID(int index) { return _bookmarks[index].ID; }

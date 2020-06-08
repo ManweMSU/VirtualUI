@@ -587,6 +587,7 @@ namespace Engine
 				}
 				return this;
 			}
+			string ListBox::GetControlClass(void) { return L"ListBox"; }
 			void ListBox::AddItem(const string & text, void * user) { InsertItem(text, _elements.Length(), user); }
 			void ListBox::AddItem(IArgumentProvider * provider, void * user) { InsertItem(provider, _elements.Length(), user); }
 			void ListBox::AddItem(Reflection::Reflected & object, void * user) { InsertItem(object, _elements.Length(), user); }
@@ -1291,6 +1292,7 @@ namespace Engine
 				}
 				return this;
 			}
+			string TreeView::GetControlClass(void) { return L"TreeView"; }
 			TreeView::TreeViewItem * TreeView::GetRootItem(void) { return &_root; }
 			void TreeView::ClearItems(void)
 			{
@@ -2053,6 +2055,7 @@ namespace Engine
 					}
 				}
 			}
+			string ListView::GetControlClass(void) { return L"ListView"; }
 			void ListView::AddColumn(const string & title, int id, int width, int minimal_width, Template::Shape * cell_normal, Template::Shape * cell_disabled)
 			{
 				int tw = 0;

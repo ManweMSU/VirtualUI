@@ -233,6 +233,7 @@ namespace Engine
 					}
 				}
 			}
+			string Button::GetControlClass(void) { return L"Button"; }
 
 			CheckBox::CheckBox(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			CheckBox::CheckBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
@@ -377,6 +378,7 @@ namespace Engine
 					}
 				}
 			}
+			string CheckBox::GetControlClass(void) { return L"CheckBox"; }
 
 			RadioButton::RadioButton(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			RadioButton::RadioButton(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
@@ -525,6 +527,7 @@ namespace Engine
 					}
 				}
 			}
+			string RadioButton::GetControlClass(void) { return L"RadioButton"; }
 
 			ToolButton::ToolButton(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			ToolButton::ToolButton(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _state(0)
@@ -604,6 +607,7 @@ namespace Engine
 					}
 				}
 			}
+			string ToolButton::GetControlClass(void) { return L"ToolButton"; }
 
 			ToolButtonPart::ToolButtonPart(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			ToolButtonPart::ToolButtonPart(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
@@ -767,6 +771,7 @@ namespace Engine
 				_state = 0;
 				static_cast<ToolButton *>(GetParent())->_state = 0;
 			}
+			string ToolButtonPart::GetControlClass(void) { return L"ToolButtonPart"; }
 			void ToolButtonPart::SetNormalImage(ITexture * Image) { ImageNormal.SetRetain(Image); ResetCache(); }
 			ITexture * ToolButtonPart::GetNormalImage(void) { return ImageNormal; }
 			void ToolButtonPart::SetGrayedImage(ITexture * Image) { ImageGrayed.SetRetain(Image); ResetCache(); }

@@ -21,7 +21,7 @@ namespace Engine
                 options: 0 range: NSMakeRange(0, utf16.Length()) remainingRange: NULL];
             return string(utf16.GetBuffer(), utf16.Length(), Engine::Encoding::UTF16);
         }
-        NSImage * CocoaImage(Codec::Frame * frame) __attribute((ns_returns_retained))
+        NSImage * CocoaImage(Codec::Frame * frame, double scale_factor) __attribute((ns_returns_retained))
         {
             SafePointer<Codec::Frame> src;
             if (frame->GetLineDirection() == Codec::LineDirection::TopDown && frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
@@ -41,7 +41,8 @@ namespace Engine
             CGColorSpaceRelease(rgb);
             CGDataProviderRelease(provider);
             if (!img) throw Exception();
-            NSImage * result = [[NSImage alloc] initWithCGImage: img size: NSZeroSize];
+			CGSize image_size = CGSizeMake(double(frame->GetWidth()) / scale_factor, double(frame->GetHeight()) / scale_factor);
+            NSImage * result = [[NSImage alloc] initWithCGImage: img size: image_size];
             CGImageRelease(img);
             return result;
         }
@@ -52,28 +53,6 @@ namespace Engine
             const void * bytes = [data bytes];
             Streaming::MemoryStream stream(bytes, size);
             return Codec::DecodeFrame(&stream);
-            // NSSize size = [image size];
-            // int width = size.width;
-            // int height = size.height;
-            // SafePointer<Codec::Frame> result = new Engine::Codec::Frame(width, height, 4 * width, Codec::PixelFormat::R8G8B8A8,
-            //     Codec::AlphaFormat::Premultiplied, Codec::LineDirection::TopDown);
-            // ZeroMemory(result->GetData(), width * height * 4);
-            // CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
-			// CGContextRef context = CGBitmapContextCreate(result->GetData(), width, height, 8, result->GetScanLineLength(), rgb, kCGImageAlphaPremultipliedLast);
-
-            // CGContextRelease(context);
-			// CGColorSpaceRelease(rgb);
-            // if (result) result->Retain();
-            // return result;
-
-							
-							
-			// 				CGRect rect = CGRectMake(0.0f, 0.0f, float(width), float(height));
-			// 				CGContextSetBlendMode(context, kCGBlendModeCopy);
-			// 				CGContextDrawImage(context, rect, frame);
-							
-			// 				result->Frames.Append(eframe);
-			// 				CGImageRelease(frame);
         }
     }
 }

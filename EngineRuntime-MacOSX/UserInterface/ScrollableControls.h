@@ -50,6 +50,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void Timer(void) override;
+				virtual string GetControlClass(void) override;
 
 				void SetScrollerPosition(int position);
 				void SetPage(int page);
@@ -98,6 +99,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual void Timer(void) override;
+				virtual string GetControlClass(void) override;
 
 				void SetScrollerPosition(int position);
 				void SetPage(int page);
@@ -141,6 +143,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual bool KeyDown(int key_code) override;
+				virtual string GetControlClass(void) override;
 
 				void SetTrackerPosition(int position);
 				void SetRange(int range_min, int range_max);
@@ -182,6 +185,7 @@ namespace Engine
 				virtual void LeftButtonUp(Point at) override;
 				virtual void MouseMove(Point at) override;
 				virtual bool KeyDown(int key_code) override;
+				virtual string GetControlClass(void) override;
 
 				void SetTrackerPosition(int position);
 				void SetRange(int range_min, int range_max);
