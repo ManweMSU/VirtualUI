@@ -134,7 +134,7 @@ namespace Engine
 			string ControlTemplate::ToString(void) const { return Properties->GetTemplateClass(); }
 			ControlReflectedBase::~ControlReflectedBase(void) {}
 		}
-		InterfaceTemplate::InterfaceTemplate(void) : Texture(0x20), Font(0x10), Application(0x20), Dialog(0x10) {}
+		InterfaceTemplate::InterfaceTemplate(void) : Texture(0x20), Font(0x10), Application(0x20), Dialog(0x10), Colors(0x20), Strings(0x20) {}
 		InterfaceTemplate::~InterfaceTemplate(void) {}
 		string InterfaceTemplate::ToString(void) const { return L"InterfaceTemplate"; }
 	}

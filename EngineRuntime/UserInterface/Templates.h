@@ -276,6 +276,8 @@ namespace Engine
 			Dictionary::Dictionary<string, IFont> Font;
 			Dictionary::Dictionary<string, Template::Shape> Application;
 			Dictionary::Dictionary<string, Template::ControlTemplate> Dialog;
+			Dictionary::PlainDictionary<string, Color> Colors;
+			Dictionary::PlainDictionary<string, string> Strings;
 
 			InterfaceTemplate(void);
 			virtual ~InterfaceTemplate(void) override;
