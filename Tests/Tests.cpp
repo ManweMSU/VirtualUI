@@ -172,6 +172,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	cns.MoveCaret(5, 2);
 	cns.ClearScreen();
 	cns.WriteLine(L"Привет!");
+	cns.WriteLine(FormatString(L"%0 %1 %%", L"kornevgen", L"pidor"));
 
 	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
 	(*conout) << L"Full path      : " << IO::GetExecutablePath() << IO::NewLineChar;

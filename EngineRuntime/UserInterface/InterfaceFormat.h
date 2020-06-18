@@ -11,6 +11,11 @@ namespace Engine
 	{
 		namespace Format
 		{
+			namespace EncodeFlags {
+				enum Flags {
+					EncodeStringNames = 0x01,
+				};
+			}
 			class InterfaceTemplateImage;
 			// An extensible hierarhy of objects
 			ENGINE_REFLECTED_CLASS(InterfaceCoordinate, Reflection::Reflected)
@@ -28,6 +33,7 @@ namespace Engine
 			ENGINE_END_REFLECTED_CLASS
 			ENGINE_REFLECTED_CLASS(InterfaceColor, Reflection::Reflected)
 				ENGINE_DEFINE_REFLECTED_PROPERTY(INTEGER, ID)
+				ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Name)
 				ENGINE_DEFINE_REFLECTED_PROPERTY(BOOLEAN, IsSystemColor)
 				ENGINE_DEFINE_REFLECTED_PROPERTY(COLOR, Value)
 			ENGINE_END_REFLECTED_CLASS
@@ -146,24 +152,39 @@ namespace Engine
 				ENGINE_DEFINE_REFLECTED_GENERIC_ARRAY(InterfaceDialog, Dialogs)
 			ENGINE_END_REFLECTED_CLASS
 
+			class TemplateResourceResolver : public IResourceResolver
+			{
+			public:
+				InterfaceTemplate * Source;
+				IResourceResolver * DelegateResolver;
+				virtual ITexture * GetTexture(const string & Name) override;
+				virtual IFont * GetFont(const string & Name) override;
+				virtual Template::Shape * GetApplication(const string & Name) override;
+				virtual Template::ControlTemplate * GetDialog(const string & Name) override;
+			};
 			class InterfaceTemplateImage : public Object
 			{
 			public:
 				Dictionary::Dictionary<string, Storage::StringTable> Locales;
 				Dictionary::Dictionary<int, Codec::Image> Textures;
+				Dictionary::PlainDictionary<string, int> StringIDs;
+				Dictionary::PlainDictionary<string, int> ColorIDs;
 				Array<InterfaceAsset> Assets;
 
 				InterfaceTemplateImage(void);
 				InterfaceTemplateImage(Streaming::Stream * Source, const string & Locale, const string & System, double Scale); // Pass zero argument to load all resources (all locales, all system assets and all image sizes)
 				virtual ~InterfaceTemplateImage(void) override;
 
-				void Encode(Streaming::Stream * Output);
+				void Encode(Streaming::Stream * Output, uint32 Flags = 0);
 				void Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0);
+				void Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0);
 				void Specialize(const string & Locale, const string & System, double Scale);
 				InterfaceTemplateImage * Clone(void);
 
 				Color GetColorByID(int ID);
 				string GetStringByID(int ID);
+				Color GetColorByName(const string & name);
+				string GetStringByName(const string & name);
 			};
 		}
 	}

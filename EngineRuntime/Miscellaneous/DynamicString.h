@@ -40,4 +40,15 @@ namespace Engine
 		void ReserveLength(int length);
 		int ReservedLength(void) const;
 	};
+
+	string FormatString(const string & base, const string & arg1);
+	string FormatString(const string & base, const string & arg1, const string & arg2);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4, const string & arg5);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4, const string & arg5, const string & arg6);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4, const string & arg5, const string & arg6, const string & arg7);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4, const string & arg5, const string & arg6, const string & arg7, const string & arg8);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4, const string & arg5, const string & arg6, const string & arg7, const string & arg8, const string & arg9);
+	string FormatString(const string & base, const string & arg1, const string & arg2, const string & arg3, const string & arg4, const string & arg5, const string & arg6, const string & arg7, const string & arg8, const string & arg9, const string & arg10);
 }
