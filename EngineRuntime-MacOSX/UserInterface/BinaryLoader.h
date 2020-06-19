@@ -12,6 +12,7 @@ namespace Engine
 		namespace Loader
 		{
 			void LoadUserInterfaceFromBinary(InterfaceTemplate & Template, Streaming::Stream * Source, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0);
+			void LoadUserInterfaceWithStyleSet(InterfaceTemplate & Template, InterfaceTemplate & Styles, Streaming::Stream * Source, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0);
 		}
 	}
 }

@@ -10,6 +10,7 @@ namespace Engine
 {
 	namespace Reflection
 	{
+		class Reflected;
 		enum class PropertyType {
 			Byte = 0, UInt8 = 0, Int8 = 1, UInt16 = 2, Int16 = 3, UInt32 = 4, Int32 = 5, Integer = 5, UInt64 = 6, Int64 = 7, LongInteger = 7,
 			Float = 8, ShortReal = 8, Double = 9, Real = 9, Complex = 10,
@@ -50,6 +51,13 @@ namespace Engine
 		class PropertyZeroInitializer : public IPropertyEnumerator
 		{
 		public:
+			virtual void EnumerateProperty(const string & name, void * address, PropertyType type, PropertyType inner, int volume, int element_size) override;
+		};
+		class PropertyCopyInitializer : public IPropertyEnumerator
+		{
+			Reflected & _base;
+		public:
+			PropertyCopyInitializer(Reflected & base_object);
 			virtual void EnumerateProperty(const string & name, void * address, PropertyType type, PropertyType inner, int volume, int element_size) override;
 		};
 		class Reflected;
@@ -195,6 +203,10 @@ public: cxx_type property_name define_postfix;
 
 #define ENGINE_STRING(macro_arg) ENGINE_STRING_INTERNAL(#macro_arg)
 #define ENGINE_STRING_INTERNAL(macro_arg) L##macro_arg
+	}
+}
+
+#include "../UserInterface/Templates.h"
 
 #define ENGINE_CXX_TYPE_UINT8				::Engine::uint8
 #define ENGINE_CXX_TYPE_BYTE				::Engine::uint8
@@ -250,5 +262,3 @@ public: cxx_type property_name define_postfix;
 #define ENGINE_REFLECTED_TYPE_ARRAY			::Engine::Reflection::PropertyType::Array
 #define ENGINE_REFLECTED_TYPE_SAFEARRAY		::Engine::Reflection::PropertyType::SafeArray
 #define ENGINE_REFLECTED_TYPE_STRUCTURE		::Engine::Reflection::PropertyType::Structure
-	}
-}

@@ -5,6 +5,24 @@
 namespace Engine
 {
 	namespace Dictionary {
+		template <class K, class V> class PlainDictionaryKeyPair
+		{
+		public:
+			K key;
+			V value;
+
+			PlainDictionaryKeyPair(void) {}
+			PlainDictionaryKeyPair(const K & pair_key, const V & pair_value) : key(pair_key), value(pair_value) {}
+			PlainDictionaryKeyPair(const PlainDictionaryKeyPair & src) : key(src.key), value(src.value) {}
+			PlainDictionaryKeyPair & operator = (const PlainDictionaryKeyPair & src) { if (this == &src) return *this; key = src.key; value = src.value; return *this; }
+
+			bool friend operator == (const PlainDictionaryKeyPair & a, const PlainDictionaryKeyPair & b) { return a.key == b.key; }
+			bool friend operator != (const PlainDictionaryKeyPair & a, const PlainDictionaryKeyPair & b) { return a.key != b.key; }
+			bool friend operator < (const PlainDictionaryKeyPair & a, const PlainDictionaryKeyPair & b) { return a.key < b.key; }
+			bool friend operator > (const PlainDictionaryKeyPair & a, const PlainDictionaryKeyPair & b) { return a.key > b.key; }
+			bool friend operator <= (const PlainDictionaryKeyPair & a, const PlainDictionaryKeyPair & b) { return a.key <= b.key; }
+			bool friend operator >= (const PlainDictionaryKeyPair & a, const PlainDictionaryKeyPair & b) { return a.key >= b.key; }
+		};
 		template <class K, class O> class DictionaryKeyPair
 		{
 		public:
@@ -23,6 +41,70 @@ namespace Engine
 			bool friend operator > (const DictionaryKeyPair & a, const DictionaryKeyPair & b) { return a.key > b.key; }
 			bool friend operator <= (const DictionaryKeyPair & a, const DictionaryKeyPair & b) { return a.key <= b.key; }
 			bool friend operator >= (const DictionaryKeyPair & a, const DictionaryKeyPair & b) { return a.key >= b.key; }
+		};
+		template <class K, class V> class PlainDictionary : public Object
+		{
+			Array<PlainDictionaryKeyPair<K, V> > data;
+		public:
+			PlainDictionary(void) : data(0x400) {}
+			explicit PlainDictionary(int BlockSize) : data(BlockSize) {}
+
+			virtual bool Append(const K & key, const V & value)
+			{
+				if (data.Length()) {
+					auto pair = PlainDictionaryKeyPair<K, V>(key, value);
+					int element_lesser_equal = BinarySearchLE(data, pair);
+					if (element_lesser_equal < 0) data.Insert(pair, 0);
+					else if (data[element_lesser_equal] == pair) {
+						return false;
+					} else {
+						if (element_lesser_equal == data.Length() - 1) data.Append(pair);
+						else data.Insert(pair, element_lesser_equal + 1);
+					}
+				} else data.Append(PlainDictionaryKeyPair<K, V>(key, value));
+				return true;
+			}
+			virtual const V * ElementByKey(const K & key) const
+			{
+				if (!data.Length()) return 0;
+				int element = BinarySearchLE(data, PlainDictionaryKeyPair<K, V>(key, 0));
+				if (element < 0 || data[element].key != key) return 0;
+				return &data[element].value;
+			}
+			virtual V * ElementByKey(const K & key)
+			{
+				if (!data.Length()) return 0;
+				int element = BinarySearchLE(data, PlainDictionaryKeyPair<K, V>(key, 0));
+				if (element < 0 || data[element].key != key) return 0;
+				return &data[element].value;
+			}
+			virtual const PlainDictionaryKeyPair<K, V> & ElementByIndex(int index) const { return data[index]; }
+			virtual PlainDictionaryKeyPair<K, V> & ElementByIndex(int index) { return data[index]; }
+			virtual void RemoveValue(const V & value)
+			{
+				for (int i = 0; i < data.Length(); i++) if (data[i].value == value) { data.Remove(i); break; }
+			}
+			virtual void RemoveByKey(const K & key)
+			{
+				if (!data.Length()) return;
+				int element = BinarySearchLE(data, PlainDictionaryKeyPair<K, V>(key, 0));
+				if (element >= 0 && data[element].key == key) data.Remove(element);
+			}
+			virtual void RemoveAt(int index) { data.Remove(index); }
+			virtual void Clear(void) { data.Clear(); }
+			bool ElementPresent(const K & key) const
+			{
+				if (!data.Length()) return false;
+				int element = BinarySearchLE(data, PlainDictionaryKeyPair<K, V>(key, 0));
+				if (element >= 0 && data[element].key == key) return true; else return false;
+			}
+			int Length(void) const { return data.Length(); }
+
+			string ToString(void) const override { return L"Dictionary"; }
+			const V * operator [] (const K & key) const { return ElementByKey(key); }
+			V * operator [] (const K & key) { return ElementByKey(key); }
+			const PlainDictionaryKeyPair<K, V> & operator [] (int index) const { return data[index]; }
+			PlainDictionaryKeyPair<K, V> & operator [] (int index) { return data[index]; }
 		};
 		template <class K, class O> class Dictionary : public Object
 		{

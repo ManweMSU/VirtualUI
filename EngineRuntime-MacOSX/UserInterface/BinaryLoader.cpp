@@ -32,6 +32,12 @@ namespace Engine
 					LoadUserInterfaceFromBinaryLegacy(Template, Source, loader, ResourceResolver);
 				}
 			}
+			void LoadUserInterfaceWithStyleSet(InterfaceTemplate & Template, InterfaceTemplate & Styles, Streaming::Stream * Source, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
+			{
+				Windows::InitializeCodecCollection();
+				SafePointer<Format::InterfaceTemplateImage> image = new Format::InterfaceTemplateImage(Source, Assembly::CurrentLocale, CURRENT_SYSTEM, Zoom);
+				image->Compile(Template, Styles, ResourceLoader, ResourceResolver);
+			}
 		}
 	}
 }

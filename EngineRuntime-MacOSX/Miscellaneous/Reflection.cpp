@@ -45,5 +45,87 @@ namespace Engine
 				}
 			}
 		}
+		PropertyCopyInitializer::PropertyCopyInitializer(Reflected & base_object) : _base(base_object) {}
+		void PropertyCopyInitializer::EnumerateProperty(const string & name, void * address, PropertyType type, PropertyType inner, int volume, int element_size)
+		{
+			auto src = _base.GetProperty(name);
+			PropertyInfo dest = PropertyInfo{ address, type, inner, volume, element_size, name };
+			if (!src.Address || src.Type != type || src.InnerType != inner || src.Volume != volume || src.ElementSize != element_size) return;
+			if (type == PropertyType::String) {
+				for (int i = 0; i < volume; i++) {
+					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
+					edest.Set(esrc.Get<string>());
+				}
+			} else if (type == PropertyType::Texture) {
+				for (int i = 0; i < volume; i++) {
+					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
+					edest.Get< SafePointer<UI::ITexture> >().SetRetain(esrc.Get< SafePointer<UI::ITexture> >());
+				}
+			} else if (type == PropertyType::Font) {
+				for (int i = 0; i < volume; i++) {
+					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
+					edest.Get< SafePointer<UI::IFont> >().SetRetain(esrc.Get< SafePointer<UI::IFont> >());
+				}
+			} else if (type == PropertyType::Application) {
+				for (int i = 0; i < volume; i++) {
+					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
+					edest.Get< SafePointer<UI::Template::Shape> >().SetRetain(esrc.Get< SafePointer<UI::Template::Shape> >());
+				}
+			} else if (type == PropertyType::Dialog) {
+				for (int i = 0; i < volume; i++) {
+					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
+					edest.Get< SafePointer<UI::Template::ControlTemplate> >().SetRetain(esrc.Get< SafePointer<UI::Template::ControlTemplate> >());
+				}
+			} else if (type == PropertyType::Array) {
+				if (inner == PropertyType::UInt8 || inner == PropertyType::Int8 || inner == PropertyType::Boolean) dest.Get< Array<uint8> >() = src.Get< Array<uint8> >();
+				else if (inner == PropertyType::UInt16 || inner == PropertyType::Int16) dest.Get< Array<uint16> >() = src.Get< Array<uint16> >();
+				else if (inner == PropertyType::UInt32 || inner == PropertyType::Int32 || inner == PropertyType::Float || inner == PropertyType::Color) dest.Get< Array<uint32> >() = src.Get< Array<uint32> >();
+				else if (inner == PropertyType::UInt64 || inner == PropertyType::Int64 || inner == PropertyType::Double || inner == PropertyType::Time) dest.Get< Array<uint64> >() = src.Get< Array<uint64> >();
+				else if (inner == PropertyType::Complex) dest.Get< Array<Math::Complex> >() = src.Get< Array<Math::Complex> >();
+				else if (inner == PropertyType::String) dest.Get< Array<string> >() = src.Get< Array<string> >();
+				else if (inner == PropertyType::Rectangle) dest.Get< Array<UI::Rectangle> >() = src.Get< Array<UI::Rectangle> >();
+				else if (inner == PropertyType::Texture) dest.Get< Array< SafePointer<UI::ITexture> > >() = src.Get< Array< SafePointer<UI::ITexture> > >();
+				else if (inner == PropertyType::Font) dest.Get< Array< SafePointer<UI::IFont> > >() = src.Get< Array< SafePointer<UI::IFont> > >();
+				else if (inner == PropertyType::Application) dest.Get< Array< SafePointer<UI::Template::Shape> > >() = src.Get< Array< SafePointer<UI::Template::Shape> > >();
+				else if (inner == PropertyType::Dialog) dest.Get< Array< SafePointer<UI::Template::ControlTemplate> > >() = src.Get< Array< SafePointer<UI::Template::ControlTemplate> > >();
+				else if (inner == PropertyType::Structure) {
+					auto & asrc = src.Get<ReflectedArray>();
+					auto & adest = dest.Get<ReflectedArray>();
+					for (int i = 0; i < asrc.Length(); i++) {
+						adest.AppendNew();
+						auto & esrc = asrc.ElementAt(i);
+						auto & edest = adest.LastElement();
+						PropertyCopyInitializer inner_initializer(esrc);
+						edest.EnumerateProperties(inner_initializer);
+					}
+				}
+			} else if (type == PropertyType::SafeArray) {
+				if (inner == PropertyType::UInt8 || inner == PropertyType::Int8 || inner == PropertyType::Boolean) dest.Get< SafeArray<uint8> >() = src.Get< SafeArray<uint8> >();
+				else if (inner == PropertyType::UInt16 || inner == PropertyType::Int16) dest.Get< SafeArray<uint16> >() = src.Get< SafeArray<uint16> >();
+				else if (inner == PropertyType::UInt32 || inner == PropertyType::Int32 || inner == PropertyType::Float || inner == PropertyType::Color) dest.Get< SafeArray<uint32> >() = src.Get< SafeArray<uint32> >();
+				else if (inner == PropertyType::UInt64 || inner == PropertyType::Int64 || inner == PropertyType::Double || inner == PropertyType::Time) dest.Get< SafeArray<uint64> >() = src.Get< SafeArray<uint64> >();
+				else if (inner == PropertyType::Complex) dest.Get< SafeArray<Math::Complex> >() = src.Get< SafeArray<Math::Complex> >();
+				else if (inner == PropertyType::String) dest.Get< SafeArray<string> >() = src.Get< SafeArray<string> >();
+				else if (inner == PropertyType::Rectangle) dest.Get< SafeArray<UI::Rectangle> >() = src.Get< SafeArray<UI::Rectangle> >();
+				else if (inner == PropertyType::Texture) dest.Get< SafeArray< SafePointer<UI::ITexture> > >() = src.Get< SafeArray< SafePointer<UI::ITexture> > >();
+				else if (inner == PropertyType::Font) dest.Get< SafeArray< SafePointer<UI::IFont> > >() = src.Get< SafeArray< SafePointer<UI::IFont> > >();
+				else if (inner == PropertyType::Application) dest.Get< SafeArray< SafePointer<UI::Template::Shape> > >() = src.Get< SafeArray< SafePointer<UI::Template::Shape> > >();
+				else if (inner == PropertyType::Dialog) dest.Get< SafeArray< SafePointer<UI::Template::ControlTemplate> > >() = src.Get< SafeArray< SafePointer<UI::Template::ControlTemplate> > >();
+				else if (inner == PropertyType::Structure) {
+					auto & asrc = src.Get<ReflectedArray>();
+					auto & adest = dest.Get<ReflectedArray>();
+					for (int i = 0; i < asrc.Length(); i++) {
+						adest.AppendNew();
+						auto & esrc = asrc.ElementAt(i);
+						auto & edest = adest.LastElement();
+						PropertyCopyInitializer inner_initializer(esrc);
+						edest.EnumerateProperties(inner_initializer);
+					}
+				}
+			} else if (type == PropertyType::Structure) {
+				PropertyCopyInitializer inner_initializer(src.Get<Reflected>());
+				dest.Get<Reflected>().EnumerateProperties(inner_initializer);
+			} else MemoryCopy(address, src.Address, volume * element_size);
+		}
 	}
 }
