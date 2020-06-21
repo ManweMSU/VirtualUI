@@ -31,7 +31,7 @@ namespace Engine
 			{
 				if (bitmap) CGImageRelease(bitmap);
 				for (int i = 0; i < variants.Length(); i++) {
-		 			variants[i].dev_tex->VersionWasDestroyed(0);
+		 			variants[i].dev_tex->VersionWasDestroyed(this);
 		 			variants[i].dev_ptr->TextureWasDestroyed(this);
 		 		}
 			}

@@ -237,11 +237,13 @@ namespace Engine
 							result->Gradient.LastElement().Position = Template::DoubleTemplate(0.0);
 						}
 					}
+					int gp = 0;
 					for (int i = 0; i < shape.DoubleValues.Length(); i++) {
 						if (shape.DoubleValues[i].Name == L"GradientAngle") {
 							result->GradientAngle = shape.DoubleValues[i].ToTemplate();
 						} else if (shape.DoubleValues[i].Name == L"Gradient") {
-							result->Gradient.LastElement().Position = shape.DoubleValues[i].ToTemplate();
+							result->Gradient[gp].Position = shape.DoubleValues[i].ToTemplate();
+							gp++;
 						}
 					}
 					for (int i = 0; i < shape.RectangleValues.Length(); i++) {
