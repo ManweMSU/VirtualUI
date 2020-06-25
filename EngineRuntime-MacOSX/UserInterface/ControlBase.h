@@ -154,11 +154,13 @@ namespace Engine
 				SafePointer<Template::ControlTemplate> WindowSmallMinimizeButton;
 				SafePointer<Template::ControlTemplate> WindowSmallHelpButton;
 
+				SafePointer<Template::Shape> MenuShadow;
 				SafePointer<Template::Shape> MenuBackground;
 				SafePointer<Template::Shape> MenuArrow;
 				int MenuBorder = 0;
 
 				int CaretWidth = 1;
+				bool ForcedVirtualMenu = false;
 			};
 		protected:
 			WindowStation(IDesktopWindowFactory * Factory);

@@ -410,6 +410,8 @@ namespace Engine
 					// Combined controls
 					else if (child->Properties->GetTemplateClass() == L"ComboBox") return on->GetStation()->CreateWindow<ComboBox>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"TextComboBox") return on->GetStation()->CreateWindow<TextComboBox>(on, child);
+					// Technical class
+					else if (child->Properties->GetTemplateClass() == L"FrameExtendedData") return 0;
 					// That's all
 					else throw InvalidArgumentException();
 				}

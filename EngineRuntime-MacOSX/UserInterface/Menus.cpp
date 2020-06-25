@@ -55,6 +55,7 @@ namespace Engine
 				{
 				private:
 					SafePointer<Shape> _background;
+					SafePointer<Shape> _shadow;
 					SafePointer<Shape> _arrow;
 				public:
 					ObjectArray<MenuElement> * Elements;
@@ -113,6 +114,15 @@ namespace Engine
 							Submenu = 0;
 						}
 					}
+					void RenderShadow(const Box & at)
+					{
+						auto Device = GetStation()->GetRenderingDevice();
+						if (!_shadow && GetStation()->GetVisualStyles().MenuShadow) {
+							auto provider = ZeroArgumentProvider();
+							_shadow.SetReference(GetStation()->GetVisualStyles().MenuShadow->Initialize(&provider));
+						}
+						if (_shadow) _shadow->Render(Device, at);
+					}
 					virtual void Render(const Box & at) override
 					{
 						auto Device = GetStation()->GetRenderingDevice();
@@ -141,6 +151,7 @@ namespace Engine
 					virtual void ResetCache(void) override
 					{
 						_background.SetReference(0);
+						_shadow.SetReference(0);
 						_arrow.SetReference(0);
 					}
 					virtual void CaptureChanged(bool got_capture) override
@@ -210,6 +221,12 @@ namespace Engine
 					virtual void Render(const Box & at) override
 					{
 						auto Device = GetStation()->GetRenderingDevice();
+						for (int i = 0; i < ChildrenCount(); i++) {
+							auto & child = *Child(i);
+							Box pos = child.GetPosition();
+							Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
+							static_cast<MenuList &>(child).RenderShadow(rect);
+						}
 						for (int i = 0; i < ChildrenCount(); i++) {
 							auto & child = *Child(i);
 							Box pos = child.GetPosition();
@@ -406,7 +423,7 @@ namespace Engine
 			{
 				if (!owner) throw InvalidArgumentException();
 				auto station = owner->GetStation();
-				if (station->IsNativeStationWrapper()) {
+				if (station->IsNativeStationWrapper() && !station->GetVisualStyles().ForcedVirtualMenu) {
 					int command = NativeWindows::RunMenuPopup(this, owner, at);
 					if (command) owner->RaiseEvent(command, Window::Event::MenuCommand, 0);
 					else owner->PopupMenuCancelled();

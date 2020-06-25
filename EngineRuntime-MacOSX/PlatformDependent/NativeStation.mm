@@ -15,6 +15,7 @@
 #include "../Storage/ImageVolume.h"
 #include "Assembly.h"
 #include "../PlatformSpecific/MacWindowEffects.h"
+#include "../PlatformSpecific/MacTouchBar.h"
 
 using namespace Engine::UI;
 
@@ -588,7 +589,6 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	bool state;
 }
 - (instancetype) init;
-- (void) prepareForReuse;
 - (void) setFrame : (NSRect) frame;
 - (void) setFrameSize: (NSSize) newSize;
 - (void) drawRect : (NSRect) dirtyRect;
@@ -1181,6 +1181,25 @@ namespace Engine
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
 		{
 			InitializeWindowSystem();
+			UI::Template::Controls::FrameExtendedData * ex_data = 0;
+			for (int i = 0; i < Template->Children.Length(); i++) {
+				if (Template->Children[i].Properties->GetTemplateClass() == L"FrameExtendedData") {
+					ex_data = static_cast<UI::Template::Controls::FrameExtendedData *>(Template->Children[i].Properties);
+					break;
+				}
+			}
+			auto prev_attr = MacOSXSpecific::GetWindowCreationAttribute();
+			if (ex_data) {
+				auto new_attr = 0;
+				if (ex_data->MacTransparentTitle) new_attr |= MacOSXSpecific::CreationAttribute::TransparentTitle;
+				else if (ex_data->MacEffectBackground) new_attr |= MacOSXSpecific::CreationAttribute::EffectBackground;
+				else if (ex_data->MacTransparentWindow) new_attr |= MacOSXSpecific::CreationAttribute::Transparent;
+				else if (ex_data->MacUseLightTheme) new_attr |= MacOSXSpecific::CreationAttribute::LightTheme;
+				else if (ex_data->MacUseDarkTheme) new_attr |= MacOSXSpecific::CreationAttribute::DarkTheme;
+				else if (ex_data->MacShadowlessWindow) new_attr |= MacOSXSpecific::CreationAttribute::Shadowless;
+				if (ex_data->MacEffectBackgroundMaterial.Length()) new_attr |= MacOSXSpecific::CreationAttribute::EffectBackground;
+				MacOSXSpecific::SetWindowCreationAttribute(new_attr);
+			}
 			NSScreen * screen = [NSScreen mainScreen];
 			CGRect desktop_rect = [screen frame];
 			Box parent_box = ParentStation ? GetWindowPosition(ParentStation) : GetScreenDimensions();
@@ -1246,6 +1265,9 @@ namespace Engine
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::Transparent) {
 				[window setOpaque: NO];
 			}
+			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::Shadowless) {
+				[window setHasShadow: NO];
+			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::LightTheme) {
 				@autoreleasepool {
 					[window setAppearance: [NSAppearance appearanceNamed: NSAppearanceNameAqua]];
@@ -1271,6 +1293,29 @@ namespace Engine
 			NSRect actual = [view frame];
 			station->SetBox(UI::Box(0, 0, int(actual.size.width * scale), int(actual.size.height * scale)));
 			station->Retain();
+			if (ex_data) {
+				MacOSXSpecific::SetWindowCreationAttribute(prev_attr);
+				if (ex_data->MacTouchBar) {
+					SafePointer<MacOSXSpecific::TouchBar> touch_bar = MacOSXSpecific::SetTouchBarFromTemplate(station->GetDesktop(), ex_data->MacTouchBar);
+				}
+				if (ex_data->MacCustomBackgroundColor) MacOSXSpecific::SetWindowBackgroundColor(station->GetDesktop(), ex_data->MacBackgroundColor);
+				if (ex_data->Transparentcy) MacOSXSpecific::SetWindowTransparentcy(station->GetDesktop(), 1.0 - ex_data->Transparentcy);
+				if (ex_data->MacEffectBackgroundMaterial.Length()) {
+					MacOSXSpecific::EffectBackgroundMaterial material = MacOSXSpecific::EffectBackgroundMaterial::WindowBackground;
+					if (ex_data->MacEffectBackgroundMaterial == L"Titlebar") material = MacOSXSpecific::EffectBackgroundMaterial::Titlebar;
+					else if (ex_data->MacEffectBackgroundMaterial == L"Selection") material = MacOSXSpecific::EffectBackgroundMaterial::Selection;
+					else if (ex_data->MacEffectBackgroundMaterial == L"Menu") material = MacOSXSpecific::EffectBackgroundMaterial::Menu;
+					else if (ex_data->MacEffectBackgroundMaterial == L"Popover") material = MacOSXSpecific::EffectBackgroundMaterial::Popover;
+					else if (ex_data->MacEffectBackgroundMaterial == L"Sidebar") material = MacOSXSpecific::EffectBackgroundMaterial::Sidebar;
+					else if (ex_data->MacEffectBackgroundMaterial == L"HeaderView") material = MacOSXSpecific::EffectBackgroundMaterial::HeaderView;
+					else if (ex_data->MacEffectBackgroundMaterial == L"Sheet") material = MacOSXSpecific::EffectBackgroundMaterial::Sheet;
+					else if (ex_data->MacEffectBackgroundMaterial == L"WindowBackground") material = MacOSXSpecific::EffectBackgroundMaterial::WindowBackground;
+					else if (ex_data->MacEffectBackgroundMaterial == L"HUD") material = MacOSXSpecific::EffectBackgroundMaterial::HUD;
+					else if (ex_data->MacEffectBackgroundMaterial == L"FullScreenUI") material = MacOSXSpecific::EffectBackgroundMaterial::FullScreenUI;
+					else if (ex_data->MacEffectBackgroundMaterial == L"ToolTip") material = MacOSXSpecific::EffectBackgroundMaterial::ToolTip;
+					MacOSXSpecific::SetEffectBackgroundMaterial(station->GetDesktop(), material);
+				}
+			}
 			return station;
 		}
 		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)

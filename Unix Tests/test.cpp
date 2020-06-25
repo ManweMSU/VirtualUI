@@ -269,7 +269,8 @@ int Main(void)
 	//Console << IO::ExpandPath(L"/pidor//pidor") << IO::NewLineChar;
 	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
 
-	MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle | MacOSXSpecific::CreationAttribute::EffectBackground);
+	MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
+		MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::Shadowless);
 
 	auto Callback2 = new _cb2;
 	auto templ = interface.Dialog[L"Test3"];

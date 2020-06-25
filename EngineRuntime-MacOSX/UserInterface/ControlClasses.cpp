@@ -53,6 +53,8 @@ namespace Engine
 					else TEST_CLASS(TouchBarPopover)
 					else TEST_CLASS(TouchBarColorPicker)
 					else TEST_CLASS(TouchBarSlider)
+
+					else TEST_CLASS(FrameExtendedData)
 					else return 0;
 				}
 			}

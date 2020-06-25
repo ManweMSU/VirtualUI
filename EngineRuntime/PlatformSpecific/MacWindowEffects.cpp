@@ -9,8 +9,11 @@ namespace Engine
     namespace MacOSXSpecific
     {
         int WndAttribute;
+		RenderingDeviceFeatureClass system_dev_class = RenderingDeviceFeatureClass::DontCare;
         void SetWindowCreationAttribute(int attribute) { WndAttribute = attribute; }
         int GetWindowCreationAttribute(void) { return WndAttribute; }
+		void SetRenderingDeviceFeatureClass(RenderingDeviceFeatureClass dev_class) { system_dev_class = dev_class; }
+		RenderingDeviceFeatureClass GetRenderingDeviceFeatureClass(void) { return system_dev_class; }
         void SetWindowBackgroundColor(UI::Window * window, UI::Color color) { __SetEngineWindowBackgroundColor(window, color); }
         void SetWindowTransparentcy(UI::Window * window, double value) { __SetEngineWindowAlpha(window, value); }
         void SetEffectBackgroundMaterial(UI::Window * window, EffectBackgroundMaterial material)

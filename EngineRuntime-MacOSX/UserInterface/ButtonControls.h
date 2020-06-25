@@ -162,6 +162,13 @@ namespace Engine
 			};
 			class ToolButtonPart : public Window, public Template::Controls::ToolButtonPart
 			{
+			public:
+				class IToolButtonPartCustomDropDown
+				{
+				public:
+					virtual bool RunDropDown(ToolButtonPart * sender, Point top_left) = 0;
+				};
+			private:
 				friend class ToolButton;
 				SafePointer<Shape> _normal;
 				SafePointer<Shape> _disabled;
@@ -176,6 +183,7 @@ namespace Engine
 				SafePointer<Shape> _hot_checked;
 				SafePointer<Shape> _pressed_checked;
 				SafePointer<Menus::Menu> _menu;
+				IToolButtonPartCustomDropDown * _callback;
 				int _state;
 			public:
 				ToolButtonPart(Window * Parent, WindowStation * Station);
@@ -207,6 +215,9 @@ namespace Engine
 				virtual ITexture * GetGrayedImage(void);
 				virtual void SetDropDownMenu(Menus::Menu * Menu);
 				virtual Menus::Menu * GetDropDownMenu(void);
+				virtual void SetDropDownCallback(IToolButtonPartCustomDropDown * callback);
+				virtual IToolButtonPartCustomDropDown * GetDropDownCallback(void);
+				virtual void CustomDropDownClosed(void);
 			};
 		}
 	}
