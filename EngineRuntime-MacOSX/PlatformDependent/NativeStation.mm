@@ -499,13 +499,17 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 {
 	Engine::Application::ApplicationLaunched();
 }
-- (BOOL) application: (NSApplication *) sender openFile: (NSString *) filename
+- (void) application: (NSApplication *) application openURLs: (NSArray<NSURL *> *) urls
 {
 	auto controller = Engine::Application::GetController();
 	auto callback = controller ? controller->GetCallback() : 0;
 	if (callback) {
-		return callback->OpenExactFile(Engine::Cocoa::EngineString(filename)) ? YES : NO;
-	} return NO;
+		for (int i = 0; i < [urls count]; i++) {
+			NSURL * url = [urls objectAtIndex: i];
+			if ([[url scheme] compare: @"file"] == NSOrderedSame) callback->OpenExactFile(Engine::Cocoa::EngineString([url path]));
+			else callback->OpenExactFile(Engine::Cocoa::EngineString([url absoluteString]));
+		}
+	}
 }
 - (BOOL) applicationOpenUntitledFile: (NSApplication *) sender
 {

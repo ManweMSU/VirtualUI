@@ -35,6 +35,7 @@ struct FileFormat
 	int UniqueIndex;
     bool CanCreate;
 	bool UniqueIcon;
+	bool IsProtocol;
 };
 
 handle error_output;
@@ -416,26 +417,48 @@ bool asm_plist(const string & output, bool with_icon, ITextWriter & console)
             list << L"\t\t<string>MacOSX</string>" << IO::NewLineChar;
             list << L"\t</array>" << IO::NewLineChar;
             if (formats.Length()) {
-                list << L"\t<key>CFBundleDocumentTypes</key>" << IO::NewLineChar;
-                list << L"\t<array>" << IO::NewLineChar;
-                for (int i = 0; i < formats.Length(); i++) {
-					string icon_file;
-					if (formats[i].UniqueIndex) icon_file = L"FileIcon" + string(formats[i].UniqueIndex) + L".icns";
-					else icon_file = L"AppIcon.icns";
-                    list << L"\t\t<dict>" << IO::NewLineChar;
-                    list << L"\t\t\t<key>CFBundleTypeExtensions</key>" << IO::NewLineChar;
-                    list << L"\t\t\t<array>" << IO::NewLineChar;
-                    list << L"\t\t\t\t<string>" << formats[i].Extension << L"</string>" << IO::NewLineChar;
-                    list << L"\t\t\t</array>" << IO::NewLineChar;
-                    list << L"\t\t\t<key>CFBundleTypeName</key>" << IO::NewLineChar;
-                    list << L"\t\t\t<string>" << formats[i].Description << L"</string>" << IO::NewLineChar;
-                    list << L"\t\t\t<key>CFBundleTypeIconFile</key>" << IO::NewLineChar;
-                    list << L"\t\t\t<string>" << icon_file << L"</string>" << IO::NewLineChar;
-                    list << L"\t\t\t<key>CFBundleTypeRole</key>" << IO::NewLineChar;
-                    list << L"\t\t\t<string>" << (formats[i].CanCreate ? L"Editor" : L"Viewer") << L"</string>" << IO::NewLineChar;
-                    list << L"\t\t</dict>" << IO::NewLineChar;
-                }
-                list << L"\t</array>" << IO::NewLineChar;
+				int n_formats = 0;
+				int n_protocols = 0;
+				for (int i = 0; i < formats.Length(); i++) if (formats[i].IsProtocol) n_protocols++; else n_formats++;
+				if (n_formats) {
+					list << L"\t<key>CFBundleDocumentTypes</key>" << IO::NewLineChar;
+					list << L"\t<array>" << IO::NewLineChar;
+					for (int i = 0; i < formats.Length(); i++) if (!formats[i].IsProtocol) {
+						string icon_file;
+						if (formats[i].UniqueIndex) icon_file = L"FileIcon" + string(formats[i].UniqueIndex) + L".icns";
+						else icon_file = L"AppIcon.icns";
+						list << L"\t\t<dict>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleTypeExtensions</key>" << IO::NewLineChar;
+						list << L"\t\t\t<array>" << IO::NewLineChar;
+						list << L"\t\t\t\t<string>" << formats[i].Extension << L"</string>" << IO::NewLineChar;
+						list << L"\t\t\t</array>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleTypeName</key>" << IO::NewLineChar;
+						list << L"\t\t\t<string>" << formats[i].Description << L"</string>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleTypeIconFile</key>" << IO::NewLineChar;
+						list << L"\t\t\t<string>" << icon_file << L"</string>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleTypeRole</key>" << IO::NewLineChar;
+						list << L"\t\t\t<string>" << (formats[i].CanCreate ? L"Editor" : L"Viewer") << L"</string>" << IO::NewLineChar;
+						list << L"\t\t</dict>" << IO::NewLineChar;
+					}
+					list << L"\t</array>" << IO::NewLineChar;
+				}
+				if (n_protocols) {
+					list << L"\t<key>CFBundleURLTypes</key>" << IO::NewLineChar;
+					list << L"\t<array>" << IO::NewLineChar;
+					for (int i = 0; i < formats.Length(); i++) if (formats[i].IsProtocol) {
+						list << L"\t\t<dict>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleURLSchemes</key>" << IO::NewLineChar;
+						list << L"\t\t\t<array>" << IO::NewLineChar;
+						list << L"\t\t\t\t<string>" << formats[i].Extension << L"</string>" << IO::NewLineChar;
+						list << L"\t\t\t</array>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleURLName</key>" << IO::NewLineChar;
+						list << L"\t\t\t<string>" << formats[i].Description << L"</string>" << IO::NewLineChar;
+						list << L"\t\t\t<key>CFBundleTypeRole</key>" << IO::NewLineChar;
+						list << L"\t\t\t<string>Viewer</string>" << IO::NewLineChar;
+						list << L"\t\t</dict>" << IO::NewLineChar;
+					}
+					list << L"\t</array>" << IO::NewLineChar;
+				}
             }
             list << L"</dict>" << IO::NewLineChar;
             list << L"</plist>" << IO::NewLineChar;
@@ -518,38 +541,55 @@ bool index_file_formats(const string & app_icon, const string & app_icon_src, co
 	Array<string> src_paths(0x10);
     for (int i = 0; i < dirs.Length(); i++) {
         SafePointer<RegistryNode> sub = node->OpenNode(dirs[i]);
-        formats << FileFormat();
-        formats.LastElement().Extension = sub->GetValueString(L"Extension");
-        formats.LastElement().Description = sub->GetValueString(L"Description");
-        formats.LastElement().Icon = IO::ExpandPath(base_path + L"/" + sub->GetValueString(L"Icon"));
-        formats.LastElement().CanCreate = sub->GetValueBoolean(L"CanCreate");
-		src_paths << formats.LastElement().Icon;
-		if (formats.LastElement().Icon == app_icon_src) {
-			formats.LastElement().Icon = app_icon;
-			formats.LastElement().IconIndex = 0;
-			formats.LastElement().UniqueIcon = false;
-		} else {
-			bool found = false;
-			for (int i = 0; i < src_paths.Length() - 1; i++) {
-				if (formats.LastElement().Icon == src_paths[i]) {
-					formats.LastElement().Icon = formats[i].Icon;
-					formats.LastElement().IconIndex = i + 1;
-					formats.LastElement().UniqueIcon = false;
-					found = true;
-					break;
+		if (sub->GetValueString(L"Extension").Length()) {
+			formats << FileFormat();
+			formats.LastElement().Extension = sub->GetValueString(L"Extension");
+			formats.LastElement().Description = sub->GetValueString(L"Description");
+			formats.LastElement().Icon = IO::ExpandPath(base_path + L"/" + sub->GetValueString(L"Icon"));
+			formats.LastElement().CanCreate = sub->GetValueBoolean(L"CanCreate");
+			formats.LastElement().IsProtocol = false;
+			src_paths << formats.LastElement().Icon;
+			if (formats.LastElement().Icon == app_icon_src) {
+				formats.LastElement().Icon = app_icon;
+				formats.LastElement().IconIndex = 0;
+				formats.LastElement().UniqueIcon = false;
+			} else {
+				bool found = false;
+				for (int i = 0; i < src_paths.Length() - 1; i++) {
+					if (formats.LastElement().Icon == src_paths[i]) {
+						formats.LastElement().Icon = formats[i].Icon;
+						formats.LastElement().IconIndex = i + 1;
+						formats.LastElement().UniqueIcon = false;
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					string conv = obj_path + L"/" + IO::Path::GetFileNameWithoutExtension(formats.LastElement().Icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
+					if (!asm_icon(formats.LastElement().Icon, conv, console)) return false;
+					formats.LastElement().Icon = conv;
+					formats.LastElement().IconIndex = formats.Length();
+					formats.LastElement().UniqueIcon = true;
 				}
 			}
-			if (!found) {
-				string conv = obj_path + L"/" + IO::Path::GetFileNameWithoutExtension(formats.LastElement().Icon) + L"." + sys_cfg->GetValueString(L"IconExtension");
-				if (!asm_icon(formats.LastElement().Icon, conv, console)) return false;
-				formats.LastElement().Icon = conv;
-				formats.LastElement().IconIndex = formats.Length();
-				formats.LastElement().UniqueIcon = true;
-			}
+		} else if (sub->GetValueString(L"Protocol").Length()) {
+			formats << FileFormat();
+			formats.LastElement().Extension = sub->GetValueString(L"Protocol");
+			formats.LastElement().Description = sub->GetValueString(L"Description");
+			formats.LastElement().Icon = L"";
+			formats.LastElement().CanCreate = false;
+			formats.LastElement().IconIndex = -1;
+			formats.LastElement().UniqueIndex = -1;
+			formats.LastElement().UniqueIcon = false;
+			formats.LastElement().IsProtocol = true;
+		} else {
+			console << L"Invalid file format entry: it declares neither a file format nor a protocol." << IO::NewLineChar;
+			return false;
 		}
     }
 	int counter = 1;
 	for (int i = 0; i < formats.Length(); i++) {
+		if (formats[i].IsProtocol) continue;
 		if (formats[i].UniqueIcon) { formats[i].UniqueIndex = counter; counter++; }
 		else { if (formats[i].IconIndex) formats[i].UniqueIndex = formats[formats[i].IconIndex - 1].UniqueIcon; else formats[i].UniqueIndex = 0; }
 	}
@@ -570,14 +610,20 @@ bool asm_format_manifest(const string & name, ITextWriter & console)
             SafePointer<Registry> man = CreateRegistry();
             for (int i = 0; i < formats.Length(); i++) {
                 string ext = formats[i].Extension.LowerCase();
+				if (formats[i].IsProtocol) ext += L":";
                 man->CreateNode(ext);
                 SafePointer<RegistryNode> fmt = man->OpenNode(ext);
-                fmt->CreateValue(L"Description", RegistryValueType::String);
-                fmt->SetValue(L"Description", formats[i].Description);
-                fmt->CreateValue(L"IconIndex", RegistryValueType::Integer);
-                fmt->SetValue(L"IconIndex", formats[i].UniqueIndex);
-                fmt->CreateValue(L"CanCreate", RegistryValueType::Boolean);
-                fmt->SetValue(L"CanCreate", formats[i].CanCreate);
+				if (formats[i].IsProtocol) {
+					fmt->CreateValue(L"Description", RegistryValueType::String);
+					fmt->SetValue(L"Description", formats[i].Description);
+				} else {
+					fmt->CreateValue(L"Description", RegistryValueType::String);
+					fmt->SetValue(L"Description", formats[i].Description);
+					fmt->CreateValue(L"IconIndex", RegistryValueType::Integer);
+					fmt->SetValue(L"IconIndex", formats[i].UniqueIndex);
+					fmt->CreateValue(L"CanCreate", RegistryValueType::Boolean);
+					fmt->SetValue(L"CanCreate", formats[i].CanCreate);
+				}
             }
             FileStream man_file(name, AccessReadWrite, CreateAlways);
             TextWriter writer(&man_file, Encoding::UTF8);

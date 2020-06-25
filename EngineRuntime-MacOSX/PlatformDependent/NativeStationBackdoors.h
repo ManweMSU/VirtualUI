@@ -8,7 +8,7 @@
 @interface EngineRuntimeApplicationDelegate : NSObject<NSApplicationDelegate>
 - (void) close_all: (id) sender;
 - (void) applicationDidFinishLaunching: (NSNotification *) notification;
-- (BOOL) application: (NSApplication *) sender openFile: (NSString *) filename;
+- (void) application: (NSApplication *) application openURLs: (NSArray<NSURL *> *) urls;
 - (BOOL) applicationOpenUntitledFile: (NSApplication *) sender;
 - (void) new_file: (id) sender;
 - (void) open_file: (id) sender;

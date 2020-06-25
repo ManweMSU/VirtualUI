@@ -495,7 +495,6 @@ namespace Engine
 				for (int i = 0; i < controller->_deferred_open.Length(); i++) {
 					controller->_callback->OpenExactFile(controller->_deferred_open[i]);
 				}
-				if (!controller->_main_windows.Length()) controller->_callback->CreateNewFile();
 				controller->_deferred_open.Clear();
 			}
 		}
