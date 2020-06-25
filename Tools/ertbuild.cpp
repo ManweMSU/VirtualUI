@@ -112,7 +112,7 @@ bool compile(const string & source, const string & object, const string & log, I
         if (object_time < source_time) {
             console << IO::Path::GetFileName(source) << L" renewed (" << source_time.ToLocal().ToString() << L" against " << object_time.ToLocal().ToString() << L")" << IO::NewLineChar;
         }
-    } else if (clean) {
+    } else if (vcheck && clean) {
         IO::CloseFile(source_handle);
         IO::CloseFile(object_handle);
     }
