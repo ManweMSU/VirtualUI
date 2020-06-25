@@ -58,6 +58,7 @@ namespace Engine
 			void ExitMessageLoop(void);
 			Array<string> * GetFontFamilies(void);
 			void SetApplicationIcon(Codec::Image * icon);
+			Codec::Frame * CaptureScreenState(void);
 
 			void ActivateWindow(Window * window);
 			void MaximizeWindow(Window * window);

@@ -82,6 +82,7 @@ static void ViewToScreen(int ox, int oy, NSView * view, double & sx, double & sy
 - (void) setFrame: (NSRect) frame;
 - (void) setFrameSize: (NSSize) newSize;
 - (void) keyboardStateInactivate;
+- (void) require_contents_update;
 
 - (void) mouseMoved: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;
@@ -192,7 +193,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	}
 	if (text.Length() && view->station) {
 		for (int i = 0; i < text.Length(); i++) view->station->CharDown(text[i]);
-		[view setNeedsDisplay: YES];
+		[view require_contents_update];
 	}
 }
 - (NSUInteger) characterIndexForPoint: (NSPoint) point { return NSNotFound; }
@@ -239,6 +240,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 - (void) drawRect : (NSRect) dirtyRect
 {
+	// TODO: IF QUARTZ DEVICE
 	if (station) {
 		RenderStationContent(station);
 	}
@@ -254,7 +256,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	double scale = [[self window] backingScaleFactor];
 	station->SetBox(Engine::UI::Box(0, 0, double(frame.size.width * scale), double(frame.size.height * scale)));
 	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Move);
-	[self setNeedsDisplay: YES];
+	[self require_contents_update];
 }
 - (void) setFrameSize: (NSSize) newSize
 {
@@ -263,11 +265,16 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	double scale = [[self window] backingScaleFactor];
 	station->SetBox(Engine::UI::Box(0, 0, double(newSize.width * scale), double(newSize.height * scale)));
 	station->GetDesktop()->As<Engine::UI::Controls::OverlappedWindow>()->RaiseFrameEvent(Engine::UI::Windows::FrameEvent::Move);
-	[self setNeedsDisplay: YES];
+	[self require_contents_update];
 }
 - (void) keyboardStateInactivate
 {
 	fkeys = 0;
+}
+- (void) require_contents_update
+{
+	// TODO: IF QUARTZ DEVICE
+	[self setNeedsDisplay: YES];
 }
 - (void) mouseMoved: (NSEvent *) event
 {
@@ -280,7 +287,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 			last_y = y;
 			mwas = true;
 			station->MouseMove(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		}
 	}
 }
@@ -295,7 +302,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 			last_y = y;
 			mwas = true;
 			station->MouseMove(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		}
 	}
 }
@@ -310,12 +317,12 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 		if (lwas && (time - last_ldown) < dbl && x == last_px && y == last_py) {
 			lwas = false;
 			station->LeftButtonDoubleClick(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		} else {
 			lwas = true;
 			last_ldown = time;
 			station->LeftButtonDown(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		}
 		last_px = x; last_py = y;
 	}
@@ -327,7 +334,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 		int x, y;
 		ScreenToView(pos.x, pos.y, self, x, y);
 		station->LeftButtonUp(Engine::UI::Point(x, y));
-		[self setNeedsDisplay: YES];
+		[self require_contents_update];
 	}
 }
 - (void) rightMouseDragged: (NSEvent *) event
@@ -341,7 +348,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 			last_y = y;
 			mwas = true;
 			station->MouseMove(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		}
 	}
 }
@@ -356,12 +363,12 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 		if (rwas && (time - last_rdown) < dbl && x == last_px && y == last_py) {
 			rwas = false;
 			station->RightButtonDoubleClick(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		} else {
 			rwas = true;
 			last_rdown = time;
 			station->RightButtonDown(Engine::UI::Point(x, y));
-			[self setNeedsDisplay: YES];
+			[self require_contents_update];
 		}
 		last_px = x; last_py = y;
 	}
@@ -373,7 +380,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 		int x, y;
 		ScreenToView(pos.x, pos.y, self, x, y);
 		station->RightButtonUp(Engine::UI::Point(x, y));
-		[self setNeedsDisplay: YES];
+		[self require_contents_update];
 	}
 }
 - (void) keyDown: (NSEvent *) event
@@ -397,7 +404,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 				for (int i = 0; i < etext.Length(); i++) station->CharDown(etext[i]);
 			}
 		}
-		[self setNeedsDisplay: YES];
+		[self require_contents_update];
 	}
 }
 - (void) keyUp: (NSEvent *) event
@@ -406,7 +413,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
 	if (key && station) {
 		station->KeyUp(key);
-		[self setNeedsDisplay: YES];
+		[self require_contents_update];
 	}
 }
 - (void) flagsChanged: (NSEvent *) event
@@ -438,7 +445,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 		else station->KeyUp(Engine::KeyCodes::System);
 	}
 	fkeys = (shift ? 1 : 0) | (control ? 2 : 0) | (alternative ? 4 : 0) | (system ? 8 : 0);
-	if (redraw) { [self setNeedsDisplay: YES]; }
+	if (redraw) { [self require_contents_update]; }
 }
 - (void) scrollWheel: (NSEvent *) event
 {
@@ -447,13 +454,13 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	double dy = [event deltaY];
 	station->ScrollHorizontally(-dx);
 	station->ScrollVertically(-dy);
-	[self setNeedsDisplay: YES];
+	[self require_contents_update];
 }
 - (void) timerFireMethod: (NSTimer *) timer
 {
 	auto target = ((EngineRuntimeTimerTarget *) [timer userInfo])->target;
 	if (target && station) target->Timer();
-	[self setNeedsDisplay: YES];
+	[self require_contents_update];
 }
 - (void) engineEvent: (EngineRuntimeEvent *) event
 {
@@ -790,6 +797,7 @@ namespace Engine
 		
 			NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory) : _window(window), WindowStation(factory), _slaves(0x10), _timers(0x10)
 			{
+				// TODO: HANDLE METAL DEVICE
 				RenderingDevice = new Cocoa::QuartzRenderingDevice;
 				SetRenderingDevice(RenderingDevice);
 				_arrow.SetReference(new CocoaCursor([NSCursor arrowCursor], false));
@@ -939,7 +947,7 @@ namespace Engine
 					}
 				}
 			}
-			virtual void FocusWindowChanged(void) override { [__GetEngineViewFromWindow(_window) setNeedsDisplay: YES]; AnimationStateChanged(); }
+			virtual void FocusWindowChanged(void) override { [__GetEngineViewFromWindow(_window) require_contents_update]; AnimationStateChanged(); }
 			virtual Box GetDesktopBox(void) override
 			{
 				NSScreen * screen = [_window screen];
@@ -963,7 +971,7 @@ namespace Engine
 				result.Bottom = result.Top + int(rect.size.height * scale);
 				return result;
 			}
-			virtual void RequireRedraw(void) override { [__GetEngineViewFromWindow(_window) setNeedsDisplay: YES]; }
+			virtual void RequireRedraw(void) override { [__GetEngineViewFromWindow(_window) require_contents_update]; }
 			virtual void DeferredDestroy(Window * window) override
 			{
 				EngineRuntimeEvent * event = [[EngineRuntimeEvent alloc] init];
@@ -1024,6 +1032,7 @@ namespace Engine
 			}
 			void RenderContent(void)
 			{
+				// TODO: HANDLE METAL DEVICE
 				if (RenderingDevice) {
 					RenderingDevice->SetTimerValue(GetTimerValue());
 					Animate();
@@ -1184,6 +1193,7 @@ namespace Engine
 		}
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
 		{
+			// TODO: HANDLE METAL DEVICE
 			InitializeWindowSystem();
 			UI::Template::Controls::FrameExtendedData * ex_data = 0;
 			for (int i = 0; i < Template->Children.Length(); i++) {
@@ -1324,6 +1334,7 @@ namespace Engine
 		}
 		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
 		{
+			// TODO: HANDLE METAL DEVICE
 			InitializeWindowSystem();
 			Box ClientBox(Position, GetScreenDimensions());
 			Box ClientArea(0, 0, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top);
@@ -1575,6 +1586,25 @@ namespace Engine
 			[NSApp setApplicationIconImage: image];
 			[image release];
 		}
+		Codec::Frame * CaptureScreenState(void)
+		{
+			CGDirectDisplayID display = [[[[NSScreen mainScreen] deviceDescription] objectForKey: @"NSScreenNumber"] unsignedIntValue];
+			CGImageRef image = CGDisplayCreateImage(display);
+			if (!image) return 0;
+			int width = CGImageGetWidth(image);
+			int height = CGImageGetHeight(image);
+			SafePointer<Codec::Frame> state = new Codec::Frame(width, height, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+			CGContextRef context = CGBitmapContextCreate(state->GetData(), width, height, 8, state->GetScanLineLength(), rgb, kCGImageAlphaPremultipliedLast);
+			CGRect rect = CGRectMake(0.0f, 0.0f, float(width), float(height));
+			CGContextSetBlendMode(context, kCGBlendModeCopy);
+			CGContextDrawImage(context, rect, image);
+			CGImageRelease(image);
+			CGContextRelease(context);
+			CGColorSpaceRelease(rgb);
+			state->Retain();
+			return state;
+		}
 	}
 }
 
@@ -1606,7 +1636,7 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 	station->FocusChanged(true);
 	station->CaptureChanged(true);
 	[GetStationWindow(station) makeFirstResponder: __GetEngineViewFromWindow(GetStationWindow(station))];
-	[__GetEngineViewFromWindow(GetStationWindow(station)) setNeedsDisplay: YES];
+	[__GetEngineViewFromWindow(GetStationWindow(station)) require_contents_update];
 }
 - (void) windowDidResignKey: (NSNotification *) notification
 {
@@ -1614,7 +1644,7 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 	station->FocusChanged(false);
 	station->CaptureChanged(false);
 	[__GetEngineViewFromWindow(GetStationWindow(station)) keyboardStateInactivate];
-	[__GetEngineViewFromWindow(GetStationWindow(station)) setNeedsDisplay: YES];
+	[__GetEngineViewFromWindow(GetStationWindow(station)) require_contents_update];
 }
 - (void) windowWillBeginSheet: (NSNotification *) notification
 {
