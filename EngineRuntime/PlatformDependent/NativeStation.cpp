@@ -566,6 +566,35 @@ namespace Engine
 			if (icon_sm_old) DestroyIcon(icon_sm_old);
 			if (icon_nm_old) DestroyIcon(icon_nm_old);
 		}
+		Codec::Frame * CaptureScreenState(void)
+		{
+			HDC DC = GetWindowDC(0);
+			if (!DC) { return 0; }
+			int x = GetDeviceCaps(DC, HORZRES), y = GetDeviceCaps(DC, VERTRES);
+			if (!x || !y) { ReleaseDC(0, DC); return 0; }
+			SafePointer<Codec::Frame> state = new Codec::Frame(x, y, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp);
+			HDC CDC = CreateCompatibleDC(DC);
+			if (!CDC) { ReleaseDC(0, DC); return 0; }
+			HBITMAP hrender_target = CreateCompatibleBitmap(DC, x, y);
+			if (!hrender_target) { ReleaseDC(0, DC); DeleteDC(CDC); return 0; }
+			HGDIOBJ hprev_bitmap = SelectObject(CDC, hrender_target);
+			BitBlt(CDC, 0, 0, x, y, DC, 0, 0, SRCCOPY);
+			ReleaseDC(0, DC);
+			SelectObject(CDC, hprev_bitmap);
+			BITMAPINFOHEADER hdr;
+			ZeroMemory(&hdr, sizeof(hdr));
+			hdr.biSize = sizeof(hdr);
+			hdr.biWidth = x;
+			hdr.biHeight = y;
+			hdr.biPlanes = 1;
+			hdr.biBitCount = 32;
+			hdr.biSizeImage = x * y * 4;
+			GetDIBits(CDC, hrender_target, 0, y, state->GetData(), reinterpret_cast<LPBITMAPINFO>(&hdr), DIB_RGB_COLORS);
+			DeleteDC(CDC);
+			DeleteObject(hrender_target);
+			state->Retain();
+			return state;
+		}
 		LRESULT WINAPI HandleEngineMenuMessages(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		{
 			if (Msg == WM_MEASUREITEM) {

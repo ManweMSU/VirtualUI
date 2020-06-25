@@ -573,6 +573,7 @@ namespace Engine
 			void ExitMessageLoop(void) { NativeWindows::ExitMainLoop(); }
 			Array<string>* GetFontFamilies(void) { return NativeWindows::GetFontFamilies(); }
 			void SetApplicationIcon(Codec::Image * icon) { NativeWindows::SetApplicationIcon(icon); }
+			Codec::Frame * CaptureScreenState(void) { return NativeWindows::CaptureScreenState(); }
 			void ActivateWindow(Window * window) { NativeWindows::ActivateWindow(window->GetStation()); }
 			void MaximizeWindow(Window * window) { NativeWindows::MaximizeWindow(window->GetStation()); }
 			void MinimizeWindow(Window * window) { NativeWindows::MinimizeWindow(window->GetStation()); }

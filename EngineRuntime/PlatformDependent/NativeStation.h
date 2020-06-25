@@ -40,5 +40,6 @@ namespace Engine
 		void ExitMainLoop(void);
 		Array<string> * GetFontFamilies(void);
 		void SetApplicationIcon(Codec::Image * icon);
+		Codec::Frame * CaptureScreenState(void);
 	}
 }
