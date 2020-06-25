@@ -110,6 +110,8 @@ namespace Engine
 				SplitBoxPart(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
 				~SplitBoxPart(void) override;
 
+				virtual void Show(bool visible) override;
+				virtual bool IsVisible(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
 				virtual void SetRectangle(const Rectangle & rect) override;

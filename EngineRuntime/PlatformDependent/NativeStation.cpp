@@ -269,6 +269,13 @@ namespace Engine
 		UI::WindowStation * CreateOverlappedWindow(Template::ControlTemplate * Template, const UI::Rectangle & Position, WindowStation * ParentStation)
 		{
 			InitializeWindowSystem();
+			UI::Template::Controls::FrameExtendedData * ex_data = 0;
+			for (int i = 0; i < Template->Children.Length(); i++) {
+				if (Template->Children[i].Properties->GetTemplateClass() == L"FrameExtendedData") {
+					ex_data = static_cast<UI::Template::Controls::FrameExtendedData *>(Template->Children[i].Properties);
+					break;
+				}
+			}
 			RECT pRect;
 			GetWindowRect(ParentStation ? static_cast<NativeStation *>(ParentStation)->GetHandle() : GetDesktopWindow(), &pRect);
 			Box ParentBox(pRect.left, pRect.top, pRect.right, pRect.bottom);
@@ -323,6 +330,13 @@ namespace Engine
 			}
 			Station->SetBox(ClientArea);
 			Station->Retain();
+			if (ex_data) {
+				if (ex_data->Transparentcy) WindowsSpecific::SetWindowTransparentcy(Station->GetDesktop(), 1.0 - ex_data->Transparentcy);
+				if (ex_data->WindowsLeftMargin || ex_data->WindowsTopMargin || ex_data->WindowsRightMargin || ex_data->WindowsBottomMargin) {
+					WindowsSpecific::ExtendFrameIntoClient(Station->GetDesktop(), ex_data->WindowsLeftMargin, ex_data->WindowsTopMargin, ex_data->WindowsRightMargin, ex_data->WindowsBottomMargin);
+				}
+				if (ex_data->WindowsEnableBlurBehind) WindowsSpecific::SetWindowBlurBehind(Station->GetDesktop(), true);
+			}
 			return Station;
 		}
 		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)

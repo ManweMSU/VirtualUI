@@ -285,6 +285,8 @@ namespace Engine
 				Constructor::ConstructChildren(this, Template);
 			}
 			SplitBoxPart::~SplitBoxPart(void) {}
+			void SplitBoxPart::Show(bool visible) { Invisible = !visible; GetParent()->ArrangeChildren(); }
+			bool SplitBoxPart::IsVisible(void){ return !Invisible; }
 			void SplitBoxPart::SetID(int _ID) { ID = _ID; }
 			int SplitBoxPart::GetID(void) { return ID; }
 			void SplitBoxPart::SetRectangle(const Rectangle & rect) { ControlPosition = rect; }
@@ -302,17 +304,20 @@ namespace Engine
 			VerticalSplitBox::~VerticalSplitBox(void) {}
 			void VerticalSplitBox::Render(const Box & at)
 			{
+				int index = 0;
 				for (int i = 0; i < ChildrenCount() - 1; i++) {
+					if (!Child(i)->IsVisible()) continue;
 					auto box = Child(i)->GetPosition();
 					auto splitter = Box(at.Left, at.Top + box.Bottom, at.Right, at.Top + box.Bottom + SplitterSize);
 					auto device = GetStation()->GetRenderingDevice();
-					if (_part == i && _state == 2) {
+					if (_part == index && _state == 2) {
 						if (_splitter_pressed) _splitter_pressed->Render(device, splitter);
 					} else if (_part == i && _state == 1) {
 						if (_splitter_hot) _splitter_hot->Render(device, splitter);
 					} else {
 						if (_splitter_normal) _splitter_normal->Render(device, splitter);
 					}
+					index++;
 				}
 				ParentWindow::Render(at);
 			}
@@ -332,12 +337,13 @@ namespace Engine
 			int VerticalSplitBox::GetID(void) { return ID; }
 			void VerticalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle VerticalSplitBox::GetRectangle(void) { return ControlPosition; }
-			void VerticalSplitBox::ArrangeChildren(void) {}
-			void VerticalSplitBox::SetPosition(const Box & box)
+			void VerticalSplitBox::ArrangeChildren(void)
 			{
-				WindowPosition = box;
+				auto & box = WindowPosition;
+				int visible_count = 0;
+				for (int i = 0; i < ChildrenCount(); i++) if (Child(i)->IsVisible()) visible_count++;
 				int size = box.Bottom - box.Top;
-				int available_size = size - (ChildrenCount() - 1) * SplitterSize;
+				int available_size = size - (visible_count - 1) * SplitterSize;
 				int stretch_part = -1;
 				if (!_initialized) {
 					for (int i = 0; i < ChildrenCount(); i++) {
@@ -352,6 +358,7 @@ namespace Engine
 				int used_size = 0;
 				for (int i = 0; i < ChildrenCount(); i++) {
 					auto child = static_cast<SplitBoxPart *>(Child(i));
+					if (!child->IsVisible()) continue;
 					used_size += child->Size;
 					if (child->Stretch) stretch_part = i;
 				}
@@ -368,6 +375,7 @@ namespace Engine
 					if (extra) {
 						for (int i = 0; i < ChildrenCount(); i++) {
 							auto child = static_cast<SplitBoxPart *>(Child(i));
+							if (!child->IsVisible()) continue;
 							int diff = (i == ChildrenCount() - 1) ? (-extra) : (min(child->Size - child->MinimalSize, -extra));
 							child->Size -= diff;
 							extra += diff;
@@ -378,11 +386,13 @@ namespace Engine
 				int pos = 0;
 				int width = box.Right - box.Left;
 				for (int i = 0; i < ChildrenCount(); i++) {
+					if (!Child(i)->IsVisible()) continue;
 					int part_size = static_cast<SplitBoxPart *>(Child(i))->Size;
 					Child(i)->SetPosition(Box(0, pos, width, pos + part_size));
 					pos += part_size + SplitterSize;
 				}
 			}
+			void VerticalSplitBox::SetPosition(const Box & box) { WindowPosition = box; ArrangeChildren(); }
 			void VerticalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; } }
 			void VerticalSplitBox::LeftButtonDown(Point at)
 			{
@@ -398,10 +408,13 @@ namespace Engine
 					int pos = 0;
 					_part = -1;
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						int index = 0;
 						for (int i = 0; i < ChildrenCount() - 1; i++) {
 							auto child = static_cast<SplitBoxPart *>(Child(i));
-							if (at.y >= pos + child->Size && at.y < pos + child->Size + SplitterSize) { _part = i; break; }
+							if (!child->IsVisible()) continue;
+							if (at.y >= pos + child->Size && at.y < pos + child->Size + SplitterSize) { _part = index; break; }
 							pos += child->Size + SplitterSize;
+							index++;
 						}
 					}
 					if (_part != -1) {
@@ -411,8 +424,16 @@ namespace Engine
 				} else {
 					int mouse = at.y;
 					int ds = at.y - _mouse;
-					auto left = static_cast<SplitBoxPart *>(Child(_part));
-					auto right = static_cast<SplitBoxPart *>(Child(_part + 1));
+					SplitBoxPart * left = 0;
+					SplitBoxPart * right = 0;
+					int index = 0;
+					for (int i = 0; i < ChildrenCount(); i++) {
+						if (!Child(i)->IsVisible()) continue;
+						if (index == _part) left = static_cast<SplitBoxPart *>(Child(i));
+						else if (index == _part + 1) { right = static_cast<SplitBoxPart *>(Child(i)); break; }
+						index++;
+					}
+					if (!left || !right) return;
 					if (left->Size + ds < left->MinimalSize) {
 						mouse += left->MinimalSize - left->Size - ds;
 						ds = left->MinimalSize - left->Size;
@@ -447,17 +468,20 @@ namespace Engine
 			HorizontalSplitBox::~HorizontalSplitBox(void) {}
 			void HorizontalSplitBox::Render(const Box & at)
 			{
+				int index = 0;
 				for (int i = 0; i < ChildrenCount() - 1; i++) {
+					if (!Child(i)->IsVisible()) continue;
 					auto box = Child(i)->GetPosition();
 					auto splitter = Box(at.Left + box.Right, at.Top, at.Left + box.Right + SplitterSize, at.Bottom);
 					auto device = GetStation()->GetRenderingDevice();
-					if (_part == i && _state == 2) {
+					if (_part == index && _state == 2) {
 						if (_splitter_pressed) _splitter_pressed->Render(device, splitter);
 					} else if (_part == i && _state == 1) {
 						if (_splitter_hot) _splitter_hot->Render(device, splitter);
 					} else {
 						if (_splitter_normal) _splitter_normal->Render(device, splitter);
 					}
+					index++;
 				}
 				ParentWindow::Render(at);
 			}
@@ -477,12 +501,13 @@ namespace Engine
 			int HorizontalSplitBox::GetID(void) { return ID; }
 			void HorizontalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
 			Rectangle HorizontalSplitBox::GetRectangle(void) { return ControlPosition; }
-			void HorizontalSplitBox::ArrangeChildren(void) {}
-			void HorizontalSplitBox::SetPosition(const Box & box)
+			void HorizontalSplitBox::ArrangeChildren(void)
 			{
-				WindowPosition = box;
+				auto & box = WindowPosition;
+				int visible_count = 0;
+				for (int i = 0; i < ChildrenCount(); i++) if (Child(i)->IsVisible()) visible_count++;
 				int size = box.Right - box.Left;
-				int available_size = size - (ChildrenCount() - 1) * SplitterSize;
+				int available_size = size - (visible_count - 1) * SplitterSize;
 				int stretch_part = -1;
 				if (!_initialized) {
 					for (int i = 0; i < ChildrenCount(); i++) {
@@ -497,6 +522,7 @@ namespace Engine
 				int used_size = 0;
 				for (int i = 0; i < ChildrenCount(); i++) {
 					auto child = static_cast<SplitBoxPart *>(Child(i));
+					if (!child->IsVisible()) continue;
 					used_size += child->Size;
 					if (child->Stretch) stretch_part = i;
 				}
@@ -513,6 +539,7 @@ namespace Engine
 					if (extra) {
 						for (int i = 0; i < ChildrenCount(); i++) {
 							auto child = static_cast<SplitBoxPart *>(Child(i));
+							if (!child->IsVisible()) continue;
 							int diff = (i == ChildrenCount() - 1) ? (-extra) : (min(child->Size - child->MinimalSize, -extra));
 							child->Size -= diff;
 							extra += diff;
@@ -523,11 +550,13 @@ namespace Engine
 				int pos = 0;
 				int height = box.Bottom - box.Top;
 				for (int i = 0; i < ChildrenCount(); i++) {
+					if (!Child(i)->IsVisible()) continue;
 					int part_size = static_cast<SplitBoxPart *>(Child(i))->Size;
 					Child(i)->SetPosition(Box(pos, 0, pos + part_size, height));
 					pos += part_size + SplitterSize;
 				}
 			}
+			void HorizontalSplitBox::SetPosition(const Box & box) { WindowPosition = box; ArrangeChildren(); }
 			void HorizontalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; } }
 			void HorizontalSplitBox::LeftButtonDown(Point at)
 			{
@@ -543,10 +572,13 @@ namespace Engine
 					int pos = 0;
 					_part = -1;
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						int index = 0;
 						for (int i = 0; i < ChildrenCount() - 1; i++) {
 							auto child = static_cast<SplitBoxPart *>(Child(i));
-							if (at.x >= pos + child->Size && at.x < pos + child->Size + SplitterSize) { _part = i; break; }
+							if (!child->IsVisible()) continue;
+							if (at.x >= pos + child->Size && at.x < pos + child->Size + SplitterSize) { _part = index; break; }
 							pos += child->Size + SplitterSize;
+							index++;
 						}
 					}
 					if (_part != -1) {
@@ -556,8 +588,16 @@ namespace Engine
 				} else {
 					int mouse = at.x;
 					int ds = at.x - _mouse;
-					auto left = static_cast<SplitBoxPart *>(Child(_part));
-					auto right = static_cast<SplitBoxPart *>(Child(_part + 1));
+					SplitBoxPart * left = 0;
+					SplitBoxPart * right = 0;
+					int index = 0;
+					for (int i = 0; i < ChildrenCount(); i++) {
+						if (!Child(i)->IsVisible()) continue;
+						if (index == _part) left = static_cast<SplitBoxPart *>(Child(i));
+						else if (index == _part + 1) { right = static_cast<SplitBoxPart *>(Child(i)); break; }
+						index++;
+					}
+					if (!left || !right) return;
 					if (left->Size + ds < left->MinimalSize) {
 						mouse += left->MinimalSize - left->Size - ds;
 						ds = left->MinimalSize - left->Size;

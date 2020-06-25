@@ -609,8 +609,8 @@ namespace Engine
 			}
 			string ToolButton::GetControlClass(void) { return L"ToolButton"; }
 
-			ToolButtonPart::ToolButtonPart(Window * Parent, WindowStation * Station) : Window(Parent, Station), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
-			ToolButtonPart::ToolButtonPart(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _state(0)
+			ToolButtonPart::ToolButtonPart(Window * Parent, WindowStation * Station) : Window(Parent, Station), _callback(0), _state(0) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			ToolButtonPart::ToolButtonPart(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _callback(0), _state(0)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ToolButtonPart") throw InvalidArgumentException();
 				static_cast<Template::Controls::ToolButtonPart &>(*this) = static_cast<Template::Controls::ToolButtonPart &>(*Template->Properties);
@@ -740,7 +740,17 @@ namespace Engine
 				if (_state == 2) {
 					ReleaseCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
-						if (_menu) {
+						if (_callback) {
+							auto my = GetParent()->GetAbsolutePosition();
+							auto top_left = Point(my.Left, my.Bottom);
+							if (_callback->RunDropDown(this, top_left)) {
+								_state = 0xF2;
+								static_cast<ToolButton *>(GetParent())->_state = 0xF2;
+							} else {
+								_state = 0;
+								static_cast<ToolButton *>(GetParent())->_state = 0;
+							}
+						} else if (_menu) {
 							_state = 0xF2;
 							static_cast<ToolButton *>(GetParent())->_state = 0xF2;
 							auto my = GetParent()->GetAbsolutePosition();
@@ -778,6 +788,9 @@ namespace Engine
 			ITexture * ToolButtonPart::GetGrayedImage(void) { return ImageGrayed; }
 			void ToolButtonPart::SetDropDownMenu(Menus::Menu * Menu) { _menu.SetRetain(Menu); }
 			Menus::Menu * ToolButtonPart::GetDropDownMenu(void) { return _menu; }
+			void ToolButtonPart::SetDropDownCallback(IToolButtonPartCustomDropDown * callback) { _callback = callback; }
+			ToolButtonPart::IToolButtonPartCustomDropDown * ToolButtonPart::GetDropDownCallback(void) { return _callback; }
+			void ToolButtonPart::CustomDropDownClosed(void) { _state = 0; static_cast<ToolButton *>(GetParent())->_state = 0; }
 		}
 	}
 }

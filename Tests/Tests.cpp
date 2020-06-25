@@ -309,6 +309,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 			station->GetVisualStyles().MenuArrow.SetReference(::Template->Application[L"a"]);
 			SafePointer<Template::FrameShape> MenuBack = new Template::FrameShape;
+			SafePointer<Template::BarShape> MenuShadow = new Template::BarShape;
 			MenuBack->Position = UI::Rectangle::Entire();
 			{
 				SafePointer<Template::BlurEffectShape> Blur = new Template::BlurEffectShape;
@@ -335,8 +336,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				MenuBack->Children.Append(Bottom);
 				MenuBack->Children.Append(Bk);
 				MenuBack->Children.Append(Blur);
+				MenuShadow->Position.Left = UI::Template::Coordinate(0, -5, 0);
+				MenuShadow->Position.Top = UI::Template::Coordinate(0, -5, 0);
+				MenuShadow->Position.Right = UI::Template::Coordinate(0, 5, 1);
+				MenuShadow->Position.Bottom = UI::Template::Coordinate(0, 5, 1);
+				MenuShadow->Gradient << UI::Template::GradientPoint(UI::Color(0, 0, 0, 100), 0.0);
 			}
 			station->GetVisualStyles().MenuBackground.SetRetain(MenuBack);
+			station->GetVisualStyles().MenuShadow.SetRetain(MenuShadow);
 			station->GetVisualStyles().MenuBorder = int(UI::Zoom * 4.0);
 			station->GetVisualStyles().WindowCloseButton.SetRetain(::Template->Dialog[L"Header"]->Children[0].Children.ElementAt(0));
 			station->GetVisualStyles().WindowMaximizeButton.SetRetain(::Template->Dialog[L"Header"]->Children[0].Children.ElementAt(1));
@@ -512,6 +519,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 							group1->ShowAnimated(Animation::SlideSide::Right, 500,
 								Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
 						}
+					} else if (ID == 201) {
+						window->FindChild(6602)->Show(true);
+					} else if (ID == 202) {
+						window->FindChild(6602)->Show(false);
 					} else if (ID == 2) {
 						auto group1 = window->FindChild(101);
 						auto group2 = window->FindChild(102);
@@ -968,6 +979,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w3->AddDialogStandardAccelerators();
 			//w5->AddDialogStandardAccelerators();
 			w6->AddDialogStandardAccelerators();
+			w4->GetStation()->GetVisualStyles() = station->GetVisualStyles();
+			w4->GetStation()->GetVisualStyles().ForcedVirtualMenu = true;
 			auto re = w6->FindChild(898911)->As<Controls::RichEdit>();
 			if (re) {
 				re->SetHook(Hook3);
