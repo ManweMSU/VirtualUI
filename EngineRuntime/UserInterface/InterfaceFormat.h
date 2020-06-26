@@ -162,6 +162,11 @@ namespace Engine
 				virtual Template::Shape * GetApplication(const string & Name) override;
 				virtual Template::ControlTemplate * GetDialog(const string & Name) override;
 			};
+			class IMissingStylesReporter : public Object
+			{
+			public:
+				virtual void ReportStyleIsMissing(const string & Name, const string & Class) = 0;
+			};
 			class InterfaceTemplateImage : public Object
 			{
 			public:
@@ -176,8 +181,8 @@ namespace Engine
 				virtual ~InterfaceTemplateImage(void) override;
 
 				void Encode(Streaming::Stream * Output, uint32 Flags = 0);
-				void Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0);
-				void Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0);
+				void Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0, IMissingStylesReporter * StyleReporter = 0);
+				void Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0, IMissingStylesReporter * StyleReporter = 0);
 				void Specialize(const string & Locale, const string & System, double Scale);
 				InterfaceTemplateImage * Clone(void);
 

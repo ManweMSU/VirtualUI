@@ -449,16 +449,17 @@ namespace Engine
 					if (!found) control.ColorSetters << source.ColorSetters.InnerArray[i];
 				}
 			}
-			void BuildStyle(const Array<InterfaceDialog> & styles, InterfaceControl & control)
+			void BuildStyle(const Array<InterfaceDialog> & styles, InterfaceControl & control, IMissingStylesReporter * StyleReporter)
 			{
 				for (int i = control.Styles.Length() - 1; i >= 0; i--) {
 					int index = -1;
 					for (int j = 0; j < styles.Length(); j++) if (control.Styles[i] == styles[j].Name && control.Class == styles[j].Root.Class) { index = j; break; }
 					if (index != -1) ApplyProperties(control, styles[index].Root);
+					else if (StyleReporter) StyleReporter->ReportStyleIsMissing(control.Styles[i], control.Class);
 				}
-				for (int i = 0; i < control.Children.Length(); i++) BuildStyle(styles, control.Children[i]);
+				for (int i = 0; i < control.Children.Length(); i++) BuildStyle(styles, control.Children[i], StyleReporter);
 			}
-			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
+			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver, IMissingStylesReporter * StyleReporter)
 			{
 				SafePointer<IResourceLoader> Loader;
 				if (ResourceLoader) {
@@ -503,7 +504,7 @@ namespace Engine
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Styles.Length(); i++) {
 						InterfaceDialog style = asset.Styles[i];
-						BuildStyle(Styles, style.Root);
+						BuildStyle(Styles, style.Root, StyleReporter);
 						Styles << style;
 					}
 				}
@@ -512,7 +513,7 @@ namespace Engine
 					for (int i = 0; i < asset.Dialogs.Length(); i++) {
 						auto & name = asset.Dialogs[i].Name;
 						InterfaceControl Root = asset.Dialogs[i].Root;
-						BuildStyle(Styles, Root);
+						BuildStyle(Styles, Root, StyleReporter);
 						SafePointer<Template::ControlTemplate> control = CompileControl(this, Root, Template, 0, ResourceResolver, References);
 						if (control) Template.Dialog.Append(name, control);
 					}
@@ -529,7 +530,7 @@ namespace Engine
 					Template.Strings.Append(StringIDs.ElementByIndex(i).key, GetStringByID(StringIDs.ElementByIndex(i).value));
 				}
 			}
-			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
+			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver, IMissingStylesReporter * StyleReporter)
 			{
 				SafePointer<IResourceLoader> Loader;
 				if (ResourceLoader) {
@@ -574,7 +575,7 @@ namespace Engine
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Styles.Length(); i++) {
 						InterfaceDialog style = asset.Styles[i];
-						BuildStyle(Styles, style.Root);
+						BuildStyle(Styles, style.Root, StyleReporter);
 						Styles << style;
 					}
 				}
@@ -586,7 +587,7 @@ namespace Engine
 					for (int i = 0; i < asset.Dialogs.Length(); i++) {
 						auto & name = asset.Dialogs[i].Name;
 						InterfaceControl Root = asset.Dialogs[i].Root;
-						BuildStyle(Styles, Root);
+						BuildStyle(Styles, Root, StyleReporter);
 						SafePointer<Template::ControlTemplate> control = CompileControl(this, Root, Template, &Style, &style_resolver, References);
 						if (control) Template.Dialog.Append(name, control);
 					}
