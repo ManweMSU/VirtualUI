@@ -194,18 +194,6 @@ namespace Engine
 		void TextShape::ClearCache(void) noexcept { Info.SetReference(0); }
 		Shape * TextShape::Clone(void) const { return new TextShape(Position, Text, Font, TextColor, halign, valign); }
 		string TextShape::ToString(void) const { return L"TextShape"; }
-		ILineRenderingInfo::~ILineRenderingInfo(void) {}
-		LineShape::LineShape(const Rectangle & position, const Color & color, bool dotted) : LineColor(color), Dotted(dotted) { Position = position; }
-		LineShape::~LineShape(void) {}
-		void LineShape::Render(IRenderingDevice * Device, const Box & Outer) const noexcept
-		{
-			if (!Info) Info.SetReference(Device->CreateLineRenderingInfo(LineColor, Dotted));
-			Box my(Position, Outer);
-			Device->RenderLine(Info, my);
-		}
-		void LineShape::ClearCache(void) noexcept { Info.SetReference(0); }
-		Shape * LineShape::Clone(void) const { return new LineShape(Position, LineColor, Dotted); }
-		string LineShape::ToString(void) const { return L"LineShape"; }
 		IInversionEffectRenderingInfo::~IInversionEffectRenderingInfo(void) {}
 		InversionEffectShape::InversionEffectShape(const Rectangle & position) { Position = position; }
 		InversionEffectShape::~InversionEffectShape(void) {}

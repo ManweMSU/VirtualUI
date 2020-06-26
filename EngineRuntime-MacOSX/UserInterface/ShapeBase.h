@@ -165,11 +165,6 @@ namespace Engine
 			virtual void SetCharColors(const Array<uint8> & indicies) = 0;
 			virtual ~ITextRenderingInfo(void);
 		};
-		class ILineRenderingInfo : public Object
-		{
-		public:
-			virtual ~ILineRenderingInfo(void);
-		};
 
 		class ITexture : public Object
 		{
@@ -204,7 +199,6 @@ namespace Engine
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept  = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept = 0;
-			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept = 0;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
 			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
@@ -215,7 +209,6 @@ namespace Engine
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept = 0;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept = 0;
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept = 0;
-			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) noexcept = 0;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept = 0;
 			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept = 0;
 
@@ -324,20 +317,6 @@ namespace Engine
 		public:
 			TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align);
 			~TextShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
-		};
-		class LineShape : public Shape
-		{
-		private:
-			mutable SafePointer<ILineRenderingInfo> Info;
-			Color LineColor;
-			bool Dotted;
-		public:
-			LineShape(const Rectangle & position, const Color & color, bool dotted);
-			~LineShape(void) override;
 			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
 			void ClearCache(void) noexcept override;
 			Shape * Clone(void) const override;

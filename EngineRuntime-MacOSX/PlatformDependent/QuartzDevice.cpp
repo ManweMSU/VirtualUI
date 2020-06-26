@@ -244,14 +244,6 @@ namespace Engine
 			QuartzTextureRenderingInfo(void) {}
 			~QuartzTextureRenderingInfo(void) override {}
 		};
-		class QuartzLineRenderingInfo : public UI::ILineRenderingInfo
-		{
-		public:
-			double r, g, b, a;
-			bool dotted;
-			QuartzLineRenderingInfo(void) {}
-			~QuartzLineRenderingInfo(void) override {}
-		};
 
 		QuartzRenderingDevice::QuartzRenderingDevice(void) : BrushCache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), Clipping(0x20), _animation(0) {}
 		QuartzRenderingDevice::~QuartzRenderingDevice(void) { if (BitmapTarget) CGContextRelease(reinterpret_cast<CGContextRef>(_context)); }
@@ -453,17 +445,6 @@ namespace Engine
 			info->Retain();
 			return info;
 		}
-		UI::ILineRenderingInfo * QuartzRenderingDevice::CreateLineRenderingInfo(const UI::Color & color, bool dotted) noexcept
-		{
-			SafePointer<QuartzLineRenderingInfo> info = new QuartzLineRenderingInfo;
-			info->r = double(color.r) / 255.0;
-			info->g = double(color.g) / 255.0;
-			info->b = double(color.b) / 255.0;
-			info->a = double(color.a) / 255.0;
-			info->dotted = dotted;
-			info->Retain();
-			return info;
-		}
 
 		UI::ITexture * QuartzRenderingDevice::LoadTexture(Streaming::Stream * Source)
 		{
@@ -605,26 +586,6 @@ namespace Engine
 					double(info->run_length) / double(_scale), 2.0 * info->StrikeoutHalfWidth / double(_scale)));
 			}
 			if (Clip) CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
-		}
-		void QuartzRenderingDevice::RenderLine(UI::ILineRenderingInfo * Info, const UI::Box & At) noexcept
-		{
-			if (!Info) return;
-			auto info = static_cast<QuartzLineRenderingInfo *>(Info);
-			double s = double(_scale);
-			CGPoint p[2];
-			p[0].x = double(At.Left + 0.5) / s;
-			p[0].y = double(_height - At.Top - 0.5) / s;
-			p[1].x = double(At.Right + 0.5) / s;
-			p[1].y = double(_height - At.Bottom - 0.5) / s;
-			if (info->dotted) {
-				double l[2] = { 1.0 / s, 1.0 / s };
-				CGContextSetLineDash(reinterpret_cast<CGContextRef>(_context), 0.5 / s, l, 2);
-			} else {
-				CGContextSetLineDash(reinterpret_cast<CGContextRef>(_context), 0.0, 0, 0);
-			}
-			CGContextSetRGBStrokeColor(reinterpret_cast<CGContextRef>(_context), info->r, info->g, info->b, info->a);
-			CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), 1.0 / s);
-			CGContextStrokeLineSegments(reinterpret_cast<CGContextRef>(_context), p, 2);
 		}
 		void QuartzRenderingDevice::ApplyBlur(UI::IBlurEffectRenderingInfo * Info, const UI::Box & At) noexcept {}
 		void QuartzRenderingDevice::ApplyInversion(UI::IInversionEffectRenderingInfo * Info, const UI::Box & At, bool Blink) noexcept

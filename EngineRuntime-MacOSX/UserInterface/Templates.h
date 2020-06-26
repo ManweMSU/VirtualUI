@@ -222,18 +222,6 @@ namespace Engine
 				virtual bool IsDefined(void) const override;
 				virtual Engine::UI::Shape * Initialize(IArgumentProvider * provider) const override;
 			};
-			class LineShape : public Shape
-			{
-			public:
-				BasicTemplate<Color> LineColor;
-				bool Dotted;
-
-				LineShape(void);
-				virtual ~LineShape(void) override;
-				virtual string ToString(void) const override;
-				virtual bool IsDefined(void) const override;
-				virtual Engine::UI::Shape * Initialize(IArgumentProvider * provider) const override;
-			};
 
 			class ControlReflectedBase : public Reflection::Reflected
 			{

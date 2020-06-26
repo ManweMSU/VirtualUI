@@ -100,17 +100,6 @@ namespace Engine
 				SafePointer<IFont> Query = Font.Initialize(provider);
 				return new Engine::UI::TextShape(Position.Initialize(provider), Text.Initialize(provider), Query, TextColor.Initialize(provider), HorizontalAlign, VerticalAlign);
 			}
-			LineShape::LineShape(void) : Dotted(false), LineColor(Engine::UI::Color(0)) { Position = Engine::UI::Rectangle::Entire(); }
-			LineShape::~LineShape(void) {}
-			string LineShape::ToString(void) const { return L"Templates::LineShape"; }
-			bool LineShape::IsDefined(void) const
-			{
-				return Position.IsDefined() && LineColor.IsDefined();
-			}
-			Engine::UI::Shape * LineShape::Initialize(IArgumentProvider * provider) const
-			{
-				return new Engine::UI::LineShape(Position.Initialize(provider), LineColor.Initialize(provider), Dotted);
-			}
 			FrameShape::FrameShape(void) : Children(0x4), RenderMode(Engine::UI::FrameShape::FrameRenderMode::Normal), Opacity(1.0) { Position = Engine::UI::Rectangle::Entire(); }
 			FrameShape::~FrameShape(void) {}
 			string FrameShape::ToString(void) const { return L"Templates::FrameShape"; }
