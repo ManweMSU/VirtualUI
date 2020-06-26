@@ -744,7 +744,7 @@ namespace Engine
 					y += View->ElementHeight;
 					int ry = y;
 					if (Expanded) {
-						ILineRenderingInfo * line = 0;
+						ITextureRenderingInfo * line = 0;
 						if (enabled) line = View->_line_normal;
 						else line = View->_line_disabled;
 						int le = 0;
@@ -752,18 +752,18 @@ namespace Engine
 							int py = y;
 							le = Children[i].render(device, left_offset + View->ChildOffset, y, outer, enabled);
 							if (line && py + View->ElementHeight > 0) {
-								device->RenderLine(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
+								device->RenderTexture(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
 									outer.Top + py + (View->ElementHeight >> 1),
 									outer.Left + left_offset + View->ChildOffset + (Children[i].IsParent() ? 0 : View->ChildOffset),
-									outer.Top + py + (View->ElementHeight >> 1)));
+									outer.Top + py + (View->ElementHeight >> 1) + 1));
 							}
 						}
 						if (line) {
 							int s = sy + View->ElementHeight;
 							int e = le - (View->ElementHeight >> 1);
 							if (s < outer.Bottom && e > 0) {
-								device->RenderLine(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
-									outer.Top + s, outer.Left + left_offset + (View->ChildOffset >> 1), outer.Top + e));
+								device->RenderTexture(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
+									outer.Top + s, outer.Left + left_offset + (View->ChildOffset >> 1) + 1, outer.Top + e));
 							}
 						}
 					}
@@ -997,6 +997,21 @@ namespace Engine
 				if (view->_editor) view->ArrangeChildren();
 			}
 
+			void TreeView::generate_line_textures(void)
+			{
+				if (BranchColorNormal.a) {
+					_line_texture_normal = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+					for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+						if ((x + y) & 1) _line_texture_normal->SetPixel(x, y, BranchColorNormal); else _line_texture_normal->SetPixel(x, y, 0);
+					}
+				} else _line_texture_normal.SetReference(0);
+				if (BranchColorDisabled.a) {
+					_line_texture_disabled = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+					for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+						if ((x + y) & 1) _line_texture_disabled->SetPixel(x, y, BranchColorDisabled); else _line_texture_disabled->SetPixel(x, y, 0);
+					}
+				} else _line_texture_disabled.SetReference(0);
+			}
 			void TreeView::reset_scroll_ranges(void)
 			{
 				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
@@ -1114,8 +1129,14 @@ namespace Engine
 					ZeroArgumentProvider provider;
 					_view_node_expanded_hot.SetReference(ViewNodeOpenedHot->Initialize(&provider));
 				}
-				if (!_line_normal && BranchColorNormal.a) _line_normal.SetReference(device->CreateLineRenderingInfo(BranchColorNormal, true));
-				if (!_line_disabled && BranchColorDisabled.a) _line_disabled.SetReference(device->CreateLineRenderingInfo(BranchColorDisabled, true));
+				if (!_line_normal && _line_texture_normal) {
+					SafePointer<ITexture> texture = device->LoadTexture(_line_texture_normal);
+					_line_normal.SetReference(device->CreateTextureRenderingInfo(texture, Box(0, 0, 8, 8), true));
+				}
+				if (!_line_disabled && _line_texture_disabled) {
+					SafePointer<ITexture> texture = device->LoadTexture(_line_texture_disabled);
+					_line_disabled.SetReference(device->CreateTextureRenderingInfo(texture, Box(0, 0, 8, 8), true));
+				}
 				Box viewport = Box(at.Left + Border, at.Top + Border, at.Right - Border - (_svisible ? ScrollSize : 0), at.Bottom - Border);
 				device->PushClip(viewport);
 				int width = at.Right - at.Left - Border - Border - (_svisible ? ScrollSize : 0);
@@ -1140,6 +1161,7 @@ namespace Engine
 			}
 			void TreeView::ResetCache(void)
 			{
+				generate_line_textures();
 				int pos = (_scroll) ? _scroll->Position : 0;
 				if (_editor) _editor->ResetCache();
 				if (_scroll) _scroll->Destroy();

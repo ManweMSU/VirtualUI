@@ -348,13 +348,6 @@ namespace Engine
 				if (HighlightBrush) HighlightBrush->Release();
 			}
 		};
-		struct LineRenderingInfo : public ILineRenderingInfo
-		{
-			ID2D1SolidColorBrush * Brush;
-			ID2D1StrokeStyle * Stroke;
-			SafePointer<BarRenderingInfo> BrushInfo;
-			virtual ~LineRenderingInfo(void) override { if (Brush) Brush->Release(); if (Stroke) Stroke->Release(); }
-		};
 		struct BlurEffectRenderingInfo : public IBlurEffectRenderingInfo
 		{
 			SafePointer<ID2D1Effect> Effect;
@@ -820,26 +813,6 @@ namespace Engine
 			}
 			return Info;
 		}
-		ILineRenderingInfo * D2DRenderDevice::CreateLineRenderingInfo(const Color & color, bool dotted) noexcept
-		{
-			try {
-				Array<GradientPoint> array(1);
-				array << GradientPoint(color, 0.0f);
-				SafePointer<BarRenderingInfo> BarInfo = static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0));
-				LineRenderingInfo * Info = new (std::nothrow) LineRenderingInfo;
-				if (!Info) throw OutOfMemoryException();
-				Info->Stroke = 0;
-				Info->BrushInfo.SetReference(BarInfo);
-				Info->BrushInfo->Retain();
-				Info->Brush = Info->BrushInfo->Brush;
-				Info->Brush->AddRef();
-				if (dotted) {
-					float len[] = { 1.0f, 1.0f };
-					D2DFactory->CreateStrokeStyle(D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_FLAT, D2D1_LINE_JOIN_MITER, 10.0f, D2D1_DASH_STYLE_CUSTOM, 0.5f), len, 2, &Info->Stroke);
-				}
-				return Info;
-			} catch (...) { return 0; }
-		}
 		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source) { return StandaloneDevice::LoadTexture(Source); }
 		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source) { return StandaloneDevice::LoadTexture(Source); }
 		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source) { return StandaloneDevice::LoadTexture(Source); }
@@ -931,16 +904,6 @@ namespace Engine
 			}
 			Target->SetTransform(Transform);
 			if (Clip) PopClip();
-		}
-		void D2DRenderDevice::RenderLine(ILineRenderingInfo * Info, const Box & At) noexcept
-		{
-			if (!Info) return;
-			auto info = reinterpret_cast<LineRenderingInfo *>(Info);
-			if (info->Brush) {
-				D2D1_POINT_2F Start = D2D1::Point2F(float(At.Left) + 0.5f, float(At.Top) + 0.5f);
-				D2D1_POINT_2F End = D2D1::Point2F(float(At.Right) + 0.5f, float(At.Bottom) + 0.5f);
-				Target->DrawLine(Start, End, info->Brush, 1.0f, info->Stroke);
-			}
 		}
 		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept
 		{

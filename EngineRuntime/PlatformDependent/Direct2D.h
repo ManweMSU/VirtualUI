@@ -66,7 +66,6 @@ namespace Engine
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
-			virtual ILineRenderingInfo * CreateLineRenderingInfo(const Color & color, bool dotted) noexcept override;
 
 			virtual ITexture * LoadTexture(Streaming::Stream * Source) override;
 			virtual ITexture * LoadTexture(Engine::Codec::Image * Source) override;
@@ -77,7 +76,6 @@ namespace Engine
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override;
 			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept override;
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept override;
-			virtual void RenderLine(ILineRenderingInfo * Info, const Box & At) noexcept override;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept override;
 			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept override;
 

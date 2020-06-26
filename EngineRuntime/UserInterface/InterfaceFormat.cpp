@@ -334,25 +334,6 @@ namespace Engine
 					}
 					result->Retain();
 					return result;
-				} else if (shape.Class == L"Line") {
-					SafePointer<Template::LineShape> result = new Template::LineShape;
-					for (int i = 0; i < shape.IntegerValues.Length(); i++) {
-						if (shape.IntegerValues[i].Name == L"Dotted") {
-							result->Dotted = (shape.IntegerValues[i].Value != 0);
-						}
-					}
-					for (int i = 0; i < shape.ColorValues.Length(); i++) {
-						if (shape.ColorValues[i].Name == L"Color") {
-							result->LineColor = shape.ColorValues[i].ToTemplate(image);
-						}
-					}
-					for (int i = 0; i < shape.RectangleValues.Length(); i++) {
-						if (shape.RectangleValues[i].Name == L"Position") {
-							result->Position = shape.RectangleValues[i].ToTemplate();
-						}
-					}
-					result->Retain();
-					return result;
 				}
 				return 0;
 			}

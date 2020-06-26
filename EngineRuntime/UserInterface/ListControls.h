@@ -168,9 +168,12 @@ namespace Engine
 				SafePointer<Shape> _view_node_expanded_normal;
 				SafePointer<Shape> _view_node_expanded_disabled;
 				SafePointer<Shape> _view_node_expanded_hot;
-				SafePointer<ILineRenderingInfo> _line_normal;
-				SafePointer<ILineRenderingInfo> _line_disabled;
+				SafePointer<Codec::Frame> _line_texture_normal;
+				SafePointer<Codec::Frame> _line_texture_disabled;
+				SafePointer<ITextureRenderingInfo> _line_normal;
+				SafePointer<ITextureRenderingInfo> _line_disabled;
 
+				void generate_line_textures(void);
 				void reset_scroll_ranges(void);
 				void scroll_to_current(void);
 				void select(TreeViewItem * item);
