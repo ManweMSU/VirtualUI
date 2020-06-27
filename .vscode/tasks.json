@@ -68,6 +68,25 @@
             }
         },
         {
+            "label": "build shader tool",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/Tools/tools/ertbuild\"",
+            "args": [
+                "\"${workspaceRoot}/Tools/ertsc.project.ini\""
+
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
             "label": "build runtime",
             "type": "shell",
             "command": "\"${workspaceRoot}/Tools/tools/ertbuild\"",
@@ -220,6 +239,25 @@
             "args": [
                 "\"${workspaceRoot}/Tools/_build/macosx/ertsync\"",
                 "\"${workspaceRoot}/Tools/tools/ertsync\""
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "substitute shader tool",
+            "type": "shell",
+            "command": "cp",
+            "args": [
+                "\"${workspaceRoot}/Tools/_build/macosx/ertsc\"",
+                "\"${workspaceRoot}/Tools/tools/ertsc\""
             ],
             "group": "build",
             "presentation": {
