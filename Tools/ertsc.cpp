@@ -13,10 +13,10 @@ int Main(void)
 	console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::NewLineChar;
 	console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
 	if (args->Length() > 1) {
-		string source_file = args->ElementAt(1);
-		string air_file = IO::Path::GetFileNameWithoutExtension(source_file) + L".air";
-		string lib_file = IO::Path::GetFileNameWithoutExtension(source_file) + L".metallib";
-		string cxx_file = IO::Path::GetFileNameWithoutExtension(source_file) + L".cpp";
+		string source_file = IO::ExpandPath(args->ElementAt(1));
+		string air_file = IO::Path::GetDirectory(source_file) + L"/" + IO::Path::GetFileNameWithoutExtension(source_file) + L".air";
+		string lib_file = IO::Path::GetDirectory(source_file) + L"/" + IO::Path::GetFileNameWithoutExtension(source_file) + L".metallib";
+		string cxx_file = IO::Path::GetDirectory(source_file) + L"/" + IO::Path::GetFileNameWithoutExtension(source_file) + L".cpp";
 		Array<string> cmds(8);
 		cmds << L"-sdk"; cmds << L"macosx"; cmds << L"metal"; cmds << L"-c";
 		cmds << source_file; cmds << L"-o"; cmds << air_file;

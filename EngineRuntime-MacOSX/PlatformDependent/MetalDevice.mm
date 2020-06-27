@@ -1,0 +1,997 @@
+#include "MetalDevice.h"
+
+#include "QuartzDevice.h"
+#include "MetalDeviceShaders.h"
+
+using namespace Engine;
+using namespace Engine::Codec;
+using namespace Engine::Streaming;
+using namespace Engine::UI;
+namespace Engine
+{
+	namespace Cocoa
+	{
+		uint device_ref_cnt = 0;
+		uint queue_library_ref_cnt = 0;
+		id<MTLDevice> common_device = 0;
+		id<MTLCommandQueue> common_queue = 0;
+		id<MTLLibrary> common_library = 0;
+	}
+}
+
+@interface EngineMetalViewDelegate : NSObject<MTKViewDelegate>
+{
+@public
+	Engine::UI::IRenderingDevice * engine_device_ref;
+	Engine::UI::WindowStation * station_ref;
+	Engine::Cocoa::RenderContentsCallback callback_ref;
+	double w, h;
+}
+	- (nonnull instancetype) initWithMetalKitView:(nonnull MTKView *) view engineDevice: (Engine::UI::IRenderingDevice *) engine_device;
+	- (void) mtkView: (nonnull MTKView *) view drawableSizeWillChange: (CGSize) size;
+	- (void) drawInMTKView: (nonnull MTKView *) view;
+@end
+@implementation EngineMetalViewDelegate
+	- (nonnull instancetype) initWithMetalKitView:(nonnull MTKView *) view engineDevice: (Engine::UI::IRenderingDevice *) engine_device
+	{
+		self = [super init];
+		engine_device_ref = engine_device;
+		auto device = view.device;
+		Engine::Cocoa::SetMetalRenderingDeviceHandle(engine_device_ref, device);
+		if (Engine::Cocoa::common_library && Engine::Cocoa::common_queue) {
+			Engine::InterlockedIncrement(Engine::Cocoa::queue_library_ref_cnt);
+			Engine::Cocoa::SetMetalRenderingDeviceShaderLibrary(engine_device_ref, Engine::Cocoa::common_library, view.colorPixelFormat);
+			Engine::Cocoa::SetMetalRenderingDeviceQueue(engine_device_ref, Engine::Cocoa::common_queue);
+			[self mtkView: view drawableSizeWillChange: view.drawableSize];
+		} else {
+			@autoreleasepool {
+				const void * shaders_data;
+				int shaders_size;
+				NSError * error;
+				Engine::Cocoa::GetMetalDeviceShaders(&shaders_data, &shaders_size);
+				dispatch_data_t data_handle = dispatch_data_create(shaders_data, shaders_size, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+				auto library = [device newLibraryWithData: data_handle error: &error];
+				[data_handle release];
+				Engine::Cocoa::SetMetalRenderingDeviceShaderLibrary(engine_device_ref, library, view.colorPixelFormat);
+				if (!Engine::Cocoa::common_library) {
+					Engine::Cocoa::common_library = library;
+					[library retain];
+				}
+				[library release];
+				auto queue = [device newCommandQueue];
+				Engine::Cocoa::SetMetalRenderingDeviceQueue(engine_device_ref, queue);
+				if (!Engine::Cocoa::common_queue) {
+					Engine::Cocoa::common_queue = queue;
+					[queue retain];
+				}
+				[queue release];
+				[self mtkView: view drawableSizeWillChange: view.drawableSize];
+			}
+		}
+		return self;
+	}
+	- (void) mtkView: (nonnull MTKView *) view drawableSizeWillChange: (CGSize) size { w = max(size.width, 1.0); h = max(size.height, 1.0); }
+	- (void) drawInMTKView: (nonnull MTKView *) view
+	{
+		@autoreleasepool {
+			Engine::Cocoa::SetMetalRenderingDeviceState(engine_device_ref, w, h);
+			Engine::Cocoa::MetalRenderingDeviceBeginDraw(engine_device_ref, view.currentRenderPassDescriptor);
+			if (callback_ref) callback_ref(station_ref);
+			Engine::Cocoa::MetalRenderingDeviceEndDraw(engine_device_ref, view.currentDrawable, true);
+		}
+	}
+@end
+
+namespace Engine
+{
+	namespace Cocoa
+	{
+		id<MTLDevice> GetMetalDeviceHandle(UI::IRenderingDevice * device);
+		struct MetalVertex {
+			Math::Vector2f position;
+			Math::Vector4f color;
+			Math::Vector2f tex_coord;
+		};
+		struct TileShaderInfo {
+			UI::Box draw_rect;
+			UI::Point periods;
+		};
+		struct LayerInfo {
+			UI::Point viewport_size;
+			UI::Point viewport_offset;
+		};
+		struct LayerEndInfo {
+			UI::Box render_at;
+			UI::Point size;
+			float opacity;
+		};
+		class MetalBarRenderingInfo : public IBarRenderingInfo
+		{
+		public:
+			id<MTLBuffer> verticies;
+			int vertex_count;
+			bool use_clipping;
+			virtual ~MetalBarRenderingInfo(void) override { [verticies release]; }
+		};
+		class MetalTexture : public UI::ITexture
+		{
+		public:
+			UI::ITexture * base;
+			UI::IRenderingDevice * factory_device;
+			id<MTLTexture> frame;
+			int w, h;
+
+			MetalTexture(void) : base(0), factory_device(0), frame(0) {}
+			virtual ~MetalTexture(void) override
+			{
+				[frame release];
+				if (factory_device) factory_device->TextureWasDestroyed(this);
+				if (base) base->VersionWasDestroyed(this);
+			}
+			virtual int GetWidth(void) const noexcept override { return w; }
+			virtual int GetHeight(void) const noexcept override { return h; }
+
+			virtual void VersionWasDestroyed(UI::ITexture * texture) noexcept override { if (texture == base) { base = 0; factory_device = 0; } }
+			virtual void DeviceWasDestroyed(UI::IRenderingDevice * device) noexcept override { if (device == factory_device) { base = 0; factory_device = 0; } }
+			virtual void AddDeviceVersion(UI::IRenderingDevice * device, UI::ITexture * texture) noexcept override {}
+			virtual bool IsDeviceSpecific(void) const noexcept override { return true; }
+			virtual UI::IRenderingDevice * GetParentDevice(void) const noexcept override { return factory_device; }
+			virtual UI::ITexture * GetDeviceVersion(UI::IRenderingDevice * target_device) noexcept override
+			{
+				if (factory_device && target_device == factory_device) return this;
+				else if (!target_device) return base;
+				return 0;
+			}
+
+			virtual void Reload(Codec::Frame * source) override
+			{
+				if (!factory_device) return;
+				w = source->GetWidth();
+				h = source->GetHeight();
+				MTLPixelFormat pf;
+				SafePointer<Codec::Frame> conv;
+				if (source->GetAlphaFormat() != Codec::AlphaFormat::Normal || source->GetLineDirection() != Codec::LineDirection::TopDown ||
+					(source->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8 && source->GetPixelFormat() != Codec::PixelFormat::R8G8B8A8)) {
+					conv = source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown));
+				} else conv.SetRetain(source);
+				if (conv->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) pf = MTLPixelFormatRGBA8Unorm;
+				else if (conv->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) pf = MTLPixelFormatBGRA8Unorm;
+				auto dev = GetMetalDeviceHandle(factory_device);
+				[frame release];
+				@autoreleasepool {
+					frame = [dev newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pf width: w height: h mipmapped: NO]];
+					[frame replaceRegion: MTLRegionMake2D(0, 0, w, h) mipmapLevel: 0 withBytes: conv->GetData() bytesPerRow: 4 * w];
+				}
+			}
+			virtual void Reload(UI::ITexture * device_independent) override
+			{
+				CGImageRef image = static_cast<CGImageRef>(GetCoreImageFromTexture(device_independent));
+				CGDataProviderRef provider = CGImageGetDataProvider(image);
+				int width = CGImageGetWidth(image);
+				int height = CGImageGetHeight(image);
+				CFDataRef data = CGDataProviderCopyData(provider);
+				Codec::AlphaFormat alpha = Codec::AlphaFormat::Normal;
+				if (CGImageGetAlphaInfo(image) == kCGImageAlphaPremultipliedLast) alpha = Codec::AlphaFormat::Premultiplied;
+				SafePointer<Codec::Frame> cover = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, alpha, Codec::LineDirection::TopDown);
+				CFDataGetBytes(data, CFRangeMake(0, CFDataGetLength(data)), cover->GetData());
+				CFRelease(data);
+				Reload(cover);
+			}
+			virtual string ToString(void) const override { return L"Engine.Cocoa.MetalTexture"; }
+		};
+		class MetalTextureRenderingInfo : public ITextureRenderingInfo
+		{
+		public:
+			id<MTLBuffer> verticies;
+			int vertex_count;
+			SafePointer<MetalTexture> texture;
+			bool tile_render;
+
+			virtual ~MetalTextureRenderingInfo(void) override
+			{
+				[verticies release];
+			}
+		};
+		class MetalTextRenderingInfo : public UI::ITextRenderingInfo
+		{
+		public:
+			SafePointer<UI::ITextRenderingInfo> core_text_info;
+			id<MTLTexture> texture;
+			id<MTLBuffer> verticies;
+			int vertex_count;
+			int width, height;
+			int horz_align, vert_align;
+
+			MetalTextRenderingInfo(void) { texture = 0; verticies = 0; width = height = -1; }
+			~MetalTextRenderingInfo(void) override { [texture release]; [verticies release]; }
+
+			void UpdateTexture(void) { if (texture) [texture release]; texture = 0; width = height = -1; }
+			virtual void GetExtent(int & width, int & height) noexcept override { core_text_info->GetExtent(width, height); }
+			virtual void SetHighlightColor(const UI::Color & color) noexcept override { core_text_info->SetHighlightColor(color); UpdateTexture(); }
+			virtual void HighlightText(int Start, int End) noexcept override { core_text_info->HighlightText(Start, End); UpdateTexture(); }
+			virtual int TestPosition(int point) noexcept override { return core_text_info->TestPosition(point); }
+			virtual int EndOfChar(int Index) noexcept override { return core_text_info->EndOfChar(Index); }
+			virtual void SetCharPalette(const Array<UI::Color> & colors) override { core_text_info->SetCharPalette(colors); UpdateTexture(); }
+			virtual void SetCharColors(const Array<uint8> & indicies) override { core_text_info->SetCharColors(indicies); UpdateTexture(); }
+		};
+		class MetalInversionEffectRenderingInfo : public IInversionEffectRenderingInfo
+		{
+		public:
+			id<MTLBuffer> verticies;
+			int vertex_count;
+			virtual ~MetalInversionEffectRenderingInfo(void) override { [verticies release]; }
+		};
+		class MetalBlurEffectRenderingInfo : public IBlurEffectRenderingInfo
+		{
+		public:
+			float sigma;
+		};
+		class MetalDevice : public IRenderingDevice
+		{
+			struct tex_pair { ITexture * base; ITexture * spec; };
+			SafePointer<Cocoa::QuartzRenderingDevice> LoaderDevice;
+			Array<UI::Box> clipping;
+			Array<LayerInfo> layers;
+			id<MTLRenderPipelineState> main_state, tile_state, invert_state, layer_state, blur_state;
+			id<MTLTexture> white_texture;
+			id<MTLBuffer> viewport_data;
+			id<MTLBuffer> box_data;
+			id<MTLBuffer> layer_vertex;
+			Dictionary::ObjectCache<UI::Color, UI::IBarRenderingInfo> brush_cache;
+			SafePointer<UI::IInversionEffectRenderingInfo> inversion;
+			Array<tex_pair> texture_cache;
+		public:
+			id<MTLDevice> device;
+			id<MTLLibrary> library;
+			id<MTLCommandQueue> queue;
+			id<MTLCommandBuffer> command_buffer;
+			id<MTLRenderCommandEncoder> encoder;
+			MTLRenderPassDescriptor * base_descriptor;
+			Array< id<MTLTexture> > layer_texture;
+			Array<MTLRenderPassDescriptor *> desc;
+			Array<double> layer_alpha;
+			int width, height;
+			MTLPixelFormat pixel_format;
+			MTKView * metal_view;
+			NSObject * metal_view_delegate;
+
+			MetalDevice(void) : clipping(0x20), layers(0x20), brush_cache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), texture_cache(0x100),
+				layer_texture(0x10), layer_alpha(0x10)
+			{
+				LoaderDevice = new Cocoa::QuartzRenderingDevice();
+				main_state = tile_state = invert_state = layer_state = blur_state = 0;
+				white_texture = 0;
+				viewport_data = box_data = layer_vertex = 0;
+				device = 0; library = 0; queue = 0; command_buffer = 0; encoder = 0;
+				base_descriptor = 0; width = height = 1;
+				pixel_format = MTLPixelFormatInvalid;
+				metal_view = 0; metal_view_delegate = 0;
+			}
+			virtual ~MetalDevice(void) override
+			{
+				[main_state release];
+				[tile_state release];
+				[invert_state release];
+				[layer_state release];
+				[blur_state release];
+				[white_texture release];
+				[viewport_data release];
+				[box_data release];
+				[layer_vertex release];
+				[device release];
+				[library release];
+				[queue release];
+				if (metal_view) [metal_view setDelegate: 0];
+				[metal_view release];
+				[metal_view_delegate release];
+				if (InterlockedDecrement(device_ref_cnt) == 0) {
+					[common_device release];
+					common_device = 0;
+				}
+				if (InterlockedDecrement(queue_library_ref_cnt) == 0) {
+					[common_queue release];
+					[common_library release];
+					common_queue = 0;
+					common_library = 0;
+				}
+				for (int i = 0; i < texture_cache.Length(); i++) {
+					texture_cache[i].base->DeviceWasDestroyed(this);
+					texture_cache[i].spec->DeviceWasDestroyed(this);
+				}
+			}
+			virtual void TextureWasDestroyed(UI::ITexture * texture) noexcept override
+			{
+				for (int i = 0; i < texture_cache.Length(); i++) {
+					if (texture_cache[i].base == texture || texture_cache[i].spec == texture) {
+						texture_cache.Remove(i);
+						break;
+					}
+				}
+			}
+
+			void CreateRenderingStates(void)
+			{
+				[main_state release];
+				[tile_state release];
+				[invert_state release];
+				[layer_state release];
+				[blur_state release];
+				NSError * error;
+				id<MTLFunction> main_vertex = [library newFunctionWithName: @"MetalDeviceMainVertexShader"];
+				id<MTLFunction> main_pixel = [library newFunctionWithName: @"MetalDeviceMainPixelShader"];
+				id<MTLFunction> tile_vertex = [library newFunctionWithName: @"MetalDeviceTileVertexShader"];
+				id<MTLFunction> tile_pixel = [library newFunctionWithName: @"MetalDeviceTilePixelShader"];
+				id<MTLFunction> layer_vertex_f = [library newFunctionWithName: @"MetalDeviceLayerVertexShader"];
+				id<MTLFunction> layer_pixel_f = [library newFunctionWithName: @"MetalDeviceLayerPixelShader"];
+				id<MTLFunction> blur_vertex_f = [library newFunctionWithName: @"MetalDeviceBlurVertexShader"];
+				id<MTLFunction> blur_pixel_f = [library newFunctionWithName: @"MetalDeviceBlurPixelShader"];
+				{
+					MTLRenderPipelineDescriptor * descriptor = [[MTLRenderPipelineDescriptor alloc] init];
+					descriptor.colorAttachments[0].pixelFormat = pixel_format;
+					descriptor.colorAttachments[0].blendingEnabled = YES;
+					descriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
+					descriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOne;
+					descriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+					descriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					descriptor.vertexFunction = main_vertex;
+					descriptor.fragmentFunction = main_pixel;
+					main_state = [device newRenderPipelineStateWithDescriptor: descriptor error: &error];
+					descriptor.vertexFunction = tile_vertex;
+					descriptor.fragmentFunction = tile_pixel;
+					tile_state = [device newRenderPipelineStateWithDescriptor: descriptor error: &error];
+					descriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationSubtract;
+					descriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorZero;
+					descriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOne;
+					descriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorDestinationAlpha;
+					descriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOne;
+					descriptor.vertexFunction = main_vertex;
+					descriptor.fragmentFunction = main_pixel;
+					invert_state = [device newRenderPipelineStateWithDescriptor: descriptor error: &error];
+					descriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+					descriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
+					descriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOne;
+					descriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorOne;
+					descriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					descriptor.vertexFunction = layer_vertex_f;
+					descriptor.fragmentFunction = layer_pixel_f;
+					layer_state = [device newRenderPipelineStateWithDescriptor: descriptor error: &error];
+					descriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
+					descriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorZero;
+					descriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorOne;
+					descriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorZero;
+					descriptor.vertexFunction = blur_vertex_f;
+					descriptor.fragmentFunction = blur_pixel_f;
+					blur_state = [device newRenderPipelineStateWithDescriptor: descriptor error: &error];
+					[descriptor release];
+				}
+				[main_vertex release];
+				[main_pixel release];
+				[tile_vertex release];
+				[tile_pixel release];
+				[layer_vertex_f release];
+				[layer_pixel_f release];
+				[blur_vertex_f release];
+				[blur_pixel_f release];
+				if (viewport_data) [viewport_data release];
+				if (box_data) [box_data release];
+				if (white_texture) [white_texture release];
+				if (layer_vertex) [layer_vertex release];
+				viewport_data = [device newBufferWithLength: sizeof(LayerInfo) options: MTLResourceStorageModeShared];
+				box_data = [device newBufferWithLength: sizeof(LayerEndInfo) options: MTLResourceStorageModeShared];
+				@autoreleasepool {
+					UI::Color data(255, 255, 255, 255);
+					white_texture = [device newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatBGRA8Unorm width: 1 height: 1 mipmapped: NO]];
+					[white_texture replaceRegion: MTLRegionMake2D(0, 0, 1, 1) mipmapLevel: 0 withBytes: &data bytesPerRow: 4];
+				}
+				Array<MetalVertex> data(6);
+				data.SetLength(6);
+				data[0].position = Math::Vector2f(0.0f, 0.0f);
+				data[0].color = Math::Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+				data[0].tex_coord = Math::Vector2f(0.0f, 0.0f);
+				data[1].position = Math::Vector2f(1.0f, 0.0f);
+				data[1].color = data[0].color;
+				data[1].tex_coord = Math::Vector2f(1.0f, 0.0f);
+				data[2].position = Math::Vector2f(0.0f, 1.0f);
+				data[2].color = data[0].color;
+				data[2].tex_coord = Math::Vector2f(0.0f, 1.0f);
+				data[3] = data[1];
+				data[4] = data[2];
+				data[5].position = Math::Vector2f(1.0f, 1.0f);
+				data[5].color = data[0].color;
+				data[5].tex_coord = Math::Vector2f(1.0f, 1.0f);
+				layer_vertex = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+			}
+			void InitDraw(void)
+			{
+				[encoder setVertexBuffer: viewport_data offset: 0 atIndex: 0];
+				[encoder setVertexBuffer: box_data offset: 0 atIndex: 2];
+				LayerInfo info;
+				info.viewport_size = UI::Point(width, height);
+				info.viewport_offset = UI::Point(0, 0);
+				[encoder setVertexBytes: &info length: sizeof(info) atIndex: 0];
+				clipping.SetLength(1);
+				clipping.FirstElement() = UI::Box(0, 0, width, height);
+				layers.SetLength(1);
+				layers[0] = info;
+				layer_texture.Clear();
+				desc.SetLength(1);
+				desc[0] = base_descriptor;
+			}
+			static Math::Vector4f ColorVectorMake(UI::Color color)
+			{
+				return Math::Vector4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+			}
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) noexcept override
+			{
+				if (!gradient.Length()) return 0;
+				if (gradient.Length() == 1) return CreateBarRenderingInfo(gradient.FirstElement().Color);
+				Array<MetalVertex> data(0x10);
+				float dx = cos(angle), dy = sin(angle);
+				float mx = max(abs(dx), abs(dy));
+				dx /= mx; dy /= mx;
+				Math::Vector2f gradient_start(0.5f - dx / 2.0f, 0.5f + dy / 2.0f);
+				Math::Vector2f gradient_direction(dx, -dy);
+				Math::Vector2f gradient_normal = normalize(Math::Vector2f(dy, dx));
+				Math::Vector2f gradient_uv(0.0f, 0.0f);
+				data << MetalVertex{ gradient_start - gradient_direction + gradient_normal, ColorVectorMake(gradient.FirstElement().Color), gradient_uv };
+				data << MetalVertex{ gradient_start - gradient_direction - gradient_normal, ColorVectorMake(gradient.FirstElement().Color), gradient_uv };
+				for (int i = 0; i < gradient.Length(); i++) {
+					Math::Vector4f clr = ColorVectorMake(gradient[i].Color);
+					float pos = gradient[i].Position;
+					data << MetalVertex{ gradient_start + pos * gradient_direction + gradient_normal, clr, gradient_uv };
+					data << data[data.Length() - 2];
+					data << data[data.Length() - 2];
+					data << MetalVertex{ gradient_start + pos * gradient_direction - gradient_normal, clr, gradient_uv };
+					data << MetalVertex{ gradient_start + pos * gradient_direction + gradient_normal, clr, gradient_uv };
+					data << MetalVertex{ gradient_start + pos * gradient_direction - gradient_normal, clr, gradient_uv };
+				}
+				data << MetalVertex{ gradient_start + 2.0f * gradient_direction + gradient_normal, ColorVectorMake(gradient.LastElement().Color), gradient_uv };
+				data << data[data.Length() - 2];
+				data << data[data.Length() - 2];
+				data << MetalVertex{ gradient_start + 2.0f * gradient_direction - gradient_normal, ColorVectorMake(gradient.LastElement().Color), gradient_uv };
+				SafePointer<MetalBarRenderingInfo> info = new (std::nothrow) MetalBarRenderingInfo;
+				if (!info) return 0;
+				info->use_clipping = true;
+				info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+				info->vertex_count = data.Length();
+				info->Retain();
+				return info;
+			}
+			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept override
+			{
+				auto cached_info = brush_cache.ElementByKey(color);
+				if (cached_info) {
+					cached_info->Retain();
+					return cached_info;
+				}
+				Array<MetalVertex> data(6);
+				data.SetLength(6);
+				data[0].position = Math::Vector2f(0.0f, 0.0f);
+				data[0].color = ColorVectorMake(color);
+				data[0].tex_coord = Math::Vector2f(0.0f, 0.0f);
+				data[1].position = Math::Vector2f(1.0f, 0.0f);
+				data[1].color = data[0].color;
+				data[1].tex_coord = Math::Vector2f(0.0f, 0.0f);
+				data[2].position = Math::Vector2f(0.0f, 1.0f);
+				data[2].color = data[0].color;
+				data[2].tex_coord = Math::Vector2f(0.0f, 0.0f);
+				data[3] = data[1];
+				data[4] = data[2];
+				data[5].position = Math::Vector2f(1.0f, 1.0f);
+				data[5].color = data[0].color;
+				data[5].tex_coord = Math::Vector2f(0.0f, 0.0f);
+				SafePointer<MetalBarRenderingInfo> info = new (std::nothrow) MetalBarRenderingInfo;
+				if (!info) return 0;
+				info->use_clipping = false;
+				info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+				info->vertex_count = 6;
+				brush_cache.Append(color, info);
+				info->Retain();
+				return info;
+			}
+			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override
+			{
+				SafePointer<MetalBlurEffectRenderingInfo> info = new (std::nothrow) MetalBlurEffectRenderingInfo;
+				if (!info) return 0;
+				info->sigma = float(power);
+				info->Retain();
+				return info;
+			}
+			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept override
+			{
+				if (inversion) return inversion;
+				SafePointer<MetalInversionEffectRenderingInfo> info = new (std::nothrow) MetalInversionEffectRenderingInfo;
+				if (!info) return 0;
+				Array<MetalVertex> data(6);
+				data.SetLength(6);
+				data[0].position = Math::Vector2f(0.0f, 0.0f);
+				data[0].color = Math::Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+				data[0].tex_coord = Math::Vector2f(0.0f, 0.0f);
+				data[1].position = Math::Vector2f(1.0f, 0.0f);
+				data[1].color = data[0].color;
+				data[1].tex_coord = data[0].tex_coord;
+				data[2].position = Math::Vector2f(0.0f, 1.0f);
+				data[2].color = data[0].color;
+				data[2].tex_coord = data[0].tex_coord;
+				data[3] = data[1];
+				data[4] = data[2];
+				data[5].position = Math::Vector2f(1.0f, 1.0f);
+				data[5].color = data[0].color;
+				data[5].tex_coord = data[0].tex_coord;
+				info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+				info->vertex_count = 6;
+				info->Retain();
+				inversion.SetRetain(info);
+				return info;
+			}
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept override
+			{
+				SafePointer<MetalTexture> device_texture;
+				Box area = take_area;
+				if (area.Left < 0) area.Left = 0;
+				else if (area.Left > texture->GetWidth()) area.Left = texture->GetWidth();
+				if (area.Top < 0) area.Top = 0;
+				else if (area.Top > texture->GetHeight()) area.Top = texture->GetHeight();
+				if (area.Right < 0) area.Right = 0;
+				else if (area.Right > texture->GetWidth()) area.Right = texture->GetWidth();
+				if (area.Bottom < 0) area.Bottom = 0;
+				else if (area.Bottom > texture->GetHeight()) area.Bottom = texture->GetHeight();
+				if (texture->IsDeviceSpecific()) {
+					if (texture->GetParentDevice() == this) device_texture.SetRetain(static_cast<MetalTexture *>(texture));
+					else return 0;
+				} else {
+					ITexture * cached = texture->GetDeviceVersion(this);
+					if (!cached) {
+						device_texture.SetReference(new (std::nothrow) MetalTexture);
+						if (!device_texture) return 0;
+						texture->AddDeviceVersion(this, device_texture);
+						texture_cache << tex_pair{ texture, device_texture };
+						device_texture->base = texture;
+						device_texture->factory_device = this;
+						device_texture->Reload(texture);
+					} else device_texture.SetRetain(static_cast<MetalTexture *>(cached));
+				}
+				SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
+				if (!info) return 0;
+				info->verticies = 0;
+				if (fill_pattern) {
+					if (area.Left == 0 && area.Top == 0 && area.Right == device_texture->w && area.Bottom == device_texture->h) {
+						info->texture = device_texture;
+					} else {
+						SafePointer<MetalTexture> texture_cut = new (std::nothrow) MetalTexture;
+						if (!texture_cut) return 0;
+						MTLPixelFormat pixel_format = [device_texture->frame pixelFormat];
+						texture_cut->w = area.Right - area.Left;
+						texture_cut->h = area.Bottom - area.Top;
+						if (texture_cut->w < 1 || texture_cut->h < 1) return 0;
+						void * data_buffer = malloc(4 * texture_cut->w * texture_cut->h);
+						if (!data_buffer) return 0;
+						[device_texture->frame getBytes: data_buffer bytesPerRow: 4 * texture_cut->w fromRegion: MTLRegionMake2D(area.Left, area.Top, texture_cut->w, texture_cut->h) mipmapLevel: 0];
+						@autoreleasepool {
+							texture_cut->frame = [device newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pixel_format width: texture_cut->w height: texture_cut->h mipmapped: NO]];
+							[texture_cut->frame replaceRegion: MTLRegionMake2D(0, 0, texture_cut->w, texture_cut->h) mipmapLevel: 0 withBytes: data_buffer bytesPerRow: 4 * texture_cut->w];
+						}
+						free(data_buffer);
+						info->texture = texture_cut;
+					}
+					Array<MetalVertex> data(6);
+					data.SetLength(6);
+					data[0].position = Math::Vector2f(0.0f, 0.0f);
+					data[0].color = Math::Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+					data[0].tex_coord = Math::Vector2f(0.0f, 0.0f);
+					data[1].position = Math::Vector2f(1.0f, 0.0f);
+					data[1].color = data[0].color;
+					data[1].tex_coord = Math::Vector2f(0.0f, 0.0f);
+					data[2].position = Math::Vector2f(0.0f, 1.0f);
+					data[2].color = data[0].color;
+					data[2].tex_coord = Math::Vector2f(0.0f, 0.0f);
+					data[3] = data[1];
+					data[4] = data[2];
+					data[5].position = Math::Vector2f(1.0f, 1.0f);
+					data[5].color = data[0].color;
+					data[5].tex_coord = Math::Vector2f(0.0f, 0.0f);
+					info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+					info->vertex_count = 6;
+					info->tile_render = true;
+					info->Retain();
+					return info;
+				} else {
+					info->texture = device_texture;
+					Array<MetalVertex> data(6);
+					data.SetLength(6);
+					data[0].position = Math::Vector2f(0.0f, 0.0f);
+					data[0].color = Math::Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+					data[0].tex_coord = Math::Vector2f(area.Left, area.Top);
+					data[1].position = Math::Vector2f(1.0f, 0.0f);
+					data[1].color = data[0].color;
+					data[1].tex_coord = Math::Vector2f(area.Right, area.Top);
+					data[2].position = Math::Vector2f(0.0f, 1.0f);
+					data[2].color = data[0].color;
+					data[2].tex_coord = Math::Vector2f(area.Left, area.Bottom);
+					data[3] = data[1];
+					data[4] = data[2];
+					data[5].position = Math::Vector2f(1.0f, 1.0f);
+					data[5].color = data[0].color;
+					data[5].tex_coord = Math::Vector2f(area.Right, area.Bottom);
+					info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+					info->vertex_count = 6;
+					info->tile_render = false;
+					info->Retain();
+					return info;
+				}
+			}
+			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return nullptr;
+			}
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
+			{
+				SafePointer<ITextRenderingInfo> core_info = LoaderDevice->CreateTextRenderingInfo(font, text, 0, 0, color);
+				SafePointer<MetalTextRenderingInfo> info = new MetalTextRenderingInfo;
+				info->core_text_info = core_info;
+				info->horz_align = horizontal_align;
+				info->vert_align = vertical_align;
+				info->Retain();
+				return info;
+			}
+			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
+			{
+				SafePointer<ITextRenderingInfo> core_info = LoaderDevice->CreateTextRenderingInfo(font, text, 0, 0, color);
+				SafePointer<MetalTextRenderingInfo> info = new MetalTextRenderingInfo;
+				info->core_text_info = core_info;
+				info->horz_align = horizontal_align;
+				info->vert_align = vertical_align;
+				info->Retain();
+				return info;
+			}
+			virtual ITexture * LoadTexture(Streaming::Stream * Source) override { return LoaderDevice->LoadTexture(Source); }
+			virtual ITexture * LoadTexture(Codec::Image * Source) override { return LoaderDevice->LoadTexture(Source); }
+			virtual ITexture * LoadTexture(Codec::Frame * Source) override { return LoaderDevice->LoadTexture(Source); }
+			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return LoaderDevice->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
+			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override
+			{
+				if (!desc.LastElement()) { return; }
+				if (At.Right <= At.Left || At.Bottom <= At.Top) return;
+				if (!Info) return;
+				auto info = reinterpret_cast<MetalBarRenderingInfo *>(Info);
+				if (info->use_clipping) PushClip(At);
+				[encoder setRenderPipelineState: main_state];
+				[encoder setFragmentTexture: white_texture atIndex: 0];
+				[encoder setVertexBytes: &At length: sizeof(At) atIndex: 2];
+				[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
+				[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+				if (info->use_clipping) PopClip();
+			}
+			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept override
+			{
+				if (!desc.LastElement()) { return; }
+				if (At.Right <= At.Left || At.Bottom <= At.Top) return;
+				if (!Info) return;
+				auto info = reinterpret_cast<MetalTextureRenderingInfo *>(Info);
+				if (info->tile_render) {
+					TileShaderInfo tile_info;
+					tile_info.draw_rect = At;
+					tile_info.periods = UI::Point(info->texture->GetWidth(), info->texture->GetHeight());
+					[encoder setRenderPipelineState: tile_state];
+					[encoder setFragmentTexture: info->texture->frame atIndex: 0];
+					[encoder setVertexBytes: &tile_info length: sizeof(tile_info) atIndex: 2];
+					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
+					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+				} else {
+					[encoder setRenderPipelineState: main_state];
+					[encoder setFragmentTexture: info->texture->frame atIndex: 0];
+					[encoder setVertexBytes: &At length: sizeof(At) atIndex: 2];
+					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
+					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+				}
+			}
+			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept override
+			{
+				if (!desc.LastElement()) { return; }
+				if (At.Right <= At.Left || At.Bottom <= At.Top) return;
+				if (!Info) return;
+				auto info = reinterpret_cast<MetalTextRenderingInfo *>(Info);
+				if (!info->texture) {
+					info->core_text_info->GetExtent(info->width, info->height);
+					if (info->width > 0 && info->height > 0) {
+						SafePointer<Drawing::ITextureRenderingDevice> inner_device = QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(info->width, info->height, Math::Color(0.0, 0.0, 0.0, 0.0));
+						inner_device->BeginDraw();
+						inner_device->RenderText(info->core_text_info, Box(0, 0, info->width, info->height), false);
+						inner_device->EndDraw();
+						SafePointer<Codec::Frame> backbuffer = inner_device->GetRenderTargetAsFrame();
+						backbuffer = backbuffer->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown));
+						@autoreleasepool {
+							info->texture = [device newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm width: info->width height: info->height mipmapped: NO]];
+							[info->texture replaceRegion: MTLRegionMake2D(0, 0, info->width, info->height) mipmapLevel: 0 withBytes: backbuffer->GetData() bytesPerRow: backbuffer->GetScanLineLength()];
+						}
+						if (info->verticies) [info->verticies release];
+						Array<MetalVertex> data(6);
+						data.SetLength(6);
+						data[0].position = Math::Vector2f(0.0f, 0.0f);
+						data[0].color = Math::Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+						data[0].tex_coord = Math::Vector2f(0.0f, 0.0f);
+						data[1].position = Math::Vector2f(1.0f, 0.0f);
+						data[1].color = data[0].color;
+						data[1].tex_coord = Math::Vector2f(info->width, 0.0f);
+						data[2].position = Math::Vector2f(0.0f, 1.0f);
+						data[2].color = data[0].color;
+						data[2].tex_coord = Math::Vector2f(0.0f, info->height);
+						data[3] = data[1];
+						data[4] = data[2];
+						data[5].position = Math::Vector2f(1.0f, 1.0f);
+						data[5].color = data[0].color;
+						data[5].tex_coord = Math::Vector2f(info->width, info->height);
+						info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
+						info->vertex_count = 6;
+					}
+				}
+				if (info->texture) {
+					if (Clip) PushClip(At);
+					Box render_at;
+					if (info->horz_align == 0) {
+						render_at.Left = At.Left;
+						render_at.Right = At.Left + info->width;
+					} else if (info->horz_align == 1) {
+						render_at.Left = (At.Left + At.Right - info->width) / 2;
+						render_at.Right = render_at.Left + info->width;
+					} else {
+						render_at.Right = At.Right;
+						render_at.Left = At.Right - info->width;
+					}
+					if (info->vert_align == 0) {
+						render_at.Top = At.Top;
+						render_at.Bottom = At.Top + info->height;
+					} else if (info->vert_align == 1) {
+						render_at.Top = (At.Top + At.Bottom - info->height) / 2;
+						render_at.Bottom = render_at.Top + info->height;
+					} else {
+						render_at.Bottom = At.Bottom;
+						render_at.Top = At.Bottom - info->height;
+					}
+					[encoder setRenderPipelineState: main_state];
+					[encoder setFragmentTexture: info->texture atIndex: 0];
+					[encoder setVertexBytes: &render_at length: sizeof(render_at) atIndex: 2];
+					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
+					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+					if (Clip) PopClip();
+				}
+			}
+			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept override
+			{
+				if (!desc.LastElement() || desc.Length() > 1 || !Info) return;
+				if (At.Right <= At.Left || At.Bottom <= At.Top) return;
+				auto info = reinterpret_cast<MetalBlurEffectRenderingInfo *>(Info);
+				auto blur_box = UI::Box::Intersect(clipping.LastElement(), At);
+				if (blur_box.Right <= blur_box.Left || blur_box.Bottom <= blur_box.Top) return;
+				auto size = UI::Point(blur_box.Right - blur_box.Left, blur_box.Bottom - blur_box.Top);
+				[encoder endEncoding];
+				id<MTLTexture> blur_region;
+				@autoreleasepool {
+					auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pixel_format width: size.x height: size.y mipmapped: NO];
+					[tex_desc setUsage: MTLTextureUsageShaderRead];
+					blur_region = [device newTextureWithDescriptor: tex_desc];
+				}
+				id<MTLTexture> render_target = [[[base_descriptor colorAttachments] objectAtIndexedSubscript: 0] texture];
+				id<MTLBlitCommandEncoder> blit_encoder = [command_buffer blitCommandEncoder];
+				[blit_encoder copyFromTexture: render_target sourceSlice: 0 sourceLevel: 0 sourceOrigin: MTLOriginMake(blur_box.Left, blur_box.Top, 0)
+					sourceSize: MTLSizeMake(size.x, size.y, 1) toTexture: blur_region destinationSlice: 0 destinationLevel: 0 destinationOrigin: MTLOriginMake(0, 0, 0)];
+				[blit_encoder endEncoding];
+				auto prev_desc = desc.LastElement();
+				[[[prev_desc colorAttachments] objectAtIndexedSubscript: 0] setLoadAction: MTLLoadActionLoad];
+				encoder = [command_buffer renderCommandEncoderWithDescriptor: prev_desc];
+				[encoder setVertexBuffer: viewport_data offset: 0 atIndex: 0];
+				[encoder setVertexBuffer: box_data offset: 0 atIndex: 2];
+				[encoder setVertexBytes: &layers.LastElement() length: sizeof(LayerInfo) atIndex: 0];
+				auto & box = clipping.LastElement();
+				auto & layer = layers.LastElement();
+				MTLScissorRect scissor;
+				scissor.x = box.Left - layer.viewport_offset.x;
+				scissor.y = box.Top - layer.viewport_offset.y;
+				scissor.width = box.Right - box.Left;
+				scissor.height = box.Bottom - box.Top;
+				[encoder setScissorRect: scissor];
+				LayerEndInfo rinfo;
+				rinfo.render_at = blur_box;
+				rinfo.size = size;
+				rinfo.opacity = info->sigma;
+				[encoder setRenderPipelineState: blur_state];
+				[encoder setFragmentTexture: blur_region atIndex: 0];
+				[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
+				[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
+				[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: 6];
+				[blur_region release];
+			}
+			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept override
+			{
+				if (!desc.LastElement()) { return; }
+				if (At.Right <= At.Left || At.Bottom <= At.Top) return;
+				if (Blink && !CaretShouldBeVisible()) return;
+				if (!Info) return;
+				auto info = reinterpret_cast<MetalInversionEffectRenderingInfo *>(Info);
+				[encoder setRenderPipelineState: invert_state];
+				[encoder setFragmentTexture: white_texture atIndex: 0];
+				[encoder setVertexBytes: &At length: sizeof(At) atIndex: 2];
+				[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
+				[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+			}
+			virtual void PushClip(const Box & Rect) noexcept override
+			{
+				clipping << UI::Box::Intersect(clipping.LastElement(), Rect);
+				auto & box = clipping.LastElement();
+				auto & layer = layers.LastElement();
+				MTLScissorRect scissor;
+				scissor.x = box.Left - layer.viewport_offset.x;
+				scissor.y = box.Top - layer.viewport_offset.y;
+				scissor.width = box.Right - box.Left;
+				scissor.height = box.Bottom - box.Top;
+				[encoder setScissorRect: scissor];
+			}
+			virtual void PopClip(void) noexcept override
+			{
+				clipping.RemoveLast();
+				auto & box = clipping.LastElement();
+				auto & layer = layers.LastElement();
+				MTLScissorRect scissor;
+				scissor.x = box.Left - layer.viewport_offset.x;
+				scissor.y = box.Top - layer.viewport_offset.y;
+				scissor.width = box.Right - box.Left;
+				scissor.height = box.Bottom - box.Top;
+				[encoder setScissorRect: scissor];
+			}
+			virtual void BeginLayer(const Box & Rect, double Opacity) noexcept override
+			{
+				if (!desc.LastElement()) { desc << 0; return; }
+				layer_alpha << Opacity;
+				auto layer_box = UI::Box::Intersect(clipping.LastElement(), Rect);
+				if (layer_box.Right <= layer_box.Left || layer_box.Bottom <= layer_box.Top) { desc << 0; return; }
+				clipping << layer_box;
+				LayerInfo info;
+				info.viewport_size = UI::Point(layer_box.Right - layer_box.Left, layer_box.Bottom - layer_box.Top);
+				info.viewport_offset = UI::Point(layer_box.Left, layer_box.Top);
+				layers << info;
+				id<MTLTexture> render_target;
+				@autoreleasepool {
+					auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pixel_format width: info.viewport_size.x height: info.viewport_size.y mipmapped: NO];
+					[tex_desc setUsage: MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget];
+					render_target = [device newTextureWithDescriptor: tex_desc];
+				}
+				layer_texture << render_target;
+				auto layer_desc = [MTLRenderPassDescriptor renderPassDescriptor];
+				auto attachment = [[MTLRenderPassColorAttachmentDescriptor alloc] init];
+				[attachment setTexture: render_target];
+				[attachment setClearColor: MTLClearColorMake(0.0, 0.0, 0.0, 0.0)];
+				[attachment setLoadAction: MTLLoadActionClear];
+				[[layer_desc colorAttachments] setObject: attachment atIndexedSubscript: 0];
+				[attachment release];
+				[encoder endEncoding];
+				desc << layer_desc;
+				encoder = [command_buffer renderCommandEncoderWithDescriptor: layer_desc];
+				[encoder setVertexBuffer: viewport_data offset: 0 atIndex: 0];
+				[encoder setVertexBuffer: box_data offset: 0 atIndex: 2];
+				[encoder setVertexBytes: &info length: sizeof(info) atIndex: 0];
+			}
+			virtual void EndLayer(void) noexcept override
+			{
+				if (!desc.LastElement()) { desc.RemoveLast(); return; }
+				[encoder endEncoding];
+				desc.RemoveLast();
+				auto prev_desc = desc.LastElement();
+				[[[prev_desc colorAttachments] objectAtIndexedSubscript: 0] setLoadAction: MTLLoadActionLoad];
+				encoder = [command_buffer renderCommandEncoderWithDescriptor: prev_desc];
+				[encoder setVertexBuffer: viewport_data offset: 0 atIndex: 0];
+				[encoder setVertexBuffer: box_data offset: 0 atIndex: 2];
+				[encoder setVertexBytes: &layers[layers.Length() - 2] length: sizeof(LayerInfo) atIndex: 0];
+				auto & cinfo = layers.LastElement();
+				LayerEndInfo info;
+				info.render_at = UI::Box(cinfo.viewport_offset.x, cinfo.viewport_offset.y,
+					cinfo.viewport_offset.x + cinfo.viewport_size.x, cinfo.viewport_offset.y + cinfo.viewport_size.y);
+				info.size = UI::Point(cinfo.viewport_size.x, cinfo.viewport_size.y);
+				info.opacity = layer_alpha.LastElement();
+				[encoder setRenderPipelineState: layer_state];
+				[encoder setFragmentTexture: layer_texture.LastElement() atIndex: 0];
+				[encoder setVertexBytes: &info length: sizeof(info) atIndex: 2];
+				[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
+				[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: 6];
+				[layer_texture.LastElement() release];
+				layer_texture.RemoveLast();
+				layer_alpha.RemoveLast();
+				layers.RemoveLast();
+				PopClip();
+			}
+			virtual void SetTimerValue(uint32 time) noexcept override { LoaderDevice->SetTimerValue(time); }
+			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override { return LoaderDevice->GetCaretBlinkHalfTime(); }
+			virtual bool CaretShouldBeVisible(void) noexcept override { return LoaderDevice->CaretShouldBeVisible(); }
+			virtual void ClearCache(void) noexcept override { brush_cache.Clear(); inversion.SetReference(0); }
+			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override { return 0; }
+		};
+
+		UI::IRenderingDevice * CreateMetalDeviceAndView(NSView * parent_view, UI::WindowStation * station, RenderContentsCallback callback)
+		{
+			SafePointer<MetalDevice> engine_device = new (std::nothrow) MetalDevice;
+			if (!engine_device) return 0;
+			id<MTLDevice> device;
+			if (common_device) {
+				InterlockedIncrement(device_ref_cnt);
+				device = common_device;
+			} else device = common_device = MTLCreateSystemDefaultDevice();
+			if (!device) return 0;
+			[device retain];
+			MTKView * metal_view = [[MTKView alloc] init];
+			engine_device->metal_view = metal_view;
+			[metal_view setDevice: device];
+			[device release];
+			[metal_view setFrameSize: [parent_view frame].size];
+			[metal_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
+			[metal_view setWantsLayer: YES];
+			[metal_view setFramebufferOnly: NO];
+			[metal_view setPaused: YES];
+			[metal_view setEnableSetNeedsDisplay: YES];
+			[metal_view setClearColor: MTLClearColorMake(0.0, 0.0, 0.0, 0.0)];
+			[[metal_view layer] setOpaque: NO];
+			[parent_view addSubview: metal_view];
+			[parent_view setWantsLayer: YES];
+			EngineMetalViewDelegate * delegate = [[EngineMetalViewDelegate alloc] initWithMetalKitView: metal_view engineDevice: engine_device];
+			delegate->station_ref = station;
+			delegate->callback_ref = callback;
+			engine_device->metal_view_delegate = delegate;
+			[metal_view setDelegate: delegate];
+			engine_device->Retain();
+			return engine_device;
+		}
+		void SetMetalRenderingDeviceHandle(UI::IRenderingDevice * device, id<MTLDevice> mtl_device)
+		{
+			[reinterpret_cast<MetalDevice *>(device)->device release];
+			[mtl_device retain];
+			reinterpret_cast<MetalDevice *>(device)->device = mtl_device;
+		}
+		void SetMetalRenderingDeviceShaderLibrary(UI::IRenderingDevice * device, id<MTLLibrary> mtl_shaders, MTLPixelFormat format)
+		{
+			[reinterpret_cast<MetalDevice *>(device)->library release];
+			[mtl_shaders retain];
+			reinterpret_cast<MetalDevice *>(device)->library = mtl_shaders;
+			reinterpret_cast<MetalDevice *>(device)->pixel_format = format;
+			reinterpret_cast<MetalDevice *>(device)->CreateRenderingStates();
+		}
+		void SetMetalRenderingDeviceQueue(UI::IRenderingDevice * device, id<MTLCommandQueue> mtl_queue)
+		{
+			[reinterpret_cast<MetalDevice *>(device)->queue release];
+			[mtl_queue retain];
+			reinterpret_cast<MetalDevice *>(device)->queue = mtl_queue;
+		}
+		void SetMetalRenderingDeviceState(UI::IRenderingDevice * device, int view_width, int view_height)
+		{
+			reinterpret_cast<MetalDevice *>(device)->width = view_width;
+			reinterpret_cast<MetalDevice *>(device)->height = view_height;
+		}
+		id<MTLDevice> GetMetalDeviceHandle(UI::IRenderingDevice * device)
+		{
+			return static_cast<MetalDevice *>(device)->device;
+		}
+		void MetalRenderingDeviceBeginDraw(UI::IRenderingDevice * device, MTLRenderPassDescriptor * pass_descriptor)
+		{
+			auto dev = reinterpret_cast<MetalDevice *>(device);
+			dev->base_descriptor = pass_descriptor;
+			dev->command_buffer = [dev->queue commandBuffer];
+			dev->encoder = [dev->command_buffer renderCommandEncoderWithDescriptor: pass_descriptor];
+			[dev->encoder setViewport: (MTLViewport) { 0.0, 0.0, double(dev->width), double(dev->height), 0.0, 1.0 }];
+			dev->InitDraw();
+		}
+		void MetalRenderingDeviceEndDraw(UI::IRenderingDevice * device, id<MTLDrawable> drawable, bool wait)
+		{
+			auto dev = reinterpret_cast<MetalDevice *>(device);
+			[dev->encoder endEncoding];
+			[dev->command_buffer presentDrawable: drawable];
+			[dev->command_buffer commit];
+			if (wait) [dev->command_buffer waitUntilCompleted];
+			dev->encoder = 0;
+			dev->command_buffer = 0;
+		}
+		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device) { [reinterpret_cast<MetalDevice *>(device)->metal_view setNeedsDisplay: YES]; }
+	}
+}

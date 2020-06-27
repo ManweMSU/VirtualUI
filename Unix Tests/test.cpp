@@ -284,7 +284,6 @@ int Main(void)
 	MacOSXSpecific::SetEffectBackgroundMaterial(w4, MacOSXSpecific::EffectBackgroundMaterial::Popover);
 	if (w4) w4->Show(true);
 
-	UI::Windows::PushUserNotification(L"Privet", L"Kornevgen pidor!");
 	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();
 	status->SetIconColorUsage(UI::Windows::StatusBarIconColorUsage::Monochromic);
 	{

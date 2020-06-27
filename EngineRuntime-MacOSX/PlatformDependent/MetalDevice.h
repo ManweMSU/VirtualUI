@@ -1,0 +1,24 @@
+#pragma once
+
+#include "../UserInterface/ControlBase.h"
+
+#import "Foundation/Foundation.h"
+#import "AppKit/AppKit.h"
+#import "Metal/Metal.h"
+#import "MetalKit/MetalKit.h"
+
+namespace Engine
+{
+	namespace Cocoa
+	{
+		typedef void (* RenderContentsCallback) (UI::WindowStation * station);
+        UI::IRenderingDevice * CreateMetalDeviceAndView(NSView * parent_view, UI::WindowStation * station, RenderContentsCallback callback);
+		void SetMetalRenderingDeviceHandle(UI::IRenderingDevice * device, id<MTLDevice> mtl_device);
+		void SetMetalRenderingDeviceShaderLibrary(UI::IRenderingDevice * device, id<MTLLibrary> mtl_shaders, MTLPixelFormat format);
+		void SetMetalRenderingDeviceQueue(UI::IRenderingDevice * device, id<MTLCommandQueue> mtl_queue);
+		void SetMetalRenderingDeviceState(UI::IRenderingDevice * device, int view_width, int view_height);
+		void MetalRenderingDeviceBeginDraw(UI::IRenderingDevice * device, MTLRenderPassDescriptor * pass_descriptor);
+		void MetalRenderingDeviceEndDraw(UI::IRenderingDevice * device, id<MTLDrawable> drawable, bool wait);
+		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device);
+	}
+}

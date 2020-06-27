@@ -5,6 +5,7 @@
 
 #include "CocoaInterop.h"
 #include "QuartzDevice.h"
+#include "MetalDevice.h"
 #include "CocoaKeyCodes.h"
 #include "KeyCodes.h"
 #include "AppleCodec.h"
@@ -20,6 +21,7 @@
 using namespace Engine::UI;
 
 static void RenderStationContent(Engine::UI::WindowStation * station);
+static Engine::UI::IRenderingDevice * GetStationMetalDevice(Engine::UI::WindowStation * station);
 static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
 static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy)
 {
@@ -240,8 +242,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 - (void) drawRect : (NSRect) dirtyRect
 {
-	// TODO: IF QUARTZ DEVICE
-	if (station) {
+	if (station && !GetStationMetalDevice(station)) {
 		RenderStationContent(station);
 	}
 }
@@ -273,8 +274,9 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 - (void) require_contents_update
 {
-	// TODO: IF QUARTZ DEVICE
-	[self setNeedsDisplay: YES];
+	if (!station) return;
+	if (GetStationMetalDevice(station)) Engine::Cocoa::InvalidateMetalDeviceContents(GetStationMetalDevice(station));
+	else [self setNeedsDisplay: YES];
 }
 - (void) mouseMoved: (NSEvent *) event
 {
@@ -770,10 +772,11 @@ namespace Engine
 			bool _visible = false;
 			NativeStation * _parent = 0;
 			Array<EngineRuntimeTimerTarget *> _timers;
-			SafePointer<Cocoa::QuartzRenderingDevice> RenderingDevice;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
 		public:
 			SafePointer<Object> TouchBar;
+			SafePointer<Cocoa::QuartzRenderingDevice> RenderingDevice;
+			SafePointer<UI::IRenderingDevice> MetalRenderingDevice;
 			class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
 			{
 				Template::ControlTemplate * _template = 0;
@@ -797,9 +800,12 @@ namespace Engine
 		
 			NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory) : _window(window), WindowStation(factory), _slaves(0x10), _timers(0x10)
 			{
-				// TODO: HANDLE METAL DEVICE
-				RenderingDevice = new Cocoa::QuartzRenderingDevice;
-				SetRenderingDevice(RenderingDevice);
+				auto feature_class = MacOSXSpecific::GetRenderingDeviceFeatureClass();
+				if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::DontCare) feature_class = MacOSXSpecific::RenderingDeviceFeatureClass::Metal;
+				if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::Quartz) {
+					RenderingDevice = new Cocoa::QuartzRenderingDevice;
+					SetRenderingDevice(RenderingDevice);
+				} else if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::Metal) {}
 				_arrow.SetReference(new CocoaCursor([NSCursor arrowCursor], false));
 				_beam.SetReference(new CocoaCursor([NSCursor IBeamCursor], false));
 				_link.SetReference(new CocoaCursor([NSCursor pointingHandCursor], false));
@@ -918,6 +924,9 @@ namespace Engine
 
 			virtual void OnDesktopDestroy(void) override
 			{
+				RenderingDevice.SetReference(0);
+				MetalRenderingDevice.SetReference(0);
+				SetRenderingDevice(0);
 				EngineRuntimeWindowDelegate * dlg = (EngineRuntimeWindowDelegate *) [_window delegate];
 				((EngineRuntimeContentView *) __GetEngineViewFromWindow(_window))->station = 0;
 				if (dlg) dlg->station = 0;
@@ -1032,7 +1041,6 @@ namespace Engine
 			}
 			void RenderContent(void)
 			{
-				// TODO: HANDLE METAL DEVICE
 				if (RenderingDevice) {
 					RenderingDevice->SetTimerValue(GetTimerValue());
 					Animate();
@@ -1041,6 +1049,10 @@ namespace Engine
 					UI::Box box = UI::Box(0, 0, int(rect.size.width * scale), int(rect.size.height * scale));
 					CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
 					RenderingDevice->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
+					Render();
+				} else if (MetalRenderingDevice) {
+					MetalRenderingDevice->SetTimerValue(GetTimerValue());
+					Animate();
 					Render();
 				}
 			}
@@ -1193,7 +1205,6 @@ namespace Engine
 		}
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
 		{
-			// TODO: HANDLE METAL DEVICE
 			InitializeWindowSystem();
 			UI::Template::Controls::FrameExtendedData * ex_data = 0;
 			for (int i = 0; i < Template->Children.Length(); i++) {
@@ -1273,6 +1284,10 @@ namespace Engine
 			} else {
 				[window setContentView: view];
 			}
+			if (!station->RenderingDevice) {
+				station->MetalRenderingDevice = Cocoa::CreateMetalDeviceAndView(view, station, RenderStationContent);
+				station->SetRenderingDevice(station->MetalRenderingDevice);
+			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
 				[window setTitlebarAppearsTransparent: YES];
 			}
@@ -1334,7 +1349,6 @@ namespace Engine
 		}
 		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
 		{
-			// TODO: HANDLE METAL DEVICE
 			InitializeWindowSystem();
 			Box ClientBox(Position, GetScreenDimensions());
 			Box ClientArea(0, 0, ClientBox.Right - ClientBox.Left, ClientBox.Bottom - ClientBox.Top);
@@ -1365,6 +1379,10 @@ namespace Engine
 				[fx_view release];
 			} else {
 				[window setContentView: view];
+			}
+			if (!station->RenderingDevice) {
+				station->MetalRenderingDevice = Cocoa::CreateMetalDeviceAndView(view, station, RenderStationContent);
+				station->SetRenderingDevice(station->MetalRenderingDevice);
 			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
 				[window setTitlebarAppearsTransparent: YES];
@@ -1611,6 +1629,10 @@ namespace Engine
 static void RenderStationContent(Engine::UI::WindowStation * station)
 {
 	static_cast<Engine::NativeWindows::NativeStation *>(station)->RenderContent();
+}
+static Engine::UI::IRenderingDevice * GetStationMetalDevice(Engine::UI::WindowStation * station)
+{
+	return static_cast<Engine::NativeWindows::NativeStation *>(station)->MetalRenderingDevice;
 }
 static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 {

@@ -224,11 +224,13 @@ namespace Engine
 
 		void WindowStation::DeconstructChain(Window * window)
 		{
-			if (CaptureWindow.Inner() == window) ReleaseCapture();
-			if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
-			if (ActiveWindow.Inner() == window) SetActiveWindow(TopLevelWindow);
-			if (ExclusiveWindow.Inner() == window) SetExclusiveWindow(0);
-			SetTimer(window, 0);
+			if (Works) {
+				if (CaptureWindow.Inner() == window) ReleaseCapture();
+				if (FocusedWindow.Inner() == window) SetFocus(TopLevelWindow);
+				if (ActiveWindow.Inner() == window) SetActiveWindow(TopLevelWindow);
+				if (ExclusiveWindow.Inner() == window) SetExclusiveWindow(0);
+				SetTimer(window, 0);
+			}
 			for (int i = 0; i < window->Children.Length(); i++) DeconstructChain(&window->Children[i]);
 			window->Parent.SetReference(0);
 			window->Station.SetReference(0);
