@@ -2,6 +2,9 @@
 
 #include "QuartzDevice.h"
 #include "MetalDeviceShaders.h"
+#include "CocoaInterop.h"
+
+#import "QuartzCore/QuartzCore.h"
 
 using namespace Engine;
 using namespace Engine::Codec;
@@ -11,75 +14,70 @@ namespace Engine
 {
 	namespace Cocoa
 	{
-		uint device_ref_cnt = 0;
-		uint queue_library_ref_cnt = 0;
-		id<MTLDevice> common_device = 0;
-		id<MTLCommandQueue> common_queue = 0;
-		id<MTLLibrary> common_library = 0;
+		CocoaPointer< id<MTLDevice> > common_device;
+		CocoaPointer< id<MTLCommandQueue> > common_queue;
+		CocoaPointer< id<MTLLibrary> > common_library;
 	}
 }
 
-@interface EngineMetalViewDelegate : NSObject<MTKViewDelegate>
+@interface EngineMetalView : NSView<CALayerDelegate>
 {
 @public
 	Engine::UI::IRenderingDevice * engine_device_ref;
 	Engine::UI::WindowStation * station_ref;
 	Engine::Cocoa::RenderContentsCallback callback_ref;
+	CAMetalLayer * layer;
 	double w, h;
 }
-	- (nonnull instancetype) initWithMetalKitView:(nonnull MTKView *) view engineDevice: (Engine::UI::IRenderingDevice *) engine_device;
-	- (void) mtkView: (nonnull MTKView *) view drawableSizeWillChange: (CGSize) size;
-	- (void) drawInMTKView: (nonnull MTKView *) view;
+- (instancetype) init;
+- (void) displayLayer: (CALayer *) layer;
+- (void) setFrame: (NSRect) frame;
+- (void) setFrameSize: (NSSize) newSize;
 @end
-@implementation EngineMetalViewDelegate
-	- (nonnull instancetype) initWithMetalKitView:(nonnull MTKView *) view engineDevice: (Engine::UI::IRenderingDevice *) engine_device
-	{
-		self = [super init];
-		engine_device_ref = engine_device;
-		auto device = view.device;
-		Engine::Cocoa::SetMetalRenderingDeviceHandle(engine_device_ref, device);
-		if (Engine::Cocoa::common_library && Engine::Cocoa::common_queue) {
-			Engine::InterlockedIncrement(Engine::Cocoa::queue_library_ref_cnt);
-			Engine::Cocoa::SetMetalRenderingDeviceShaderLibrary(engine_device_ref, Engine::Cocoa::common_library, view.colorPixelFormat);
-			Engine::Cocoa::SetMetalRenderingDeviceQueue(engine_device_ref, Engine::Cocoa::common_queue);
-			[self mtkView: view drawableSizeWillChange: view.drawableSize];
-		} else {
-			@autoreleasepool {
-				const void * shaders_data;
-				int shaders_size;
-				NSError * error;
-				Engine::Cocoa::GetMetalDeviceShaders(&shaders_data, &shaders_size);
-				dispatch_data_t data_handle = dispatch_data_create(shaders_data, shaders_size, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
-				auto library = [device newLibraryWithData: data_handle error: &error];
-				[data_handle release];
-				Engine::Cocoa::SetMetalRenderingDeviceShaderLibrary(engine_device_ref, library, view.colorPixelFormat);
-				if (!Engine::Cocoa::common_library) {
-					Engine::Cocoa::common_library = library;
-					[library retain];
-				}
-				[library release];
-				auto queue = [device newCommandQueue];
-				Engine::Cocoa::SetMetalRenderingDeviceQueue(engine_device_ref, queue);
-				if (!Engine::Cocoa::common_queue) {
-					Engine::Cocoa::common_queue = queue;
-					[queue retain];
-				}
-				[queue release];
-				[self mtkView: view drawableSizeWillChange: view.drawableSize];
-			}
-		}
-		return self;
-	}
-	- (void) mtkView: (nonnull MTKView *) view drawableSizeWillChange: (CGSize) size { w = max(size.width, 1.0); h = max(size.height, 1.0); }
-	- (void) drawInMTKView: (nonnull MTKView *) view
-	{
+@implementation EngineMetalView
+- (instancetype) init
+{
+	[super init];
+	layer = [CAMetalLayer layer];
+	[layer setDelegate: self];
+	[self setLayer: layer];
+	[self setWantsLayer: YES];
+	[layer setDevice: Engine::Cocoa::common_device];
+	[layer setFramebufferOnly: NO];
+	[layer setOpaque: NO];
+	w = h = 1;
+	return self;
+}
+- (void) displayLayer: (CALayer *) sender
+{
+	if (engine_device_ref) {
 		@autoreleasepool {
+			id<CAMetalDrawable> drawable = [layer nextDrawable];
+			MTLRenderPassDescriptor * descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+			descriptor.colorAttachments[0].texture = drawable.texture;
+			descriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+			descriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			Engine::Cocoa::SetMetalRenderingDeviceState(engine_device_ref, w, h);
-			Engine::Cocoa::MetalRenderingDeviceBeginDraw(engine_device_ref, view.currentRenderPassDescriptor);
+			Engine::Cocoa::MetalRenderingDeviceBeginDraw(engine_device_ref, descriptor);
 			if (callback_ref) callback_ref(station_ref);
-			Engine::Cocoa::MetalRenderingDeviceEndDraw(engine_device_ref, view.currentDrawable, true);
+			Engine::Cocoa::MetalRenderingDeviceEndDraw(engine_device_ref, drawable, true);
 		}
 	}
+}
+- (void) setFrame: (NSRect) frame
+{
+	[super setFrame: frame];
+	double scale = [[self window] backingScaleFactor];
+	w = max(frame.size.width * scale, 1.0); h = max(frame.size.height * scale, 1.0);
+	[layer setDrawableSize: NSMakeSize(w, h)]; [layer setNeedsDisplay];
+}
+- (void) setFrameSize: (NSSize) newSize
+{
+	[super setFrameSize: newSize];
+	double scale = [[self window] backingScaleFactor];
+	w = max(newSize.width * scale, 1.0); h = max(newSize.height * scale, 1.0);
+	[layer setDrawableSize: NSMakeSize(w, h)]; [layer setNeedsDisplay];
+}
 @end
 
 namespace Engine
@@ -197,13 +195,11 @@ namespace Engine
 		public:
 			SafePointer<UI::ITextRenderingInfo> core_text_info;
 			id<MTLTexture> texture;
-			id<MTLBuffer> verticies;
-			int vertex_count;
 			int width, height;
 			int horz_align, vert_align;
 
-			MetalTextRenderingInfo(void) { texture = 0; verticies = 0; width = height = -1; }
-			~MetalTextRenderingInfo(void) override { [texture release]; [verticies release]; }
+			MetalTextRenderingInfo(void) { texture = 0; width = height = -1; }
+			~MetalTextRenderingInfo(void) override { [texture release]; }
 
 			void UpdateTexture(void) { if (texture) [texture release]; texture = 0; width = height = -1; }
 			virtual void GetExtent(int & width, int & height) noexcept override { core_text_info->GetExtent(width, height); }
@@ -252,8 +248,7 @@ namespace Engine
 			Array<double> layer_alpha;
 			int width, height;
 			MTLPixelFormat pixel_format;
-			MTKView * metal_view;
-			NSObject * metal_view_delegate;
+			EngineMetalView * metal_view;
 
 			MetalDevice(void) : clipping(0x20), layers(0x20), brush_cache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), texture_cache(0x100),
 				layer_texture(0x10), layer_alpha(0x10)
@@ -265,7 +260,7 @@ namespace Engine
 				device = 0; library = 0; queue = 0; command_buffer = 0; encoder = 0;
 				base_descriptor = 0; width = height = 1;
 				pixel_format = MTLPixelFormatInvalid;
-				metal_view = 0; metal_view_delegate = 0;
+				metal_view = 0;
 			}
 			virtual ~MetalDevice(void) override
 			{
@@ -281,19 +276,12 @@ namespace Engine
 				[device release];
 				[library release];
 				[queue release];
-				if (metal_view) [metal_view setDelegate: 0];
+				if (metal_view) {
+					metal_view->engine_device_ref = 0;
+					metal_view->station_ref = 0;
+					metal_view->callback_ref = 0;
+				}
 				[metal_view release];
-				[metal_view_delegate release];
-				if (InterlockedDecrement(device_ref_cnt) == 0) {
-					[common_device release];
-					common_device = 0;
-				}
-				if (InterlockedDecrement(queue_library_ref_cnt) == 0) {
-					[common_queue release];
-					[common_library release];
-					common_queue = 0;
-					common_library = 0;
-				}
 				for (int i = 0; i < texture_cache.Length(); i++) {
 					texture_cache[i].base->DeviceWasDestroyed(this);
 					texture_cache[i].spec->DeviceWasDestroyed(this);
@@ -705,60 +693,42 @@ namespace Engine
 						inner_device->RenderText(info->core_text_info, Box(0, 0, info->width, info->height), false);
 						inner_device->EndDraw();
 						SafePointer<Codec::Frame> backbuffer = inner_device->GetRenderTargetAsFrame();
-						backbuffer = backbuffer->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown));
 						@autoreleasepool {
 							info->texture = [device newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm width: info->width height: info->height mipmapped: NO]];
 							[info->texture replaceRegion: MTLRegionMake2D(0, 0, info->width, info->height) mipmapLevel: 0 withBytes: backbuffer->GetData() bytesPerRow: backbuffer->GetScanLineLength()];
 						}
-						if (info->verticies) [info->verticies release];
-						Array<MetalVertex> data(6);
-						data.SetLength(6);
-						data[0].position = Math::Vector2f(0.0f, 0.0f);
-						data[0].color = Math::Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
-						data[0].tex_coord = Math::Vector2f(0.0f, 0.0f);
-						data[1].position = Math::Vector2f(1.0f, 0.0f);
-						data[1].color = data[0].color;
-						data[1].tex_coord = Math::Vector2f(info->width, 0.0f);
-						data[2].position = Math::Vector2f(0.0f, 1.0f);
-						data[2].color = data[0].color;
-						data[2].tex_coord = Math::Vector2f(0.0f, info->height);
-						data[3] = data[1];
-						data[4] = data[2];
-						data[5].position = Math::Vector2f(1.0f, 1.0f);
-						data[5].color = data[0].color;
-						data[5].tex_coord = Math::Vector2f(info->width, info->height);
-						info->verticies = [device newBufferWithBytes: data.GetBuffer() length: sizeof(MetalVertex) * data.Length() options: MTLResourceStorageModeShared];
-						info->vertex_count = 6;
 					}
 				}
 				if (info->texture) {
 					if (Clip) PushClip(At);
-					Box render_at;
+					LayerEndInfo rinfo;
 					if (info->horz_align == 0) {
-						render_at.Left = At.Left;
-						render_at.Right = At.Left + info->width;
+						rinfo.render_at.Left = At.Left;
+						rinfo.render_at.Right = At.Left + info->width;
 					} else if (info->horz_align == 1) {
-						render_at.Left = (At.Left + At.Right - info->width) / 2;
-						render_at.Right = render_at.Left + info->width;
+						rinfo.render_at.Left = (At.Left + At.Right - info->width) / 2;
+						rinfo.render_at.Right = rinfo.render_at.Left + info->width;
 					} else {
-						render_at.Right = At.Right;
-						render_at.Left = At.Right - info->width;
+						rinfo.render_at.Right = At.Right;
+						rinfo.render_at.Left = At.Right - info->width;
 					}
 					if (info->vert_align == 0) {
-						render_at.Top = At.Top;
-						render_at.Bottom = At.Top + info->height;
+						rinfo.render_at.Top = At.Top;
+						rinfo.render_at.Bottom = At.Top + info->height;
 					} else if (info->vert_align == 1) {
-						render_at.Top = (At.Top + At.Bottom - info->height) / 2;
-						render_at.Bottom = render_at.Top + info->height;
+						rinfo.render_at.Top = (At.Top + At.Bottom - info->height) / 2;
+						rinfo.render_at.Bottom = rinfo.render_at.Top + info->height;
 					} else {
-						render_at.Bottom = At.Bottom;
-						render_at.Top = At.Bottom - info->height;
+						rinfo.render_at.Bottom = At.Bottom;
+						rinfo.render_at.Top = At.Bottom - info->height;
 					}
-					[encoder setRenderPipelineState: main_state];
+					rinfo.size = UI::Point(info->width, info->height);
+					rinfo.opacity = 1.0f;
+					[encoder setRenderPipelineState: layer_state];
 					[encoder setFragmentTexture: info->texture atIndex: 0];
-					[encoder setVertexBytes: &render_at length: sizeof(render_at) atIndex: 2];
-					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
-					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+					[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
+					[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
+					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: 6];
 					if (Clip) PopClip();
 				}
 			}
@@ -916,31 +886,45 @@ namespace Engine
 			SafePointer<MetalDevice> engine_device = new (std::nothrow) MetalDevice;
 			if (!engine_device) return 0;
 			id<MTLDevice> device;
-			if (common_device) {
-				InterlockedIncrement(device_ref_cnt);
-				device = common_device;
-			} else device = common_device = MTLCreateSystemDefaultDevice();
+			if (common_device) device = common_device;
+			else device = common_device = MTLCreateSystemDefaultDevice();
 			if (!device) return 0;
 			[device retain];
-			MTKView * metal_view = [[MTKView alloc] init];
+			if (!common_library || !common_queue) {
+				@autoreleasepool {
+					const void * shaders_data;
+					int shaders_size;
+					NSError * error;
+					GetMetalDeviceShaders(&shaders_data, &shaders_size);
+					dispatch_data_t data_handle = dispatch_data_create(shaders_data, shaders_size, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+					auto library = [device newLibraryWithData: data_handle error: &error];
+					[data_handle release];
+					if (!common_library) {
+						common_library = library;
+						[library retain];
+					}
+					[library release];
+					auto queue = [device newCommandQueue];
+					if (!common_queue) {
+						common_queue = queue;
+						[queue retain];
+					}
+					[queue release];
+				}
+			}
+			EngineMetalView * metal_view = [[EngineMetalView alloc] init];
 			engine_device->metal_view = metal_view;
-			[metal_view setDevice: device];
+			metal_view->engine_device_ref = engine_device;
+			metal_view->station_ref = station;
+			metal_view->callback_ref = callback;
+			SetMetalRenderingDeviceHandle(engine_device, common_device);
+			SetMetalRenderingDeviceShaderLibrary(engine_device, common_library, [metal_view->layer pixelFormat]);
+			SetMetalRenderingDeviceQueue(engine_device, common_queue);
 			[device release];
-			[metal_view setFrameSize: [parent_view frame].size];
-			[metal_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
-			[metal_view setWantsLayer: YES];
-			[metal_view setFramebufferOnly: NO];
-			[metal_view setPaused: YES];
-			[metal_view setEnableSetNeedsDisplay: YES];
-			[metal_view setClearColor: MTLClearColorMake(0.0, 0.0, 0.0, 0.0)];
-			[[metal_view layer] setOpaque: NO];
 			[parent_view addSubview: metal_view];
 			[parent_view setWantsLayer: YES];
-			EngineMetalViewDelegate * delegate = [[EngineMetalViewDelegate alloc] initWithMetalKitView: metal_view engineDevice: engine_device];
-			delegate->station_ref = station;
-			delegate->callback_ref = callback;
-			engine_device->metal_view_delegate = delegate;
-			[metal_view setDelegate: delegate];
+			[metal_view setFrameSize: [parent_view frame].size];
+			[metal_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
 			engine_device->Retain();
 			return engine_device;
 		}
@@ -992,6 +976,6 @@ namespace Engine
 			dev->encoder = 0;
 			dev->command_buffer = 0;
 		}
-		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device) { [reinterpret_cast<MetalDevice *>(device)->metal_view setNeedsDisplay: YES]; }
+		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device) { [[reinterpret_cast<MetalDevice *>(device)->metal_view layer] setNeedsDisplay]; }
 	}
 }

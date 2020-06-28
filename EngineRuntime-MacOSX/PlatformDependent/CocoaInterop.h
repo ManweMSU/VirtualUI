@@ -14,5 +14,24 @@ namespace Engine
         string EngineString(NSString * str);
         NSImage * CocoaImage(Codec::Frame * frame, double scale_factor = 1.0) __attribute((ns_returns_retained));
         Codec::Frame * EngineImage(NSImage * image);
+        template <class O> class CocoaPointer
+        {
+            O object;
+        public:
+            CocoaPointer(void) { object = 0; }
+            CocoaPointer(O src) { object = src; }
+            CocoaPointer(const CocoaPointer & ptr) { object = ptr.object; if (object) [object retain]; }
+            ~CocoaPointer(void) { if (object) [object release]; }
+            CocoaPointer & operator = (const CocoaPointer & ptr)
+            {
+                if (this == &ptr) return *this;
+                if (object) [object release];
+                object = ptr.object; if (object) [object retain];
+                return *this;
+            }
+
+            operator O (void) { return object; }
+            operator bool (void) { return object != 0; }
+        };
     }
 }

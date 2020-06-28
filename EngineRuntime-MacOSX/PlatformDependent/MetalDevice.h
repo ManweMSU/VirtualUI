@@ -5,7 +5,6 @@
 #import "Foundation/Foundation.h"
 #import "AppKit/AppKit.h"
 #import "Metal/Metal.h"
-#import "MetalKit/MetalKit.h"
 
 namespace Engine
 {
