@@ -194,17 +194,27 @@ namespace Engine
 		{
 		public:
 			SafePointer<UI::ITextRenderingInfo> core_text_info;
+			SafePointer<UI::IBarRenderingInfo> highlight_info;
 			id<MTLTexture> texture;
 			int width, height;
 			int horz_align, vert_align;
+			int highlight_left, highlight_right;
+			UI::Color highlight_color;
 
-			MetalTextRenderingInfo(void) { texture = 0; width = height = -1; }
+			MetalTextRenderingInfo(void) { texture = 0; width = height = highlight_left = highlight_right = -1; highlight_color = 0; }
 			~MetalTextRenderingInfo(void) override { [texture release]; }
 
 			void UpdateTexture(void) { if (texture) [texture release]; texture = 0; width = height = -1; }
 			virtual void GetExtent(int & width, int & height) noexcept override { core_text_info->GetExtent(width, height); }
-			virtual void SetHighlightColor(const UI::Color & color) noexcept override { core_text_info->SetHighlightColor(color); UpdateTexture(); }
-			virtual void HighlightText(int Start, int End) noexcept override { core_text_info->HighlightText(Start, End); UpdateTexture(); }
+			virtual void SetHighlightColor(const UI::Color & color) noexcept override { if (color != highlight_color) { highlight_color = color; highlight_info.SetReference(0); } }
+			virtual void HighlightText(int Start, int End) noexcept override
+			{
+				if (Start < 0 || Start == End) highlight_left = highlight_right = -1;
+				else {
+					if (Start == 0) highlight_left = 0; else highlight_left = EndOfChar(Start - 1);
+					highlight_right = EndOfChar(End - 1);
+				}
+			}
 			virtual int TestPosition(int point) noexcept override { return core_text_info->TestPosition(point); }
 			virtual int EndOfChar(int Index) noexcept override { return core_text_info->EndOfChar(Index); }
 			virtual void SetCharPalette(const Array<UI::Color> & colors) override { core_text_info->SetCharPalette(colors); UpdateTexture(); }
@@ -487,7 +497,10 @@ namespace Engine
 			}
 			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept override
 			{
-				if (inversion) return inversion;
+				if (inversion) {
+					inversion->Retain();
+					return inversion;
+				}
 				SafePointer<MetalInversionEffectRenderingInfo> info = new (std::nothrow) MetalInversionEffectRenderingInfo;
 				if (!info) return 0;
 				Array<MetalVertex> data(6);
@@ -724,6 +737,11 @@ namespace Engine
 					}
 					rinfo.size = UI::Point(info->width, info->height);
 					rinfo.opacity = 1.0f;
+					if (info->highlight_right > info->highlight_left) {
+						if (!info->highlight_info) info->highlight_info.SetReference(CreateBarRenderingInfo(info->highlight_color));
+						UI::Box highlight(rinfo.render_at.Left + info->highlight_left, At.Top, rinfo.render_at.Left + info->highlight_right, At.Bottom);
+						RenderBar(info->highlight_info, highlight);
+					}
 					[encoder setRenderPipelineState: layer_state];
 					[encoder setFragmentTexture: info->texture atIndex: 0];
 					[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
