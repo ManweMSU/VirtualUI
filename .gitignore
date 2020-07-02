@@ -26,6 +26,7 @@ _build/
 _obj/
 .stat/
 tools_windows/
+tools_windows_64/
 tools_macosx/
 *.ecsa
 *.ecsal
