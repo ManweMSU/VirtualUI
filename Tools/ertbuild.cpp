@@ -619,7 +619,7 @@ int Main(void)
 				string out_path = prj_cfg_path + string(IO::PathChar) + output_location_raw;
 				if (output_location_raw[0] == L'$') out_path = output_location_raw.Fragment(1, -1);
 				string platform_path = prj_cfg->GetValueString(output_location_platform_raw);
-				if (!platform_path.Length() && debug) prj_cfg->GetValueString(L"OutputLocation" + compile_system + bitness);
+				if (!platform_path.Length() && debug) platform_path = prj_cfg->GetValueString(L"OutputLocation" + compile_system + bitness);
 				if (platform_path.Length()) out_path += string(IO::PathChar) + platform_path;
 				if (!outpath) {
 					try_create_directory_full(out_path);

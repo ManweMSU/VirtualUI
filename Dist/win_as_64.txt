@@ -2,16 +2,12 @@
 set metadata include
 set notation binary
 set format e64
-append "../EngineRuntime-MacOSX/*" rec
+append "../EngineRuntime/*.cpp;*.h" rec
 set user 1
-append "tools_macosx/*"
+append "tools_windows_64/*"
 set user 2
 append "test/*"
 set user 3
-select name "*.DS_Store"
-exclude
-select name "*._*"
-exclude
 select name "*_build*"
 exclude
 invert

@@ -6,7 +6,7 @@ append "../EngineRuntime/*.cpp;*.h" rec
 set user 1
 append "tools_windows/*"
 set user 2
-append "test_windows/*"
+append "test/*"
 set user 3
 select name "*_build*"
 exclude
