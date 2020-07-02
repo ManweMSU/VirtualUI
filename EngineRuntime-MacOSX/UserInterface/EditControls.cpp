@@ -1026,7 +1026,8 @@ namespace Engine
 					_save = true;
 					_deferred_scroll = true;
 					_deferred_update = true;
-					for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i);
+					_text_info.Clear();
+				for (int i = 0; i < _content.lines.Length(); i++) _text_info.Append(0);
 					if (_hook) _hook->CaretPositionChanged(this);
 					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 				}
@@ -1038,7 +1039,8 @@ namespace Engine
 					_save = true;
 					_deferred_scroll = true;
 					_deferred_update = true;
-					for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i);
+					_text_info.Clear();
+					for (int i = 0; i < _content.lines.Length(); i++) _text_info.Append(0);
 					if (_hook) _hook->CaretPositionChanged(this);
 					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
 				}
