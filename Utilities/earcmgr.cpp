@@ -799,6 +799,8 @@ int Main(void)
         bool archive = false;
 		bool break_on_error = false;
         string list_file;
+        SafePointer<ITextReader> input;
+        input.SetRetain(&console);
         for (int i = 1; i < args->Length(); i++) {
             if (string::CompareIgnoreCase(args->ElementAt(i), L":create") == 0) {
                 create = true;
@@ -807,9 +809,8 @@ int Main(void)
             } else if (string::CompareIgnoreCase(args->ElementAt(i), L":cs") == 0 && i < args->Length() - 1) {
                 i++;
                 try {
-                    handle input = IO::CreateFile(args->ElementAt(i), IO::AccessRead, IO::OpenExisting);
-                    IO::SetStandardInput(input);
-                    IO::CloseFile(input);
+                    SafePointer<FileStream> input_stream = new FileStream(args->ElementAt(i), AccessRead, OpenExisting);
+                    input.SetReference(new TextReader(input_stream));
                     prompt = false;
 					break_on_error = true;
                 }
@@ -844,29 +845,35 @@ int Main(void)
                 if (!list.Archive(console)) return 1;
                 return 0;
             }
-            IO::Console new_console;
             command_spelling.IsolatedChars << L'?';
-            while (!new_console.EofReached()) {
+            while (!input->EofReached()) {
                 if (prompt) {
-                    new_console << IO::NewLineChar << IO::Path::GetFileName(list.ListName).UpperCase() << L"> ";
+                    console << IO::NewLineChar << IO::Path::GetFileName(list.ListName).UpperCase() << L"> ";
                 }
-                string command = new_console.ReadLine();
+                string command = input->ReadLine();
+                if (!command.Length()) continue;
                 SafePointer<Array<Syntax::Token>> decomposed;
                 try {
                     decomposed = Syntax::ParseText(command, command_spelling);
                     decomposed->RemoveLast();
-                    if (!Execute(*decomposed, new_console)) {
+                    if (!Execute(*decomposed, console)) {
 						if (exiting) break;
 						else throw Exception();
 					}
                 }
                 catch (Syntax::ParserSpellingException & e) {
-                    new_console << L"Invalid command syntax. Type \"?\"." << IO::NewLineChar;
-                    if (break_on_error) break;
+                    if (break_on_error) {
+                        console << command + L": Invalid command syntax. Type \"?\"." << IO::NewLineChar;
+                        break;
+                    }
+                    console << L"Invalid command syntax. Type \"?\"." << IO::NewLineChar;
                 }
 				catch (...) {
-					new_console << L"Failed to execute the command." << IO::NewLineChar;
-                    if (break_on_error) break;
+                    if (break_on_error) {
+                        console << command + L": Failed to execute the command." << IO::NewLineChar;
+                        break;
+                    }
+					console << L"Failed to execute the command." << IO::NewLineChar;
 				}
             }
         }
