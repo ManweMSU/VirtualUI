@@ -16,5 +16,15 @@ namespace Engine
 		void CreateDevices(void);
 		void CreateD2DDeviceContextForWindow(HWND Window, ID2D1DeviceContext ** Context, IDXGISwapChain1 ** SwapChain);
 		void ResizeRenderBufferForD2DDevice(ID2D1DeviceContext * Context, IDXGISwapChain1 * SwapChain);
+
+		class D3DTexture : public Graphics::ITexture
+		{
+		public:
+			ID3D11Texture2D * texture;
+			int width, height;
+
+			D3DTexture(void);
+			virtual ~D3DTexture(void) override;
+		};
 	}
 }

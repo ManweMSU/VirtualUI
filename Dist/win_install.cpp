@@ -410,7 +410,7 @@ void configure(const string & rt_path, const string & tools)
 }
 Codec::Frame * prod_frame(int w)
 {
-    Codec::Frame * frame = new Codec::Frame(w, w, w * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+    Codec::Frame * frame = new Codec::Frame(w, w, w * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
     int b = w / 16;
     for (int y = 0; y < w; y++) for (int x = 0; x < w; x++) {
         uint32 p = 0x4444FF00;

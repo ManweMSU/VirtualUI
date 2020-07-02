@@ -24,10 +24,10 @@ namespace Engine
         NSImage * CocoaImage(Codec::Frame * frame, double scale_factor) __attribute((ns_returns_retained))
         {
             SafePointer<Codec::Frame> src;
-            if (frame->GetLineDirection() == Codec::LineDirection::TopDown && frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
+            if (frame->GetScanOrigin() == Codec::ScanOrigin::TopDown && frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
                 src.SetRetain(frame);
             } else {
-                src = frame->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, frame->GetAlphaFormat(), Codec::LineDirection::TopDown));
+                src = frame->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, frame->GetAlphaMode(), Codec::ScanOrigin::TopDown));
             }
             int data_len = src->GetScanLineLength() * src->GetHeight();
             uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));
@@ -36,7 +36,7 @@ namespace Engine
             CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
             CGDataProviderRef provider = CGDataProviderCreateWithData(data, data, data_len, QuartzDataRelease);
             CGImageRef img = CGImageCreate(src->GetWidth(), src->GetHeight(), 8, 32, src->GetScanLineLength(), rgb,
-                (src->GetAlphaFormat() == Codec::AlphaFormat::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
+                (src->GetAlphaMode() == Codec::AlphaMode::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
                 provider, 0, false, kCGRenderingIntentDefault);
             CGColorSpaceRelease(rgb);
             CGDataProviderRelease(provider);

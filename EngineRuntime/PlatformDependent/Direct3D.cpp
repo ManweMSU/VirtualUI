@@ -127,5 +127,7 @@ namespace Engine
 				Context->SetTarget(Bitmap);
 			}
 		}
+		D3DTexture::D3DTexture(void) { texture = 0; }
+		D3DTexture::~D3DTexture(void) { if (texture) texture->Release(); }
 	}
 }

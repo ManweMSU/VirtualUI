@@ -151,6 +151,48 @@ ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text3)
 ENGINE_END_REFLECTED_CLASS
 
+class RenderTargetShape : public UI::Shape
+{
+public:
+	SafePointer<Graphics::ITexture> texture;
+	mutable SafePointer<ITextureRenderingInfo> info;
+	mutable SafePointer<IBarRenderingInfo> info2;
+	virtual void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override
+	{
+		if (!info2) info2 = Device->CreateBarRenderingInfo(UI::Color(0, 0, 255, 255));
+		if (!info) info = Device->CreateTextureRenderingInfo(texture);
+		Device->RenderBar(info2, Box(Position, Outer));
+		Device->RenderTexture(info, Box(Position, Outer));
+	}
+	virtual void ClearCache(void) noexcept override
+	{
+		info.SetReference(0);
+	}
+	virtual Shape * Clone(void) const override
+	{
+		SafePointer<RenderTargetShape> copy = new RenderTargetShape;
+		copy->Position = Position;
+		copy->texture = texture;
+		copy->Retain();
+		return copy;
+	}
+};
+class RenderTargetShapeTemplate : public UI::Template::Shape
+{
+public:
+	SafePointer<Graphics::ITexture> texture;
+	RenderTargetShapeTemplate(void) {}
+	virtual bool IsDefined(void) const override { return true; }
+	virtual Engine::UI::Shape * Initialize(IArgumentProvider * provider) const override
+	{
+		SafePointer<RenderTargetShape> copy = new RenderTargetShape;
+		copy->Position = Position.Initialize(provider);
+		copy->texture = texture;
+		copy->Retain();
+		return copy;
+	}
+};
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
@@ -246,38 +288,22 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
-	{
-		cns.WriteLine(L"====================================");
-		SafePointer< Array<string> > fonts = UI::Windows::GetFontFamilies();
-		SortArray(*fonts);
-		for (int i = 0; i < fonts->Length(); i++) cns.WriteLine(fonts->ElementAt(i));
-		cns.WriteLine(L"====================================");
-	}
-
-	SafePointer<Codec::Frame> image_frame;
-	Clipboard::GetData(image_frame.InnerRef());
-	SafePointer<UI::ITexture> image = image_frame ? Device->LoadTexture(image_frame) : 0;
-	Codec::Image icon;
-
-	{
-		SafePointer<Codec::Frame> frame = new Codec::Frame(512, 512, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
-		SafePointer<Streaming::Stream> stream = new Streaming::FileStream(L"hsv.png", Streaming::AccessReadWrite, Streaming::CreateAlways);
-		for (int y = 0; y < 512; y++) for (int x = 0; x < 512; x++) {
-			auto hsv = Math::ColorHSV(x / 512.0 * 2.0 * ENGINE_PI, (512 - y) / 512.0, 1.0, 1.0);
-			frame->SetPixel(x, y, UI::Color(hsv).Value);
+	auto tex = Device->CreateIntermediateRenderTarget(Graphics::PixelFormat::B8G8R8A8_unorm, 256, 128);
+	cns.WriteLine(FormatString(L"INTERMEDIATE RENDER TARGET: %0", string((void *) tex)));
+	SafePointer<UI::Template::Shape> custom_tex_shape;
+	if (tex) {
+		auto shape = new RenderTargetShapeTemplate;
+		custom_tex_shape = shape;
+		custom_tex_shape->Position = UI::Template::Rectangle(UI::Template::Coordinate(0), UI::Template::Coordinate(0), UI::Template::Coordinate(0, 0.0, 1.0), UI::Template::Coordinate(0, 0.0, 1.0));
+		shape->texture = tex;
+		auto cast = static_cast<Direct3D::D3DTexture *>(tex);
+		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
+			frame->SetPixel(x, y, UI::Color(x, 255, y, 255));
 		}
-		Codec::EncodeFrame(stream, frame, L"PNG");
-		icon.Frames.Append(frame);
+		Direct3D::D3DDeviceContext->UpdateSubresource(cast->texture, 0, 0, frame->GetData(), frame->GetScanLineLength(), 0);
+		Direct3D::D3DDeviceContext->Flush();
 	}
-	NativeWindows::SetApplicationIcon(&icon);
-
-	SafePointer<Windows::StatusBarIcon> sb_icon = Windows::CreateStatusBarIcon();
-	sb_icon->SetIcon(&icon);
-	sb_icon->SetTooltip(L"pidor");
-	sb_icon->PresentIcon(true);
-	sb_icon->SetEventID(891);
-
-	Windows::PushUserNotification(L"privet!", L"kornevgen pidor", &icon);
 
 	{
 		{
@@ -298,11 +324,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Back->RenderMode = TextureShape::TextureRenderMode::Fit;
 				Back->Position = Rectangle::Entire();
 
-				Back->Texture = image ? UI::Template::TextureTemplate(image) : ::Template->Texture[L"Wallpaper"];
+				Back->Texture = ::Template->Texture[L"Wallpaper"];
 
 				SafePointer<Template::BarShape> Fill = new Template::BarShape;
 				Fill->Gradient << GradientPoint(0xFF303050);
-				back->Children.Append(Back);
+				//back->Children.Append(Back);
+				back->Children.Append(custom_tex_shape);
 				back->Children.Append(Fill);
 			}
 			Main->As<TopLevelWindow>()->Background.SetRetain(back);
@@ -451,7 +478,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				}
 			};
 			auto Callback = new _cb;
-			sb_icon->SetCallback(Callback);
 			class _cb2 : public Windows::IWindowEventCallback
 			{
 			public:
@@ -1095,7 +1121,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				Target->SetDpi(96.0f, 96.0f);
 				Target->BeginDraw();
 				if (station) station->Render();
-				Target->EndDraw();
+				HRESULT result = Target->EndDraw();
+				if (result != S_OK) {
+					IO::Console cns;
+					cns.WriteLine(L"FAILED");
+				}
 				SwapChain->Present(1, 0);
 			}
 			ValidateRect(hWnd, 0);

@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "ComInterop.h"
+#include "Direct3D.h"
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -97,23 +98,23 @@ namespace Engine
 						FrameFormat Format;
 						bool Deny = false;
 						if (PixelFormat == GUID_WICPixelFormat32bppBGRA) {
-							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat32bppPBGRA) {
-							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat32bppRGBA) {
-							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat32bppPRGBA) {
-							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaFormat::Premultiplied, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat32bppBGR) {
-							Format = FrameFormat(PixelFormat::B8G8R8U8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::B8G8R8U8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat32bppRGB) {
-							Format = FrameFormat(PixelFormat::R8G8B8U8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::R8G8B8U8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat24bppBGR) {
-							Format = FrameFormat(PixelFormat::B8G8R8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::B8G8R8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat24bppRGB) {
-							Format = FrameFormat(PixelFormat::R8G8B8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::R8G8B8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else if (PixelFormat == GUID_WICPixelFormat8bppIndexed) {
-							Format = FrameFormat(PixelFormat::P8, AlphaFormat::Normal, LineDirection::TopDown);
+							Format = FrameFormat(PixelFormat::P8, AlphaMode::Normal, ScanOrigin::TopDown);
 						} else Deny = true;
 						if (!Deny) {
 							SafePointer<Engine::Codec::Frame> Conv = image->Frames[i].ConvertFormat(Format);
@@ -167,7 +168,7 @@ namespace Engine
 						if (Decoder->GetFrame(i, &FrameDecoder) != S_OK) throw IO::FileFormatException();
 						uint32 fw, fh;
 						if (FrameDecoder->GetSize(&fw, &fh) != S_OK) throw IO::FileFormatException();
-						SafePointer<Frame> frame = new Frame(fw, fh, -1, PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::TopDown);
+						SafePointer<Frame> frame = new Frame(fw, fh, -1, PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::TopDown);
 						if (FrameDecoder->GetMetadataQueryReader(&Metadata) == S_OK) {
 							PROPVARIANT Value;
 							PropVariantInit(&Value);
@@ -498,7 +499,7 @@ namespace Engine
 			{
 				SafePointer<IWICBitmap> Bitmap;
 				if (WICFactory->CreateBitmap(Source->GetWidth(), Source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) throw Exception();
-				SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, Codec::AlphaFormat::Premultiplied, LineDirection::TopDown));
+				SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, ScanOrigin::TopDown));
 				IWICBitmapLock * Lock;
 				Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock);
 				UINT len;
@@ -744,8 +745,35 @@ namespace Engine
 		}
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			if (!texture) return 0;
+			if (!ExtendedTarget) return 0;
+			Direct3D::D3DTexture * wrapper = static_cast<Direct3D::D3DTexture *>(texture);
+			IDXGISurface * surface = 0;
+			if (wrapper->texture->QueryInterface(__uuidof(IDXGISurface), reinterpret_cast<void **>(&surface)) != S_OK) return 0;
+			D2D1_BITMAP_PROPERTIES props;
+			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+			props.dpiX = props.dpiY = 0.0f;
+			ID2D1Bitmap * bitmap = 0;
+			if (ExtendedTarget->CreateSharedBitmap(__uuidof(IDXGISurface), surface, &props, &bitmap) != S_OK) {
+				surface->Release();
+				return 0;
+			}
+			surface->Release();
+			SafePointer<D2DTexture> cover = new (std::nothrow) D2DTexture;
+			if (!cover) {
+				bitmap->Release();
+				return 0;
+			}
+			cover->bitmap = bitmap;
+			cover->w = wrapper->width;
+			cover->h = wrapper->height;
+			auto info = new (std::nothrow) TextureRenderingInfo;
+			if (!info) return 0;
+			info->Texture = cover;
+			info->From = UI::Box(0, 0, cover->w, cover->h);
+			info->Fill = false;
+			return info;
 		}
 		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept
 		{
@@ -819,8 +847,32 @@ namespace Engine
 		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			if (!ExtendedTarget) return 0;
+			if (width <= 0 || height <= 0) throw InvalidArgumentException();
+			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
+			D3D11_TEXTURE2D_DESC desc;
+			desc.Width = width;
+			desc.Height = height;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = D3D11_USAGE_DEFAULT;
+			desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+			ID3D11Texture2D * texture = 0;
+			if (Direct3D::D3DDevice->CreateTexture2D(&desc, 0, &texture) != S_OK) return 0;
+			Direct3D::D3DTexture * wrapper = new (std::nothrow) Direct3D::D3DTexture;
+			if (!wrapper) {
+				texture->Release();
+				return 0;
+			}
+			wrapper->texture = texture;
+			wrapper->width = width;
+			wrapper->height = height;
+			return wrapper;
 		}
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
 		{
@@ -1084,7 +1136,7 @@ namespace Engine
 		Engine::Codec::Frame * D2DRenderDevice::GetRenderTargetAsFrame(void) noexcept
 		{
 			if (!BitmapTarget || BitmapTargetState) return 0;
-			SafePointer<Engine::Codec::Frame> result = new Engine::Codec::Frame(BitmapTargetResX, BitmapTargetResY, BitmapTargetResX * 4, PixelFormat::B8G8R8A8, AlphaFormat::Premultiplied, LineDirection::TopDown);
+			SafePointer<Engine::Codec::Frame> result = new Engine::Codec::Frame(BitmapTargetResX, BitmapTargetResY, BitmapTargetResX * 4, PixelFormat::B8G8R8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
 			SafePointer<IWICBitmapLock> lock;
 			if (BitmapTarget->Lock(0, WICBitmapLockRead, lock.InnerRef()) == S_OK) {
 				UINT size;

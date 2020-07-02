@@ -56,7 +56,7 @@ namespace Engine
 				hdr.FrameCount = image->Frames.Length();
 				for (int i = 0; i < image->Frames.Length(); i++) {
 					Engine::Codec::Frame & frame = image->Frames[i];
-					SafePointer<Engine::Codec::Frame> conv = frame.ConvertFormat(Engine::Codec::FrameFormat(Engine::Codec::PixelFormat::B8G8R8A8, Engine::Codec::AlphaFormat::Normal, Engine::Codec::LineDirection::BottomUp));
+					SafePointer<Engine::Codec::Frame> conv = frame.ConvertFormat(Engine::Codec::FrameFormat(Engine::Codec::PixelFormat::B8G8R8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::BottomUp));
 					fhdr[i].Width = conv->GetWidth();
 					fhdr[i].Height = conv->GetHeight();
 					if (conv->Usage == Engine::Codec::FrameUsage::ColorMap) fhdr[i].Usage = 0;
@@ -228,7 +228,7 @@ namespace Engine
 							pixel[j].Value = plt[v];
 						}
 					}
-					SafePointer<Engine::Codec::Frame> decoded = new Engine::Codec::Frame(fhdr[i].Width, fhdr[i].Height, fhdr[i].Width * 4, Engine::Codec::PixelFormat::B8G8R8A8, Engine::Codec::AlphaFormat::Normal, Engine::Codec::LineDirection::BottomUp);
+					SafePointer<Engine::Codec::Frame> decoded = new Engine::Codec::Frame(fhdr[i].Width, fhdr[i].Height, fhdr[i].Width * 4, Engine::Codec::PixelFormat::B8G8R8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::BottomUp);
 					if (fhdr[i].Usage == 1) decoded->Usage = Engine::Codec::FrameUsage::NormalMap;
 					else if (fhdr[i].Usage == 2) decoded->Usage = Engine::Codec::FrameUsage::LightMap;
 					decoded->HotPointX = fhdr[i].HotPointX;

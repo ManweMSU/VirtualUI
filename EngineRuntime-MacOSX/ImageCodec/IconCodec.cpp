@@ -116,18 +116,18 @@ namespace Engine
 					Array<uint8> out_g(0x200);
 					Array<uint8> out_b(0x200);
 					auto format = frame->GetPixelFormat();
-					auto alpha = frame->GetAlphaFormat();
+					auto alpha = frame->GetAlphaMode();
 					if (IsPalettePixel(format)) {
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
-							uint8 cv = uint8(GetRedChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
+							uint8 cv = uint8(GetRedChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal));
 							out_r << cv;
 						}
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
-							uint8 cv = uint8(GetGreenChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
+							uint8 cv = uint8(GetGreenChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal));
 							out_g << cv;
 						}
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
-							uint8 cv = uint8(GetBlueChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
+							uint8 cv = uint8(GetBlueChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal));
 							out_b << cv;
 						}
 					} else {
@@ -158,10 +158,10 @@ namespace Engine
 				} else if (section == L"s8mk" || section == L"l8mk") {
 					Array<uint8> out(0x800);
 					auto format = frame->GetPixelFormat();
-					auto alpha = frame->GetAlphaFormat();
+					auto alpha = frame->GetAlphaMode();
 					if (IsPalettePixel(format)) {
 						for (int y = 0; y < frame->GetHeight(); y++) for (int x = 0; x < frame->GetWidth(); x++) {
-							uint8 av = uint8(GetAlphaChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal));
+							uint8 av = uint8(GetAlphaChannel(frame->GetPalette()[frame->GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal));
 							out << av;
 						}
 					} else {
@@ -218,7 +218,7 @@ namespace Engine
 							frame.Seek(0, Begin);
 							frame.CopyTo(stream);
 						} else {
-							SafePointer<Frame> Conv = image->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::BottomUp));
+							SafePointer<Frame> Conv = image->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::BottomUp));
 							Array<uint8> Mask(0x100);
 							uint32 mask_scanline = ((Conv->GetWidth() + 31) / 32) * 4;
 							for (uint s = 0; s < mask_scanline * Conv->GetHeight(); s++) Mask << uint8(0);
@@ -327,7 +327,7 @@ namespace Engine
 								WindowsBitmapInfoHeader bhdr;
 								stream->Read(&bhdr, sizeof(bhdr));
 								SafePointer<Frame> frame = new Frame(fhdr.width ? fhdr.width : 0x100, fhdr.height ? fhdr.height : 0x100, -1,
-									PixelFormat::B8G8R8A8, AlphaFormat::Normal, (bhdr.height > 0) ? LineDirection::BottomUp : LineDirection::TopDown);
+									PixelFormat::B8G8R8A8, AlphaMode::Normal, (bhdr.height > 0) ? ScanOrigin::BottomUp : ScanOrigin::TopDown);
 								if (hdr.type == 2) {
 									frame->HotPointX = fhdr.x_hot_point;
 									frame->HotPointY = fhdr.y_hot_point;
@@ -359,7 +359,7 @@ namespace Engine
 												uint32 v2 = line[byte + 1];
 												uint32 v3 = line[byte + 2];
 												uint32 cc = 0xFF000000 | v1 | (v2 << 8) | (v3 << 16);
-												int cy = (frame->GetLineDirection() == LineDirection::BottomUp) ? (frame->GetHeight() - y - 1) : y;
+												int cy = (frame->GetScanOrigin() == ScanOrigin::BottomUp) ? (frame->GetHeight() - y - 1) : y;
 												frame->SetPixel(x, cy, cc);
 											} else {
 												uint8 v = line[byte];
@@ -372,7 +372,7 @@ namespace Engine
 													v &= 0x1;
 												}
 												uint32 cc = 0xFF000000 | palette[v];
-												int cy = (frame->GetLineDirection() == LineDirection::BottomUp) ? (frame->GetHeight() - y - 1) : y;
+												int cy = (frame->GetScanOrigin() == ScanOrigin::BottomUp) ? (frame->GetHeight() - y - 1) : y;
 												frame->SetPixel(x, cy, cc);
 											}
 										}
@@ -386,7 +386,7 @@ namespace Engine
 											uint32 byte = x / 8;
 											uint32 bit = 7 - x % 8;
 											uint8 v = (line[byte] >> bit) & 1;	
-											int cy = (frame->GetLineDirection() == LineDirection::BottomUp) ? (frame->GetHeight() - y - 1) : y;
+											int cy = (frame->GetScanOrigin() == ScanOrigin::BottomUp) ? (frame->GetHeight() - y - 1) : y;
 											if (v) frame->SetPixel(x, cy, 0);
 										}
 									}
@@ -444,7 +444,7 @@ namespace Engine
 								Array<uint8> * mask_map = Deferred[mask_name];
 								SafePointer< Array<uint8> > color_map_dec;
 								color_map_dec.SetReference(AppleRleDecompress(color_map));
-								SafePointer<Frame> frame = new Frame(side, side, -1, PixelFormat::B8G8R8A8, AlphaFormat::Normal, LineDirection::TopDown);
+								SafePointer<Frame> frame = new Frame(side, side, -1, PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::TopDown);
 								for (int y = 0; y < side; y++) for (int x = 0; x < side; x++) {
 									uint32 alpha = mask_map ? mask_map->ElementAt(x + side * y) : 0xFF;
 									frame->SetPixel(x, y, (uint32(color_map_dec->ElementAt(x + side * y)) << 16) |

@@ -873,7 +873,7 @@ namespace Engine
 			virtual ICursor * LoadCursor(Codec::Frame * Source) override
 			{
 				SafePointer<Codec::Frame> conv = Source->ConvertFormat(Engine::Codec::FrameFormat(
-					Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaFormat::Normal, Engine::Codec::LineDirection::TopDown));
+					Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::TopDown));
 				CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
 				uint len = conv->GetScanLineLength() * conv->GetHeight();
 				void * data = malloc(len);
@@ -1611,7 +1611,7 @@ namespace Engine
 			if (!image) return 0;
 			int width = CGImageGetWidth(image);
 			int height = CGImageGetHeight(image);
-			SafePointer<Codec::Frame> state = new Codec::Frame(width, height, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+			SafePointer<Codec::Frame> state = new Codec::Frame(width, height, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
 			CGContextRef context = CGBitmapContextCreate(state->GetData(), width, height, 8, state->GetScanLineLength(), rgb, kCGImageAlphaPremultipliedLast);
 			CGRect rect = CGRectMake(0.0f, 0.0f, float(width), float(height));

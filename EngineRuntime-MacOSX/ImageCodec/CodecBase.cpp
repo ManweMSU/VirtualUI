@@ -7,7 +7,7 @@ namespace Engine
 	namespace Codec
 	{
 		FrameFormat::FrameFormat(void) {}
-		FrameFormat::FrameFormat(PixelFormat format, AlphaFormat alpha, LineDirection direction) :
+		FrameFormat::FrameFormat(PixelFormat format, AlphaMode alpha, ScanOrigin direction) :
 			Format(format), Alpha(alpha), Direction(direction) {}
 
 		bool IsPalettePixel(PixelFormat format)
@@ -34,46 +34,46 @@ namespace Engine
 			else if (format == PixelFormat::P1) return 1;
 			else return 0;
 		}
-		uint32 GetRedChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha)
+		uint32 GetRedChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha)
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x00FF0000) >> 16;
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x000000FF);
 			else if (source_format == PixelFormat::B8G8R8U8) ev = (source & 0x00FF0000) >> 16;
 			else if (source_format == PixelFormat::R8G8B8U8) ev = (source & 0x000000FF);
-			if (source_alpha == AlphaFormat::Premultiplied) {
+			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
 			}
 			return ev;
 		}
-		uint32 GetGreenChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha)
+		uint32 GetGreenChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha)
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x0000FF00) >> 8;
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x0000FF00) >> 8;
 			else if (source_format == PixelFormat::B8G8R8U8) ev = (source & 0x0000FF00) >> 8;
 			else if (source_format == PixelFormat::R8G8B8U8) ev = (source & 0x0000FF00) >> 8;
-			if (source_alpha == AlphaFormat::Premultiplied) {
+			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
 			}
 			return ev;
 		}
-		uint32 GetBlueChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha)
+		uint32 GetBlueChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha)
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x000000FF);
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x00FF0000) >> 16;
 			else if (source_format == PixelFormat::B8G8R8U8) ev = (source & 0x000000FF);
 			else if (source_format == PixelFormat::R8G8B8U8) ev = (source & 0x00FF0000) >> 16;
-			if (source_alpha == AlphaFormat::Premultiplied) {
+			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
 			}
 			return ev;
 		}
-		uint32 GetAlphaChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha)
+		uint32 GetAlphaChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha)
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::B8G8R8A8) ev = (source & 0xFF000000) >> 24;
@@ -82,9 +82,9 @@ namespace Engine
 			else if (source_format == PixelFormat::R8G8B8U8 || source_format == PixelFormat::R8G8B8) ev = 0xFF;
 			return ev;
 		}
-		uint32 MakePixel(uint32 r, uint32 g, uint32 b, uint32 a, PixelFormat format, AlphaFormat alpha)
+		uint32 MakePixel(uint32 r, uint32 g, uint32 b, uint32 a, PixelFormat format, AlphaMode alpha)
 		{
-			if (alpha == AlphaFormat::Premultiplied) {
+			if (alpha == AlphaMode::Premultiplied) {
 				r *= a; r /= 255;
 				g *= a; g /= 255;
 				b *= a; b /= 255;
@@ -99,7 +99,7 @@ namespace Engine
 				return r | (g << 8) | (b << 16);
 			} else return 0;
 		}
-		uint32 ConvertPixel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha, PixelFormat format, AlphaFormat alpha)
+		uint32 ConvertPixel(uint32 source, PixelFormat source_format, AlphaMode source_alpha, PixelFormat format, AlphaMode alpha)
 		{
 			return MakePixel(
 				GetRedChannel(source, source_format, source_alpha),
@@ -109,7 +109,7 @@ namespace Engine
 				format, alpha);
 		}
 
-		Frame::Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaFormat alpha, LineDirection direction) :
+		Frame::Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha, ScanOrigin direction) :
 			Width(width), Height(height), ScanLineLength(scan_line_length), Format(format), Alpha(alpha), Direction(direction), Palette(0x10)
 		{
 			if (width <= 0 || height <= 0 || scan_line_length < -1 || scan_line_length == 0) throw InvalidArgumentException();
@@ -127,8 +127,8 @@ namespace Engine
 		int32 Frame::GetHeight(void) const { return Height; }
 		int32 Frame::GetScanLineLength(void) const { return ScanLineLength; }
 		PixelFormat Frame::GetPixelFormat(void) const { return Format; }
-		AlphaFormat Frame::GetAlphaFormat(void) const { return Alpha; }
-		LineDirection Frame::GetLineDirection(void) const { return Direction; }
+		AlphaMode Frame::GetAlphaMode(void) const { return Alpha; }
+		ScanOrigin Frame::GetScanOrigin(void) const { return Direction; }
 		const uint32 * Frame::GetPalette(void) const { return Palette.GetBuffer(); }
 		uint32 * Frame::GetPalette(void) { return Palette.GetBuffer(); }
 		int Frame::GetPaletteVolume(void) const { return Palette.Length(); }
@@ -143,7 +143,7 @@ namespace Engine
 		}
 		uint32 Frame::GetPixel(int x, int y) const
 		{
-			if (Direction == LineDirection::BottomUp) y = Height - y - 1;
+			if (Direction == ScanOrigin::BottomUp) y = Height - y - 1;
 			uint32 bpp = GetBitsPerPixel(Format);
 			if (bpp == 32) {
 				return *reinterpret_cast<const uint32 *>(RawData + ScanLineLength * y + 4 * x);
@@ -164,7 +164,7 @@ namespace Engine
 		}
 		void Frame::SetPixel(int x, int y, uint32 v)
 		{
-			if (Direction == LineDirection::BottomUp) y = Height - y - 1;
+			if (Direction == ScanOrigin::BottomUp) y = Height - y - 1;
 			uint32 bpp = GetBitsPerPixel(Format);
 			if (bpp == 32) {
 				*reinterpret_cast<uint32 *>(RawData + ScanLineLength * y + 4 * x) = v;
@@ -228,7 +228,7 @@ namespace Engine
 				}
 			} else if (!IsPalettePixel(new_format.Format)){
 				for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
-					New->SetPixel(x, y, ConvertPixel(Palette[GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaFormat::Normal, new_format.Format, new_format.Alpha));
+					New->SetPixel(x, y, ConvertPixel(Palette[GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal, new_format.Format, new_format.Alpha));
 				}
 			} else {
 				bool plt = IsPalettePixel(Format);
@@ -237,7 +237,7 @@ namespace Engine
 					Array<uint32> clr_used(0x100);
 					for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
 						uint32 src_color = plt ? Palette[GetPixel(x, y)] :
-							ConvertPixel(GetPixel(x, y), Format, Alpha, PixelFormat::B8G8R8A8, AlphaFormat::Normal);
+							ConvertPixel(GetPixel(x, y), Format, Alpha, PixelFormat::B8G8R8A8, AlphaMode::Normal);
 						if (clr_used.Length() <= 0x100) {
 							bool found = false;
 							for (int j = 0; j < clr_used.Length(); j++) {
@@ -250,7 +250,7 @@ namespace Engine
 						bool has_transparent = false;
 						for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
 							uint32 src_color = plt ? Palette[GetPixel(x, y)] :
-								ConvertPixel(GetPixel(x, y), Format, Alpha, PixelFormat::B8G8R8A8, AlphaFormat::Normal);
+								ConvertPixel(GetPixel(x, y), Format, Alpha, PixelFormat::B8G8R8A8, AlphaMode::Normal);
 							if ((src_color & 0xFF000000) != 0xFF000000) has_transparent = true;
 						}
 						if (has_transparent) New->Palette << 0x00000000;
@@ -290,7 +290,7 @@ namespace Engine
 				}
 				for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
 					uint32 src_color = plt ? Palette[GetPixel(x, y)] :
-						ConvertPixel(GetPixel(x, y), Format, Alpha, PixelFormat::B8G8R8A8, AlphaFormat::Normal);
+						ConvertPixel(GetPixel(x, y), Format, Alpha, PixelFormat::B8G8R8A8, AlphaMode::Normal);
 					uint32 index = New->GetBestPaletteIndex(src_color);
 					New->SetPixel(x, y, index);
 				}

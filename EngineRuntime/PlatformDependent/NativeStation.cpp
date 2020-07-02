@@ -572,7 +572,7 @@ namespace Engine
 			if (!DC) { return 0; }
 			int x = GetDeviceCaps(DC, HORZRES), y = GetDeviceCaps(DC, VERTRES);
 			if (!x || !y) { ReleaseDC(0, DC); return 0; }
-			SafePointer<Codec::Frame> state = new Codec::Frame(x, y, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp);
+			SafePointer<Codec::Frame> state = new Codec::Frame(x, y, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp);
 			HDC CDC = CreateCompatibleDC(DC);
 			if (!CDC) { ReleaseDC(0, DC); return 0; }
 			HBITMAP hrender_target = CreateCompatibleBitmap(DC, x, y);

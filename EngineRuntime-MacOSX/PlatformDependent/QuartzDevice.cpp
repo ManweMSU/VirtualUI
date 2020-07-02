@@ -462,10 +462,10 @@ namespace Engine
 			result->w = Source->GetWidth();
 			result->h = Source->GetHeight();
 			SafePointer<Codec::Frame> source;
-			if (Source->GetLineDirection() == Codec::LineDirection::TopDown && Source->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
+			if (Source->GetScanOrigin() == Codec::ScanOrigin::TopDown && Source->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
 				source.SetRetain(Source);
 			} else {
-				source = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, Source->GetAlphaFormat(), Codec::LineDirection::TopDown));
+				source = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, Source->GetAlphaMode(), Codec::ScanOrigin::TopDown));
 			}
 			int data_len = source->GetScanLineLength() * source->GetHeight();
 			uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));
@@ -474,7 +474,7 @@ namespace Engine
 			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
 			CGDataProviderRef provider = CGDataProviderCreateWithData(data, data, data_len, QuartzDataRelease);
 			CGImageRef frame = CGImageCreate(result->w, result->h, 8, 32, source->GetScanLineLength(), rgb,
-				(source->GetAlphaFormat() == Codec::AlphaFormat::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
+				(source->GetAlphaMode() == Codec::AlphaMode::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
 				provider, 0, false, kCGRenderingIntentDefault);
 			CGColorSpaceRelease(rgb);
 			CGDataProviderRelease(provider);
@@ -674,7 +674,7 @@ namespace Engine
 		string QuartzRenderingDevice::ToString(void) const { return L"Engine.Cocoa.QuartzRenderingDevice"; }
 		Drawing::ITextureRenderingDevice * QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept
 		{
-			SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Premultiplied, Codec::LineDirection::TopDown);
+			SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
 			{
 				Math::Color prem = color;
 				prem.x *= prem.w;

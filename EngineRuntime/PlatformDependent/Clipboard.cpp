@@ -58,11 +58,11 @@ namespace Engine
 					hdr.biSize = sizeof(hdr);
 					hdr.biBitCount = 0;
 					if (GetDIBits(dc, picture, 0, 0, 0, reinterpret_cast<LPBITMAPINFO>(&hdr), DIB_RGB_COLORS)) {
-						Codec::LineDirection direction;
+						Codec::ScanOrigin direction;
 						Codec::PixelFormat format;
-						Codec::AlphaFormat alpha = Codec::AlphaFormat::Normal;
-						if (hdr.biHeight > 0) direction = Codec::LineDirection::BottomUp;
-						else direction = Codec::LineDirection::TopDown;
+						Codec::AlphaMode alpha = Codec::AlphaMode::Normal;
+						if (hdr.biHeight > 0) direction = Codec::ScanOrigin::BottomUp;
+						else direction = Codec::ScanOrigin::TopDown;
 						if (hdr.biBitCount == 32) {
 							format = Codec::PixelFormat::B8G8R8A8;
 							hdr.biCompression = 0;
@@ -179,10 +179,10 @@ namespace Engine
 				HWND desktop = GetDesktopWindow();
 				HDC dc = GetDC(desktop);
 				SafePointer<Codec::Frame> frame;
-				if (value->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8 && value->GetAlphaFormat() == Codec::AlphaFormat::Normal && value->GetLineDirection() == Codec::LineDirection::BottomUp) {
+				if (value->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8 && value->GetAlphaMode() == Codec::AlphaMode::Normal && value->GetScanOrigin() == Codec::ScanOrigin::BottomUp) {
 					frame.SetRetain(value);
 				} else {
-					frame = value->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+					frame = value->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp));
 				}
 				BITMAPINFOHEADER hdr;
 				hdr.biSize = sizeof(hdr);

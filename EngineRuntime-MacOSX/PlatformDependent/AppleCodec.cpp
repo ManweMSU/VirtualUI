@@ -49,7 +49,7 @@ namespace Engine
 				ObjectArray<Engine::Codec::Frame> conv(0x10);
 				for (int i = 0; i < max_frame; i++) {
 					SafePointer<Engine::Codec::Frame> frame = image->Frames[i].ConvertFormat(Engine::Codec::FrameFormat(
-						Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaFormat::Normal, Engine::Codec::LineDirection::TopDown));
+						Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::TopDown));
 					conv.Append(frame);
 				}
 				for (int i = 0; i < max_frame; i++) {
@@ -124,7 +124,7 @@ namespace Engine
 							int width = CGImageGetWidth(frame);
 							int height = CGImageGetHeight(frame);
 							SafePointer<Engine::Codec::Frame> eframe = new Engine::Codec::Frame(width, height, 4 * width, Engine::Codec::PixelFormat::R8G8B8A8,
-								Engine::Codec::AlphaFormat::Premultiplied, Engine::Codec::LineDirection::TopDown);
+								Engine::Codec::AlphaMode::Premultiplied, Engine::Codec::ScanOrigin::TopDown);
 							ZeroMemory(eframe->GetData(), width * height * 4);
 							CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
 							CGContextRef context = CGBitmapContextCreate(eframe->GetData(), width, height, 8, eframe->GetScanLineLength(), rgb, kCGImageAlphaPremultipliedLast);

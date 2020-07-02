@@ -90,7 +90,7 @@ namespace Engine
 		ICursor * HandleWindowStation::LoadCursor(Codec::Image * Source) { return LoadCursor(Source->GetFrameBestDpiFit(UI::Zoom)); }
 		ICursor * HandleWindowStation::LoadCursor(Codec::Frame * Source)
 		{
-			SafePointer<Codec::Frame> Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+			SafePointer<Codec::Frame> Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp));
 			BITMAPINFOHEADER hdr;
 			Array<uint32> Fake(0x100);
 			Fake.SetLength(Conv->GetWidth() * Conv->GetHeight());
@@ -275,9 +275,9 @@ namespace Engine
 		HICON CreateWinIcon(Codec::Frame * Source)
 		{
 			SafePointer<Codec::Frame> Conv;
-			if (Source->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8 || Source->GetAlphaFormat() != Codec::AlphaFormat::Normal ||
-				Source->GetLineDirection() != Codec::LineDirection::BottomUp || Source->GetScanLineLength() != 4 * Source->GetWidth()) {
-				Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::BottomUp));
+			if (Source->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8 || Source->GetAlphaMode() != Codec::AlphaMode::Normal ||
+				Source->GetScanOrigin() != Codec::ScanOrigin::BottomUp || Source->GetScanLineLength() != 4 * Source->GetWidth()) {
+				Conv = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp));
 			} else Conv.SetRetain(Source);
 			BITMAPINFOHEADER hdr;
 			Array<uint32> Fake(0x100);

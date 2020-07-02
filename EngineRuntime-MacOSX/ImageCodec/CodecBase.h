@@ -59,27 +59,27 @@ namespace Engine
 
 		enum class FrameUsage { ColorMap, NormalMap, LightMap };
 		enum class PixelFormat { B8G8R8A8, R8G8B8A8, B8G8R8U8, R8G8B8U8, B8G8R8, R8G8B8, P8, P4, P2, P1 };
-		enum class AlphaFormat { Normal, Premultiplied };
-		enum class LineDirection { TopDown, BottomUp };
+		enum class AlphaMode { Normal, Premultiplied };
+		enum class ScanOrigin { TopDown, BottomUp };
 
 		struct FrameFormat
 		{
 			PixelFormat Format;
-			AlphaFormat Alpha;
-			LineDirection Direction;
+			AlphaMode Alpha;
+			ScanOrigin Direction;
 
 			FrameFormat(void);
-			FrameFormat(PixelFormat format, AlphaFormat alpha, LineDirection direction);
+			FrameFormat(PixelFormat format, AlphaMode alpha, ScanOrigin direction);
 		};
 		bool IsPalettePixel(PixelFormat format);
 		uint32 GetPaletteVolume(PixelFormat format);
 		uint32 GetBitsPerPixel(PixelFormat format);
-		uint32 GetRedChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha);
-		uint32 GetGreenChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha);
-		uint32 GetBlueChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha);
-		uint32 GetAlphaChannel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha);
-		uint32 MakePixel(uint32 r, uint32 g, uint32 b, uint32 a, PixelFormat format, AlphaFormat alpha);
-		uint32 ConvertPixel(uint32 source, PixelFormat source_format, AlphaFormat source_alpha, PixelFormat format, AlphaFormat alpha);
+		uint32 GetRedChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha);
+		uint32 GetGreenChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha);
+		uint32 GetBlueChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha);
+		uint32 GetAlphaChannel(uint32 source, PixelFormat source_format, AlphaMode source_alpha);
+		uint32 MakePixel(uint32 r, uint32 g, uint32 b, uint32 a, PixelFormat format, AlphaMode alpha);
+		uint32 ConvertPixel(uint32 source, PixelFormat source_format, AlphaMode source_alpha, PixelFormat format, AlphaMode alpha);
 
 		class Frame : public Object
 		{
@@ -87,8 +87,8 @@ namespace Engine
 			int32 Height;
 			int32 ScanLineLength;
 			PixelFormat Format;
-			AlphaFormat Alpha;
-			LineDirection Direction;
+			AlphaMode Alpha;
+			ScanOrigin Direction;
 			uint8 * RawData;
 			Array<uint32> Palette;
 		public:
@@ -98,15 +98,15 @@ namespace Engine
 			int32 Duration = 0;
 			double DpiUsage = 1.0;
 
-			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaFormat alpha, LineDirection direction);
+			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha, ScanOrigin direction);
 			~Frame(void) override;
 
 			int32 GetWidth(void) const;
 			int32 GetHeight(void) const;
 			int32 GetScanLineLength(void) const;
 			PixelFormat GetPixelFormat(void) const;
-			AlphaFormat GetAlphaFormat(void) const;
-			LineDirection GetLineDirection(void) const;
+			AlphaMode GetAlphaMode(void) const;
+			ScanOrigin GetScanOrigin(void) const;
 			const uint32 * GetPalette(void) const;
 			uint32 * GetPalette(void);
 			int GetPaletteVolume(void) const;

@@ -148,9 +148,9 @@ namespace Engine
 				h = source->GetHeight();
 				MTLPixelFormat pf;
 				SafePointer<Codec::Frame> conv;
-				if (source->GetAlphaFormat() != Codec::AlphaFormat::Normal || source->GetLineDirection() != Codec::LineDirection::TopDown ||
+				if (source->GetAlphaMode() != Codec::AlphaMode::Normal || source->GetScanOrigin() != Codec::ScanOrigin::TopDown ||
 					(source->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8 && source->GetPixelFormat() != Codec::PixelFormat::R8G8B8A8)) {
-					conv = source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown));
+					conv = source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown));
 				} else conv.SetRetain(source);
 				if (conv->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) pf = MTLPixelFormatRGBA8Unorm;
 				else if (conv->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) pf = MTLPixelFormatBGRA8Unorm;
@@ -168,9 +168,9 @@ namespace Engine
 				int width = CGImageGetWidth(image);
 				int height = CGImageGetHeight(image);
 				CFDataRef data = CGDataProviderCopyData(provider);
-				Codec::AlphaFormat alpha = Codec::AlphaFormat::Normal;
-				if (CGImageGetAlphaInfo(image) == kCGImageAlphaPremultipliedLast) alpha = Codec::AlphaFormat::Premultiplied;
-				SafePointer<Codec::Frame> cover = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, alpha, Codec::LineDirection::TopDown);
+				Codec::AlphaMode alpha = Codec::AlphaMode::Normal;
+				if (CGImageGetAlphaInfo(image) == kCGImageAlphaPremultipliedLast) alpha = Codec::AlphaMode::Premultiplied;
+				SafePointer<Codec::Frame> cover = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, alpha, Codec::ScanOrigin::TopDown);
 				CFDataGetBytes(data, CFRangeMake(0, CFDataGetLength(data)), cover->GetData());
 				CFRelease(data);
 				Reload(cover);

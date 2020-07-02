@@ -1000,13 +1000,13 @@ namespace Engine
 			void TreeView::generate_line_textures(void)
 			{
 				if (BranchColorNormal.a) {
-					_line_texture_normal = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+					_line_texture_normal = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 					for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
 						if ((x + y) & 1) _line_texture_normal->SetPixel(x, y, BranchColorNormal); else _line_texture_normal->SetPixel(x, y, 0);
 					}
 				} else _line_texture_normal.SetReference(0);
 				if (BranchColorDisabled.a) {
-					_line_texture_disabled = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaFormat::Normal, Codec::LineDirection::TopDown);
+					_line_texture_disabled = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 					for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
 						if ((x + y) & 1) _line_texture_disabled->SetPixel(x, y, BranchColorDisabled); else _line_texture_disabled->SetPixel(x, y, 0);
 					}
