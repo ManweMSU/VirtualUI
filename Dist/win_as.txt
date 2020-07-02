@@ -1,5 +1,4 @@
-﻿
-set metadata include
+﻿set metadata include
 set notation binary
 set format e64
 append "../EngineRuntime/*.cpp;*.h" rec

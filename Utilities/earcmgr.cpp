@@ -856,15 +856,17 @@ int Main(void)
                     decomposed = Syntax::ParseText(command, command_spelling);
                     decomposed->RemoveLast();
                     if (!Execute(*decomposed, new_console)) {
-						if (break_on_error || exiting) break;
+						if (exiting) break;
 						else throw Exception();
 					}
                 }
                 catch (Syntax::ParserSpellingException & e) {
                     new_console << L"Invalid command syntax. Type \"?\"." << IO::NewLineChar;
+                    if (break_on_error) break;
                 }
 				catch (...) {
 					new_console << L"Failed to execute the command." << IO::NewLineChar;
+                    if (break_on_error) break;
 				}
             }
         }
