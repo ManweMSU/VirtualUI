@@ -229,7 +229,7 @@ void local_configure(RegistryNode * node, const string & rt_path, const string &
 	node->CreateValue(L"ObjectExtension", RegistryValueType::String);
 	node->SetValue(L"ObjectExtension", string(L"obj"));
 	node->CreateValue(L"ObjectPath", RegistryValueType::String);
-	node->SetValue(L"ObjectPath", string(L"_build/win") + (x64 ? string(L"64") : string(L"32"))) + (debug ? string(L"_debug") : string(L""));
+	node->SetValue(L"ObjectPath", string(L"_build/win") + (x64 ? string(L"64") : string(L"32")) + (debug ? string(L"_debug") : string(L"")));
 	node->CreateValue(L"ExecutableExtension", RegistryValueType::String);
 	node->SetValue(L"ExecutableExtension", string(L"exe"));
 	node->CreateValue(L"LibraryExtension", RegistryValueType::String);
