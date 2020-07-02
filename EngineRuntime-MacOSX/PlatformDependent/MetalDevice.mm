@@ -177,12 +177,24 @@ namespace Engine
 			}
 			virtual string ToString(void) const override { return L"Engine.Cocoa.MetalTexture"; }
 		};
+		class MetalWrappedTexture : public Graphics::ITexture
+		{
+		public:
+			id<MTLTexture> frame;
+			int w, h;
+
+			MetalWrappedTexture(void) : frame(0) {}
+			virtual ~MetalWrappedTexture(void) override { [frame release]; }
+			
+			virtual string ToString(void) const override { return L"Engine.Cocoa.MetalWrappedTexture"; }
+		};
 		class MetalTextureRenderingInfo : public ITextureRenderingInfo
 		{
 		public:
 			id<MTLBuffer> verticies;
 			int vertex_count;
 			SafePointer<MetalTexture> texture;
+			SafePointer<MetalWrappedTexture> wrapped;
 			bool tile_render;
 
 			virtual ~MetalTextureRenderingInfo(void) override
@@ -623,8 +635,14 @@ namespace Engine
 			}
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return nullptr;
+				SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
+				if (!info) return 0;
+				auto wrapper = static_cast<MetalWrappedTexture *>(texture);
+				info->wrapped.SetRetain(wrapper);
+				info->verticies = 0;
+				info->vertex_count = 6;
+				info->tile_render = false;
+				return info;
 			}
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
 			{
@@ -652,8 +670,23 @@ namespace Engine
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return LoaderDevice->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				MTLPixelFormat metal_format;
+				if (width <= 0 || height <= 0) throw InvalidArgumentException();
+				if (format == Graphics::PixelFormat::B8G8R8A8_unorm) metal_format = MTLPixelFormatBGRA8Unorm;
+				else if (format == Graphics::PixelFormat::R8G8B8A8_unorm) metal_format = MTLPixelFormatRGBA8Unorm;
+				else throw InvalidArgumentException();
+				id<MTLTexture> texture = 0;
+				@autoreleasepool {
+					auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: metal_format width: width height: height mipmapped: NO];
+					[tex_desc setUsage: MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget];
+					texture = [device newTextureWithDescriptor: tex_desc];
+				}
+				if (!texture) return 0;
+				MetalWrappedTexture * info = new (std::nothrow) MetalWrappedTexture;
+				if (!info) { [texture release]; return 0; }
+				info->frame = texture;
+				info->w = width; info->h = height;
+				return info;
 			}
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override
 			{
@@ -684,11 +717,21 @@ namespace Engine
 					[encoder setVertexBytes: &tile_info length: sizeof(tile_info) atIndex: 2];
 					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
 					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
-				} else {
+				} else if (info->texture) {
 					[encoder setRenderPipelineState: main_state];
 					[encoder setFragmentTexture: info->texture->frame atIndex: 0];
 					[encoder setVertexBytes: &At length: sizeof(At) atIndex: 2];
 					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
+					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+				} else if (info->wrapped) {
+					LayerEndInfo rinfo;
+					rinfo.render_at = At;
+					rinfo.size = UI::Point(info->wrapped->w, info->wrapped->h);
+					rinfo.opacity = 1.0f;
+					[encoder setRenderPipelineState: layer_state];
+					[encoder setFragmentTexture: info->wrapped->frame atIndex: 0];
+					[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
+					[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
 					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
 				}
 			}
@@ -995,5 +1038,11 @@ namespace Engine
 			dev->command_buffer = 0;
 		}
 		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device) { [[reinterpret_cast<MetalDevice *>(device)->metal_view layer] setNeedsDisplay]; }
+
+		id<MTLTexture> QueryTextureMetalSurface(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->frame; }
+		int QueryTextureWidth(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->w; }
+		int QueryTextureHeight(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->h; }
+		id<MTLDevice> GetMetalSharedDevice(void) { return common_device; }
+		id<MTLCommandQueue> GetMetalSharedQueue(void) { return common_queue; }
 	}
 }

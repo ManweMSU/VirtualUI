@@ -19,5 +19,11 @@ namespace Engine
 		void MetalRenderingDeviceBeginDraw(UI::IRenderingDevice * device, MTLRenderPassDescriptor * pass_descriptor);
 		void MetalRenderingDeviceEndDraw(UI::IRenderingDevice * device, id<MTLDrawable> drawable, bool wait);
 		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device);
+		
+		id<MTLTexture> QueryTextureMetalSurface(Graphics::ITexture * texture);
+		int QueryTextureWidth(Graphics::ITexture * texture);
+		int QueryTextureHeight(Graphics::ITexture * texture);
+		id<MTLDevice> GetMetalSharedDevice(void);
+		id<MTLCommandQueue> GetMetalSharedQueue(void);
 	}
 }

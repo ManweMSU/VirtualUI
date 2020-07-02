@@ -11,7 +11,7 @@
 // GIF    - Graphics Interchange Format (.gif)                     WIC, IIO           YES      YES
 // TIF    - Tagged Image File Format (.tif, .tiff)                 WIC, IIO           YES      YES
 // DDS    - Direct Draw Surface (.dds)                             WIC                YES      NO
-// HEIF   - High Efficiency Image Format (.heif, .heic)            WIC, IIO            READ-ONLY
+// HEIF   - High Efficiency Image Format (.heif, .heic)            WIC, IIO            NO   READ-ONLY
 // ICO    - Windows Icon (.ico)                                    IC                 YES      YES
 // CUR    - Windows Cursor (.cur)                                  IC                 YES      YES
 // ICNS   - Apple Icon (.icns)                                     IC                 YES      YES
@@ -58,7 +58,7 @@ namespace Engine
 		string GetEncodedImageFormat(Streaming::Stream * stream);
 
 		enum class FrameUsage { ColorMap, NormalMap, LightMap };
-		enum class PixelFormat { B8G8R8A8, R8G8B8A8, B8G8R8U8, R8G8B8U8, B8G8R8, R8G8B8, P8, P4, P2, P1 };
+		enum class PixelFormat { B8G8R8A8, R8G8B8A8, B8G8R8U8, R8G8B8U8, B8G8R8, R8G8B8, A8, P8, P4, P2, P1 };
 		enum class AlphaMode { Normal, Premultiplied };
 		enum class ScanOrigin { TopDown, BottomUp };
 
@@ -66,10 +66,10 @@ namespace Engine
 		{
 			PixelFormat Format;
 			AlphaMode Alpha;
-			ScanOrigin Direction;
+			ScanOrigin Origin;
 
 			FrameFormat(void);
-			FrameFormat(PixelFormat format, AlphaMode alpha, ScanOrigin direction);
+			FrameFormat(PixelFormat format, AlphaMode alpha, ScanOrigin origin);
 		};
 		bool IsPalettePixel(PixelFormat format);
 		uint32 GetPaletteVolume(PixelFormat format);
@@ -88,7 +88,7 @@ namespace Engine
 			int32 ScanLineLength;
 			PixelFormat Format;
 			AlphaMode Alpha;
-			ScanOrigin Direction;
+			ScanOrigin Origin;
 			uint8 * RawData;
 			Array<uint32> Palette;
 		public:
@@ -98,7 +98,7 @@ namespace Engine
 			int32 Duration = 0;
 			double DpiUsage = 1.0;
 
-			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha, ScanOrigin direction);
+			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha, ScanOrigin origin);
 			~Frame(void) override;
 
 			int32 GetWidth(void) const;
