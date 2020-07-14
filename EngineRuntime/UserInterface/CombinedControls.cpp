@@ -417,7 +417,7 @@ namespace Engine
 				int space = Base->_elements.Length() * Base->ElementHeight;
 				_scroll->SetRangeSilent(0, space - 1);
 			}
-			ComboBox::ComboListBox::~ComboListBox(void) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); }
+			ComboBox::ComboListBox::~ComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); } }
 			void ComboBox::ComboListBox::Render(const Box & at)
 			{
 				if (!_owner) return;
@@ -1190,7 +1190,7 @@ namespace Engine
 				int space = Base->_elements.Length() * Base->ElementHeight;
 				_scroll->SetRangeSilent(0, space - 1);
 			}
-			TextComboBox::TextComboListBox::~TextComboListBox(void) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); }
+			TextComboBox::TextComboListBox::~TextComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); } }
 			void TextComboBox::TextComboListBox::Render(const Box & at)
 			{
 				if (!_owner) return;
