@@ -186,13 +186,13 @@ namespace Engine
 				int bit = 8 - base % 8 - bpp;
 				if (bpp == 8) RawData[byte] = v;
 				else if (bpp == 4) {
-					RawData[byte] &= 0xF ^ (0xF << bit);
+					RawData[byte] &= 0xFF ^ (0xF << bit);
 					RawData[byte] |= v << bit;
 				} else if (bpp == 2) {
-					RawData[byte] &= 0xF ^ (0x3 << bit);
+					RawData[byte] &= 0xFF ^ (0x3 << bit);
 					RawData[byte] |= v << bit;
 				} else if (bpp == 1) {
-					RawData[byte] &= 0xF ^ (0x1 << bit);
+					RawData[byte] &= 0xFF ^ (0x1 << bit);
 					RawData[byte] |= v << bit;
 				}
 			}
