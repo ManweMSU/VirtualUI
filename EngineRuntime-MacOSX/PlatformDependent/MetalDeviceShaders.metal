@@ -138,8 +138,9 @@ fragment float4 MetalDeviceBlurPixelShader(metal_device_main_output data [[stage
 	int2 center = int2(data.tex_coord.x, data.tex_coord.y);
 	int radius = ceil(data.color.a * 3.0);
 	int dv = max(((radius + 8) / 9), 1);
-	float norm = 1.0f / (data.color.a * 2.506628274631001);
-	float denom = -1.0f / (2.0f * data.color.a * data.color.a);
+	float aa = data.color.a * data.color.a;
+	float norm = 1.0f / (aa * 6.2831853071795864f);
+	float denom = -1.0f / (2.0f * aa);
 	float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f);
 	float4 div = 0.0f;
 	for (int y = -radius; y <= radius; y += dv) for (int x = -radius; x <= radius; x += dv) {

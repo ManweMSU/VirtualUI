@@ -159,7 +159,7 @@ namespace Engine
 				if (Template->Properties->GetTemplateClass() != L"ComboBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::ComboBox &>(*this) = static_cast<Template::Controls::ComboBox &>(*Template->Properties);
 			}
-			ComboBox::~ComboBox(void) {}
+			ComboBox::~ComboBox(void) { if (_list) { _list->_owner = 0; _list->GetStation()->SetExclusiveWindow(0); } }
 			void ComboBox::Render(const Box & at)
 			{
 				Shape ** back = 0;
@@ -420,6 +420,7 @@ namespace Engine
 			ComboBox::ComboListBox::~ComboListBox(void) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); }
 			void ComboBox::ComboListBox::Render(const Box & at)
 			{
+				if (!_owner) return;
 				auto device = GetStation()->GetRenderingDevice();
 				if (!_view) {
 					if (_owner->ViewDropDownList) {
@@ -468,7 +469,7 @@ namespace Engine
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
 			void ComboBox::ComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); _owner->SetFocus(); }
+			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
 			void ComboBox::ComboListBox::LeftButtonUp(Point at)
 			{
 				if (_hot != -1) {
@@ -594,7 +595,7 @@ namespace Engine
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
 			}
-			TextComboBox::~TextComboBox(void) {}
+			TextComboBox::~TextComboBox(void) { if (_list) { _list->_owner = 0; _list->GetStation()->SetExclusiveWindow(0); } }
 			void TextComboBox::Render(const Box & at)
 			{
 				auto device = GetStation()->GetRenderingDevice();
@@ -1192,6 +1193,7 @@ namespace Engine
 			TextComboBox::TextComboListBox::~TextComboListBox(void) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); }
 			void TextComboBox::TextComboListBox::Render(const Box & at)
 			{
+				if (!_owner) return;
 				auto device = GetStation()->GetRenderingDevice();
 				if (!_view) {
 					if (_owner->ViewDropDownList) {
@@ -1247,7 +1249,7 @@ namespace Engine
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
 			void TextComboBox::TextComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); _owner->SetFocus(); }
+			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
 			void TextComboBox::TextComboListBox::LeftButtonUp(Point at)
 			{
 				if (_hot != -1) {
