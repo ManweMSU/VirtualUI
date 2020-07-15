@@ -2,6 +2,7 @@
 
 #include "../Storage/Archive.h"
 #include "../Storage/Object.h"
+#include "../Storage/ImageVolume.h"
 #include "../PlatformDependent/SystemColors.h"
 #include "OverlappedWindows.h"
 
@@ -72,67 +73,75 @@ namespace Engine
 			InterfaceTemplateImage::InterfaceTemplateImage(void) : Locales(0x10), Textures(0x40), StringIDs(0x40), ColorIDs(0x40), Assets(0x10) {}
 			InterfaceTemplateImage::InterfaceTemplateImage(Streaming::Stream * Source, const string & Locale, const string & System, double Scale) : InterfaceTemplateImage()
 			{
-				SafePointer<Archive> container = OpenArchive(Source, ArchiveMetadataUsage::IgnoreMetadata);
-				if (!container) throw InvalidFormatException();
-				InterfaceManifest manifest;
-				manifest.Version = 0xFFFFFFFF;
-				{
-					ArchiveFile manifest_file = container->FindArchiveFile(L"IMF", 1);
-					if (!manifest_file) throw InvalidFormatException();
-					SafePointer<Stream> manifest_stream = container->QueryFileStream(manifest_file, ArchiveStream::ForceDecompressed);
-					Reflection::RestoreFromBinaryObject(manifest, manifest_stream);
-					if (manifest.Version != 0) throw InvalidFormatException();
-				}
-				{
-					for (int i = 1; i <= container->GetFileCount(); i++) if (container->GetFileType(i) == L"STT") {
-						string lang = container->GetFileName(i);
-						if (!lang.Length() || !Locale.Length() || lang == Locale) {
-							if (!lang.Length()) lang = L"_";
-							SafePointer<Stream> table_stream = container->QueryFileStream(i, ArchiveStream::ForceDecompressed);
-							SafePointer<StringTable> table = new StringTable(table_stream);
-							Locales.Append(lang, table);
-						}
+				bool load_best_dpi = Storage::IsVolumeCodecLoadsBestDpiOnly();
+				try {
+					if (Scale && Scale == UI::Zoom) Storage::SetVolumeCodecLoadBestDpiOnly(true);
+					SafePointer<Archive> container = OpenArchive(Source, ArchiveMetadataUsage::IgnoreMetadata);
+					if (!container) throw InvalidFormatException();
+					InterfaceManifest manifest;
+					manifest.Version = 0xFFFFFFFF;
+					{
+						ArchiveFile manifest_file = container->FindArchiveFile(L"IMF", 1);
+						if (!manifest_file) throw InvalidFormatException();
+						SafePointer<Stream> manifest_stream = container->QueryFileStream(manifest_file, ArchiveStream::ForceDecompressed);
+						Reflection::RestoreFromBinaryObject(manifest, manifest_stream);
+						if (manifest.Version != 0) throw InvalidFormatException();
 					}
-				}
-				for (int i = 0; i < manifest.Assets.Length(); i++) {
-					if (!manifest.Assets[i].SystemFilter.Length() || !System.Length() || manifest.Assets[i].SystemFilter == System) {
-						int asset_id = manifest.Assets[i].AssetID;
-						ArchiveFile asset_file = container->FindArchiveFile(L"AST", asset_id);
-						if (asset_file) {
-							SafePointer<Stream> asset_stream = container->QueryFileStream(asset_file, ArchiveStream::ForceDecompressed);
-							Assets.Append(InterfaceAsset());
-							Reflection::RestoreFromBinaryObject(Assets.LastElement(), asset_stream);
-							for (int j = 0; j < Assets.LastElement().Colors.Length(); j++) {
-								auto & clr = Assets.LastElement().Colors[j];
-								if (clr.Name.Length()) ColorIDs.Append(clr.Name, clr.ID);
+					{
+						for (int i = 1; i <= container->GetFileCount(); i++) if (container->GetFileType(i) == L"STT") {
+							string lang = container->GetFileName(i);
+							if (!lang.Length() || !Locale.Length() || lang == Locale) {
+								if (!lang.Length()) lang = L"_";
+								SafePointer<Stream> table_stream = container->QueryFileStream(i, ArchiveStream::ForceDecompressed);
+								SafePointer<StringTable> table = new StringTable(table_stream);
+								Locales.Append(lang, table);
 							}
 						}
 					}
-				}
-				for (int a = 0; a < Assets.Length(); a++) {
-					for (int i = 0; i < Assets[a].Textures.Length(); i++) {
-						auto & texture_ref = Assets[a].Textures[i];
-						ArchiveFile texture_file = container->FindArchiveFile(L"IMG", texture_ref.ImageID);
-						if (!texture_file) throw InvalidFormatException();
-						SafePointer<Stream> texture_stream = container->QueryFileStream(texture_file, ArchiveStream::Native);
-						SafePointer<Codec::Image> texture = Codec::DecodeImage(texture_stream);
-						if (!texture) throw InvalidFormatException();
-						if (Scale) {
-							SafePointer<Codec::Image> new_texture = new Codec::Image;
-							new_texture->Frames.Append(texture->GetFrameBestDpiFit(Scale));
-							texture = new_texture;
+					for (int i = 0; i < manifest.Assets.Length(); i++) {
+						if (!manifest.Assets[i].SystemFilter.Length() || !System.Length() || manifest.Assets[i].SystemFilter == System) {
+							int asset_id = manifest.Assets[i].AssetID;
+							ArchiveFile asset_file = container->FindArchiveFile(L"AST", asset_id);
+							if (asset_file) {
+								SafePointer<Stream> asset_stream = container->QueryFileStream(asset_file, ArchiveStream::ForceDecompressed);
+								Assets.Append(InterfaceAsset());
+								Reflection::RestoreFromBinaryObject(Assets.LastElement(), asset_stream);
+								for (int j = 0; j < Assets.LastElement().Colors.Length(); j++) {
+									auto & clr = Assets.LastElement().Colors[j];
+									if (clr.Name.Length()) ColorIDs.Append(clr.Name, clr.ID);
+								}
+							}
 						}
-						Textures.Append(texture_ref.ImageID, texture);
 					}
-				}
-				{
-					ArchiveFile str_map_file = container->FindArchiveFile(L"STM", 1);
-					if (str_map_file) {
-						SafePointer<Stream> str_map_stream = container->QueryFileStream(str_map_file, ArchiveStream::ForceDecompressed);
-						InterfaceStringMapping map;
-						Reflection::RestoreFromBinaryObject(map, str_map_stream);
-						for (int i = 0; i < min(map.Values.Length(), map.Keys.Length()); i++) StringIDs.Append(map.Keys[i], map.Values[i]);
+					for (int a = 0; a < Assets.Length(); a++) {
+						for (int i = 0; i < Assets[a].Textures.Length(); i++) {
+							auto & texture_ref = Assets[a].Textures[i];
+							ArchiveFile texture_file = container->FindArchiveFile(L"IMG", texture_ref.ImageID);
+							if (!texture_file) throw InvalidFormatException();
+							SafePointer<Stream> texture_stream = container->QueryFileStream(texture_file, ArchiveStream::Native);
+							SafePointer<Codec::Image> texture = Codec::DecodeImage(texture_stream);
+							if (!texture) throw InvalidFormatException();
+							if (Scale) {
+								SafePointer<Codec::Image> new_texture = new Codec::Image;
+								new_texture->Frames.Append(texture->GetFrameBestDpiFit(Scale));
+								texture = new_texture;
+							}
+							Textures.Append(texture_ref.ImageID, texture);
+						}
 					}
+					{
+						ArchiveFile str_map_file = container->FindArchiveFile(L"STM", 1);
+						if (str_map_file) {
+							SafePointer<Stream> str_map_stream = container->QueryFileStream(str_map_file, ArchiveStream::ForceDecompressed);
+							InterfaceStringMapping map;
+							Reflection::RestoreFromBinaryObject(map, str_map_stream);
+							for (int i = 0; i < min(map.Values.Length(), map.Keys.Length()); i++) StringIDs.Append(map.Keys[i], map.Values[i]);
+						}
+					}
+					Storage::SetVolumeCodecLoadBestDpiOnly(load_best_dpi);
+				} catch (...) {
+					Storage::SetVolumeCodecLoadBestDpiOnly(load_best_dpi);
+					throw;
 				}
 			}
 			InterfaceTemplateImage::~InterfaceTemplateImage(void) {}
@@ -562,11 +571,14 @@ namespace Engine
 						Template.Font.Append(name, font);
 					}
 				}
+				StyleResourceResolver style_resolver;
+				style_resolver.Source = &Style;
+				style_resolver.DelegateResolver = ResourceResolver;
 				for (int a = 0; a < Assets.Length(); a++) {
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Applications.Length(); i++) {
 						auto & name = asset.Applications[i].Name;
-						SafePointer<Template::Shape> shape = CompileShape(this, asset.Applications[i].Root, Template, ResourceResolver);
+						SafePointer<Template::Shape> shape = CompileShape(this, asset.Applications[i].Root, Template, &style_resolver);
 						if (shape) Template.Application.Append(name, shape);
 					}
 				}
@@ -579,9 +591,6 @@ namespace Engine
 						Styles << style;
 					}
 				}
-				StyleResourceResolver style_resolver;
-				style_resolver.Source = &Style;
-				style_resolver.DelegateResolver = ResourceResolver;
 				for (int a = 0; a < Assets.Length(); a++) {
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Dialogs.Length(); i++) {

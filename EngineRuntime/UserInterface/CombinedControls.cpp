@@ -384,6 +384,7 @@ namespace Engine
 
 			void ComboBox::ComboListBox::scroll_to_current(void)
 			{
+				if (!_owner) return;
 				if (_owner->_current >= 0) {
 					int min = _owner->ElementHeight * _owner->_current;
 					int max = min + _owner->ElementHeight;
@@ -393,6 +394,7 @@ namespace Engine
 			}
 			void ComboBox::ComboListBox::move_selection(int to)
 			{
+				if (!_owner) return;
 				int index = max(min(to, _owner->_elements.Length() - 1), 0);
 				if (!_owner->_elements.Length()) return;
 				if (_owner->_current != index) {
@@ -463,6 +465,7 @@ namespace Engine
 			void ComboBox::ComboListBox::SetPosition(const Box & box)
 			{
 				WindowPosition = box; ArrangeChildren();
+				if (!_owner) return;
 				int page = box.Bottom - box.Top - (_owner->Border << 1);
 				_scroll->SetPageSilent(page);
 				_scroll->SetScrollerPositionSilent(_owner->_current * _owner->ElementHeight - (page >> 1));
@@ -472,6 +475,7 @@ namespace Engine
 			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
 			void ComboBox::ComboListBox::LeftButtonUp(Point at)
 			{
+				if (!_owner) return;
 				if (_hot != -1) {
 					if (_hot != _owner->_current) {
 						_owner->_current = _hot;
@@ -484,6 +488,7 @@ namespace Engine
 			}
 			void ComboBox::ComboListBox::MouseMove(Point at)
 			{
+				if (!_owner) return;
 				Box element(_owner->Border, _owner->Border,
 					WindowPosition.Right - WindowPosition.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0),
 					WindowPosition.Bottom - WindowPosition.Top - _owner->Border);
@@ -500,12 +505,14 @@ namespace Engine
 			}
 			void ComboBox::ComboListBox::ScrollVertically(double delta)
 			{
+				if (!_owner) return;
 				if (_svisible) {
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
 			bool ComboBox::ComboListBox::KeyDown(int key_code)
 			{
+				if (!_owner) return false;
 				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Space) {
 					GetStation()->SetExclusiveWindow(0);
@@ -1139,6 +1146,7 @@ namespace Engine
 
 			void TextComboBox::TextComboListBox::scroll_to_current(void)
 			{
+				if (!_owner) return;
 				if (_current >= 0) {
 					int min = _owner->ElementHeight * _current;
 					int max = min + _owner->ElementHeight;
@@ -1148,6 +1156,7 @@ namespace Engine
 			}
 			void TextComboBox::TextComboListBox::move_selection(int to)
 			{
+				if (!_owner) return;
 				int index = max(min(to, _owner->_elements.Length() - 1), 0);
 				if (!_owner->_elements.Length()) return;
 				_current = index;
@@ -1243,6 +1252,7 @@ namespace Engine
 			void TextComboBox::TextComboListBox::SetPosition(const Box & box)
 			{
 				WindowPosition = box; ArrangeChildren();
+				if (!_owner) return;
 				int page = box.Bottom - box.Top - (_owner->Border << 1);
 				_scroll->SetPageSilent(page);
 				_scroll->SetScrollerPositionSilent(_current * _owner->ElementHeight - (page >> 1));
@@ -1252,6 +1262,7 @@ namespace Engine
 			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
 			void TextComboBox::TextComboListBox::LeftButtonUp(Point at)
 			{
+				if (!_owner) return;
 				if (_hot != -1) {
 					move_selection(_hot);
 				}
@@ -1259,6 +1270,7 @@ namespace Engine
 			}
 			void TextComboBox::TextComboListBox::MouseMove(Point at)
 			{
+				if (!_owner) return;
 				Box element(_owner->Border, _owner->Border,
 					WindowPosition.Right - WindowPosition.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0),
 					WindowPosition.Bottom - WindowPosition.Top - _owner->Border);
@@ -1275,12 +1287,14 @@ namespace Engine
 			}
 			void TextComboBox::TextComboListBox::ScrollVertically(double delta)
 			{
+				if (!_owner) return;
 				if (_svisible) {
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
 			bool TextComboBox::TextComboListBox::KeyDown(int key_code)
 			{
+				if (!_owner) return false;
 				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Left) {
 					GetStation()->SetExclusiveWindow(0);
