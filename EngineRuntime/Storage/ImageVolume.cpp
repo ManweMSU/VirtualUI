@@ -1,6 +1,7 @@
 #include "ImageVolume.h"
 
 #include "Chain.h"
+#include "../Math/MathBase.h"
 #include "../UserInterface/ShapeBase.h"
 
 namespace Engine
@@ -170,7 +171,7 @@ namespace Engine
 					int best_match_index = -1;
 					double best_match = 0.0;
 					for (int i = 0; i < fhdr.Length(); i++) {
-						double res = abs(fhdr[i].DpiUsage - UI::Zoom);
+						double res = Math::abs(fhdr[i].DpiUsage - UI::Zoom);
 						if (res < best_match || best_match_index < 0) { best_match = res; best_match_index = i; }
 					}
 					if (best_match_index > 0) fhdr.SwapAt(0, best_match_index);

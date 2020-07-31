@@ -1,6 +1,7 @@
 #include "ImageVolume.h"
 
 #include "Chain.h"
+#include "../Math/MathBase.h"
 #include "../UserInterface/ShapeBase.h"
 
 namespace Engine
@@ -31,7 +32,9 @@ namespace Engine
 		class VolumeCodec : public Codec::ICodec
 		{
 		public:
-			VolumeCodec(void) {}
+			bool load_best_dpi_only;
+
+			VolumeCodec(void) { load_best_dpi_only = false; }
 			~VolumeCodec(void) override {}
 
 			virtual void EncodeFrame(Streaming::Stream * stream, Engine::Codec::Frame * frame, const string & format) override
@@ -164,6 +167,16 @@ namespace Engine
 				if (MemoryCompare(&hdr.Signature, "ecs.1.0", 8) != 0 || hdr.SignatureEx != 0x80000006 || hdr.Version != 0 || hdr.FrameCount == 0) throw InvalidFormatException();
 				fhdr.SetLength(hdr.FrameCount);
 				stream->Read(fhdr.GetBuffer(), sizeof(ImageVolumeFrameHeader) * hdr.FrameCount);
+				if (load_best_dpi_only) {
+					int best_match_index = -1;
+					double best_match = 0.0;
+					for (int i = 0; i < fhdr.Length(); i++) {
+						double res = Math::abs(fhdr[i].DpiUsage - UI::Zoom);
+						if (res < best_match || best_match_index < 0) { best_match = res; best_match_index = i; }
+					}
+					if (best_match_index > 0) fhdr.SwapAt(0, best_match_index);
+					if (fhdr.Length() > 1) fhdr.SetLength(1);
+				}
 				SafePointer<Engine::Codec::Image> result = new Engine::Codec::Image;
 				for (int i = 0; i < fhdr.Length(); i++) {
 					Streaming::FragmentStream source(stream, fhdr[i].DataOffset, fhdr[i].DataSize);
@@ -260,5 +273,7 @@ namespace Engine
 
 		Codec::ICodec * _VolumeCodec = 0;
 		Codec::ICodec * CreateVolumeCodec(void) { if (!_VolumeCodec) { _VolumeCodec = new VolumeCodec(); _VolumeCodec->Release(); } return _VolumeCodec; }
+		void SetVolumeCodecLoadBestDpiOnly(bool only) { if (_VolumeCodec) static_cast<VolumeCodec *>(_VolumeCodec)->load_best_dpi_only = only; }
+		bool IsVolumeCodecLoadsBestDpiOnly(void) { if (_VolumeCodec) return static_cast<VolumeCodec *>(_VolumeCodec)->load_best_dpi_only; else return false; }
 	}
 }

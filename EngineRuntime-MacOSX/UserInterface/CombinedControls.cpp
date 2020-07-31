@@ -159,7 +159,7 @@ namespace Engine
 				if (Template->Properties->GetTemplateClass() != L"ComboBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::ComboBox &>(*this) = static_cast<Template::Controls::ComboBox &>(*Template->Properties);
 			}
-			ComboBox::~ComboBox(void) {}
+			ComboBox::~ComboBox(void) { if (_list) { _list->_owner = 0; _list->GetStation()->SetExclusiveWindow(0); } }
 			void ComboBox::Render(const Box & at)
 			{
 				Shape ** back = 0;
@@ -384,6 +384,7 @@ namespace Engine
 
 			void ComboBox::ComboListBox::scroll_to_current(void)
 			{
+				if (!_owner) return;
 				if (_owner->_current >= 0) {
 					int min = _owner->ElementHeight * _owner->_current;
 					int max = min + _owner->ElementHeight;
@@ -393,6 +394,7 @@ namespace Engine
 			}
 			void ComboBox::ComboListBox::move_selection(int to)
 			{
+				if (!_owner) return;
 				int index = max(min(to, _owner->_elements.Length() - 1), 0);
 				if (!_owner->_elements.Length()) return;
 				if (_owner->_current != index) {
@@ -417,9 +419,10 @@ namespace Engine
 				int space = Base->_elements.Length() * Base->ElementHeight;
 				_scroll->SetRangeSilent(0, space - 1);
 			}
-			ComboBox::ComboListBox::~ComboListBox(void) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); }
+			ComboBox::ComboListBox::~ComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); } }
 			void ComboBox::ComboListBox::Render(const Box & at)
 			{
+				if (!_owner) return;
 				auto device = GetStation()->GetRenderingDevice();
 				if (!_view) {
 					if (_owner->ViewDropDownList) {
@@ -462,15 +465,17 @@ namespace Engine
 			void ComboBox::ComboListBox::SetPosition(const Box & box)
 			{
 				WindowPosition = box; ArrangeChildren();
+				if (!_owner) return;
 				int page = box.Bottom - box.Top - (_owner->Border << 1);
 				_scroll->SetPageSilent(page);
 				_scroll->SetScrollerPositionSilent(_owner->_current * _owner->ElementHeight - (page >> 1));
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
 			void ComboBox::ComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); _owner->SetFocus(); }
+			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
 			void ComboBox::ComboListBox::LeftButtonUp(Point at)
 			{
+				if (!_owner) return;
 				if (_hot != -1) {
 					if (_hot != _owner->_current) {
 						_owner->_current = _hot;
@@ -483,6 +488,7 @@ namespace Engine
 			}
 			void ComboBox::ComboListBox::MouseMove(Point at)
 			{
+				if (!_owner) return;
 				Box element(_owner->Border, _owner->Border,
 					WindowPosition.Right - WindowPosition.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0),
 					WindowPosition.Bottom - WindowPosition.Top - _owner->Border);
@@ -499,12 +505,14 @@ namespace Engine
 			}
 			void ComboBox::ComboListBox::ScrollVertically(double delta)
 			{
+				if (!_owner) return;
 				if (_svisible) {
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
 			bool ComboBox::ComboListBox::KeyDown(int key_code)
 			{
+				if (!_owner) return false;
 				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Space) {
 					GetStation()->SetExclusiveWindow(0);
@@ -594,7 +602,7 @@ namespace Engine
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
 			}
-			TextComboBox::~TextComboBox(void) {}
+			TextComboBox::~TextComboBox(void) { if (_list) { _list->_owner = 0; _list->GetStation()->SetExclusiveWindow(0); } }
 			void TextComboBox::Render(const Box & at)
 			{
 				auto device = GetStation()->GetRenderingDevice();
@@ -1138,6 +1146,7 @@ namespace Engine
 
 			void TextComboBox::TextComboListBox::scroll_to_current(void)
 			{
+				if (!_owner) return;
 				if (_current >= 0) {
 					int min = _owner->ElementHeight * _current;
 					int max = min + _owner->ElementHeight;
@@ -1147,6 +1156,7 @@ namespace Engine
 			}
 			void TextComboBox::TextComboListBox::move_selection(int to)
 			{
+				if (!_owner) return;
 				int index = max(min(to, _owner->_elements.Length() - 1), 0);
 				if (!_owner->_elements.Length()) return;
 				_current = index;
@@ -1189,9 +1199,10 @@ namespace Engine
 				int space = Base->_elements.Length() * Base->ElementHeight;
 				_scroll->SetRangeSilent(0, space - 1);
 			}
-			TextComboBox::TextComboListBox::~TextComboListBox(void) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); }
+			TextComboBox::TextComboListBox::~TextComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); } }
 			void TextComboBox::TextComboListBox::Render(const Box & at)
 			{
+				if (!_owner) return;
 				auto device = GetStation()->GetRenderingDevice();
 				if (!_view) {
 					if (_owner->ViewDropDownList) {
@@ -1241,15 +1252,17 @@ namespace Engine
 			void TextComboBox::TextComboListBox::SetPosition(const Box & box)
 			{
 				WindowPosition = box; ArrangeChildren();
+				if (!_owner) return;
 				int page = box.Bottom - box.Top - (_owner->Border << 1);
 				_scroll->SetPageSilent(page);
 				_scroll->SetScrollerPositionSilent(_current * _owner->ElementHeight - (page >> 1));
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
 			void TextComboBox::TextComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); _owner->SetFocus(); }
+			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
 			void TextComboBox::TextComboListBox::LeftButtonUp(Point at)
 			{
+				if (!_owner) return;
 				if (_hot != -1) {
 					move_selection(_hot);
 				}
@@ -1257,6 +1270,7 @@ namespace Engine
 			}
 			void TextComboBox::TextComboListBox::MouseMove(Point at)
 			{
+				if (!_owner) return;
 				Box element(_owner->Border, _owner->Border,
 					WindowPosition.Right - WindowPosition.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0),
 					WindowPosition.Bottom - WindowPosition.Top - _owner->Border);
@@ -1273,12 +1287,14 @@ namespace Engine
 			}
 			void TextComboBox::TextComboListBox::ScrollVertically(double delta)
 			{
+				if (!_owner) return;
 				if (_svisible) {
 					_scroll->SetScrollerPosition(_scroll->Position + int(delta * double(_scroll->Line)));
 				}
 			}
 			bool TextComboBox::TextComboListBox::KeyDown(int key_code)
 			{
+				if (!_owner) return false;
 				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Left) {
 					GetStation()->SetExclusiveWindow(0);

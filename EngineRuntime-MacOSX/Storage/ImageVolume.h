@@ -7,5 +7,7 @@ namespace Engine
 	namespace Storage
 	{
 		Codec::ICodec * CreateVolumeCodec(void);
+		void SetVolumeCodecLoadBestDpiOnly(bool only);
+		bool IsVolumeCodecLoadsBestDpiOnly(void);
 	}
 }
