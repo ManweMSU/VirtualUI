@@ -10,8 +10,10 @@ namespace Engine
 		{
 			SafePointer<Streaming::TextReader> reader;
 			SafePointer<Streaming::TextWriter> writer;
+			bool throw_on_syntax_error;
 		public:
 			JsonSerializer(Streaming::Stream * stream);
+			JsonSerializer(Streaming::Stream * stream, bool throw_on_syntax);
 			virtual ~JsonSerializer(void) override;
 
 			virtual void SerializeObject(Reflected & obj) override;

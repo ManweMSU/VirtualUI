@@ -10,6 +10,16 @@ namespace Engine
 	namespace Reflection
 	{
 		namespace JsonInternal {
+			string FormatFloatTokenJSON(float value)
+			{
+				if (Math::IsInfinity(value) || Math::IsNaN(value)) return L"0";
+				else return string(value);
+			}
+			string FormatFloatTokenJSON(double value)
+			{
+				if (Math::IsInfinity(value) || Math::IsNaN(value)) return L"0";
+				else return string(value);
+			}
 			string FormatStringTokenJSON(const string & input)
 			{
 				int ucslen = input.GetEncodedLength(Encoding::UTF32);
@@ -63,12 +73,12 @@ namespace Engine
 					} else if (pi.Type == PropertyType::Int64) {
 						ps << string(pi.Get<int64>());
 					} else if (pi.Type == PropertyType::Float) {
-						ps << string(pi.Get<float>());
+						ps << FormatFloatTokenJSON(pi.Get<float>());
 					} else if (pi.Type == PropertyType::Double) {
-						ps << string(pi.Get<double>());
+						ps << FormatFloatTokenJSON(pi.Get<double>());
 					} else if (pi.Type == PropertyType::Complex) {
 						auto & v = pi.Get<Math::Complex>();
-						ps << L"{ \"re\": " << string(v.re) << L", \"im\": " << string(v.im) << L" }";
+						ps << L"{ \"re\": " << FormatFloatTokenJSON(v.re) << L", \"im\": " << FormatFloatTokenJSON(v.im) << L" }";
 					} else if (pi.Type == PropertyType::Boolean) {
 						auto v = pi.Get<bool>();
 						ps << (v ? L"true" : L"false");
@@ -81,10 +91,10 @@ namespace Engine
 						ps << L"{ \"r\": " << string(int32(v.r)) << L", \"g\": " << string(int32(v.g)) << L", \"b\": " << string(int32(v.b)) << L", \"a\": " << string(int32(v.a)) << L" }";
 					} else if (pi.Type == PropertyType::Rectangle) {
 						auto & v = pi.Get<UI::Rectangle>();
-						ps << L"{ \"la\": " << string(v.Left.Absolute) << L", \"ls\": " << string(v.Left.Zoom) << L", \"lm\": " << string(v.Left.Anchor) <<
-							L", \"ta\": " << string(v.Top.Absolute) << L", \"ts\": " << string(v.Top.Zoom) << L", \"tm\": " << string(v.Top.Anchor) <<
-							L", \"ra\": " << string(v.Right.Absolute) << L", \"rs\": " << string(v.Right.Zoom) << L", \"rm\": " << string(v.Right.Anchor) <<
-							L", \"ba\": " << string(v.Bottom.Absolute) << L", \"bs\": " << string(v.Bottom.Zoom) << L", \"bm\": " << string(v.Bottom.Anchor) << L" }";
+						ps << L"{ \"la\": " << string(v.Left.Absolute) << L", \"ls\": " << FormatFloatTokenJSON(v.Left.Zoom) << L", \"lm\": " << FormatFloatTokenJSON(v.Left.Anchor) <<
+							L", \"ta\": " << string(v.Top.Absolute) << L", \"ts\": " << FormatFloatTokenJSON(v.Top.Zoom) << L", \"tm\": " << FormatFloatTokenJSON(v.Top.Anchor) <<
+							L", \"ra\": " << string(v.Right.Absolute) << L", \"rs\": " << FormatFloatTokenJSON(v.Right.Zoom) << L", \"rm\": " << FormatFloatTokenJSON(v.Right.Anchor) <<
+							L", \"ba\": " << string(v.Bottom.Absolute) << L", \"bs\": " << FormatFloatTokenJSON(v.Bottom.Zoom) << L", \"bm\": " << FormatFloatTokenJSON(v.Bottom.Anchor) << L" }";
 					} else {
 						ps << L"null";
 					}
@@ -629,7 +639,12 @@ namespace Engine
 				obj.WasDeserialized();
 			}
 		}
-		JsonSerializer::JsonSerializer(Streaming::Stream * stream)
+		JsonSerializer::JsonSerializer(Streaming::Stream * stream) : throw_on_syntax_error(false)
+		{
+			reader = new TextReader(stream, Encoding::UTF8);
+			writer = new TextWriter(stream, Encoding::UTF8);
+		}
+		JsonSerializer::JsonSerializer(Streaming::Stream * stream, bool throw_on_syntax) : throw_on_syntax_error(throw_on_syntax)
 		{
 			reader = new TextReader(stream, Encoding::UTF8);
 			writer = new TextWriter(stream, Encoding::UTF8);
@@ -697,7 +712,7 @@ namespace Engine
 				// Handling
 				JsonInternal::JsonAnalyzeStructure(obj, tree.Root);
 			}
-			catch (...) {}
+			catch (...) { if (throw_on_syntax_error) throw InvalidFormatException(); }
 		}
 	}
 	constexpr widechar * Base64Digits = L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
