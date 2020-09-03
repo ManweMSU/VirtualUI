@@ -703,7 +703,7 @@ namespace Engine
 									!(_text[pos].lo & StyleUnderline) && !(_text[pos].lo & StyleStrikeout) &&
 									!(_text[pos].lo & FlagLargeObject)) pos++;
 								if (pos >= _text.Length()) break;
-								if ((_text[pos].lo & MaskUcsCode) == L'\n') {
+								if ((_text[pos].lo & MaskUcsCode) == L'\n' && !(_text[pos].lo & FlagLargeObject)) {
 									_words << Word();
 									_words.LastElement().embedded_object_index = -2;
 									_words.LastElement().range_left = pos;
@@ -711,7 +711,7 @@ namespace Engine
 									_words.LastElement().width = _words.LastElement().height = 0;
 									_words.LastElement().align = int((_text[pos].lo & MaskAlignment) >> 37);
 									pos++;
-								} else if ((_text[pos].lo & MaskUcsCode) == L'\t') {
+								} else if ((_text[pos].lo & MaskUcsCode) == L'\t' && !(_text[pos].lo & FlagLargeObject)) {
 									_words << Word();
 									_words.LastElement().embedded_object_index = -3;
 									_words.LastElement().range_left = pos;
@@ -1005,7 +1005,7 @@ namespace Engine
 							_parent->ShiftCaretLeft(pos, box, enter);
 						} else {
 							(*pos)--;
-							if (enter && _text[*pos].lo & FlagLargeObject && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if (enter && (_text[*pos].lo & FlagLargeObject) && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box = _objs[_text[*pos].lo & MaskUcsCode].inner;
 								*pos = (*box)->GetMaximalPosition();
 								(*box)->ShiftCaretLeft(pos, box, true);
@@ -1020,7 +1020,7 @@ namespace Engine
 							*box = _parent;
 							_parent->ShiftCaretRight(pos, box, enter);
 						} else {
-							if (enter && _text[*pos].lo & FlagLargeObject && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if (enter && (_text[*pos].lo & FlagLargeObject) && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box = _objs[_text[*pos].lo & MaskUcsCode].inner;
 								*pos = 0;
 								(*box)->ShiftCaretRight(pos, box, true);
@@ -1069,7 +1069,7 @@ namespace Engine
 							auto align_attr = _text[pos].lo & MaskAlignment;
 							int sp = pos;
 							while (pos < _text.Length() && (_text[pos].lo & FlagLargeObject || (_text[pos].lo & MaskUcsCode) != L'\n')) pos++;
-							if (pos < _text.Length() && (_text[pos].lo & MaskUcsCode) == L'\n') pos++;
+							if (pos < _text.Length() && !(_text[pos].lo & FlagLargeObject)) pos++;
 							for (int i = sp; i < pos; i++) _text[i].lo = (_text[i].lo & ~MaskAlignment) | align_attr;
 						}
 						if (_parent && _parent->GetBoxType() == 3 && _text.Length() == 0) {
@@ -1086,7 +1086,7 @@ namespace Engine
 					virtual void RemoveBack(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) override
 					{
 						if (*pos1 > 0) {
-							if (_text[(*pos1) - 1].lo & FlagLargeObject && _objs[_text[(*pos1) - 1].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if ((_text[(*pos1) - 1].lo & FlagLargeObject) && _objs[_text[(*pos1) - 1].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box1 = *box2 = _objs[_text[(*pos1) - 1].lo & MaskUcsCode].inner;
 								*pos1 = *pos2 = (*box1)->GetMaximalPosition();
 								(*box1)->RemoveBack(pos1, box1, pos2, box2);
@@ -1105,7 +1105,7 @@ namespace Engine
 					virtual void RemoveForward(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) override
 					{
 						if (*pos1 < _text.Length()) {
-							if (_text[*pos1].lo & FlagLargeObject && _objs[_text[*pos1].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if ((_text[*pos1].lo & FlagLargeObject) && _objs[_text[*pos1].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box1 = *box2 = _objs[_text[*pos1].lo & MaskUcsCode].inner;
 								*pos1 = *pos2 = 0;
 								(*box1)->RemoveForward(pos1, box1, pos2, box2);
