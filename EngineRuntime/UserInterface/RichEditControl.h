@@ -25,6 +25,7 @@ namespace Engine
 					virtual void InitializeContextMenu(Menus::Menu * menu, RichEdit * sender);
 					virtual void LinkPressed(const string & resource, RichEdit * sender);
 					virtual void CaretPositionChanged(RichEdit * sender);
+					virtual ITexture * GetImageByName(const string & resource, RichEdit * sender);
 				};
 				class ContentBox : public Object
 				{
