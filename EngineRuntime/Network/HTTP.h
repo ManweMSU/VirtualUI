@@ -32,6 +32,7 @@ namespace Engine
 		{
 		public:
 			virtual HttpConnection * Connect(const string & server_address) = 0;
+			virtual HttpConnection * SecureConnect(const string & server_address) = 0;
 		};
 		HttpSession * OpenHttpSession(const string & agent_name = L"");
 	}

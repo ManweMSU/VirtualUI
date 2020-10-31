@@ -15,7 +15,7 @@
 #include "Miscellaneous/Time.h"
 #include "Miscellaneous/UndoBuffer.h"
 #include "Network/HTTP.h"
-#include "Network/Socket.h"
+#include "Network/SecureSocket.h"
 #include "PlatformDependent/Application.h"
 #include "PlatformDependent/Assembly.h"
 #include "PlatformDependent/Clipboard.h"
