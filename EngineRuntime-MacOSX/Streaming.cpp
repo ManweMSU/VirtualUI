@@ -204,37 +204,40 @@ namespace Engine
 					source->Read(&byte, 1);
 					return byte;
 				} else if (coding == Encoding::UTF8) {
-					uint32 code = 0;
-					source->Read(&code, 1);
-					if (code & 0x80) {
-						code &= 0x7F;
-						if (code & 0x20) {
-							code &= 0x1F;
-							if (code & 0x10) {
-								code &= 0x07;
-								code <<= 18;
-								uint8 c2, c3, c4;
-								source->Read(&c2, 1);
-								source->Read(&c3, 1);
-								source->Read(&c4, 1);
-								code |= (c2 & 0x3F) << 12;
-								code |= (c3 & 0x3F) << 6;
-								code |= (c4 & 0x3F);
+					uint32 code = 0xFEFF;
+					while (code == 0xFEFF) {
+						code = 0;
+						source->Read(&code, 1);
+						if (code & 0x80) {
+							code &= 0x7F;
+							if (code & 0x20) {
+								code &= 0x1F;
+								if (code & 0x10) {
+									code &= 0x07;
+									code <<= 18;
+									uint8 c2, c3, c4;
+									source->Read(&c2, 1);
+									source->Read(&c3, 1);
+									source->Read(&c4, 1);
+									code |= (c2 & 0x3F) << 12;
+									code |= (c3 & 0x3F) << 6;
+									code |= (c4 & 0x3F);
+								} else {
+									code &= 0x0F;
+									code <<= 12;
+									uint8 c2, c3;
+									source->Read(&c2, 1);
+									source->Read(&c3, 1);
+									code |= (c2 & 0x3F) << 6;
+									code |= (c3 & 0x3F);
+								}
 							} else {
-								code &= 0x0F;
-								code <<= 12;
-								uint8 c2, c3;
+								code &= 0x1F;
+								code <<= 6;
+								uint8 c2;
 								source->Read(&c2, 1);
-								source->Read(&c3, 1);
-								code |= (c2 & 0x3F) << 6;
-								code |= (c3 & 0x3F);
+								code |= (c2 & 0x3F);
 							}
-						} else {
-							code &= 0x1F;
-							code <<= 6;
-							uint8 c2;
-							source->Read(&c2, 1);
-							code |= (c2 & 0x3F);
 						}
 					}
 					return code;

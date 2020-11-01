@@ -11,6 +11,7 @@ ENGINE_END_REFLECTED_CLASS
 
 using namespace Engine;
 using namespace Engine::UI;
+using namespace Engine::Network;
 
 UI::InterfaceTemplate interface;
 
@@ -229,44 +230,26 @@ int Main(void)
 	UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
 	source->Release();
 
-	UI::ITexture * tex;
-	{
-		Codec::Image icon;
-		Array<Math::Vector2> line;
-		line << Math::Vector2(0.0, 0.0);
-		line << Math::Vector2(200.0, 100.0);
-		line << Math::Vector2(200.0, 200.0);
-		line << Math::Vector2(20.0, 200.0);
-		auto rd = UI::Windows::CreateNativeCompatibleTextureRenderingDevice(256, 256, Math::Color(0.0, 0.0, 0.0, 0.0));
-		SafePointer<IFont> local_font = rd->LoadFont(L"Times", 30, 400, false, false, false);
-		rd->BeginDraw();
-		rd->FillPolygon(line.GetBuffer(), line.Length(), Math::Color(0.0, 0.0, 1.0, 1.0));
-		rd->DrawPolygon(line.GetBuffer(), line.Length(), Math::Color(1.0, 0.0, 0.0, 0.5), 10.0);
-		rd->DrawText(L"ПРИВЕТ", local_font, Math::Color(1.0, 0.0, 0.0, 0.5), 128, 16);
-		rd->EndDraw();
-		tex = rd->GetRenderTargetAsTexture();
-		SafePointer<Codec::Frame> frame = rd->GetRenderTargetAsFrame();
-		Console << L"Set clipboard data : " << Clipboard::SetData(frame) << IO::NewLineChar;
-		rd->Release();
-		icon.Frames.Append(frame);
-		UI::Windows::SetApplicationIcon(&icon);
-	}
-	{
-		auto fonts = UI::Windows::GetFontFamilies();
-		for (int i = 0; i < fonts->Length(); i++) {
-			Console.WriteLine(fonts->ElementAt(i));
-		}
-	}
-	// SafePointer<Codec::Frame> cframe;
-	// if (Clipboard::GetData(cframe.InnerRef())) {
-	//     tex = loader->LoadTexture(cframe);
-	// }
+	UI::ITexture * tex = 0;
+	try {
+		string host = L"i.pinimg.com";
+		string url = L"/originals/80/7a/a2/807aa2cb5485f9e3bbb353b124428d93.jpg";
+		SafePointer<HttpSession> session = OpenHttpSession();
+		if (!session) return 1;
+		SafePointer<HttpConnection> connection = session->SecureConnect(host);
+		if (!connection) return 1;
+		SafePointer<HttpRequest> request = connection->CreateRequest(url);
+		if (!connection) return 1;
+		request->Send();
+		Streaming::MemoryStream stream(0x10000);
+		request->GetResponceStream()->CopyToUntilEof(&stream);
+		stream.Seek(0, Streaming::Begin);
+		SafePointer<Codec::Image> image = Codec::DecodeImage(&stream);
+		UI::Windows::SetApplicationIcon(image);
+		SafePointer<UI::IResourceLoader> loader = UI::Windows::CreateNativeCompatibleResourceLoader();
+		tex = loader->LoadTexture(image->Frames.FirstElement());
+	} catch (Exception & e) { Console << e.ToString() << IO::NewLineChar; return 1; }
 
-	//Console << string(tex) + IO::NewLineChar;
-	//Console << L"Text available : " << Clipboard::IsFormatAvailable(Clipboard::Format::Text) << IO::NewLineChar;
-	//Console << L"Image available: " << Clipboard::IsFormatAvailable(Clipboard::Format::Image) << IO::NewLineChar;
-	//Console << IO::GetCurrentDirectory() << IO::NewLineChar;
-	//Console << IO::ExpandPath(L"/pidor//pidor") << IO::NewLineChar;
 	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
 
 	MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |

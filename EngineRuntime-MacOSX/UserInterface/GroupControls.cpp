@@ -620,6 +620,7 @@ namespace Engine
 			}
 			void HorizontalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight)); }
 			string HorizontalSplitBox::GetControlClass(void) { return L"HorizontalSplitBox"; }
+
 			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _bookmarks(4) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
 			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _bookmarks(4)
 			{
@@ -740,7 +741,7 @@ namespace Engine
 			{
 				int w = WindowPosition.Right - WindowPosition.Left;
 				int h = WindowPosition.Bottom - WindowPosition.Top;
-				if (at.x >= 0 && at.x < w && at.y >= 0 && at.y < h && at.y < TabHeight) {
+				if (at.x >= 0 && at.x < w && at.y >= 0 && at.y < h && at.y < TabHeight && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
 					int x = at.x + _shift;
 					int oh = _hot; _hot = -1;
 					int right = 0;

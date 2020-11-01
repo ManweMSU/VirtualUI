@@ -1,6 +1,6 @@
 #include "HTTP.h"
 
-#include "Socket.h"
+#include "SecureSocket.h"
 #include "../Miscellaneous/DynamicString.h"
 
 namespace Engine
@@ -159,6 +159,7 @@ namespace Engine
 					send_http_header();
 					_headers.Clear();
 					_status = 1;
+					_connection->Flush();
 				}
 				virtual void Send(const void * data, uint32 size) override
 				{
@@ -168,6 +169,7 @@ namespace Engine
 					if (size) _connection->Write(data, size);
 					_headers.Clear();
 					_status = 1;
+					_connection->Flush();
 				}
 				virtual Streaming::Stream * BeginSend(uint32 size) override
 				{
@@ -187,6 +189,7 @@ namespace Engine
 					writer.SetReference(0);
 					_headers.Clear();
 					_status = 1;
+					_connection->Flush();
 				}
 				virtual Streaming::Stream * GetResponceStream(void) override
 				{
@@ -230,12 +233,13 @@ namespace Engine
 				SocketAddressDomain _domain;
 				Address _address;
 				uint32 _port;
+				bool _secure;
 			public:
-				HttpConnection(const string & agent, const string & address) : _agent(agent), _host(address) { ResetConnection(); }
+				HttpConnection(const string & agent, const string & address, bool secure = false) : _agent(agent), _host(address), _secure(secure) { ResetConnection(); }
 				virtual ~HttpConnection(void) override {}
 				virtual HttpRequest * CreateRequest(const string & object, HttpVerb verb) override
 				{
-					SafePointer<Socket> connection = CreateSocket(_domain, SocketProtocol::TCP);
+					SafePointer<Socket> connection = _secure ? CreateSecureSocket(_domain, _host) : CreateSocket(_domain, SocketProtocol::TCP);
 					if (!connection) throw Exception();
 					connection->Connect(_address, _port);
 					const widechar * Verb = L"GET";
@@ -263,7 +267,7 @@ namespace Engine
 							port = uint16(_host.Fragment(sep + 1, -1).ToUInt32());
 						} else {
 							server = _host.Fragment(1, _host.Length() - 2);
-							port = 80;
+							port = _secure ? 443 : 80;
 						}
 					} else {
 						int sep;
@@ -272,7 +276,7 @@ namespace Engine
 							port = uint16(_host.Fragment(sep + 1, -1).ToUInt32());
 						} else {
 							server = _host;
-							port = 80;
+							port = _secure ? 443 : 80;
 						}
 					}
 					SafePointer< Array<AddressEntity> > addr = GetAddressByHost(server, port, SocketAddressDomain::IPv6, SocketProtocol::TCP);
@@ -292,6 +296,12 @@ namespace Engine
 				{
 					try {
 						return new HttpConnection(_agent, server_address);
+					} catch (...) { return 0; }
+				}
+				virtual HttpConnection * SecureConnect(const string & server_address) override
+				{
+					try {
+						return new HttpConnection(_agent, server_address, true);
 					} catch (...) { return 0; }
 				}
 			};

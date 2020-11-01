@@ -226,6 +226,7 @@ namespace Engine
 				{
 					RichEdit * _edit;
 					RichEdit::ContentBox * _parent;
+					string _image_resource;
 					SafePointer<Codec::Image> _image;
 					SafePointer<ITexture> _texture;
 					SafePointer<ITextureRenderingInfo> _info;
@@ -238,7 +239,10 @@ namespace Engine
 					~PictureContents(void) override {}
 					virtual void Render(IRenderingDevice * device, const Box & at) override
 					{
-						if (!_texture && _image) _texture = device->LoadTexture(_image->GetFrameBestDpiFit(Zoom));
+						if (!_texture) {
+							if (_image) _texture = device->LoadTexture(_image->GetFrameBestDpiFit(Zoom));
+							else if (_edit->GetHook()) _texture = _edit->GetHook()->GetImageByName(_image_resource, _edit);
+						}
 						if (!_info && _texture) _info = device->CreateTextureRenderingInfo(_texture, Box(0, 0, _texture->GetWidth(), _texture->GetHeight()), false);
 						if (_info) device->RenderTexture(_info, Box(at.Left, at.Top, at.Left + _box_width, at.Top + _box_height));
 					}
@@ -283,12 +287,17 @@ namespace Engine
 							while (pos < text.Length() && text[pos] != 27) pos++;
 							int ep = pos;
 							if (pos < text.Length()) pos += 2;
-							SafePointer< Array<uint8> > data = ConvertFromBase64(string(text.GetBuffer() + sp, ep - sp, Encoding::UTF32));
-							Streaming::MemoryStream stream(0x10000);
-							stream.WriteArray(data);
-							stream.Seek(0, Streaming::Begin);
-							data.SetReference(0);
-							_image = Codec::DecodeImage(&stream);
+							auto data_ref = string(text.GetBuffer() + sp, ep - sp, Encoding::UTF32);
+							if (data_ref[0] == L'@') {
+								_image_resource = data_ref.Fragment(1, -1);
+							} else {
+								SafePointer< Array<uint8> > data = ConvertFromBase64(data_ref);
+								Streaming::MemoryStream stream(0x10000);
+								stream.WriteArray(data);
+								stream.Seek(0, Streaming::Begin);
+								data.SetReference(0);
+								_image = Codec::DecodeImage(&stream);
+							}
 							ResetCache();
 							_width = width; _height = height;
 							_box_width = int(_width * Zoom);
@@ -297,17 +306,19 @@ namespace Engine
 					}
 					virtual void SerializeToPlainText(const Array<int> & index, Array<uint32> & text, uint64 attr_lo, uint64 attr_hi) override
 					{
-						text << L'\33'; text << L'p';
-						string dims = string(uint(_width), HexadecimalBase, 4) + string(uint(_height), HexadecimalBase, 4);
-						text << dims[0]; text << dims[1]; text << dims[2]; text << dims[3];
-						text << dims[4]; text << dims[5]; text << dims[6]; text << dims[7];
-						Streaming::MemoryStream stream(0x10000);
-						Codec::EncodeImage(&stream, _image, L"EIWV");
-						string base64 = ConvertToBase64(stream.GetBuffer(), int(stream.Length()));
-						Array<uint32> ucs(0x10000);
-						ucs.SetLength(base64.GetEncodedLength(Encoding::UTF32));
-						base64.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
-						text << ucs; text << L'\33'; text << L'e';
+						if (_image) {
+							text << L'\33'; text << L'p';
+							string dims = string(uint(_width), HexadecimalBase, 4) + string(uint(_height), HexadecimalBase, 4);
+							text << dims[0]; text << dims[1]; text << dims[2]; text << dims[3];
+							text << dims[4]; text << dims[5]; text << dims[6]; text << dims[7];
+							Streaming::MemoryStream stream(0x10000);
+							Codec::EncodeImage(&stream, _image, L"EIWV");
+							string base64 = ConvertToBase64(stream.GetBuffer(), int(stream.Length()));
+							Array<uint32> ucs(0x10000);
+							ucs.SetLength(base64.GetEncodedLength(Encoding::UTF32));
+							base64.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
+							text << ucs; text << L'\33'; text << L'e';
+						}
 					}
 					virtual void SerializeRange(const Array<int> & index, Array<uint32> & text, int from, int to, uint64 attr_lo, uint64 attr_hi) override { SerializeToPlainText(index, text, attr_lo, attr_hi); }
 					virtual void SerializeUnattributedToPlainText(Array<uint32> & text) override {}
@@ -703,7 +714,7 @@ namespace Engine
 									!(_text[pos].lo & StyleUnderline) && !(_text[pos].lo & StyleStrikeout) &&
 									!(_text[pos].lo & FlagLargeObject)) pos++;
 								if (pos >= _text.Length()) break;
-								if ((_text[pos].lo & MaskUcsCode) == L'\n') {
+								if ((_text[pos].lo & MaskUcsCode) == L'\n' && !(_text[pos].lo & FlagLargeObject)) {
 									_words << Word();
 									_words.LastElement().embedded_object_index = -2;
 									_words.LastElement().range_left = pos;
@@ -711,7 +722,7 @@ namespace Engine
 									_words.LastElement().width = _words.LastElement().height = 0;
 									_words.LastElement().align = int((_text[pos].lo & MaskAlignment) >> 37);
 									pos++;
-								} else if ((_text[pos].lo & MaskUcsCode) == L'\t') {
+								} else if ((_text[pos].lo & MaskUcsCode) == L'\t' && !(_text[pos].lo & FlagLargeObject)) {
 									_words << Word();
 									_words.LastElement().embedded_object_index = -3;
 									_words.LastElement().range_left = pos;
@@ -983,17 +994,19 @@ namespace Engine
 								}
 							}
 						}
-						int sel_pos = pos;
-						int len = _text.Length();
-						if (_text[tag_pos].lo & FlagLargeObject) {
-							sel_pos = tag_pos; pos = tag_pos + 1;
-						} else {
-							while (sel_pos > 0 && _is_ident_char(_text[sel_pos - 1])) sel_pos--;
-							while (pos < len && _is_ident_char(_text[pos])) pos++;
-							if (pos == sel_pos && tag_pos != -1) { sel_pos = tag_pos; pos = tag_pos + 1; }
-						}
-						*pos1 = pos;
-						*pos2 = sel_pos;
+						if (tag_pos != -1) {
+							int sel_pos = pos;
+							int len = _text.Length();
+							if (_text[tag_pos].lo & FlagLargeObject) {
+								sel_pos = tag_pos; pos = tag_pos + 1;
+							} else {
+								while (sel_pos > 0 && _is_ident_char(_text[sel_pos - 1])) sel_pos--;
+								while (pos < len && _is_ident_char(_text[pos])) pos++;
+								if (pos == sel_pos && tag_pos != -1) { sel_pos = tag_pos; pos = tag_pos + 1; }
+							}
+							*pos1 = pos;
+							*pos2 = sel_pos;
+						} else { *pos1 = *pos2 = 0; }
 					}
 					virtual void SetAbsoluteOrigin(int x, int y) override { _org_x = x; _org_y = y; }
 					virtual void ShiftCaretLeft(int * pos, ContentBox ** box, bool enter) override
@@ -1005,7 +1018,7 @@ namespace Engine
 							_parent->ShiftCaretLeft(pos, box, enter);
 						} else {
 							(*pos)--;
-							if (enter && _text[*pos].lo & FlagLargeObject && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if (enter && (_text[*pos].lo & FlagLargeObject) && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box = _objs[_text[*pos].lo & MaskUcsCode].inner;
 								*pos = (*box)->GetMaximalPosition();
 								(*box)->ShiftCaretLeft(pos, box, true);
@@ -1020,7 +1033,7 @@ namespace Engine
 							*box = _parent;
 							_parent->ShiftCaretRight(pos, box, enter);
 						} else {
-							if (enter && _text[*pos].lo & FlagLargeObject && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if (enter && (_text[*pos].lo & FlagLargeObject) && _objs[_text[*pos].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box = _objs[_text[*pos].lo & MaskUcsCode].inner;
 								*pos = 0;
 								(*box)->ShiftCaretRight(pos, box, true);
@@ -1069,7 +1082,7 @@ namespace Engine
 							auto align_attr = _text[pos].lo & MaskAlignment;
 							int sp = pos;
 							while (pos < _text.Length() && (_text[pos].lo & FlagLargeObject || (_text[pos].lo & MaskUcsCode) != L'\n')) pos++;
-							if (pos < _text.Length() && (_text[pos].lo & MaskUcsCode) == L'\n') pos++;
+							if (pos < _text.Length() && !(_text[pos].lo & FlagLargeObject)) pos++;
 							for (int i = sp; i < pos; i++) _text[i].lo = (_text[i].lo & ~MaskAlignment) | align_attr;
 						}
 						if (_parent && _parent->GetBoxType() == 3 && _text.Length() == 0) {
@@ -1086,7 +1099,7 @@ namespace Engine
 					virtual void RemoveBack(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) override
 					{
 						if (*pos1 > 0) {
-							if (_text[(*pos1) - 1].lo & FlagLargeObject && _objs[_text[(*pos1) - 1].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if ((_text[(*pos1) - 1].lo & FlagLargeObject) && _objs[_text[(*pos1) - 1].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box1 = *box2 = _objs[_text[(*pos1) - 1].lo & MaskUcsCode].inner;
 								*pos1 = *pos2 = (*box1)->GetMaximalPosition();
 								(*box1)->RemoveBack(pos1, box1, pos2, box2);
@@ -1105,7 +1118,7 @@ namespace Engine
 					virtual void RemoveForward(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) override
 					{
 						if (*pos1 < _text.Length()) {
-							if (_text[*pos1].lo & FlagLargeObject && _objs[_text[*pos1].lo & MaskUcsCode].inner->HasInternalUnits()) {
+							if ((_text[*pos1].lo & FlagLargeObject) && _objs[_text[*pos1].lo & MaskUcsCode].inner->HasInternalUnits()) {
 								*box1 = *box2 = _objs[_text[*pos1].lo & MaskUcsCode].inner;
 								*pos1 = *pos2 = 0;
 								(*box1)->RemoveForward(pos1, box1, pos2, box2);
@@ -1843,7 +1856,7 @@ namespace Engine
 						at.x < WindowPosition.Right - WindowPosition.Left - (_vscroll->IsVisible() ? ScrollSize : 0) &&
 						at.y < WindowPosition.Bottom - WindowPosition.Top) inside = true;
 					else inside = false;
-					if (inside) {
+					if (inside && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
 						SetCapture();
 						auto box = _root->ActiveBoxForPosition(at.x - Border, at.y - Border + _vscroll->Position);
 						if (box != _hot_box) {
@@ -2909,6 +2922,7 @@ namespace Engine
 			void RichEdit::IRichEditHook::InitializeContextMenu(Menus::Menu * menu, RichEdit * sender) {}
 			void RichEdit::IRichEditHook::LinkPressed(const string & resource, RichEdit * sender) {}
 			void RichEdit::IRichEditHook::CaretPositionChanged(RichEdit * sender) {}
+			ITexture * RichEdit::IRichEditHook::GetImageByName(const string & resource, RichEdit * sender) { return 0; }
 			void RichEdit::ContentBox::UnifyBoxForSelection(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2)
 			{
 				if (*box1 == *box2) return;
