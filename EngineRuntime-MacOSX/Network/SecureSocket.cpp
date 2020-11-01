@@ -21,7 +21,7 @@ namespace Engine
 			SocketAddressDomain addr_domain; 
 			string host;
 			nw_connection_t connection;
-			int send_error_state;
+			volatile int send_error_state;
 		public:
 			SecureSocket(SocketAddressDomain domain, const string & verify_host) : addr_domain(domain), host(verify_host), connection(0), send_error_state(0) {}
 			virtual ~SecureSocket(void) override { if (connection) nw_release(connection); }
@@ -30,10 +30,10 @@ namespace Engine
 			{
 				if (send_error_state) throw IO::FileAccessException();
 				uint8 * bytes = reinterpret_cast<uint8 *>(buffer);
-				int lock_state = 0;
-				int * lock_state_ptr = &lock_state;
-				int data_read = 0;
-				int * data_read_ptr = &data_read;
+				volatile int lock_state = 0;
+				volatile int * lock_state_ptr = &lock_state;
+				volatile int data_read = 0;
+				volatile int * data_read_ptr = &data_read;
 				nw_connection_receive(connection, length, length, ^(dispatch_data_t content, nw_content_context_t context, bool is_complete, nw_error_t error) {
 					if (content) {
 						auto real_size = dispatch_data_get_size(content);
@@ -62,7 +62,7 @@ namespace Engine
 			virtual void Write(const void * data, uint32 length) override
 			{
 				if (send_error_state) throw IO::FileAccessException();
-				int * error_state = &send_error_state;
+				volatile int * error_state = &send_error_state;
 				Retain();
 				dispatch_data_t dispatch = dispatch_data_create(data, length, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
 				nw_connection_send(connection, dispatch, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, false, ^(nw_error_t error) {
@@ -121,8 +121,8 @@ namespace Engine
 					sec_protocol_options_set_tls_server_name((sec_protocol_options_t) options, host_name.GetBuffer());
 				}, NW_PARAMETERS_DEFAULT_CONFIGURATION);
 				connection = nw_connection_create(endpoint, params);
-				int lock_state = 0;
-				int * lock_state_ptr = &lock_state;
+				volatile int lock_state = 0;
+				volatile int * lock_state_ptr = &lock_state;
 				nw_connection_set_queue(connection, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
 				nw_connection_set_state_changed_handler(connection, ^(nw_connection_state_t state, nw_error_t error) {
 					if (state == nw_connection_state_ready) *lock_state_ptr = 1;
@@ -151,8 +151,8 @@ namespace Engine
 			virtual void Shutdown(bool close_read, bool close_write) override
 			{
 				if (send_error_state) throw IO::FileAccessException();
-				int lock_state = 0;
-				int * lock_state_ptr = &lock_state;
+				volatile int lock_state = 0;
+				volatile int * lock_state_ptr = &lock_state;
 				if (close_write) {
 					nw_connection_send(connection, 0, NW_CONNECTION_FINAL_MESSAGE_CONTEXT, true, ^(nw_error_t error) {
 						*lock_state_ptr = 1;
