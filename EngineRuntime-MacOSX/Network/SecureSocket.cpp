@@ -22,8 +22,9 @@ namespace Engine
 			string host;
 			nw_connection_t connection;
 			volatile int send_error_state;
+			SafePointer<Semaphore> semaphore;
 		public:
-			SecureSocket(SocketAddressDomain domain, const string & verify_host) : addr_domain(domain), host(verify_host), connection(0), send_error_state(0) {}
+			SecureSocket(SocketAddressDomain domain, const string & verify_host) : addr_domain(domain), host(verify_host), connection(0), send_error_state(0) { semaphore = CreateSemaphore(0); }
 			virtual ~SecureSocket(void) override { if (connection) nw_release(connection); }
 
 			virtual void Read(void * buffer, uint32 length) override
@@ -54,8 +55,9 @@ namespace Engine
 					} else {
 						*lock_state_ptr = 3;
 					}
+					semaphore->Open();
 				});
-				while (!lock_state);
+				semaphore->Wait();
 				if (lock_state == 2) throw IO::FileReadEndOfFileException(data_read);
 				else if (lock_state == 3) throw IO::FileAccessException();
 			}
@@ -130,11 +132,12 @@ namespace Engine
 						if (nw_error_get_error_domain(error) == nw_error_domain_tls) *lock_state_ptr = 3;
 						else *lock_state_ptr = 2;
 					}
+					if (*lock_state_ptr) semaphore->Open();
 				});
 				nw_release(endpoint);
 				nw_release(params);
 				nw_connection_start(connection);
-				while (!lock_state);
+				semaphore->Wait();
 				if (lock_state == 2) throw IO::FileAccessException();
 				else if (lock_state == 3) throw SecurityAuthenticationFailedException();
 				if (lock_state != 1) {
@@ -151,13 +154,11 @@ namespace Engine
 			virtual void Shutdown(bool close_read, bool close_write) override
 			{
 				if (send_error_state) throw IO::FileAccessException();
-				volatile int lock_state = 0;
-				volatile int * lock_state_ptr = &lock_state;
 				if (close_write) {
 					nw_connection_send(connection, 0, NW_CONNECTION_FINAL_MESSAGE_CONTEXT, true, ^(nw_error_t error) {
-						*lock_state_ptr = 1;
+						semaphore->Open();
 					});
-					while (!lock_state);
+					semaphore->Wait();
 				}
 				if (close_write && close_read) nw_connection_cancel(connection);
 			}
