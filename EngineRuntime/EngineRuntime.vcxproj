@@ -37,6 +37,7 @@
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
     <ClInclude Include="Network\HTTP.h" />
     <ClInclude Include="Network\Punycode.h" />
+    <ClInclude Include="Network\SecureSocket.h" />
     <ClInclude Include="Network\Socket.h" />
     <ClInclude Include="PlatformDependent\Application.h" />
     <ClInclude Include="PlatformDependent\Assembly.h" />
@@ -113,6 +114,7 @@
     <ClCompile Include="Miscellaneous\Time.cpp" />
     <ClCompile Include="Network\HTTP.cpp" />
     <ClCompile Include="Network\Punycode.cpp" />
+    <ClCompile Include="Network\SecureSocket.cpp" />
     <ClCompile Include="Network\Socket.cpp" />
     <ClCompile Include="PlatformDependent\Application.cpp" />
     <ClCompile Include="PlatformDependent\Assembly.cpp" />

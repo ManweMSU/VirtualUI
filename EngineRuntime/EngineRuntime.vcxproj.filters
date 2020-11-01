@@ -271,6 +271,9 @@
     <ClInclude Include="PlatformDependent\Notifications.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="Network\SecureSocket.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -491,6 +494,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\Notifications.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\SecureSocket.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -277,7 +277,7 @@ namespace Engine
 			{
 				if (!(sock_state & 2)) throw InvalidStateException();
 				if (close_write) {
-					if (!SubmitWriteBufferEncrypted()) throw IO::FileAccessException();
+					if (write_buffer.Length() && !SubmitWriteBufferEncrypted()) throw IO::FileAccessException();
 					if (!SubmitAlert(1, 0)) throw IO::FileAccessException(IO::Error::NotImplemented);
 					sock->Flush();
 				}
