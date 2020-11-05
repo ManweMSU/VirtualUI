@@ -582,7 +582,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 - (void) queue_event: (NSView *) view;
 {
 	NSRunLoop * loop = [NSRunLoop currentRunLoop];
-	NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSDefaultRunLoopMode];
+	NSArray<NSRunLoopMode> * modes = [NSArray<NSRunLoopMode> arrayWithObject: NSRunLoopCommonModes];
 	[loop performSelector: @selector(engineEvent:) target: view argument: self order: 0 modes: modes];
 	[self release];
 }
@@ -600,6 +600,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 	id target;
 	SEL action;
 	bool state;
+	bool status_bar;
 }
 - (instancetype) init;
 - (void) setFrame : (NSRect) frame;
@@ -674,7 +675,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 - (void) viewDidMoveToWindow
 {
 	state = 0;
-	if ([self window]) [[self window] becomeKeyWindow];
+	if (status_bar && [self window]) [[self window] becomeKeyWindow];
 }
 @end
 @implementation EngineRuntimeMenuSeparator
@@ -689,7 +690,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 @end
 
-NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, id target, SEL action, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuItem * item, NSMenuItem * server)
+NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, id target, SEL action, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuItem * item, NSMenuItem * server, bool status_bar)
 {
 	double scale = Engine::UI::Windows::GetScreenScale();
 	EngineRuntimeMenuItem * obj = [[EngineRuntimeMenuItem alloc] init];
@@ -701,6 +702,7 @@ NSView * create_engine_menu_item(NSMenu * owner, int width, int * code, id targe
 	obj->action = action;
 	obj->server = server;
 	obj->owner = owner;
+	obj->status_bar = status_bar;
 	return obj;
 }
 NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingDevice * device, Engine::UI::Menus::MenuSeparator * item)
@@ -712,7 +714,7 @@ NSView * create_engine_menu_separator(int width, Engine::Cocoa::QuartzRenderingD
 	obj->item = item;
 	return obj;
 }
-NSMenu * build_engine_menu(NSMenu * owner, int * code, id target, SEL action, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menus::MenuElement> & elements)
+NSMenu * build_engine_menu(NSMenu * owner, int * code, id target, SEL action, Engine::Cocoa::QuartzRenderingDevice * device, Engine::ObjectArray<Engine::UI::Menus::MenuElement> & elements, bool status_bar)
 {
 	NSMenu * result = [[NSMenu alloc] initWithTitle: @""];
 	[result setAutoenablesItems: NO];
@@ -731,14 +733,14 @@ NSMenu * build_engine_menu(NSMenu * owner, int * code, id target, SEL action, En
 		if (src_item && src_item->Checked) [item setState: NSControlStateValueOn];
 		NSView * view = 0;
 		if (src_item) {
-			view = create_engine_menu_item(owner ? owner : result, width, code, target, action, device, src_item, item);
+			view = create_engine_menu_item(owner ? owner : result, width, code, target, action, device, src_item, item, status_bar);
 		} else if (src_sep) {
 			view = create_engine_menu_separator(width, device, src_sep);
 		}
 		[item setView: view];
 		[view release];
 		if (src_item && src_item->Children.Length()) {
-			NSMenu * sub = build_engine_menu(owner ? owner : result, code, target, action, device, src_item->Children);
+			NSMenu * sub = build_engine_menu(owner ? owner : result, code, target, action, device, src_item->Children, status_bar);
 			[item setSubmenu: sub];
 			[sub release];
 		}
@@ -1028,7 +1030,7 @@ namespace Engine
 					NSTimer * sys_timer = [NSTimer timerWithTimeInterval: double(period) / 1000.0
 						target: __GetEngineViewFromWindow(_window) selector: @selector(timerFireMethod:) userInfo: timer repeats: YES];
 					timer->timer = sys_timer;
-					[[NSRunLoop currentRunLoop] addTimer: sys_timer forMode: NSDefaultRunLoopMode];
+					[[NSRunLoop currentRunLoop] addTimer: sys_timer forMode: NSRunLoopCommonModes];
 				} else {
 					for (int i = _timers.Length() - 1; i >= 0; i--) {
 						if (_timers[i]->target == window) {
@@ -1445,6 +1447,11 @@ namespace Engine
 			NativeStation * st = static_cast<NativeStation *>(Station);
 			st->TouchBar.SetRetain(Bar);
 		}
+		Object * GetTouchBarObject(UI::WindowStation * Station)
+		{
+			NativeStation * st = static_cast<NativeStation *>(Station);
+			return st->TouchBar;
+		}
 		void ShowWindow(UI::WindowStation * Station, bool Show)
 		{
 			NativeStation * st = static_cast<NativeStation *>(Station);
@@ -1535,7 +1542,7 @@ namespace Engine
 			auto device = static_cast<Cocoa::QuartzRenderingDevice *>(quartz_device);
 			device->SetTimerValue(0);
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(device);
-			return build_engine_menu(0, result, target, action, device, menu->Children);
+			return build_engine_menu(0, result, target, action, device, menu->Children, true);
 		}
 		void DestroyCocoaMenu(UI::Menus::Menu * menu, NSMenu * cocoa_menu)
 		{
@@ -1553,7 +1560,7 @@ namespace Engine
 			device->SetTimerValue(0);
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(device);
 			int result = 0;
-			NSMenu * popup = build_engine_menu(0, &result, 0, 0, device, menu->Children);
+			NSMenu * popup = build_engine_menu(0, &result, 0, 0, device, menu->Children, false);
 			[popup popUpMenuPositioningItem: nil atLocation: point inView: server];
 			[popup release];
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();

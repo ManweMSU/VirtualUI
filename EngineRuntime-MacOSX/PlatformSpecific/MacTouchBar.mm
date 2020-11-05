@@ -707,6 +707,10 @@ namespace Engine
             }
             NativeWindows::SetTouchBarObject(window->GetStation(), bar);
         }
+		TouchBar * TouchBar::GetTouchBarFromWindow(UI::Window * window)
+		{
+			return static_cast<TouchBar *>(NativeWindows::GetTouchBarObject(window->GetStation()));
+		}
         TouchBar * SetTouchBarFromTemplate(UI::Window * window, UI::Template::ControlTemplate * source)
         {
             SafePointer<TouchBar> bar = new TouchBar(source);

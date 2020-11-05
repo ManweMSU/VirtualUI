@@ -20,6 +20,7 @@ namespace Engine
 			Array<UI::Box> Clipping;
 
 			SafePointer<Codec::Frame> BitmapTarget;
+			UI::ITextRenderingInfo * CreateTextRenderingInfoRaw(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept;
         public:
             QuartzRenderingDevice(void);
 			~QuartzRenderingDevice(void) override;

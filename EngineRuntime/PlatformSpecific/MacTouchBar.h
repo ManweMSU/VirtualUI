@@ -130,6 +130,7 @@ namespace Engine
             static TouchBarSlider * CreateSliderItem(void);
 
             static void SetTouchBarForWindow(UI::Window * window, TouchBar * bar);
+			static TouchBar * GetTouchBarFromWindow(UI::Window * window);
         };
         TouchBar * SetTouchBarFromTemplate(UI::Window * window, UI::Template::ControlTemplate * source);
 #endif

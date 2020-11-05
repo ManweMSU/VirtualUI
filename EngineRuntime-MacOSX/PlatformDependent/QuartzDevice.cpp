@@ -9,6 +9,7 @@ namespace Engine
 {
 	namespace Cocoa
 	{
+		void NormalizeUnicodeString(string & text);
 		void QuartzDataRelease(void *info, const void *data, size_t size) { free(info); }
 		CGRect QuartzMakeRect(const UI::Box & box, int w, int h, int scale)
 		{
@@ -334,12 +335,18 @@ namespace Engine
 		UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept { return 0; }
 		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
 		{
-			Array<uint32> chars(text.Length());
-			chars.SetLength(text.Length());
-			text.Encode(chars.GetBuffer(), Encoding::UTF32, false);
-			return CreateTextRenderingInfo(font, chars, horizontal_align, vertical_align, color);
+			string copy = text;
+			NormalizeUnicodeString(copy);
+			Array<uint32> chars(copy.Length());
+			chars.SetLength(copy.Length());
+			copy.Encode(chars.GetBuffer(), Encoding::UTF32, false);
+			return CreateTextRenderingInfoRaw(font, chars, horizontal_align, vertical_align, color);
 		}
 		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
+		{
+			return CreateTextRenderingInfo(font, string(text.GetBuffer(), text.Length(), Encoding::UTF32), horizontal_align, vertical_align, color);
+		}
+		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfoRaw(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
 		{
 			SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
 			if (!text.Length()) {
@@ -408,7 +415,7 @@ namespace Engine
 						} else adv[i].width = 0.0;
 					} else if (!info->Surrogate[i]) {
 						info->GlyphString[i] = space;
-						int w = int(int64(v) + 4 * info->font->width) / int64(4 * info->font->width);
+						int w = int(int64(v) + 4 * info->font->width) / int64(max(int(4 * info->font->width), 1));
 						double lv = v;
 						v = double(4 * info->font->width * w);
 						adv[i].width = v - lv;

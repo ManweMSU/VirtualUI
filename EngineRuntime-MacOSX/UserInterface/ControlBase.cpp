@@ -254,14 +254,13 @@ namespace Engine
 				return;
 			}
 			SafePointer<Window> Parent = window->Parent;
-			Parent->Retain();
 			SafePointer<Window> Target = window;
 			Target->Retain();
-			DeconstructChain(window);
 			for (int i = 0; i < Parent->Children.Length(); i++) if (Parent->Children.ElementAt(i) == window) {
 				Parent->Children.Remove(i);
 				break;
 			}
+			DeconstructChain(window);
 		}
 		void WindowStation::DestroyStation(void)
 		{

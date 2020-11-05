@@ -642,6 +642,7 @@ namespace Engine
 				info->verticies = 0;
 				info->vertex_count = 6;
 				info->tile_render = false;
+				info->Retain();
 				return info;
 			}
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override

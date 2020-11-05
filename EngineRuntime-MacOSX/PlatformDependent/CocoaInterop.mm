@@ -21,6 +21,15 @@ namespace Engine
                 options: 0 range: NSMakeRange(0, utf16.Length()) remainingRange: NULL];
             return string(utf16.GetBuffer(), utf16.Length(), Engine::Encoding::UTF16);
         }
+		void NormalizeUnicodeString(string & text)
+		{
+			@autoreleasepool {
+				auto nss = CocoaString(text);
+				auto norm = [nss precomposedStringWithCanonicalMapping];
+				text = EngineString(norm);
+				[nss release];
+			}
+		}
         NSImage * CocoaImage(Codec::Frame * frame, double scale_factor) __attribute((ns_returns_retained))
         {
             SafePointer<Codec::Frame> src;
