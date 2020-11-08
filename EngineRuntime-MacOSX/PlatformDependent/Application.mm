@@ -492,7 +492,7 @@ namespace Engine
 		{
 			auto controller = static_cast<MacOSXApplicationController *>(GetController());
 			if (controller && controller->_callback) {
-				for (int i = 0; i < controller->_deferred_open.Length(); i++) {
+				for (int i = 0; i < controller->_deferred_open.Length(); i++) if (controller->_deferred_open[i].Fragment(0, 5) != L"-psn_") {
 					controller->_callback->OpenExactFile(controller->_deferred_open[i]);
 				}
 				controller->_deferred_open.Clear();
