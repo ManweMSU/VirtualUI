@@ -61,5 +61,7 @@ namespace Engine
 		Registry * CreateRegistry(void);
 		Registry * LoadRegistry(Streaming::Stream * source);
 		Registry * CreateRegistryFromNode(const RegistryNode * node);
+
+		RegistryNode * CreateMergedNode(const ObjectArray<RegistryNode> & nodes);
 	}
 }

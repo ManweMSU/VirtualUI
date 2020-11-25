@@ -596,6 +596,7 @@ namespace Engine
 			{
 				if (Template->Properties->GetTemplateClass() != L"TextComboBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::TextComboBox &>(*this) = static_cast<Template::Controls::TextComboBox &>(*Template->Properties);
+				Text = Text.NormalizedForm();
 				_text.SetLength(Text.GetEncodedLength(Encoding::UTF32));
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_chars_enabled.SetLength(CharactersEnabled.GetEncodedLength(Encoding::UTF32));
@@ -746,7 +747,7 @@ namespace Engine
 			{
 				_undo.RemoveAllVersions();
 				_save = true;
-				Text = text;
+				Text = text.NormalizedForm();
 				_text.SetLength(Text.GetEncodedLength(Encoding::UTF32));
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_text_info.SetReference(0);
@@ -1107,9 +1108,10 @@ namespace Engine
 			}
 			void TextComboBox::Print(const string & text)
 			{
+				auto norm = text.NormalizedForm();
 				Array<uint32> utf32(0x100);
-				utf32.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
+				utf32.SetLength(norm.GetEncodedLength(Encoding::UTF32));
+				norm.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
 				if (_cp != _sp) {
 					int sp = min(const_cast<const int &>(_sp), _cp);
 					int ep = max(const_cast<const int &>(_sp), _cp);

@@ -80,6 +80,7 @@
 
 using namespace Engine;
 using namespace Engine::UI;
+using namespace Engine::IO::ConsoleControl;
 
 #define MAX_LOADSTRING 100
 
@@ -208,13 +209,35 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandardOutput());
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
-	IO::Console cns;
+	Console cns;
 	cns.SetTextColor(15);
 	cns.SetBackgroundColor(8);
 	cns.MoveCaret(5, 2);
 	cns.ClearScreen();
 	cns.WriteLine(L"Привет!");
 	cns.WriteLine(FormatString(L"%0 %1 %%", L"kornevgen", L"pidor"));
+
+	cns.SetInputMode(IO::Console::InputMode::Raw);
+	cns.AlternateScreenBuffer(true);
+
+	auto vols = IO::Search::GetVolumes();
+	const Array<IO::Search::Volume> & vols_ref = *vols;
+	for (auto & e : vols_ref) {
+		cns << e.Label << " -- " << e.Path << LineFeed();
+	}
+	vols->Release();
+
+	while (true) {
+		int x, y;
+		cns.GetScreenBufferDimensions(x, y);
+		cns << FormatString(L"(%0, %1)", x, y) << LineFeed();
+		auto chr = cns.ReadChar();
+		cns << TextColor(Console::ColorCyan) << TextBackground(0) << string(uint(chr), HexadecimalBase, 8) << TextColorDefault() << TextBackgroundDefault() << LineFeed();
+		if (chr == 13) break;
+	}
+	cns.AlternateScreenBuffer(false);
+	cns.SetInputMode(IO::Console::InputMode::Echo);
+	cns.ReadLine();
 
 	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
 	(*conout) << L"Full path      : " << IO::GetExecutablePath() << IO::NewLineChar;

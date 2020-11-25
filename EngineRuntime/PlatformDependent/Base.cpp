@@ -72,6 +72,17 @@ namespace Engine
 	int MemoryCompare(const void * A, const void * B, intptr Length) { return memcmp(A, B, Length); }
 	int StringCompareCaseInsensitive(const widechar * A, const widechar * B) { return StrCmpIW(A, B); }
 	int StringLength(const widechar * str) { int l = 0; while (str[l]) l++; return l; }
+	void UnicodeNormalize(const widechar * source, widechar ** dest, NormalizeForm form)
+	{
+		NORM_FORM _form = NormalizationC;
+		if (form == NormalizeForm::D) _form = NormalizationD;
+		else if (form == NormalizeForm::KC) _form = NormalizationKC;
+		else if (form == NormalizeForm::KD) _form = NormalizationKD;
+		auto length = NormalizeString(_form, source, -1, 0, 0);
+		if (length <= 0 && GetLastError() != ERROR_SUCCESS) { *dest = 0; return; }
+		*dest = reinterpret_cast<widechar *>(malloc(sizeof(widechar) * length));
+		if (*dest) NormalizeString(_form, source, -1, *dest, length);
+	}
 	void StringAppend(widechar * str, widechar letter) { auto len = StringLength(str); str[len + 1] = 0; str[len] = letter; }
 
 	void StringLower(widechar * str, int length)
@@ -88,17 +99,31 @@ namespace Engine
 	}
 	bool IsPlatformAvailable(Platform platform)
 	{
-		if (platform == Platform::X86) return true;
-		if (platform == Platform::X64) {
-#ifdef ENGINE_X64
-			return true;
-#else
-			SYSTEM_INFO info;
-			GetNativeSystemInfo(&info);
-			return info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64;
-#endif
-		}
-		return false;
+		SYSTEM_INFO info;
+		GetNativeSystemInfo(&info);
+		if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL) {
+			if (platform == Platform::X86) return true;
+			else return false;
+		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
+			if (platform == Platform::X86 || platform == Platform::X64) return true;
+			else return false;
+		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM) {
+			if (platform == Platform::X86 || platform == Platform::ARM) return true;
+			else return false;
+		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM64) {
+			if (platform == Platform::X86 || platform == Platform::ARM || platform == Platform::ARM64) return true;
+			else return false;
+		} else return false;
+	}
+	Platform GetSystemPlatform(void)
+	{
+		SYSTEM_INFO info;
+		GetNativeSystemInfo(&info);
+		if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL) return Platform::X86;
+		else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) return Platform::X64;
+		else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM) return Platform::ARM;
+		else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM64) return Platform::ARM64;
+		else return Platform::Unknown;
 	}
 	int GetProcessorsNumber(void)
 	{

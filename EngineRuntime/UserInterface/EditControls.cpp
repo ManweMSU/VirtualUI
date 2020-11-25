@@ -20,6 +20,7 @@ namespace Engine
 			{
 				if (Template->Properties->GetTemplateClass() != L"Edit") throw InvalidArgumentException();
 				static_cast<Template::Controls::Edit &>(*this) = static_cast<Template::Controls::Edit &>(*Template->Properties);
+				Text = Text.NormalizedForm();
 				_text.SetLength(Text.GetEncodedLength(Encoding::UTF32));
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_chars_enabled.SetLength(CharactersEnabled.GetEncodedLength(Encoding::UTF32));
@@ -166,7 +167,7 @@ namespace Engine
 			{
 				_undo.RemoveAllVersions();
 				_save = true;
-				Text = text;
+				Text = text.NormalizedForm();
 				_text.SetLength(Text.GetEncodedLength(Encoding::UTF32));
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_text_info.SetReference(0);
@@ -489,9 +490,10 @@ namespace Engine
 			}
 			void Edit::Print(const string & text)
 			{
+				auto norm = text.NormalizedForm();
 				Array<uint32> utf32(0x100);
-				utf32.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
+				utf32.SetLength(norm.GetEncodedLength(Encoding::UTF32));
+				norm.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
 				if (_cp != _sp) {
 					int sp = min(const_cast<const int &>(_sp), _cp);
 					int ep = max(const_cast<const int &>(_sp), _cp);
@@ -709,8 +711,9 @@ namespace Engine
 				_content.lines.Clear();
 				_save = true;
 				Array<uint32> chars(0x100);
-				chars.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(chars.GetBuffer(), Encoding::UTF32, false);
+				auto norm = text.NormalizedForm();
+				chars.SetLength(norm.GetEncodedLength(Encoding::UTF32));
+				norm.Encode(chars.GetBuffer(), Encoding::UTF32, false);
 				int sp = 0;
 				bool nle = true;
 				while (sp < chars.Length()) {
@@ -1171,9 +1174,10 @@ namespace Engine
 			}
 			void MultiLineEdit::Print(const string & text)
 			{
+				auto norm = text.NormalizedForm();
 				Array<uint32> utf32(0x100);
-				utf32.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
+				utf32.SetLength(norm.GetEncodedLength(Encoding::UTF32));
+				norm.Encode(utf32.GetBuffer(), Encoding::UTF32, false);
 				if (_content.cp != _content.sp) {
 					auto sp = min(_content.sp, _content.cp);
 					auto ep = max(_content.sp, _content.cp);

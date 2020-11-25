@@ -16,7 +16,8 @@ namespace Engine
 
 	typedef wchar_t widechar;
 
-	enum class Platform { X86, X64 };
+	enum class Platform { Unknown, X86, X64, ARM, ARM64 };
+	enum class NormalizeForm { C, D, KC, KD };
 
 #define ENGINE_PI 3.14159265358979323846
 
@@ -41,12 +42,22 @@ namespace Engine
 #endif
 #endif
 
+#ifdef ENGINE_ARM
+#ifdef ENGINE_X64
+	typedef uint64 intptr;
+	constexpr Platform ApplicationPlatform = Platform::ARM64;
+#else
+	typedef uint32 intptr;
+	constexpr Platform ApplicationPlatform = Platform::ARM;
+#endif
+#else
 #ifdef ENGINE_X64
 	typedef uint64 intptr;
 	constexpr Platform ApplicationPlatform = Platform::X64;
 #else
 	typedef uint32 intptr;
 	constexpr Platform ApplicationPlatform = Platform::X86;
+#endif
 #endif
 
 	typedef intptr eint;
@@ -72,6 +83,7 @@ namespace Engine
 	int MemoryCompare(const void * A, const void * B, intptr Length);
 	int StringCompareCaseInsensitive(const widechar * A, const widechar * B);
 	int StringLength(const widechar * str);
+	void UnicodeNormalize(const widechar * source, widechar ** dest, NormalizeForm form = NormalizeForm::C);
 	void StringAppend(widechar * str, widechar letter);
 
 	// Case converters for fixed-length strings - should work with any language chars
@@ -81,6 +93,7 @@ namespace Engine
 
 	// Query system information
 	bool IsPlatformAvailable(Platform platform);
+	Platform GetSystemPlatform(void);
 	int GetProcessorsNumber(void);
 	uint64 GetInstalledMemory(void);
 }

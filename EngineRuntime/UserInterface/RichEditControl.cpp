@@ -1718,7 +1718,7 @@ namespace Engine
 			void RichEdit::SetPosition(const Box & box) { ParentWindow::SetPosition(box); _align_contents(box); }
 			void RichEdit::SetText(const string & text)
 			{
-				if (text[0] == L'\33' && text[1] == L'X') SetAttributedText(text.Fragment(2, -1));
+				if (text[0] == L'\33' && text[1] == L'X') SetAttributedText(text.Fragment(2, -1).NormalizedForm());
 				else SetAttributedText(L"\33n*\33e\33f00\33h****\33c********" + text + L"\33e\33e\33e");
 			}
 			string RichEdit::GetText(void)
@@ -2126,8 +2126,9 @@ namespace Engine
 				int pos = 0;
 				Array<uint32> ucs(0x100);
 				Array<int> index(0x10);
-				ucs.SetLength(text.GetEncodedLength(Encoding::UTF32) + 1);
-				text.Encode(ucs.GetBuffer(), Encoding::UTF32, true);
+				auto norm = text.NormalizedForm();
+				ucs.SetLength(norm.GetEncodedLength(Encoding::UTF32) + 1);
+				norm.Encode(ucs.GetBuffer(), Encoding::UTF32, true);
 				_root->DeserializeFromPlainText(index, ucs, pos, 0, 0);
 				_vscroll->SetScrollerPositionSilent(0);
 				_align_contents(WindowPosition);
@@ -2204,11 +2205,12 @@ namespace Engine
 			bool RichEdit::IsSelectionEmpty(void) { return !_caret_box || _caret_pos == _selection_pos; }
 			void RichEdit::Print(const string & text)
 			{
+				auto norm = text.NormalizedForm();
 				if (!IsSelectionEmpty() && _caret_box) _caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
 				if (!_caret_box) { _caret_box = _selection_box = _root; _caret_pos = _selection_pos = 0; }
 				Array<uint32> ucs(0x100);
-				ucs.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
+				ucs.SetLength(norm.GetEncodedLength(Encoding::UTF32));
+				norm.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
 				_caret_box->InsertUnattributedText(ucs, _caret_pos, &_caret_box, &_caret_pos);
 				_selection_box = _caret_box;
 				_selection_pos = _caret_pos;
@@ -2217,11 +2219,12 @@ namespace Engine
 			}
 			void RichEdit::PrintAttributed(const string & text)
 			{
+				auto norm = text.NormalizedForm();
 				if (!IsSelectionEmpty() && _caret_box) _caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
 				if (!_caret_box) { _caret_box = _selection_box = _root; _caret_pos = _selection_pos = 0; }
 				Array<uint32> ucs(0x100);
-				ucs.SetLength(text.GetEncodedLength(Encoding::UTF32));
-				text.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
+				ucs.SetLength(norm.GetEncodedLength(Encoding::UTF32));
+				norm.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
 				_caret_box->InsertText(ucs, _caret_pos, &_caret_box, &_caret_pos);
 				_selection_box = _caret_box;
 				_selection_pos = _caret_pos;
