@@ -14,7 +14,6 @@ namespace Engine
         string EngineString(NSString * str);
         NSImage * CocoaImage(Codec::Frame * frame, double scale_factor = 1.0) __attribute((ns_returns_retained));
         Codec::Frame * EngineImage(NSImage * image);
-		void NormalizeUnicodeString(string & text);
         template <class O> class CocoaPointer
         {
             O object;

@@ -138,6 +138,7 @@ namespace Engine
 		}
 		TextWriter::~TextWriter(void) { dest->Release(); }
 		string TextWriter::ToString(void) const { return L"TextWriter"; }
+		void ITextWriter::LineFeed(void) const { WriteLine(L""); }
 		ITextWriter & ITextWriter::operator<<(const string & text) { Write(text); return *this; }
 		const ITextWriter & ITextWriter::operator<<(const string & text) const { Write(text); return *this; }
 		FragmentStream::FragmentStream(Stream * Inner, uint64 From, uint64 Length) : inner(Inner), begin(From), end(From + Length), pointer(0) { inner->Retain(); }

@@ -10,7 +10,7 @@ namespace Engine
 		{
 		public:
 			uint32 value;
-			ControlToken(uint32 arg);
+			explicit ControlToken(uint32 arg);
 		};
 		class Console final : virtual public Streaming::ITextWriter, virtual public Streaming::ITextReader
 		{
@@ -81,6 +81,6 @@ namespace Engine
 			ControlToken TextColorDefault(void);
 			ControlToken TextBackground(int color);
 			ControlToken TextBackgroundDefault(void);
-		};
+		}
 	}
 }

@@ -126,6 +126,8 @@ namespace Engine
 			virtual void Clear(void) override { InnerArray.Clear(); }
 			virtual void SetLength(int length) override { InnerArray.SetLength(length); }
 			virtual int Length(void) override { return InnerArray.Length(); }
+
+			ENGINE_MAKE_ITERATORS(ReflectedPlainArray, V, InnerArray.Length())
 		};
 		template <class V> class ReflectedSafeArray : public ReflectedArray
 		{
@@ -158,6 +160,8 @@ namespace Engine
 			virtual void Clear(void) override { InnerArray.Clear(); }
 			virtual void SetLength(int length) override { InnerArray.SetLength(length); }
 			virtual int Length(void) override { return InnerArray.Length(); }
+
+			ENGINE_MAKE_ITERATORS(ReflectedPlainArray, V, InnerArray.Length())
 		};
 
 #if (defined(_MSC_VER))

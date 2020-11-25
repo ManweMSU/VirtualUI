@@ -184,6 +184,23 @@ int Main(void)
 	SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandardInput());
 	Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
 
+	int x, y, w, h;
+	Console.GetCaretPosition(x, y);
+	Console.GetScreenBufferDimensions(w, h);
+	Console << FormatString(L"Screen: %0 x %1, cursor at (%2, %3)", w, h, x, y) << IO::ConsoleControl::LineFeed();
+	Console.AlternateScreenBuffer(true);
+	Console.SetInputMode(IO::Console::InputMode::Raw);
+	while (true) {
+		auto chr = Console.ReadChar();
+		Console << IO::ConsoleControl::TextBackground(15) << IO::ConsoleControl::TextColor(9) <<
+			string(uint(chr), HexadecimalBase, 4) << IO::ConsoleControl::TextBackgroundDefault() << IO::ConsoleControl::TextColorDefault() <<
+			IO::ConsoleControl::LineFeed();
+		if (chr == 13) break;
+	}
+	Console.SetInputMode(IO::Console::InputMode::Echo);
+	Console.AlternateScreenBuffer(false);
+	Console.ReadLine();
+
 	Console.ClearScreen();
 	Console.MoveCaret(5, 1);
 	for (int i = 0; i < 8; i++) {

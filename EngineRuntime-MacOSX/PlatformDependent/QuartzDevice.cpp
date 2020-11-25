@@ -9,7 +9,6 @@ namespace Engine
 {
 	namespace Cocoa
 	{
-		void NormalizeUnicodeString(string & text);
 		void QuartzDataRelease(void *info, const void *data, size_t size) { free(info); }
 		CGRect QuartzMakeRect(const UI::Box & box, int w, int h, int scale)
 		{
@@ -335,8 +334,7 @@ namespace Engine
 		UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept { return 0; }
 		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
 		{
-			string copy = text;
-			NormalizeUnicodeString(copy);
+			string copy = text.NormalizedForm();
 			Array<uint32> chars(copy.Length());
 			chars.SetLength(copy.Length());
 			copy.Encode(chars.GetBuffer(), Encoding::UTF32, false);

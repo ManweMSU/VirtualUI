@@ -100,11 +100,16 @@ namespace Engine
 			}
 			int Length(void) const { return data.Length(); }
 
-			string ToString(void) const override { return L"Dictionary"; }
+			string ToString(void) const override { return L"PlainDictionary"; }
 			const V * operator [] (const K & key) const { return ElementByKey(key); }
 			V * operator [] (const K & key) { return ElementByKey(key); }
 			const PlainDictionaryKeyPair<K, V> & operator [] (int index) const { return data[index]; }
 			PlainDictionaryKeyPair<K, V> & operator [] (int index) { return data[index]; }
+
+			ArrayEnumerator< Array<PlainDictionaryKeyPair<K, V> >, PlainDictionaryKeyPair<K, V> > Elements(void) { return ArrayEnumerator< Array<PlainDictionaryKeyPair<K, V> >, PlainDictionaryKeyPair<K, V> >(data, 0, data.Length(), 1); }
+			ArrayEnumerator< const Array<PlainDictionaryKeyPair<K, V> >, const PlainDictionaryKeyPair<K, V> > Elements(void) const { return ArrayEnumerator< const Array<PlainDictionaryKeyPair<K, V> >, const PlainDictionaryKeyPair<K, V> >(data, 0, data.Length(), 1); }
+			ArrayEnumerator< Array<PlainDictionaryKeyPair<K, V> >, PlainDictionaryKeyPair<K, V> > InversedElements(void) { return ArrayEnumerator< Array<PlainDictionaryKeyPair<K, V> >, PlainDictionaryKeyPair<K, V> >(data, data.Length() - 1, -1, -1); }
+			ArrayEnumerator< const Array<PlainDictionaryKeyPair<K, V> >, const PlainDictionaryKeyPair<K, V> > InversedElements(void) const { return ArrayEnumerator< const Array<PlainDictionaryKeyPair<K, V> >, const PlainDictionaryKeyPair<K, V> >(data, data.Length() - 1, -1, -1); }
 		};
 		template <class K, class O> class Dictionary : public Object
 		{
@@ -166,6 +171,11 @@ namespace Engine
 			O * operator [] (const K & key) const { return ElementByKey(key); }
 			const DictionaryKeyPair<K, O> & operator [] (int index) const { return data[index]; }
 			DictionaryKeyPair<K, O> & operator [] (int index) { return data[index]; }
+
+			ArrayEnumerator< Array<DictionaryKeyPair<K, O> >, DictionaryKeyPair<K, O> > Elements(void) { return ArrayEnumerator< Array<DictionaryKeyPair<K, O> >, DictionaryKeyPair<K, O> >(data, 0, data.Length(), 1); }
+			ArrayEnumerator< const Array<DictionaryKeyPair<K, O> >, const DictionaryKeyPair<K, O> > Elements(void) const { return ArrayEnumerator< const Array<DictionaryKeyPair<K, O> >, const DictionaryKeyPair<K, O> >(data, 0, data.Length(), 1); }
+			ArrayEnumerator< Array<DictionaryKeyPair<K, O> >, DictionaryKeyPair<K, O> > InversedElements(void) { return ArrayEnumerator< Array<DictionaryKeyPair<K, O> >, DictionaryKeyPair<K, O> >(data, data.Length() - 1, -1, -1); }
+			ArrayEnumerator< const Array<DictionaryKeyPair<K, O> >, const DictionaryKeyPair<K, O> > InversedElements(void) const { return ArrayEnumerator< const Array<DictionaryKeyPair<K, O> >, const DictionaryKeyPair<K, O> >(data, data.Length() - 1, -1, -1); }
 		};
 		enum class ExcludePolicy { DoNotExclude = 0, ExcludeLeastRefrenced = 1 };
 		template <class K, class O> class ObjectCache : public Dictionary<K, O>

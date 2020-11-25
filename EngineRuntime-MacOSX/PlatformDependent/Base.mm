@@ -67,6 +67,25 @@ namespace Engine
 		else return 0;
     }
 	int StringLength(const widechar * str) { int l = 0; while (str[l]) l++; return l; }
+	void UnicodeNormalize(const widechar * source, widechar ** dest, NormalizeForm form)
+	{
+		@autoreleasepool {
+			NSString * s = [[NSString alloc] initWithBytes: source length: StringLength(source) * 4 encoding: NSUTF32LittleEndianStringEncoding];
+			NSString * c = 0;
+			if (form == NormalizeForm::D) c = [s decomposedStringWithCanonicalMapping];
+			else if (form == NormalizeForm::KC) c = [s precomposedStringWithCompatibilityMapping];
+			else if (form == NormalizeForm::KD) c = [s decomposedStringWithCompatibilityMapping];
+			else c = [s precomposedStringWithCanonicalMapping];
+			[s release];
+			int length = [c lengthOfBytesUsingEncoding: NSUTF32LittleEndianStringEncoding];
+			*dest = reinterpret_cast<widechar *>(malloc(length + 4));
+			if (*dest) {
+				[c getBytes: *dest maxLength: length usedLength: NULL encoding: NSUTF32LittleEndianStringEncoding
+                	options: 0 range: NSMakeRange(0, [c length]) remainingRange: NULL];
+				(*dest)[length / 4] = 0;
+			}
+		}
+	}
 	void StringAppend(widechar * str, widechar letter) { auto len = StringLength(str); str[len + 1] = 0; str[len] = letter; }
 
 	void StringLower(widechar * str, int length)
@@ -103,9 +122,35 @@ namespace Engine
 	}
 	bool IsPlatformAvailable(Platform platform)
 	{
-		if (platform == Platform::X86) return false;
-		if (platform == Platform::X64) return true;
-		return false;
+		auto system = GetSystemPlatform();
+		if (system == Platform::X86) {
+			if (platform == Platform::X86) return true;
+			else return false;
+		} else if (system == Platform::X64) {
+			if (platform == Platform::X64) return true;
+			else return false;
+		} else if (system == Platform::ARM) {
+			if (platform == Platform::ARM) return true;
+			else return false;
+		} else if (system == Platform::ARM64) {
+			if (platform == Platform::X64 || platform == Platform::ARM64) return true;
+			else return false;
+		} else return false;
+	}
+	Platform GetSystemPlatform(void)
+	{
+		uint32 proc_type = 0;
+		uint32 proc_is64 = 0;
+		uint64 length = sizeof(proc_type);
+		if (sysctlbyname("hw.cputype", &proc_type, reinterpret_cast<size_t *>(&length), 0, 0) == -1) return Platform::Unknown;
+		if (sysctlbyname("hw.cpu64bit_capable", &proc_is64, reinterpret_cast<size_t *>(&length), 0, 0) == -1) return Platform::Unknown;
+		if (proc_type == CPU_TYPE_X86) {
+			if (proc_is64) return Platform::X64;
+			else return Platform::X86;
+		} else if (proc_type == CPU_TYPE_ARM) {
+			if (proc_is64) return Platform::ARM64;
+			else return Platform::ARM;
+		} else return Platform::Unknown;
 	}
 	int GetProcessorsNumber(void)
 	{

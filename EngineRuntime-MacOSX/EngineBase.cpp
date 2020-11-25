@@ -530,6 +530,7 @@ namespace Engine
 	ImmutableString ImmutableString::Replace(widechar Substring, widechar with) const { return GeneralizedReplace(&Substring, 1, &with, 1); }
 	ImmutableString ImmutableString::LowerCase(void) const { if (!text) return L""; ImmutableString result = *this; StringLower(result.text, Length()); return result; }
 	ImmutableString ImmutableString::UpperCase(void) const { if (!text) return L""; ImmutableString result = *this; StringUpper(result.text, Length()); return result; }
+	ImmutableString ImmutableString::NormalizedForm(NormalizeForm form) const { if (!text) return L""; ImmutableString result; UnicodeNormalize(text, &result.text, form); return result; }
 	int ImmutableString::GetEncodedLength(Encoding encoding) const { return text ? MeasureSequenceLength(text, Length(), SystemEncoding, encoding) : 0; }
 	void ImmutableString::Encode(void * buffer, Encoding encoding, bool include_terminator) const { ConvertEncoding(buffer, *this, Length() + (include_terminator ? 1 : 0), SystemEncoding, encoding); }
 	Array<uint8>* ImmutableString::EncodeSequence(Encoding encoding, bool include_terminator) const

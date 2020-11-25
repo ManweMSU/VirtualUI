@@ -4,6 +4,29 @@
 
 #include <new>
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                    Retain/Release Policy
+// Function must call Retain() on object pointer if:
+//  - this object is an input argument and function wants
+//    to store it's reference,
+//  - object reference is the result value of this function,
+//    function assumes object's creation, but object was
+//    taken from another place (for example, from cache)
+//  Function must call Release() on object pointer if is is
+//  not required anymore and object's reference was taken as
+//  a result value of "Create" function or was retained
+//  explicitly.
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#define ENGINE_MAKE_ITERATORS(array_type, element_type, length) \
+	ArrayEnumerator< array_type<element_type>, element_type > Elements(void) { return ArrayEnumerator< array_type<element_type>, element_type >(*this, 0, length, 1); } \
+	ArrayEnumerator< const array_type<element_type>, const element_type > Elements(void) const { return ArrayEnumerator< const array_type<element_type>, const element_type >(*this, 0, length, 1); } \
+	ArrayEnumerator< array_type<element_type>, element_type > InversedElements(void) { return ArrayEnumerator< array_type<element_type>, element_type >(*this, length - 1, -1, -1); } \
+	ArrayEnumerator< const array_type<element_type>, const element_type > InversedElements(void) const { return ArrayEnumerator< const array_type<element_type>, const element_type >(*this, length - 1, -1, -1); } \
+	ArrayIterator< array_type<element_type>, element_type > begin(void) { return ArrayIterator< array_type<element_type>, element_type >(*this, 0, 1); } \
+	ArrayIterator< const array_type<element_type>, const element_type > begin(void) const { return ArrayIterator< const array_type<element_type>, const element_type >(*this, 0, 1); } \
+	int end(void) const { return length; }
+
 namespace Engine
 {
 	class Object;
@@ -11,20 +34,6 @@ namespace Engine
 	template <class V> class Array;
 	template <class V> class SafeArray;
 	template <class V> class ObjectArray;
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//                    Retain/Release Policy
-	// Function must call Retain() on object pointer if:
-	//  - this object is an input argument and function wants
-	//    to store it's reference,
-	//  - object reference is the result value of this function,
-	//    function assumes object's creation, but object was
-	//    taken from another place (for example, from cache)
-	//  Function mush call Release() on object pointer if is is
-	//  not required anymore and object's reference was taken as
-	//  a result value of "Create" function or was retained
-	//  explicitly.
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	class Object
 	{
@@ -131,6 +140,7 @@ namespace Engine
 
 		ImmutableString LowerCase(void) const;
 		ImmutableString UpperCase(void) const;
+		ImmutableString NormalizedForm(NormalizeForm form = NormalizeForm::C) const;
 
 		int GetEncodedLength(Encoding encoding) const;
 		void Encode(void * buffer, Encoding encoding, bool include_terminator) const;
@@ -170,6 +180,38 @@ namespace Engine
 	double sgn(double x);
 	float sgn(float x);
 	int sgn(int x);
+
+	template<class A, class V> class ArrayIterator
+	{
+		A & _array;
+		int _current;
+		int _delta;
+	public:
+		ArrayIterator(A & volume, int current, int delta) : _array(volume), _current(current), _delta(delta) {}
+		V & operator * (void) const { return _array[_current]; }
+		V & operator * (void) { return _array[_current]; }
+		V & operator -> (void) const { return _array[_current]; }
+		V & operator -> (void) { return _array[_current]; }
+
+		bool operator == (const ArrayIterator & b) const { return _current == b._current; }
+		bool operator != (const ArrayIterator & b) const { return _current != b._current; }
+		bool operator == (int b) const { return _current == b; }
+		bool operator != (int b) const { return _current != b; }
+
+		ArrayIterator & operator ++ (void) { _current += _delta; return *this; }
+		ArrayIterator operator ++ (int) { ArrayIterator result(_array, _current, _delta); _current += _delta; return result; }
+	};
+	template<class A, class V> class ArrayEnumerator
+	{
+		A & _array;
+		int _begin;
+		int _end;
+		int _delta;
+	public:
+		ArrayEnumerator(A & volume, int begin, int end, int delta) : _array(volume), _begin(begin), _end(end), _delta(delta) {}
+		ArrayIterator<A, V> begin(void) { return ArrayIterator<A, V>(_array, _begin, _delta); }
+		int end(void) { return _end; }
+	};
 
 	template <class V> class Array : public Object
 	{
@@ -284,6 +326,8 @@ namespace Engine
 			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return true;
 			return false;
 		}
+
+		ENGINE_MAKE_ITERATORS(Array, V, count)
 	};
 
 	template <class V> class SafeArray : public Object
@@ -392,6 +436,8 @@ namespace Engine
 			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return true;
 			return false;
 		}
+
+		ENGINE_MAKE_ITERATORS(SafeArray, V, count)
 	};
 
 	template <class V> class ObjectArray : public Object
@@ -490,7 +536,11 @@ namespace Engine
 			for (int i = 0; i < a.count; i++) if (a[i] != b[i]) return true;
 			return false;
 		}
+
+		ENGINE_MAKE_ITERATORS(ObjectArray, V, count)
 	};
+
+	typedef Array<uint8> DataBlock;
 
 	template <class A> void SortArray(A & volume, bool ascending = true)
 	{

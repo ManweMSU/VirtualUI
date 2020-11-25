@@ -886,5 +886,150 @@ namespace Engine
 			root->FillFromNode(reinterpret_cast<const RegistryNodeImplementation *>(node));
 			return new RegistryImplementation(root);
 		}
+		
+		class RegistryMergedNodeImplementation : public RegistryNode
+		{
+			ObjectArray<RegistryNode> _nodes;
+			Array<string> _cached_values;
+			Array<string> _cached_nodes;
+			void ResetCache(void)
+			{
+				for (auto & node : _nodes) {
+					auto & vals = node.GetValues();
+					auto & nodes = node.GetSubnodes();
+					for (auto & e : vals) {
+						bool present = false;
+						for (auto & f : _cached_values) if (string::CompareIgnoreCase(f, e) == 0) { present = true; break; }
+						if (!present) _cached_values.Append(e);
+					}
+					for (auto & e : nodes) {
+						bool present = false;
+						for (auto & f : _cached_nodes) if (string::CompareIgnoreCase(f, e) == 0) { present = true; break; }
+						if (!present) _cached_nodes.Append(e);
+					}
+				}
+			}
+		public:
+			RegistryMergedNodeImplementation(const ObjectArray<RegistryNode> & nodes) : _nodes(nodes), _cached_values(0x20), _cached_nodes(0x20) { ResetCache(); }
+			virtual ~RegistryMergedNodeImplementation(void) override {}
+
+			virtual const Array<string> & GetSubnodes(void) const override { return _cached_nodes; }
+			virtual const Array<string> & GetValues(void) const override { return _cached_values; }
+			virtual void CreateNode(const string & path) override { throw Exception(); }
+			virtual void RemoveNode(const string & path) override { throw Exception(); }
+			virtual void RenameNode(const string & node, const string & name) override { throw Exception(); }
+			virtual RegistryNode * OpenNode(const string & path) override
+			{
+				ObjectArray<RegistryNode> new_nodes(0x10);
+				for (auto & node : _nodes) {
+					SafePointer<RegistryNode> local = node.OpenNode(path);
+					if (local) new_nodes.Append(local);
+				}
+				if (new_nodes.Length()) return new RegistryMergedNodeImplementation(new_nodes);
+				else return 0;
+			}
+			virtual void CreateValue(const string & path, RegistryValueType type) override { throw Exception(); }
+			virtual void RemoveValue(const string & path) override { throw Exception(); }
+			virtual void RenameValue(const string & name_from, const string & name_to) override { throw Exception(); }
+			virtual RegistryValueType GetValueType(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return type;
+				}
+				return RegistryValueType::Unknown;
+			}
+			virtual int32 GetValueInteger(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueInteger(path);
+				}
+				return 0;
+			}
+			virtual float GetValueFloat(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueFloat(path);
+				}
+				return 0.0f;
+			}
+			virtual bool GetValueBoolean(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueBoolean(path);
+				}
+				return false;
+			}
+			virtual string GetValueString(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueString(path);
+				}
+				return L"";
+			}
+			virtual int64 GetValueLongInteger(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueLongInteger(path);
+				}
+				return 0;
+			}
+			virtual double GetValueLongFloat(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueLongFloat(path);
+				}
+				return 0.0;
+			}
+			virtual UI::Color GetValueColor(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueColor(path);
+				}
+				return 0;
+			}
+			virtual Time GetValueTime(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueTime(path);
+				}
+				return 0;
+			}
+			virtual void GetValueBinary(const string & path, void * buffer) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) { node.GetValueBinary(path, buffer); return; }
+				}
+			}
+			virtual int GetValueBinarySize(const string & path) const override
+			{
+				for (auto & node : _nodes) {
+					auto type = node.GetValueType(path);
+					if (type != RegistryValueType::Unknown) return node.GetValueBinarySize(path);
+				}
+				return 0;
+			}
+			virtual void SetValue(const string & path, int32 value) override { throw Exception(); }
+			virtual void SetValue(const string & path, float value) override { throw Exception(); }
+			virtual void SetValue(const string & path, bool value) override { throw Exception(); }
+			virtual void SetValue(const string & path, const string & value) override { throw Exception(); }
+			virtual void SetValue(const string & path, const widechar * value) override { throw Exception(); }
+			virtual void SetValue(const string & path, const char * value) override { throw Exception(); }
+			virtual void SetValue(const string & path, int64 value) override { throw Exception(); }
+			virtual void SetValue(const string & path, double value) override { throw Exception(); }
+			virtual void SetValue(const string & path, UI::Color value) override { throw Exception(); }
+			virtual void SetValue(const string & path, Time value) override { throw Exception(); }
+			virtual void SetValue(const string & path, const void * value, int size) override { throw Exception(); }
+		};
+		RegistryNode * CreateMergedNode(const ObjectArray<RegistryNode> & nodes) { return new RegistryMergedNodeImplementation(nodes); }
 	}
 }
