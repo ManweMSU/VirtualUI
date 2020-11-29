@@ -863,6 +863,45 @@ namespace Engine
 			virtual void SetValue(const string & path, const void * value, int size) override { Root->SetValue(path, value, size); }
 		};
 
+		void ReplicateRegistry(RegistryNode * node_from, RegistryNode * node_to)
+		{
+			for (int i = 0; i < node_from->GetValues().Length(); i++) {
+				auto & v = node_from->GetValues()[i];
+				auto type = node_from->GetValueType(v);
+				node_to->CreateValue(v, type);
+				if (type == RegistryValueType::Integer) {
+					node_to->SetValue(v, node_from->GetValueInteger(v));
+				} else if (type == RegistryValueType::Float) {
+					node_to->SetValue(v, node_from->GetValueFloat(v));
+				} else if (type == RegistryValueType::Boolean) {
+					node_to->SetValue(v, node_from->GetValueBoolean(v));
+				} else if (type == RegistryValueType::String) {
+					node_to->SetValue(v, node_from->GetValueString(v));
+				} else if (type == RegistryValueType::LongInteger) {
+					node_to->SetValue(v, node_from->GetValueLongInteger(v));
+				} else if (type == RegistryValueType::LongFloat) {
+					node_to->SetValue(v, node_from->GetValueLongFloat(v));
+				} else if (type == RegistryValueType::Color) {
+					node_to->SetValue(v, node_from->GetValueColor(v));
+				} else if (type == RegistryValueType::Time) {
+					node_to->SetValue(v, node_from->GetValueTime(v));
+				} else if (type == RegistryValueType::Binary) {
+					DataBlock block(0x100);
+					block.SetLength(node_from->GetValueBinarySize(v));
+					node_from->GetValueBinary(v, block.GetBuffer());
+					node_to->SetValue(v, block.GetBuffer(), block.Length());
+				}
+			}
+			for (int i = 0; i < node_from->GetSubnodes().Length(); i++) {
+				auto & n = node_from->GetSubnodes()[i];
+				SafePointer<RegistryNode> node = node_from->OpenNode(n);
+				if (node) {
+					node_to->CreateNode(n);
+					SafePointer<RegistryNode> to = node_to->OpenNode(n);
+					if (to) ReplicateRegistry(node, to);
+				}
+			}
+		}
 		Registry * CreateRegistry(void) { return new RegistryImplementation; }
 		Registry * LoadRegistry(Streaming::Stream * source)
 		{
@@ -880,11 +919,12 @@ namespace Engine
 				return new RegistryImplementation(root);
 			} catch (...) { return 0; }
 		}
-		Registry * CreateRegistryFromNode(const RegistryNode * node)
+		Registry * CreateRegistryFromNode(RegistryNode * node)
 		{
-			RegistryNodeImplementation * root = new RegistryNodeImplementation;
-			root->FillFromNode(reinterpret_cast<const RegistryNodeImplementation *>(node));
-			return new RegistryImplementation(root);
+			SafePointer<Registry> reg = CreateRegistry();
+			ReplicateRegistry(node, reg);
+			reg->Retain();
+			return reg;
 		}
 		
 		class RegistryMergedNodeImplementation : public RegistryNode
