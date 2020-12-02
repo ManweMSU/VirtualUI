@@ -1,1 +1,0 @@
-_build\win32\contest.exe
