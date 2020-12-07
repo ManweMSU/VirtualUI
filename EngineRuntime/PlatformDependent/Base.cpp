@@ -97,32 +97,84 @@ namespace Engine
 	{
 		return IsCharAlphaW(widechar(letter)) != 0;
 	}
-	bool IsPlatformAvailable(Platform platform)
+	
+	typedef HRESULT (WINAPI * func_IsWow64GuestMachineSupported) (USHORT machine, BOOL * result);
+	typedef BOOL (WINAPI * func_IsWow64Process2) (HANDLE process, USHORT * machine_process, USHORT * machine_host);
+
+	HRESULT WINAPI engine_IsWow64GuestMachineSupported(USHORT machine, BOOL * result)
 	{
 		SYSTEM_INFO info;
 		GetNativeSystemInfo(&info);
 		if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL) {
-			if (platform == Platform::X86) return true;
-			else return false;
+			*result = FALSE;
 		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
-			if (platform == Platform::X86 || platform == Platform::X64) return true;
-			else return false;
+			if (machine == IMAGE_FILE_MACHINE_I386) *result = TRUE;
+			else *result = FALSE;
 		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM) {
-			if (platform == Platform::X86 || platform == Platform::ARM) return true;
-			else return false;
-		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM64) {
-			if (platform == Platform::X86 || platform == Platform::ARM || platform == Platform::ARM64) return true;
-			else return false;
-		} else return false;
+			*result = FALSE;
+		} else *result = FALSE;
+		return S_OK;
 	}
-	Platform GetSystemPlatform(void)
+	BOOL WINAPI engine_IsWow64Process2(HANDLE process, USHORT * machine_process, USHORT * machine_host)
 	{
 		SYSTEM_INFO info;
 		GetNativeSystemInfo(&info);
-		if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL) return Platform::X86;
-		else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) return Platform::X64;
-		else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM) return Platform::ARM;
-		else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM64) return Platform::ARM64;
+		if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL) {
+			*machine_host = IMAGE_FILE_MACHINE_I386;
+			*machine_process = IMAGE_FILE_MACHINE_I386;
+		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
+			*machine_host = IMAGE_FILE_MACHINE_AMD64;
+			#ifdef ENGINE_X64
+			*machine_process = IMAGE_FILE_MACHINE_AMD64;
+			#else
+			*machine_process = IMAGE_FILE_MACHINE_I386;
+			#endif
+		} else if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_ARM) {
+			*machine_host = IMAGE_FILE_MACHINE_ARM;
+			*machine_process = IMAGE_FILE_MACHINE_ARM;
+		} else return FALSE;
+		return TRUE;
+	}
+
+	func_IsWow64GuestMachineSupported var_IsWow64GuestMachineSupported = 0;
+	func_IsWow64Process2 var_IsWow64Process2 = 0;
+
+	void WindowsWow64FunctionsInit(void)
+	{
+		if (!var_IsWow64GuestMachineSupported || !var_IsWow64Process2) {
+			HMODULE kernel32 = LoadLibraryW(L"kernel32.dll");
+			if (kernel32) {
+				var_IsWow64GuestMachineSupported = reinterpret_cast<func_IsWow64GuestMachineSupported>(GetProcAddress(kernel32, "IsWow64GuestMachineSupported"));
+				var_IsWow64Process2 = reinterpret_cast<func_IsWow64Process2>(GetProcAddress(kernel32, "IsWow64Process2"));
+				FreeLibrary(kernel32);
+			}
+			if (!var_IsWow64GuestMachineSupported) var_IsWow64GuestMachineSupported = engine_IsWow64GuestMachineSupported;
+			if (!var_IsWow64Process2) var_IsWow64Process2 = engine_IsWow64Process2;
+		}
+	}
+
+	bool IsPlatformAvailable(Platform platform)
+	{
+		WindowsWow64FunctionsInit();
+		BOOL result;
+		USHORT machine;
+		if (platform == Platform::X86) machine = IMAGE_FILE_MACHINE_I386;
+		else if (platform == Platform::X64) machine = IMAGE_FILE_MACHINE_AMD64;
+		else if (platform == Platform::ARM) machine = IMAGE_FILE_MACHINE_ARM;
+		else if (platform == Platform::ARM64) machine = IMAGE_FILE_MACHINE_ARM64;
+		else return false;
+		if (var_IsWow64GuestMachineSupported(machine, &result) != S_OK) return false;
+		return result != 0;
+	}
+	Platform GetSystemPlatform(void)
+	{
+		WindowsWow64FunctionsInit();
+		USHORT self, host;
+		if (!var_IsWow64Process2(GetCurrentProcess(), &self, &host)) return Platform::Unknown;
+		if (host == IMAGE_FILE_MACHINE_I386) return Platform::X86;
+		else if (host == IMAGE_FILE_MACHINE_AMD64) return Platform::X64;
+		else if (host == IMAGE_FILE_MACHINE_ARM) return Platform::ARM;
+		else if (host == IMAGE_FILE_MACHINE_ARM64) return Platform::ARM64;
 		else return Platform::Unknown;
 	}
 	int GetProcessorsNumber(void)
