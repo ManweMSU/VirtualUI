@@ -787,4 +787,27 @@ namespace Engine
 	double sgn(double x) { return (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0); }
 	float sgn(float x) { return (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f); }
 	int sgn(int x) { return (x > 0) ? 1 : ((x < 0) ? -1 : 0); }
+	ImmutableString StringFromDataBlock(const DataBlock * data, int max_length, bool byte_spaces)
+	{
+		auto bytes_take = (max_length > 0) ? min(max_length, data->Length()) : data->Length();
+		auto string_size = bytes_take * 2;
+		if (byte_spaces && bytes_take > 1) string_size += bytes_take - 1;
+		auto str = reinterpret_cast<char *>(malloc(string_size));
+		if (!str) throw OutOfMemoryException();
+		int pos = 0;
+		for (int i = 0; i < bytes_take; i++) {
+			if (i && byte_spaces) {
+				str[pos] = ' ';
+				pos++;
+			}
+			auto byte = data->ElementAt(i);
+			str[pos] = HexadecimalBase[(byte & 0xF0) >> 4];
+			str[pos + 1] = HexadecimalBase[byte & 0x0F];
+			pos += 2;
+		}
+		string result;
+		try { result = string(str, string_size, Encoding::ANSI); } catch (...) { free(str); throw; }
+		free(str);
+		return result;
+	}
 }

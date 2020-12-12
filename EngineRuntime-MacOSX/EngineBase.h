@@ -542,6 +542,8 @@ namespace Engine
 
 	typedef Array<uint8> DataBlock;
 
+	ImmutableString StringFromDataBlock(const DataBlock * data, int max_length, bool byte_spaces);
+
 	template <class A> void SortArray(A & volume, bool ascending = true)
 	{
 		int len = volume.Length();

@@ -161,7 +161,7 @@ namespace Engine
 			virtual void SetLength(int length) override { InnerArray.SetLength(length); }
 			virtual int Length(void) override { return InnerArray.Length(); }
 
-			ENGINE_MAKE_ITERATORS(ReflectedPlainArray, V, InnerArray.Length())
+			ENGINE_MAKE_ITERATORS(ReflectedSafeArray, V, InnerArray.Length())
 		};
 
 #if (defined(_MSC_VER))
