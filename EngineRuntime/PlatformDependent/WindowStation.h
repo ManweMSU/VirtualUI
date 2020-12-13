@@ -3,6 +3,7 @@
 #include "../UserInterface/ControlBase.h"
 
 #include <Windows.h>
+#include <dwmapi.h>
 
 #undef LoadCursor
 
@@ -30,6 +31,11 @@ namespace Engine
 			SafePointer<ICursor> _size_all;
 			uint32 _surrogate = 0;
 			Array<Window *> _timers;
+			bool _fx_blur_behind;
+			Color _fx_clear_background;
+			MARGINS _fx_margins;
+			
+			void _reset_dwm(void);
 		public:
 			HandleWindowStation(HWND window);
 			~HandleWindowStation(void) override;
@@ -58,6 +64,9 @@ namespace Engine
 
 			HWND Handle(void);
 			bool & ClearBackgroundFlag(void);
+			Color GetClearBackgroundColor(void);
+			void SetFrameMargins(int left, int top, int right, int bottom);
+			void SetBlurBehind(bool enable);
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};

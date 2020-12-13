@@ -1700,6 +1700,7 @@ namespace Engine
 				_vscroll->Line = int(Zoom * 20.0);
 				_vscroll->Show(scroll_visible);
 				_inversion.SetReference(0);
+				_selection.SetReference(0);
 				_background.SetReference(0);
 				ParentWindow::ResetCache();
 				_root->ResetCache();

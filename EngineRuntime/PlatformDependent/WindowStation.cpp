@@ -34,6 +34,26 @@ namespace Engine
 			_size_left_up_right_down.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENWSE)));
 			_size_left_down_right_up.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZENESW)));
 			_size_all.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZEALL)));
+			_fx_blur_behind = false;
+			_fx_margins.cxLeftWidth = _fx_margins.cxRightWidth = _fx_margins.cyBottomHeight = _fx_margins.cyTopHeight = 0;
+		}
+		void HandleWindowStation::_reset_dwm(void)
+		{
+			BOOL dwm_enabled;
+			if (DwmIsCompositionEnabled(&dwm_enabled) != S_OK) return;
+			if (dwm_enabled) {
+				DWM_BLURBEHIND blur;
+				blur.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+				blur.fEnable = _fx_blur_behind;
+				blur.hRgnBlur = 0;
+				DwmExtendFrameIntoClientArea(_window, &_fx_margins);
+				DwmEnableBlurBehindWindow(_window, &blur);
+				_fx_clear_background = Color(0, 0, 0, 0);
+			} else {
+				auto rgb = GetSysColor(COLOR_BTNFACE);
+				_fx_clear_background = Color(uint8(GetRValue(rgb)), uint8(GetGValue(rgb)), uint8(GetBValue(rgb)), uint(255));
+			}
+			_clear_background = _fx_blur_behind || _fx_margins.cxLeftWidth || _fx_margins.cyTopHeight || _fx_margins.cxRightWidth || _fx_margins.cyBottomHeight;
 		}
 		HandleWindowStation::HandleWindowStation(HWND window) : _window(window), _timers(0x10), _clear_background(false)
 		{
@@ -176,9 +196,26 @@ namespace Engine
 		handle HandleWindowStation::GetOSHandle(void) { return _window; }
 		HWND HandleWindowStation::Handle(void) { return _window; }
 		bool & HandleWindowStation::ClearBackgroundFlag(void) { return _clear_background; }
+		Color HandleWindowStation::GetClearBackgroundColor(void) { return _fx_clear_background; }
+		void HandleWindowStation::SetFrameMargins(int left, int top, int right, int bottom)
+		{
+			_fx_margins.cxLeftWidth = left;
+			_fx_margins.cyTopHeight = top;
+			_fx_margins.cxRightWidth = right;
+			_fx_margins.cyBottomHeight = bottom;
+			_reset_dwm();
+		}
+		void HandleWindowStation::SetBlurBehind(bool enable)
+		{
+			_fx_blur_behind = enable;
+			_reset_dwm();
+		}
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
-			if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
+			if (Msg == WM_DWMCOMPOSITIONCHANGED) {
+				_reset_dwm();
+				return 0;
+			} else if (Msg == WM_KEYDOWN || Msg == WM_SYSKEYDOWN) {
 				bool processed;
 				if (WParam == VK_SHIFT) {
 					if (MapVirtualKeyW((LParam & 0xFF0000) >> 16, MAPVK_VSC_TO_VK_EX) == VK_LSHIFT) processed = KeyDown(KeyCodes::LeftShift);
