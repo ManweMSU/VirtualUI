@@ -78,48 +78,48 @@ namespace Engine
 			} while (true);
 			return exp;
 		}
-		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode)
+		handle CreateFile(const string & path, Streaming::FileAccess access, Streaming::FileCreationMode mode)
 		{
 			DWORD Access = 0;
 			DWORD Share = 0;
-			if (access == FileAccess::AccessRead) {
+			if (access == Streaming::FileAccess::AccessRead) {
 				Access = GENERIC_READ;
 				Share = FILE_SHARE_READ;
-			} else if (access == FileAccess::AccessWrite) {
+			} else if (access == Streaming::FileAccess::AccessWrite) {
 				Access = GENERIC_WRITE;
-			} else if (access == FileAccess::AccessReadWrite) {
+			} else if (access == Streaming::FileAccess::AccessReadWrite) {
 				Access = GENERIC_READ | GENERIC_WRITE;
 			}
 			DWORD Creation = 0;
-			if (mode == FileCreationMode::CreateAlways) Creation = CREATE_ALWAYS;
-			else if (mode == FileCreationMode::CreateNew) Creation = CREATE_NEW;
-			else if (mode == FileCreationMode::OpenAlways) Creation = OPEN_ALWAYS;
-			else if (mode == FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
-			else if (mode == FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
+			if (mode == Streaming::FileCreationMode::CreateAlways) Creation = CREATE_ALWAYS;
+			else if (mode == Streaming::FileCreationMode::CreateNew) Creation = CREATE_NEW;
+			else if (mode == Streaming::FileCreationMode::OpenAlways) Creation = OPEN_ALWAYS;
+			else if (mode == Streaming::FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
+			else if (mode == Streaming::FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
 			DWORD Flags = FILE_ATTRIBUTE_NORMAL;
 			handle file = CreateFileW(NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
 			if (file == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return file;
 		}
-		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
+		handle CreateFileTemporary(const string & path, Streaming::FileAccess access, Streaming::FileCreationMode mode, bool delete_on_close)
 		{
-			if (delete_on_close && mode != CreateNew) throw InvalidArgumentException();
+			if (delete_on_close && mode != Streaming::CreateNew) throw InvalidArgumentException();
 			DWORD Access = 0;
 			DWORD Share = 0;
-			if (access == FileAccess::AccessRead) {
+			if (access == Streaming::FileAccess::AccessRead) {
 				Access = GENERIC_READ;
 				Share = FILE_SHARE_READ;
-			} else if (access == FileAccess::AccessWrite) {
+			} else if (access == Streaming::FileAccess::AccessWrite) {
 				Access = GENERIC_WRITE;
-			} else if (access == FileAccess::AccessReadWrite) {
+			} else if (access == Streaming::FileAccess::AccessReadWrite) {
 				Access = GENERIC_READ | GENERIC_WRITE;
 			}
 			DWORD Creation = 0;
-			if (mode == FileCreationMode::CreateAlways) Creation = CREATE_ALWAYS;
-			else if (mode == FileCreationMode::CreateNew) Creation = CREATE_NEW;
-			else if (mode == FileCreationMode::OpenAlways) Creation = OPEN_ALWAYS;
-			else if (mode == FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
-			else if (mode == FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
+			if (mode == Streaming::FileCreationMode::CreateAlways) Creation = CREATE_ALWAYS;
+			else if (mode == Streaming::FileCreationMode::CreateNew) Creation = CREATE_NEW;
+			else if (mode == Streaming::FileCreationMode::OpenAlways) Creation = OPEN_ALWAYS;
+			else if (mode == Streaming::FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
+			else if (mode == Streaming::FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
 			DWORD Flags = FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY;
 			if (delete_on_close) Flags |= FILE_FLAG_DELETE_ON_CLOSE;
 			handle file = CreateFileW(NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
@@ -185,13 +185,13 @@ namespace Engine
 			if (!::WriteFile(file, data, amount, &Written, 0)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			if (Written != amount) throw FileAccessException(Error::FileTooLarge);
 		}
-		int64 Seek(handle file, int64 position, SeekOrigin origin)
+		int64 Seek(handle file, int64 position, Streaming::SeekOrigin origin)
 		{
 			LARGE_INTEGER set, get;
 			set.QuadPart = position;
 			DWORD org = FILE_BEGIN;
-			if (origin == SeekOrigin::Current) org = FILE_CURRENT;
-			else if (origin == SeekOrigin::End) org = FILE_END;
+			if (origin == Streaming::SeekOrigin::Current) org = FILE_CURRENT;
+			else if (origin == Streaming::SeekOrigin::End) org = FILE_END;
 			if (!SetFilePointerEx(file, set, &get, org)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return get.QuadPart;
 		}

@@ -20,8 +20,9 @@ namespace Engine
 		{
 			SOCKET handle;
 			bool ipv6;
+			int timeout;
 		public:
-			WinSocket(SOCKET object, bool is_ipv6) : handle(object), ipv6(is_ipv6) {}
+			WinSocket(SOCKET object, bool is_ipv6) : handle(object), ipv6(is_ipv6), timeout(-1) {}
 			~WinSocket(void) override
 			{
 				shutdown(handle, SD_BOTH);
@@ -31,25 +32,24 @@ namespace Engine
 			virtual void Read(void * buffer, uint32 length) override
 			{
 				char * cbuffer = reinterpret_cast<char *>(buffer);
-				int read = recv(handle, cbuffer, length, MSG_WAITALL);
-				if (read == SOCKET_ERROR) {
-					if (WSAGetLastError() == WSAEOPNOTSUPP) {
-						int totally_read = 0;
-						do {
-							read = recv(handle, cbuffer, length, 0);
-							if (read == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK) continue;
-							else if (read == SOCKET_ERROR) throw IO::FileAccessException();
-							else if (!read) throw IO::FileReadEndOfFileException(totally_read);
-							else if (uint32(read) < length) {
-								cbuffer += read;
-								totally_read += read;
-								length -= read;
-								continue;
-							} else break;
-						} while (true);
-					} else throw IO::FileAccessException();
+				int totally_read = 0;
+				while (length) {
+					int read = recv(handle, cbuffer, length, 0);
+					if (read == SOCKET_ERROR) {
+						if (WSAGetLastError() == WSAEWOULDBLOCK) {
+							if (!Wait(timeout)) throw IO::FileAccessException();
+						} else throw IO::FileAccessException();
+					} else if (!read) {
+						throw IO::FileReadEndOfFileException(totally_read);
+					} else {
+						cbuffer += read;
+						totally_read += read;
+						length -= read;
+						if (length) {
+							if (!Wait(timeout)) throw IO::FileAccessException();
+						}
+					}
 				}
-				if (read != length) throw IO::FileReadEndOfFileException(read);
 			}
 			virtual void Write(const void * data, uint32 length) override
 			{
@@ -85,6 +85,8 @@ namespace Engine
 					ZeroMemory(&addr.sin_zero, sizeof(addr.sin_zero));
 					if (connect(handle, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == SOCKET_ERROR) throw IO::FileAccessException();
 				}
+				DWORD value = TRUE;
+				ioctlsocket(handle, FIONBIO, &value);
 			}
 			virtual void Bind(const Address & address, uint16 port) override
 			{
@@ -117,19 +119,26 @@ namespace Engine
 			virtual void Listen(void) override
 			{
 				if (listen(handle, SOMAXCONN) == SOCKET_ERROR) throw IO::FileAccessException();
+				DWORD value = TRUE;
+				ioctlsocket(handle, FIONBIO, &value);
 			}
 			virtual Socket * Accept() override
 			{
+				if (!Wait(timeout)) return 0;
 				SOCKET new_socket = accept(handle, 0, 0);
 				if (new_socket != INVALID_SOCKET) {
 					WSADATA data;
 					ZeroMemory(&data, sizeof(data));
 					WSAStartup(MAKEWORD(2, 2), &data);
+				} else {
+					DWORD value = TRUE;
+					ioctlsocket(new_socket, FIONBIO, &value);
 				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
 			virtual Socket * Accept(Address & address, uint16 & port) override
 			{
+				if (!Wait(timeout)) return 0;
 				SOCKET new_socket = INVALID_SOCKET;
 				if (ipv6) {
 					sockaddr_in6 addr;
@@ -159,6 +168,9 @@ namespace Engine
 					WSADATA data;
 					ZeroMemory(&data, sizeof(data));
 					WSAStartup(MAKEWORD(2, 2), &data);
+				} else {
+					DWORD value = TRUE;
+					ioctlsocket(new_socket, FIONBIO, &value);
 				}
 				if (new_socket != INVALID_SOCKET) return new WinSocket(new_socket, ipv6); else return 0;
 			}
@@ -171,6 +183,18 @@ namespace Engine
 				else return;
 				shutdown(handle, sd);
 			}
+			virtual bool Wait(int time) override
+			{
+				WSAPOLLFD fd;
+				fd.fd = handle;
+				fd.events = POLLIN;
+				fd.revents = 0;
+				auto result = WSAPoll(&fd, 1, time);
+				if (result) return true;
+				return false;
+			}
+			virtual void SetReadTimeout(int time) override { timeout = time; }
+			virtual int GetReadTimeout(void) override { return timeout; }
 		};
 		Socket * CreateSocket(SocketAddressDomain domain, SocketProtocol protocol)
 		{

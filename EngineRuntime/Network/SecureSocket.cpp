@@ -283,6 +283,18 @@ namespace Engine
 				}
 				if (close_read) sock->Shutdown(true, false);
 			}
+			virtual bool Wait(int time) override
+			{
+				if (!(sock_state & 2)) throw InvalidStateException();
+				if (read_pos < 0) return sock->Wait(time);
+				if (read_pos == read_buffer.Length()) {
+					if (read_buffer.Length()) return sock->Wait(time);
+					else return true;
+				}
+				return true;
+			}
+			virtual void SetReadTimeout(int time) override { sock->SetReadTimeout(time); }
+			virtual int GetReadTimeout(void) override { return sock->GetReadTimeout(); }
 		};
 
 		SecurityAuthenticationFailedException::SecurityAuthenticationFailedException(void) {}
