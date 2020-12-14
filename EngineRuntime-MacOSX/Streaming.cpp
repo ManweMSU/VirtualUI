@@ -61,11 +61,11 @@ namespace Engine
 			return result;
 		}
 		void Stream::WriteArray(const Array<uint8>* data) { Write(data->GetBuffer(), data->Length()); }
-		FileStream::FileStream(const string & path, FileAccess access, FileCreationMode mode) : owned(true) { file = CreateFile(path, static_cast<IO::FileAccess>(access), static_cast<IO::FileCreationMode>(mode)); }
+		FileStream::FileStream(const string & path, FileAccess access, FileCreationMode mode) : owned(true) { file = CreateFile(path, access, mode); }
 		FileStream::FileStream(handle file_handle, bool take_control) : owned(take_control) { file = file_handle; }
 		void FileStream::Read(void * buffer, uint32 length) { ReadFile(file, buffer, length); }
 		void FileStream::Write(const void * data, uint32 length) { WriteFile(file, data, length); }
-		int64 FileStream::Seek(int64 position, SeekOrigin origin) { return IO::Seek(file, position, static_cast<IO::SeekOrigin>(origin)); }
+		int64 FileStream::Seek(int64 position, SeekOrigin origin) { return IO::Seek(file, position, origin); }
 		uint64 FileStream::Length(void) { return GetFileSize(file); }
 		void FileStream::SetLength(uint64 length) { SetFileSize(file, length); }
 		void FileStream::Flush(void) { IO::Flush(file); }

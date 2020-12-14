@@ -23,8 +23,9 @@ namespace Engine
 			nw_connection_t connection;
 			volatile int send_error_state;
 			SafePointer<Semaphore> semaphore;
+			int timeout;
 		public:
-			SecureSocket(SocketAddressDomain domain, const string & verify_host) : addr_domain(domain), host(verify_host), connection(0), send_error_state(0) { semaphore = CreateSemaphore(0); }
+			SecureSocket(SocketAddressDomain domain, const string & verify_host) : addr_domain(domain), host(verify_host), connection(0), send_error_state(0), timeout(-1) { semaphore = CreateSemaphore(0); }
 			virtual ~SecureSocket(void) override { if (connection) nw_release(connection); }
 
 			virtual void Read(void * buffer, uint32 length) override
@@ -162,6 +163,9 @@ namespace Engine
 				}
 				if (close_write && close_read) nw_connection_cancel(connection);
 			}
+			virtual bool Wait(int time) override { return false; }
+			virtual void SetReadTimeout(int time) override { timeout = time; }
+			virtual int GetReadTimeout(void) override { return timeout; }
 		};
 
 		SecurityAuthenticationFailedException::SecurityAuthenticationFailedException(void) {}

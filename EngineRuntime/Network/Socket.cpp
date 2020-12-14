@@ -130,7 +130,6 @@ namespace Engine
 					WSADATA data;
 					ZeroMemory(&data, sizeof(data));
 					WSAStartup(MAKEWORD(2, 2), &data);
-				} else {
 					DWORD value = TRUE;
 					ioctlsocket(new_socket, FIONBIO, &value);
 				}
@@ -168,7 +167,6 @@ namespace Engine
 					WSADATA data;
 					ZeroMemory(&data, sizeof(data));
 					WSAStartup(MAKEWORD(2, 2), &data);
-				} else {
 					DWORD value = TRUE;
 					ioctlsocket(new_socket, FIONBIO, &value);
 				}

@@ -88,41 +88,41 @@ namespace Engine
 			if (!result.Length()) result << L"/";
 			return result.ToString();
         }
-		handle CreateFile(const string & path, FileAccess access, FileCreationMode mode)
+		handle CreateFile(const string & path, Streaming::FileAccess access, Streaming::FileCreationMode mode)
 		{
             SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
             int flags = 0;
-            if (access == AccessRead) flags = O_RDONLY;
-            else if (access == AccessWrite) flags = O_WRONLY;
-            else if (access == AccessReadWrite) flags = O_RDWR;
+            if (access == Streaming::AccessRead) flags = O_RDONLY;
+            else if (access == Streaming::AccessWrite) flags = O_WRONLY;
+            else if (access == Streaming::AccessReadWrite) flags = O_RDWR;
             int result = -1;
-            if (mode == CreateNew) flags |= O_CREAT | O_EXCL;
-            else if (mode == CreateAlways) flags |= O_CREAT | O_TRUNC;
-            else if (mode == OpenAlways) flags |= O_CREAT;
-            else if (mode == TruncateExisting) flags |= O_TRUNC;
+            if (mode == Streaming::CreateNew) flags |= O_CREAT | O_EXCL;
+            else if (mode == Streaming::CreateAlways) flags |= O_CREAT | O_TRUNC;
+            else if (mode == Streaming::OpenAlways) flags |= O_CREAT;
+            else if (mode == Streaming::TruncateExisting) flags |= O_TRUNC;
 			do {
 				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
 				if (result == -1 && errno != EINTR) throw FileAccessException(errno);
 			} while (result == -1);
             return handle(result);
 		}
-		handle CreateFileTemporary(const string & path, FileAccess access, FileCreationMode mode, bool delete_on_close)
+		handle CreateFileTemporary(const string & path, Streaming::FileAccess access, Streaming::FileCreationMode mode, bool delete_on_close)
 		{
-            if (delete_on_close && mode != CreateNew) throw InvalidArgumentException();
+            if (delete_on_close && mode != Streaming::CreateNew) throw InvalidArgumentException();
 			SafePointer<Array<uint8> > FullPath = new Array<uint8>(PATH_MAX);
 			FullPath->SetLength(PATH_MAX);
             SafePointer<Array<uint8> > Path = NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
 			realpath(reinterpret_cast<char *>(Path->GetBuffer()), reinterpret_cast<char *>(FullPath->GetBuffer()));
 			FullPath->SetLength(MeasureSequenceLength(FullPath->GetBuffer(), -1, Encoding::UTF8, Encoding::UTF8) + 1);
             int flags = 0;
-            if (access == AccessRead) flags = O_RDONLY;
-            else if (access == AccessWrite) flags = O_WRONLY;
-            else if (access == AccessReadWrite) flags = O_RDWR;
+            if (access == Streaming::AccessRead) flags = O_RDONLY;
+            else if (access == Streaming::AccessWrite) flags = O_WRONLY;
+            else if (access == Streaming::AccessReadWrite) flags = O_RDWR;
             int result = -1;
-            if (mode == CreateNew) flags |= O_CREAT | O_EXCL;
-            else if (mode == CreateAlways) flags |= O_CREAT | O_TRUNC;
-            else if (mode == OpenAlways) flags |= O_CREAT;
-            else if (mode == TruncateExisting) flags |= O_TRUNC;
+            if (mode == Streaming::CreateNew) flags |= O_CREAT | O_EXCL;
+            else if (mode == Streaming::CreateAlways) flags |= O_CREAT | O_TRUNC;
+            else if (mode == Streaming::OpenAlways) flags |= O_CREAT;
+            else if (mode == Streaming::TruncateExisting) flags |= O_TRUNC;
             do {
 				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
 				if (result == -1 && errno != EINTR) throw FileAccessException(errno);
@@ -200,11 +200,11 @@ namespace Engine
 				else if (Written == amount) return;
 			} while (true);
 		}
-		int64 Seek(handle file, int64 position, SeekOrigin origin)
+		int64 Seek(handle file, int64 position, Streaming::SeekOrigin origin)
 		{
             int org = SEEK_SET;
-            if (origin == Current) org = SEEK_CUR;
-            else if (origin == End) org = SEEK_END;
+            if (origin == Streaming::Current) org = SEEK_CUR;
+            else if (origin == Streaming::End) org = SEEK_END;
             auto result = lseek(reinterpret_cast<intptr>(file), position, org);
             if (result == -1) throw FileAccessException(errno);
 			return result;

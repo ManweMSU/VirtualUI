@@ -4,7 +4,9 @@
 #include "../Miscellaneous/DynamicString.h"
 
 #include <unistd.h>
+#include <poll.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netinet/ip.h>
 #include <errno.h>
 #include <netdb.h>
@@ -18,8 +20,9 @@ namespace Engine
 		{
 			SOCKET handle;
 			bool ipv6;
+			int timeout;
 		public:
-			UnixSocket(SOCKET object, bool is_ipv6) : handle(object), ipv6(is_ipv6) {}
+			UnixSocket(SOCKET object, bool is_ipv6) : handle(object), ipv6(is_ipv6), timeout(-1) {}
 			~UnixSocket(void) override
 			{
 				shutdown(handle, SHUT_RDWR);
@@ -27,14 +30,27 @@ namespace Engine
 			}
 			virtual void Read(void * buffer, uint32 length) override
 			{
-				int read = 0;
-				while (true) {
-					read = recv(handle, reinterpret_cast<char *>(buffer), length, MSG_WAITALL);
-					if (read == -1) {
-						if (errno != EINTR) throw IO::FileAccessException();
-					} else break;
+				char * cbuffer = reinterpret_cast<char *>(buffer);
+				int totally_read = 0;
+				while (length) {
+					int read = recv(handle, cbuffer, length, 0);
+					if (read < 0) {
+						if (errno == EINTR) {
+							continue;
+						} else if (errno == EWOULDBLOCK) {
+							if (!Wait(timeout)) throw IO::FileAccessException();
+						} else throw IO::FileAccessException();
+					} else if (!read) {
+						throw IO::FileReadEndOfFileException(totally_read);
+					} else {
+						cbuffer += read;
+						totally_read += read;
+						length -= read;
+						if (length) {
+							if (!Wait(timeout)) throw IO::FileAccessException();
+						}
+					}
 				}
-				if (read != length) throw IO::FileReadEndOfFileException(read);
 			}
 			virtual void Write(const void * data, uint32 length) override
 			{
@@ -90,6 +106,8 @@ namespace Engine
 						else if (result >= 0) break;
 					}
 				}
+				int value = 1;
+				ioctl(handle, FIONBIO, &value);
 			}
 			virtual void Bind(const Address & address, uint16 port) override
 			{
@@ -130,19 +148,25 @@ namespace Engine
 			virtual void Listen(void) override
 			{
 				if (listen(handle, SOMAXCONN) == -1) throw IO::FileAccessException();
+				int value = 1;
+				ioctl(handle, FIONBIO, &value);
 			}
 			virtual Socket * Accept() override
 			{
+				if (!Wait(timeout)) return 0;
 				SOCKET new_socket;
 				while (true) {
 					new_socket = accept(handle, 0, 0);
 					if (new_socket == -1 && errno != EINTR) return 0;
 					else if (new_socket >= 0) break;
 				}
+				int value = 1;
+				ioctl(new_socket, FIONBIO, &value);
 				return new UnixSocket(new_socket, ipv6);
 			}
 			virtual Socket * Accept(Address & address, uint16 & port) override
 			{
+				if (!Wait(timeout)) return 0;
 				SOCKET new_socket = -1;
 				if (ipv6) {
 					sockaddr_in6 addr;
@@ -172,6 +196,8 @@ namespace Engine
 					port = InverseEndianess(addr.sin_port);
 					address = Address::CreateIPv4(InverseEndianess(uint32(addr.sin_addr.s_addr)));
 				}
+				int value = 1;
+				ioctl(new_socket, FIONBIO, &value);
 				return new UnixSocket(new_socket, ipv6);
 			}
 			virtual void Shutdown(bool close_read, bool close_write) override
@@ -183,6 +209,31 @@ namespace Engine
 				else return;
 				shutdown(handle, sd);
 			}
+			virtual bool Wait(int time) override
+			{
+				pollfd fd;
+				fd.fd = handle;
+				fd.events = POLLIN;
+				fd.revents = 0;
+				while (true) {
+					auto ts = GetTimerValue();
+					auto result = poll(&fd, 1, time);
+					if (time < 0) {
+						if (result <= 0) continue;
+						return true;
+					} else {
+						if (result == -1 && time) {
+							time -= GetTimerValue() - ts;
+							if (time < 0) time = 0;
+							continue;
+						}
+						if (result > 0) return true;
+						return false;
+					}
+				}
+			}
+			virtual void SetReadTimeout(int time) override { timeout = time; }
+			virtual int GetReadTimeout(void) override { return timeout; }
 		};
 		Socket * CreateSocket(SocketAddressDomain domain, SocketProtocol protocol)
 		{

@@ -21,6 +21,8 @@ namespace Engine
 			virtual void SetHeader(const string & header, const string & value) = 0;
 			virtual string GetHeader(const string & header) = 0;
 			virtual Array<string> * GetHeaders(void) = 0;
+			virtual void SetReadTimeout(int time) = 0;
+			virtual int GetReadTimeout(void) = 0;
 		};
 		class HttpConnection : public Object
 		{

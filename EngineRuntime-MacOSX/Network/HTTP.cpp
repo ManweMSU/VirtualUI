@@ -146,6 +146,7 @@ namespace Engine
 				HttpRequest(const string & agent, const string & host, const string & uri, const widechar * verb, HttpVerb everb, Socket * connection) : _agent(agent), _host(host), _uri(uri), _verb(verb), _headers(0x10)
 				{
 					_connection.SetRetain(connection);
+					_connection->SetReadTimeout(10000);
 					SetHeader(L"Cache-Control", L"no-cache");
 					SetHeader(L"Accept", L"*");
 					SetHeader(L"Accept-Charset", L"utf-8");
@@ -225,6 +226,8 @@ namespace Engine
 					result->Retain();
 					return result;
 				}
+				virtual void SetReadTimeout(int time) override { _connection->SetReadTimeout(time); }
+				virtual int GetReadTimeout(void) override { return _connection->GetReadTimeout(); }
 			};
 			class HttpConnection : public Network::HttpConnection
 			{

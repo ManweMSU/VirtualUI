@@ -181,42 +181,6 @@ public:
 int Main(void)
 {
 	IO::Console Console;
-	SafePointer<Streaming::FileStream> ConsoleInStream = new Streaming::FileStream(IO::GetStandardInput());
-	Streaming::TextReader Input(ConsoleInStream, Encoding::UTF8);
-
-	int x, y, w, h;
-	Console.GetCaretPosition(x, y);
-	Console.GetScreenBufferDimensions(w, h);
-	Console << FormatString(L"Screen: %0 x %1, cursor at (%2, %3)", w, h, x, y) << IO::ConsoleControl::LineFeed();
-	Console.AlternateScreenBuffer(true);
-	Console.SetInputMode(IO::Console::InputMode::Raw);
-	while (true) {
-		auto chr = Console.ReadChar();
-		Console << IO::ConsoleControl::TextBackground(15) << IO::ConsoleControl::TextColor(9) <<
-			string(uint(chr), HexadecimalBase, 4) << IO::ConsoleControl::TextBackgroundDefault() << IO::ConsoleControl::TextColorDefault() <<
-			IO::ConsoleControl::LineFeed();
-		if (chr == 13) break;
-	}
-	Console.SetInputMode(IO::Console::InputMode::Echo);
-	Console.AlternateScreenBuffer(false);
-	Console.ReadLine();
-
-	Console.ClearScreen();
-	Console.MoveCaret(5, 1);
-	for (int i = 0; i < 8; i++) {
-		Console.SetBackgroundColor(i);
-		Console.Write(L' ');
-	}
-	Console.MoveCaret(5, 2);
-	for (int i = 8; i < 16; i++) {
-		Console.SetBackgroundColor(i);
-		Console.Write(L' ');
-	}
-	Console.WriteLine(L"");
-	Console.SetBackgroundColor(-1);
-	Console.Write(L"pidor");
-	//Console.ClearLine();
-	Console.Write(L"kornevgen");
 
 	SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();
 	for (int i = 0; i < vols->Length(); i++) {
