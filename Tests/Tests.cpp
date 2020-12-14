@@ -210,83 +210,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
 	Console cns;
-	cns.SetTextColor(15);
-	cns.SetBackgroundColor(8);
-	cns.MoveCaret(5, 2);
-	cns.ClearScreen();
-	cns.WriteLine(L"Привет!");
-	cns.WriteLine(FormatString(L"%0 %1 %%", L"kornevgen", L"pidor"));
-
-	cns.SetInputMode(IO::Console::InputMode::Raw);
-	cns.AlternateScreenBuffer(true);
-
-	auto vols = IO::Search::GetVolumes();
-	const Array<IO::Search::Volume> & vols_ref = *vols;
-	for (auto & e : vols_ref) {
-		cns << e.Label << " -- " << e.Path << LineFeed();
-	}
-	vols->Release();
-
-	while (true) {
-		int x, y;
-		cns.GetScreenBufferDimensions(x, y);
-		cns << FormatString(L"(%0, %1)", x, y) << LineFeed();
-		auto chr = cns.ReadChar();
-		cns << TextColor(Console::ColorCyan) << TextBackground(0) << string(uint(chr), HexadecimalBase, 8) << TextColorDefault() << TextBackgroundDefault() << LineFeed();
-		if (chr == 13) break;
-	}
-	cns.AlternateScreenBuffer(false);
-	cns.SetInputMode(IO::Console::InputMode::Echo);
-	cns.ReadLine();
-
-	(*conout) << IO::GetCurrentDirectory() << IO::NewLineChar;
-	(*conout) << L"Full path      : " << IO::GetExecutablePath() << IO::NewLineChar;
-	(*conout) << L"Directory      : " << IO::Path::GetDirectory(IO::GetExecutablePath()) << IO::NewLineChar;
-	(*conout) << L"File name      : " << IO::Path::GetFileName(IO::GetExecutablePath()) << IO::NewLineChar;
-	(*conout) << L"Clear file name: " << IO::Path::GetFileNameWithoutExtension(IO::GetExecutablePath()) << IO::NewLineChar;
-	(*conout) << L"Extension      : " << IO::Path::GetExtension(IO::GetExecutablePath()) << IO::NewLineChar;
-	(*conout) << L"Scale          : " << UI::Windows::GetScreenScale() << IO::NewLineChar;
-	(*conout) << L"Locale         : " << Assembly::GetCurrentUserLocale() << IO::NewLineChar;
-	(*conout) << L"Memory (GB)    : " << GetInstalledMemory() / 0x40000000 << IO::NewLineChar;
-
-	(*conout) << string(Math::Complex(5.0)) << IO::NewLineChar;
-	(*conout) << string(ENGINE_I) << IO::NewLineChar;
-
-	auto v = Math::Vector<Math::Complex, 4>(ENGINE_I, -ENGINE_I, 0.0, 0.0);
-	(*conout) << Math::length(v) << IO::NewLineChar;
-	(*conout) << string(v) << IO::NewLineChar;
-
-	(*conout) << string(Math::TensorProduct(Math::Vector3(1, 2, 3), Math::Vector2(1, 2))) << IO::NewLineChar;
-	(*conout) << string(Math::VectorColumnCast(v)) << IO::NewLineChar;
-	(*conout) << string(Math::Matrix<Math::Complex, 2, 2>::MatrixCast(v)) << IO::NewLineChar;
-
-	auto m1 = Math::TensorProduct(Math::Vector3(1, 2, 3), Math::Vector2(1, 2));
-	(*conout) << string(m1) << IO::NewLineChar;
-	(*conout) << string(m1 * transpone(m1)) << IO::NewLineChar;
-	(*conout) << string(m1 * Math::Vector2(1, 1)) << IO::NewLineChar;
-
-	Math::Vector2 f(1.0, 1.0);
-	Math::Vector2 r(1.0, 1.0);
-	Math::Matrix2x2 m;
-	m(0, 0) = 0.0;
-	m(0, 1) = -2.0;
-	m(1, 0) = 7.0;
-	m(1, 1) = -3.0;
-	Math::Matrix2x2 im = Math::inverse(m);
-	auto hi = m * im;
-
-	(*conout) << string(m) << IO::NewLineChar;
-	(*conout) << string(Math::VectorColumnCast(f)) << IO::NewLineChar;
-	(*conout) << L"det = " << string(det(m)) << IO::NewLineChar;
-	(*conout) << L"tr  = " << string(tr(m)) << IO::NewLineChar;
-
-	Math::GaussianEliminationMethod(m, f, r);
-	(*conout) << string(r) << IO::NewLineChar << IO::NewLineChar;
-	(*conout) << string(im) << IO::NewLineChar;
-	(*conout) << string(hi) << IO::NewLineChar;
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	UI::Windows::InitializeCodecCollection();
+
+	WindowsSpecific::SetRenderingDeviceFeatureClass(WindowsSpecific::RenderingDeviceFeatureClass::DeviceD3D11);
 	
 	UI::Zoom = 2.0;
 
@@ -1105,6 +1033,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+bool renderer_ok = true;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -1132,12 +1062,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return DefWindowProc(hWnd, message, wParam, lParam);
     case WM_PAINT:
         {
+			if (!renderer_ok) {
+				ValidateRect(hWnd, 0);
+				return 0;
+			}
 			RECT Rect;
 			GetClientRect(hWnd, &Rect);
             HDC hdc = GetDC(hWnd);
-			//FillRect(hdc, &Rect, (HBRUSH) GetStockObject(LTGRAY_BRUSH));
 
-			//ValidateRect(hWnd, 0);
 			if (Target) {
 				Device->SetTimerValue(GetTimerValue());
 				if (station) station->Animate();
@@ -1147,7 +1079,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				HRESULT result = Target->EndDraw();
 				if (result != S_OK) {
 					IO::Console cns;
-					cns.WriteLine(L"FAILED");
+					cns.WriteLine(FormatString(L"RENDERING FAILED (%0)", string(uint(result), HexadecimalBase, 8)));
+					cns.WriteLine(L"STOPPING RENDERING.");
+					ValidateRect(hWnd, 0);
+					renderer_ok = false;
 				}
 				SwapChain->Present(1, 0);
 			}

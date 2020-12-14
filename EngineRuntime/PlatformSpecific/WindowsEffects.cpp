@@ -3,6 +3,8 @@
 #ifdef ENGINE_WINDOWS
 #include "../PlatformDependent/NativeStation.h"
 #include "../PlatformDependent/WindowStation.h"
+#include "../PlatformDependent/Direct3D.h"
+#include "../PlatformDependent/Direct2D.h"
 
 #include <Windows.h>
 #include <dwmapi.h>
@@ -13,9 +15,18 @@ namespace Engine
 	namespace WindowsSpecific
 	{
 #ifdef ENGINE_WINDOWS
-		RenderingDeviceFeatureClass system_dev_class = RenderingDeviceFeatureClass::D3DDevice11;
+		RenderingDeviceFeatureClass system_dev_class = RenderingDeviceFeatureClass::DontCare;
 		void SetRenderingDeviceFeatureClass(RenderingDeviceFeatureClass dev_class) { system_dev_class = dev_class; }
 		RenderingDeviceFeatureClass GetRenderingDeviceFeatureClass(void) { return system_dev_class; }
+		bool CheckFeatureLevel(RenderingDeviceFeature feature)
+		{
+			Direct2D::InitializeFactory();
+			Direct3D::CreateDevices();
+			if (feature == RenderingDeviceFeature::D2D) return Direct2D::D2DFactory;
+			else if (feature == RenderingDeviceFeature::D3D11) return Direct3D::D3DDevice;
+			else if (feature == RenderingDeviceFeature::D2DEX) return (Direct3D::D3DDevice && Direct3D::D2DDevice && Direct3D::DXGIDevice && Direct3D::D3DDeviceContext);
+			return false;
+		}
 		void SetWindowTransparentcy(UI::Window * window, double value)
 		{
 			if (!window->GetStation()->IsNativeStationWrapper()) return;
@@ -28,37 +39,22 @@ namespace Engine
 			}
 			SetLayeredWindowAttributes(handle, 0, uint8(max(min(int(value * 255.0), 255), 0)), LWA_ALPHA);
 		}
-		bool SetWindowBlurBehind(UI::Window * window, bool turn_on)
+		void SetWindowBlurBehind(UI::Window * window, bool turn_on)
 		{
-			if (!window->GetStation()->IsNativeStationWrapper()) return false;
+			if (!window->GetStation()->IsNativeStationWrapper()) return;
 			auto station = static_cast<UI::HandleWindowStation *>(window->GetStation());
-			auto handle = station->Handle();
-			DWM_BLURBEHIND blur;
-			blur.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-			blur.fEnable = turn_on;
-			blur.hRgnBlur = 0;
-			if (DwmEnableBlurBehindWindow(handle, &blur) != S_OK) return false;
-			if (turn_on) station->ClearBackgroundFlag() = true;
-			return true;
+			station->SetBlurBehind(turn_on);
 		}
-		bool ExtendFrameIntoClient(UI::Window * window, int left, int top, int right, int bottom)
+		void ExtendFrameIntoClient(UI::Window * window, int left, int top, int right, int bottom)
 		{
-			if (!window->GetStation()->IsNativeStationWrapper()) return false;
+			if (!window->GetStation()->IsNativeStationWrapper()) return;
 			auto station = static_cast<UI::HandleWindowStation *>(window->GetStation());
-			auto handle = station->Handle();
-			MARGINS m;
-			m.cxLeftWidth = left;
-			m.cyTopHeight = top;
-			m.cxRightWidth = right;
-			m.cyBottomHeight = bottom;
-			if (DwmExtendFrameIntoClientArea(handle, &m) != S_OK) return false;
-			station->ClearBackgroundFlag() = true;
-			return true;
+			station->SetFrameMargins(left, top, right, bottom);
 		}
 #else
 		void SetWindowTransparentcy(UI::Window * window, double value) {}
-		bool SetWindowBlurBehind(UI::Window * window, bool turn_on) { return false; }
-		bool ExtendFrameIntoClient(UI::Window * window, int left, int top, int right, int bottom) { return false; }
+		void SetWindowBlurBehind(UI::Window * window, bool turn_on) { return false; }
+		void ExtendFrameIntoClient(UI::Window * window, int left, int top, int right, int bottom) { return false; }
 #endif
 		
 	}

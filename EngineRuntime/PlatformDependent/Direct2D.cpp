@@ -588,13 +588,18 @@ namespace Engine
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void)
 		{
-			Target->Release();
+			if (Target) Target->Release();
 			for (int i = 0; i < TextureCache.Length(); i++) {
 				TextureCache[i].base->DeviceWasDestroyed(this);
 				TextureCache[i].spec->DeviceWasDestroyed(this);
 			}
 		}
 		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const noexcept { return Target; }
+		void D2DRenderDevice::UpdateRenderTarget(ID2D1RenderTarget * target) noexcept
+		{
+			if (Target) { Target->Release(); Target = 0; }
+			if (target) { Target = target; Target->AddRef(); }
+		}
 		void D2DRenderDevice::TextureWasDestroyed(ITexture * texture) noexcept
 		{
 			for (int i = 0; i < TextureCache.Length(); i++) {
@@ -746,7 +751,6 @@ namespace Engine
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
 		{
 			if (!texture) return 0;
-			if (!ExtendedTarget) return 0;
 			Direct3D::D3DTexture * wrapper = static_cast<Direct3D::D3DTexture *>(texture);
 			IDXGISurface * surface = 0;
 			if (wrapper->texture->QueryInterface(__uuidof(IDXGISurface), reinterpret_cast<void **>(&surface)) != S_OK) return 0;
@@ -755,7 +759,7 @@ namespace Engine
 			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
 			props.dpiX = props.dpiY = 0.0f;
 			ID2D1Bitmap * bitmap = 0;
-			if (ExtendedTarget->CreateSharedBitmap(__uuidof(IDXGISurface), surface, &props, &bitmap) != S_OK) {
+			if (Target->CreateSharedBitmap(__uuidof(IDXGISurface), surface, &props, &bitmap) != S_OK) {
 				surface->Release();
 				return 0;
 			}
@@ -847,7 +851,7 @@ namespace Engine
 		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
 		{
-			if (!ExtendedTarget) return 0;
+			if (!Direct3D::D3DDevice) return 0;
 			if (width <= 0 || height <= 0) throw InvalidArgumentException();
 			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
 			D3D11_TEXTURE2D_DESC desc;

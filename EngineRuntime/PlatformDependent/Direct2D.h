@@ -56,6 +56,7 @@ namespace Engine
 			~D2DRenderDevice(void) override;
 
 			ID2D1RenderTarget * GetRenderTarget(void) const noexcept;
+			void UpdateRenderTarget(ID2D1RenderTarget * target) noexcept;
 			virtual void TextureWasDestroyed(ITexture * texture) noexcept override;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;

@@ -111,15 +111,102 @@ namespace Engine
 			friend LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 			friend void EnableWindow(UI::WindowStation * Station, bool Enable);
 		private:
+			SafePointer<IDXGISwapChain> SimpleSwapChain;
 			SafePointer<IDXGISwapChain1> SwapChain;
 			SafePointer<ID2D1DeviceContext> DeviceContext;
 			SafePointer<ID2D1HwndRenderTarget> RenderTarget;
+			SafePointer<ID2D1RenderTarget> SwapChainRenderTarget;
 			SafePointer<Direct2D::D2DRenderDevice> RenderingDevice;
 			int MinWidth = 0, MinHeight = 0;
 			Array<NativeStation *> _slaves;
 			NativeStation * _parent = 0;
 			int last_x = 0x80000000, last_y = 0x80000000;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
+
+			void _release_devices(void)
+			{
+				SimpleSwapChain.SetReference(0);
+				SwapChain.SetReference(0);
+				DeviceContext.SetReference(0);
+				RenderTarget.SetReference(0);
+				SwapChainRenderTarget.SetReference(0);
+				RenderingDevice.SetReference(0);
+			}
+			bool _init_device_d2d(void)
+			{
+				if (!Direct2D::D2DFactory) return false;
+				RECT Rect;
+				GetClientRect(_window, &Rect);
+				D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
+				D2D1_HWND_RENDER_TARGET_PROPERTIES WndRenderTargetProps;
+				RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+				RenderTargetProps.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+				RenderTargetProps.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+				RenderTargetProps.dpiX = 0.0f;
+				RenderTargetProps.dpiY = 0.0f;
+				RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+				RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+				WndRenderTargetProps.hwnd = _window;
+				WndRenderTargetProps.pixelSize.width = max(Rect.right, 1);
+				WndRenderTargetProps.pixelSize.height = max(Rect.bottom, 1);
+				WndRenderTargetProps.presentOptions = D2D1_PRESENT_OPTIONS_IMMEDIATELY;
+				if (Direct2D::D2DFactory->CreateHwndRenderTarget(&RenderTargetProps, &WndRenderTargetProps, RenderTarget.InnerRef()) != S_OK) return false;
+				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(RenderTarget));
+				SetRenderingDevice(RenderingDevice);
+				return true;
+			}
+			bool _init_device_d3d11(void)
+			{
+				if (!Direct3D::CreateSwapChainForWindow(_window, SimpleSwapChain.InnerRef())) return false;
+				if (!Direct3D::CreateSwapChainDevice(SimpleSwapChain, SwapChainRenderTarget.InnerRef())) { SimpleSwapChain.SetReference(0); return false; }
+				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(SwapChainRenderTarget));
+				SetRenderingDevice(RenderingDevice);
+				return true;
+			}
+			bool _init_device_d2dex(void)
+			{
+				if (!Direct3D::CreateD2DDeviceContextForWindow(_window, DeviceContext.InnerRef(), SwapChain.InnerRef())) return false;
+				if (!DeviceContext) return false;
+				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
+				SetRenderingDevice(RenderingDevice);
+				return true;
+			}
+			bool _init_device_by_feature_set(void)
+			{
+				auto device_class = WindowsSpecific::GetRenderingDeviceFeatureClass();
+				if (device_class == WindowsSpecific::RenderingDeviceFeatureClass::DontCare) {
+					if (!_init_device_d2dex() && !_init_device_d3d11()) _init_device_d2d();
+				} else if (device_class == WindowsSpecific::RenderingDeviceFeatureClass::DeviceD2DEX) {
+					_init_device_d2dex();
+				} else if (device_class == WindowsSpecific::RenderingDeviceFeatureClass::DeviceD3D11) {
+					_init_device_d3d11();
+				} else if (device_class == WindowsSpecific::RenderingDeviceFeatureClass::DeviceD2D) {
+					_init_device_d2d();
+				} else _init_device_d2d();
+				return RenderingDevice;
+			}
+			bool _render(ID2D1RenderTarget * target)
+			{
+				RenderingDevice->SetTimerValue(GetTimerValue());
+				Animate();
+				target->SetDpi(96.0f, 96.0f);
+				target->BeginDraw();
+				if (_clear_background) {
+					auto clr = GetClearBackgroundColor();
+					target->Clear(D2D1::ColorF(clr.r / 255.0f, clr.g / 255.0f, clr.b / 255.0f, clr.a / 255.0f));
+				}
+				Render();
+				if (target->EndDraw() != S_OK) {
+					SetRenderingDevice(0);
+					_release_devices();
+					Direct3D::RestartDevicesIfNecessary();
+					_init_device_by_feature_set();
+					ResetCache();
+					InvalidateRect(_window, 0, TRUE);
+					return false;
+				}
+				return true;
+			}
 		public:
 			class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
 			{
@@ -133,53 +220,7 @@ namespace Engine
 				}
 			};
 		
-			NativeStation(HWND Handle, DesktopWindowFactory * Factory) : HandleWindowStation(Handle, Factory), _slaves(0x10)
-			{
-				if (WindowsSpecific::GetRenderingDeviceFeatureClass() == WindowsSpecific::RenderingDeviceFeatureClass::D3DDevice11) {
-					try {
-						Direct3D::CreateD2DDeviceContextForWindow(Handle, DeviceContext.InnerRef(), SwapChain.InnerRef());
-						if (!DeviceContext) throw Exception();
-						RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
-					} catch (...) {
-						RECT Rect;
-						GetClientRect(Handle, &Rect);
-						D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
-						D2D1_HWND_RENDER_TARGET_PROPERTIES WndRenderTargetProps;
-						RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-						RenderTargetProps.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-						RenderTargetProps.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-						RenderTargetProps.dpiX = 0.0f;
-						RenderTargetProps.dpiY = 0.0f;
-						RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-						RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-						WndRenderTargetProps.hwnd = Handle;
-						WndRenderTargetProps.pixelSize.width = max(Rect.right, 1);
-						WndRenderTargetProps.pixelSize.height = max(Rect.bottom, 1);
-						WndRenderTargetProps.presentOptions = D2D1_PRESENT_OPTIONS_IMMEDIATELY;
-						Direct2D::D2DFactory->CreateHwndRenderTarget(&RenderTargetProps, &WndRenderTargetProps, RenderTarget.InnerRef());
-						RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(RenderTarget));
-					}
-				} else {
-					RECT Rect;
-					GetClientRect(Handle, &Rect);
-					D2D1_RENDER_TARGET_PROPERTIES RenderTargetProps;
-					D2D1_HWND_RENDER_TARGET_PROPERTIES WndRenderTargetProps;
-					RenderTargetProps.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-					RenderTargetProps.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-					RenderTargetProps.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-					RenderTargetProps.dpiX = 0.0f;
-					RenderTargetProps.dpiY = 0.0f;
-					RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-					RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-					WndRenderTargetProps.hwnd = Handle;
-					WndRenderTargetProps.pixelSize.width = max(Rect.right, 1);
-					WndRenderTargetProps.pixelSize.height = max(Rect.bottom, 1);
-					WndRenderTargetProps.presentOptions = D2D1_PRESENT_OPTIONS_IMMEDIATELY;
-					Direct2D::D2DFactory->CreateHwndRenderTarget(&RenderTargetProps, &WndRenderTargetProps, RenderTarget.InnerRef());
-					RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(RenderTarget));
-				}
-				SetRenderingDevice(RenderingDevice);
-			}
+			NativeStation(HWND Handle, DesktopWindowFactory * Factory) : HandleWindowStation(Handle, Factory), _slaves(0x10) { _init_device_by_feature_set(); }
 			virtual ~NativeStation(void) override {}
 			virtual bool IsNativeStationWrapper(void) const override { return true; }
 			virtual void OnDesktopDestroy(void) override
@@ -230,25 +271,29 @@ namespace Engine
 			}
 			virtual void RequireRedraw(void) override { InvalidateRect(GetHandle(), 0, 0); }
 
-			void RenderContent(void)
+			bool RenderContent(void)
 			{
 				if (DeviceContext) {
-					RenderingDevice->SetTimerValue(GetTimerValue());
-					Animate();
-					DeviceContext->SetDpi(96.0f, 96.0f);
-					DeviceContext->BeginDraw();
-					if (_clear_background) DeviceContext->Clear(D2D1::ColorF(0.0, 0.0, 0.0, 0.0));
-					Render();
-					DeviceContext->EndDraw();
-					SwapChain->Present(1, 0);
+					bool result = _render(DeviceContext);
+					if (result) SwapChain->Present(1, 0);
+					return result;
 				} else if (RenderTarget) {
-					RenderingDevice->SetTimerValue(GetTimerValue());
-					Animate();
-					RenderTarget->SetDpi(96.0f, 96.0f);
-					RenderTarget->BeginDraw();
-					if (_clear_background) RenderTarget->Clear(D2D1::ColorF(0.0, 0.0, 0.0, 0.0));
-					Render();
-					RenderTarget->EndDraw();
+					bool result = _render(RenderTarget);
+					return result;
+				} else if (SwapChainRenderTarget) {
+					bool result = _render(SwapChainRenderTarget);
+					SimpleSwapChain->Present(1, 0);
+					return result;
+				} else {
+					RECT rect;
+					GetClientRect(_window, &rect);
+					HDC dc = GetDC(_window);
+					FillRect(dc, &rect, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+					SetBkColor(dc, 0);
+					SetTextColor(dc, 0xFFFFFF);
+					DrawTextW(dc, L"FAILED TO CREATE THE RENDERING DEVICE", -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+					ReleaseDC(_window, dc);
+					return true;
 				}
 			}
 			void ResizeContent(void)
@@ -259,6 +304,17 @@ namespace Engine
 					RECT Rect;
 					GetClientRect(GetHandle(), &Rect);
 					RenderTarget->Resize(D2D1::SizeU(max(Rect.right, 1), max(Rect.bottom, 1)));
+				} else if (SwapChainRenderTarget) {
+					RenderingDevice->UpdateRenderTarget(0);
+					SwapChainRenderTarget.SetReference(0);
+					Direct3D::ResizeRenderBufferForSwapChainDevice(SimpleSwapChain);
+					if (Direct3D::CreateSwapChainDevice(SimpleSwapChain, SwapChainRenderTarget.InnerRef())) {
+						RenderingDevice->UpdateRenderTarget(SwapChainRenderTarget);
+					} else {
+						SimpleSwapChain.SetReference(0);
+						RenderingDevice.SetReference(0);
+						SetRenderingDevice(0);
+					}
 				}
 			}
 			HWND GetHandle(void) const { return _window; }
@@ -688,8 +744,7 @@ namespace Engine
 				}
 			} else if (Msg == WM_PAINT) {
 				if (station && ::IsWindowVisible(Wnd)) {
-					station->RenderContent();
-					ValidateRect(Wnd, 0);
+					if (station->RenderContent()) ValidateRect(Wnd, 0);
 				}
 			} else if (Msg == WM_MOUSEACTIVATE) {
 				if (GetWindowLongPtr(Wnd, GWL_EXSTYLE) & WS_EX_NOACTIVATE) return MA_NOACTIVATE;
