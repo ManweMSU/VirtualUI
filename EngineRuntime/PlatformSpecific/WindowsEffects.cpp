@@ -52,9 +52,12 @@ namespace Engine
 			station->SetFrameMargins(left, top, right, bottom);
 		}
 #else
+		void SetRenderingDeviceFeatureClass(RenderingDeviceFeatureClass dev_class) {}
+		RenderingDeviceFeatureClass GetRenderingDeviceFeatureClass(void) { return RenderingDeviceFeatureClass::DontCare; }
+		bool CheckFeatureLevel(RenderingDeviceFeature feature) { return false; }
 		void SetWindowTransparentcy(UI::Window * window, double value) {}
-		void SetWindowBlurBehind(UI::Window * window, bool turn_on) { return false; }
-		void ExtendFrameIntoClient(UI::Window * window, int left, int top, int right, int bottom) { return false; }
+		void SetWindowBlurBehind(UI::Window * window, bool turn_on) {}
+		void ExtendFrameIntoClient(UI::Window * window, int left, int top, int right, int bottom) {}
 #endif
 		
 	}
