@@ -55,7 +55,11 @@ namespace Engine
 			virtual void Write(const void * data, uint32 length) override
 			{
 				while (true) {
+					int value = 0;
+					ioctl(handle, FIONBIO, &value);
 					int result = send(handle, reinterpret_cast<const char *>(data), length, 0);
+					value = 1;
+					ioctl(handle, FIONBIO, &value);
 					if (result == -1 && errno != EINTR) throw IO::FileAccessException();
 					else if (result >= 0) return;
 				}

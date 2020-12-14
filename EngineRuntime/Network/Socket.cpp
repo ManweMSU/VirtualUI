@@ -53,7 +53,12 @@ namespace Engine
 			}
 			virtual void Write(const void * data, uint32 length) override
 			{
-				if (send(handle, reinterpret_cast<const char *>(data), length, 0) == SOCKET_ERROR) throw IO::FileAccessException();
+				DWORD value = FALSE;
+				ioctlsocket(handle, FIONBIO, &value);
+				auto result = send(handle, reinterpret_cast<const char *>(data), length, 0);
+				value = TRUE;
+				ioctlsocket(handle, FIONBIO, &value);
+				if (result == SOCKET_ERROR) throw IO::FileAccessException();
 			}
 			virtual int64 Seek(int64 position, Streaming::SeekOrigin origin) override { throw IO::FileAccessException(IO::Error::NotImplemented); }
 			virtual uint64 Length(void) override { throw IO::FileAccessException(IO::Error::NotImplemented); }
