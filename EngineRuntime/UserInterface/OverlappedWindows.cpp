@@ -394,6 +394,7 @@ namespace Engine
 					else if (child->Properties->GetTemplateClass() == L"Static") return on->GetStation()->CreateWindow<Static>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"ColorView") return on->GetStation()->CreateWindow<ColorView>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"ProgressBar") return on->GetStation()->CreateWindow<ProgressBar>(on, child);
+					else if (child->Properties->GetTemplateClass() == L"ComplexView") return on->GetStation()->CreateWindow<ComplexView>(on, child);
 					// Scrollable controls
 					else if (child->Properties->GetTemplateClass() == L"VerticalScrollBar") return on->GetStation()->CreateWindow<VerticalScrollBar>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"HorizontalScrollBar") return on->GetStation()->CreateWindow<HorizontalScrollBar>(on, child);
