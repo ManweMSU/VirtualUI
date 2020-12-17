@@ -20,16 +20,9 @@
 [Xx]86/
 [Bb]uild/
 bld/
-[Bb]in/
 [Oo]bj/
 _build/
 _obj/
-.stat/
-tools_windows/
-tools_windows_64/
-tools_macosx/
-*.ecsa
-*.ecsal
 
 # Visual Studio 2015 cache/options directory
 .vs/
