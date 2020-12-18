@@ -72,6 +72,54 @@ namespace Engine
 					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
 					virtual void GetArgument(const string & name, IFont ** value) override { *value = 0; }
 				};
+				class ComplexViewArgumentProvider: public IArgumentProvider
+				{
+				public:
+					ComplexView * Owner;
+					ComplexViewArgumentProvider(ComplexView * owner) : Owner(owner) {}
+					virtual void GetArgument(const string & name, int * value) override
+					{
+						if (name == L"Integer") *value = Owner->Integer;
+						else if (name == L"Integer2") *value = Owner->Integer2;
+						else if (name == L"Float") *value = int(Owner->Float);
+						else if (name == L"Float2") *value = int(Owner->Float2);
+						else *value = 0;
+					}
+					virtual void GetArgument(const string & name, double * value) override
+					{
+						if (name == L"Integer") *value = double(Owner->Integer);
+						else if (name == L"Integer2") *value = double(Owner->Integer2);
+						else if (name == L"Float") *value = Owner->Float;
+						else if (name == L"Float2") *value = Owner->Float2;
+						else *value = 0.0;
+					}
+					virtual void GetArgument(const string & name, Color * value) override
+					{
+						if (name == L"Color") *value = Owner->Color;
+						else if (name == L"Color2") *value = Owner->Color2;
+						else *value = 0;
+					}
+					virtual void GetArgument(const string & name, string * value) override
+					{
+						if (name == L"Text") *value = Owner->Text;
+						else if (name == L"Text2") *value = Owner->Text2;
+						else *value = L"";
+					}
+					virtual void GetArgument(const string & name, ITexture ** value) override
+					{
+						if (name == L"Image") *value = Owner->Image;
+						else if (name == L"Image2") *value = Owner->Image2;
+						else *value = 0;
+						if (*value) (*value)->Retain();
+					}
+					virtual void GetArgument(const string & name, IFont ** value) override
+					{
+						if (name == L"Font") *value = Owner->Font;
+						else if (name == L"Font2") *value = Owner->Font2;
+						else *value = 0;
+						if (*value) (*value)->Retain();
+					}
+				};
 			}
 
 			Static::Static(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
@@ -192,6 +240,55 @@ namespace Engine
 			string ColorView::GetControlClass(void) { return L"ColorView"; }
 			void ColorView::SetColor(UI::Color color) { Color = color; ResetCache(); }
 			UI::Color ColorView::GetColor(void) { return Color; }
+
+			ComplexView::ComplexView(Window * Parent, WindowStation * Station) : Window(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			ComplexView::ComplexView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station)
+			{
+				if (Template->Properties->GetTemplateClass() != L"ComplexView") throw InvalidArgumentException();
+				static_cast<Template::Controls::ComplexView &>(*this) = static_cast<Template::Controls::ComplexView &>(*Template->Properties);
+			}
+			ComplexView::~ComplexView(void) {}
+			void ComplexView::Render(const Box & at)
+			{
+				if (!shape) {
+					if (View) {
+						auto provider = ArgumentService::ComplexViewArgumentProvider(this);
+						shape.SetReference(View->Initialize(&provider));
+						shape->Render(GetStation()->GetRenderingDevice(), at);
+					}
+				} else shape->Render(GetStation()->GetRenderingDevice(), at);
+			}
+			void ComplexView::ResetCache(void) { shape.SetReference(0); }
+			void ComplexView::Enable(bool enable) {}
+			bool ComplexView::IsEnabled(void) { return false; }
+			void ComplexView::Show(bool visible) { Invisible = !visible; }
+			bool ComplexView::IsVisible(void) { return !Invisible; }
+			void ComplexView::SetID(int _ID) { ID = _ID; }
+			int ComplexView::GetID(void) { return ID; }
+			Window * ComplexView::FindChild(int _ID)
+			{
+				if (ID == _ID && ID != 0) return this;
+				else return 0;
+			}
+			void ComplexView::SetRectangle(const Rectangle & rect)
+			{
+				ControlPosition = rect;
+				GetParent()->ArrangeChildren();
+			}
+			Rectangle ComplexView::GetRectangle(void) { return ControlPosition; }
+			string ComplexView::GetControlClass(void) { return L"ComplexView"; }
+			void ComplexView::SetInteger(int value, int index) { if (index == 0) Integer = value; else if (index == 1) Integer2 = value; ResetCache(); }
+			void ComplexView::SetFloat(double value, int index) { if (index == 0) Float = value; else if (index == 1) Float2 = value; ResetCache(); }
+			void ComplexView::SetColor(UI::Color value, int index) { if (index == 0) Color = value; else if (index == 1) Color2 = value; ResetCache(); }
+			void ComplexView::SetText(const string & value, int index) { if (index == 0) Text = value; else if (index == 1) Text2 = value; ResetCache(); }
+			void ComplexView::SetTexture(ITexture * value, int index) { if (index == 0) Image.SetRetain(value); else if (index == 1) Image2.SetRetain(value); ResetCache(); }
+			void ComplexView::SetFont(IFont * value, int index) { if (index == 0) Font.SetRetain(value); else if (index == 1) Font2.SetRetain(value); ResetCache(); }
+			int ComplexView::GetInteger(int index) { if (index == 0) return Integer; else if (index == 1) return Integer2; else return 0; }
+			double ComplexView::GetFloat(int index) { if (index == 0) return Float; else if (index == 1) return Float2; else return 0.0; }
+			UI::Color ComplexView::GetColor(int index) { if (index == 0) return Color; else if (index == 1) return Color2; else return 0; }
+			string ComplexView::GetText(int index) { if (index == 0) return Text; else if (index == 1) return Text2; else return L""; }
+			ITexture * ComplexView::GetTexture(int index) { if (index == 0) return Image; else if (index == 1) return Image2; else return 0; }
+			IFont * ComplexView::GetFont(int index) { if (index == 0) return Font; else if (index == 1) return Font2; else return 0; }
 		}
 	}
 }

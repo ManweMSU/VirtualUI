@@ -18,6 +18,7 @@ namespace Engine
 					else TEST_CLASS(Static)
 					else TEST_CLASS(ColorView)
 					else TEST_CLASS(ProgressBar)
+					else TEST_CLASS(ComplexView)
 					else TEST_CLASS(CheckBox)
 					else TEST_CLASS(RadioButton)
 					else TEST_CLASS(RadioButtonGroup)

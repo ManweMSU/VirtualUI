@@ -25,29 +25,23 @@ int Main(void)
     }
 
     IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
-    SafePointer<RegistryNode> rt_reg;
     SafePointer<Registry> sync_reg;
     try {
-        FileStream rt_stream(L"ertbuild.ini", AccessRead, OpenExisting);
         FileStream sync_stream(L"ertsync.ini", AccessRead, OpenExisting);
-        rt_reg = CompileTextRegistry(&rt_stream);
         sync_reg = CompileTextRegistry(&sync_stream);
-        if (!rt_reg) throw Exception();
-        SafePointer<RegistryNode> conf = rt_reg->OpenNode(L"MacOSX-X64");
-        rt_reg.SetRetain(conf);
-        if (!rt_reg || !sync_reg) throw Exception();
+        if (!sync_reg) throw Exception();
     }
     catch (...) {
         console << L"Failed to load configuration" << IO::NewLineChar;
         return 1;
     }
-    string source_path = IO::ExpandPath(sync_reg->GetValueString(L"BaseRuntimePath"));
-    string dest_path = IO::ExpandPath(rt_reg->GetValueString(L"RuntimePath"));
-    string obj_path = dest_path + L"/" + rt_reg->GetValueString(L"ObjectPath");
+    string source_path = IO::ExpandPath(L"../../EngineRuntime");
+    string dest_path = IO::ExpandPath(L"../../EngineRuntime-MacOSX");
+    string obj_path = dest_path + L"/_build";
 
     {
         console << L"Cleaning object cache:" << IO::NewLineChar;
-        SafePointer< Array<string> > files = IO::Search::GetFiles(obj_path + L"/*.o;*.log");
+        SafePointer< Array<string> > files = IO::Search::GetFiles(obj_path + L"/*.o;*.log", true);
         for (int i = 0; i < files->Length(); i++) {
             string name = obj_path + L"/" + files->ElementAt(i);
             console << L"Removing " << name << L"...";
