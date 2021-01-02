@@ -12,6 +12,10 @@ namespace Engine
 		class IShaderLibrary;
 		class IPipelineState;
 		class ISamplerState;
+		class IDeviceResource;
+		class IBuffer;
+		class ITexture;
+		class ICommandQueue;
 
 		enum class PixelFormat {
 			Invalid,
@@ -61,16 +65,32 @@ namespace Engine
 		enum class StencilFunction { Keep, SetZero, Replace, IncrementWrap, DecrementWrap, IncrementClamp, DecrementClamp, Invert };
 		enum class FillMode { Solid, Wireframe };
 		enum class CullMode { None, Front, Back };
+		enum class ResourceType { Buffer, Texture };
+		enum class ResourceMemoryPool { Default, Immutable };
+		enum class TextureType { Type1D, TypeArray1D, Type2D, TypeArray2D, TypeCube, TypeArrayCube, Type3D };
 		
-		constexpr const uint32 RenderTargetFlagBlendingEnabled = 0x00000001;
-		constexpr const uint32 RenderTargetFlagRestrictWriteRed = 0x00000002;
-		constexpr const uint32 RenderTargetFlagRestrictWriteGreen = 0x00000004;
-		constexpr const uint32 RenderTargetFlagRestrictWriteBlue = 0x00000008;
-		constexpr const uint32 RenderTargetFlagRestrictWriteAlpha = 0x00000010;
-
-		constexpr const uint32 DepthStencilFlagDepthTestEnabled = 0x00000001;
-		constexpr const uint32 DepthStencilFlagStencilTestEnabled = 0x00000004;
-		constexpr const uint32 DepthStencilFlagDepthWriteEnabled = 0x00000002;
+		enum RenderTargetFlags {
+			RenderTargetFlagBlendingEnabled = 0x00000001,
+			RenderTargetFlagRestrictWriteRed = 0x00000002,
+			RenderTargetFlagRestrictWriteGreen = 0x00000004,
+			RenderTargetFlagRestrictWriteBlue = 0x00000008,
+			RenderTargetFlagRestrictWriteAlpha = 0x00000010
+		};
+		enum DepthStencilFlags {
+			DepthStencilFlagDepthTestEnabled = 0x00000001,
+			DepthStencilFlagStencilTestEnabled = 0x00000004,
+			DepthStencilFlagDepthWriteEnabled = 0x00000002
+		};
+		enum BufferResourceUsage {
+			BufferResourceUsageShaderResource = 0x00000001,
+			BufferResourceUsageIndexBuffer = 0x00000002
+		};
+		enum TextureResourceUsage {
+			TextureResourceUsageShaderRead = 0x00000001,
+			TextureResourceUsageShaderWrite = 0x00000002,
+			TextureResourceUsageRenderTarget = 0x00000004,
+			TextureResourceUsageDepthStencil = 0x00000008
+		};
 
 		struct SamplerDesc
 		{
@@ -88,7 +108,7 @@ namespace Engine
 		struct RenderTargetDesc
 		{
 			PixelFormat Format;
-			uint32 Flags;
+			RenderTargetFlags Flags;
 			BlendingFunction BlendRGB;
 			BlendingFunction BlendAlpha;
 			BlendingFactor BaseFactorRGB;
@@ -106,7 +126,7 @@ namespace Engine
 		struct DepthStencilDesc
 		{
 			PixelFormat Format;
-			uint32 Flags;
+			DepthStencilFlags Flags;
 			CompareFunction DepthTestFunction;
 			uint8 StencilWriteMask;
 			uint8 StencilReadMask;
@@ -132,33 +152,48 @@ namespace Engine
 			DepthStencilDesc DepthStencil;
 			RasterizationDesc Rasterization;
 		};
+		struct BufferDesc
+		{
+			uint32 Length;
+			uint32 Stride;
+			BufferResourceUsage Usage;
+			ResourceMemoryPool MemoryPool;
+		};
+		struct TextureDesc
+		{
+			TextureType Type;
+			PixelFormat Format;
+			uint32 Width;
+			uint32 Height;
+			uint32 Depth;
+			uint32 MipmapCount;
+			uint32 ArraySize;
+			TextureResourceUsage Usage;
+			ResourceMemoryPool MemoryPool;
+		};
+		struct ResourceInitDesc
+		{
+			const void * Data;
+			intptr DataPitch;
+			intptr DataSlicePitch;
+		};
 
 		class IDevice : public Object
 		{
 		public:
-			// TODO: FILL
-			// - Create Data Buffers (source data, length, options - managed (needs sync), private (GPU only), shared); Usage - vertex buffer/constant buffer, index buffer
-			// - Create Command Queue
-			// - Create Texture
-			//   METAL:
-			//     texture types: 1D, 2D, Cube, 3D, Array1D, Array2D, ArrayCube
-			//     width, height, depth
-			//     pixel format
-			//     mip levels count
-			//     array length
-			//     texture buffer usage: render target, depth/stencil buffer, shader resource (R, W, RW)
-			//     STORAGE MODES
-			//     DX        METAL
-			//    Default   Shared   ??? or private
-			//    Dynamic   Managed  ???
-			//    Immutable Private  ???
-			// Add parallel command encoding and fences
+			// TODO: Add parallel command encoding and fences
 			virtual string GetDeviceName(void) noexcept = 0;
 			virtual uint64 GetDeviceIdentifier(void) noexcept = 0;
+			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept = 0;
+			virtual ICommandQueue * CreateCommandQueue(void) noexcept = 0;
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept = 0;
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept = 0;
+			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept = 0;
+			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept = 0;
+			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept = 0;
+			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc & init) noexcept = 0;
 		};
 		class IDeviceChild : public Object
 		{
@@ -179,19 +214,34 @@ namespace Engine
 		};
 		class IPipelineState : public IDeviceChild {};
 		class ISamplerState : public IDeviceChild {};
-
-		// TODO: FORMALIZE
-		class IBuffer : public Object
+		class IDeviceResource : public IDeviceChild
 		{
 		public:
-			// TODO: FILL
+			virtual ResourceType GetResourceType(void) noexcept = 0;
+			virtual ResourceMemoryPool GetMemoryPool(void) noexcept = 0;
 		};
-		class ITexture : public Object
+		class IBuffer : public IDeviceResource
+		{
+		public:
+			virtual uint32 GetLength(void) noexcept = 0;
+			virtual BufferResourceUsage GetBufferUsage(void) noexcept = 0;
+		};
+		class ITexture : public IDeviceResource
+		{
+		public:
+			virtual TextureType GetTextureType(void) noexcept = 0;
+			virtual PixelFormat GetPixelFormat(void) noexcept = 0;
+			virtual uint32 GetWidth(void) noexcept = 0;
+			virtual uint32 GetHeight(void) noexcept = 0;
+			virtual uint32 GetDepth(void) noexcept = 0;
+			virtual uint32 GetMipmapCount(void) noexcept = 0;
+			virtual uint32 GetArraySize(void) noexcept = 0;
+			virtual TextureResourceUsage GetTextureUsage(void) noexcept = 0;
+		};
+		class ICommandQueue : public IDeviceChild
 		{
 		public:
 			// TODO: FILL
-			// - Immediate Set Data
-			// - Immediate Get Data
 		};
 
 		// TODO: CREATE DEFAULT DEVICE
