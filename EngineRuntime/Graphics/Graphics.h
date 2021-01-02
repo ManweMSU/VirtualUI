@@ -165,9 +165,8 @@ namespace Engine
 			PixelFormat Format;
 			uint32 Width;
 			uint32 Height;
-			uint32 Depth;
+			uint32 DepthOrArraySize;
 			uint32 MipmapCount;
-			uint32 ArraySize;
 			TextureResourceUsage Usage;
 			ResourceMemoryPool MemoryPool;
 		};
@@ -181,9 +180,9 @@ namespace Engine
 		class IDevice : public Object
 		{
 		public:
-			// TODO: Add parallel command encoding and fences
 			virtual string GetDeviceName(void) noexcept = 0;
 			virtual uint64 GetDeviceIdentifier(void) noexcept = 0;
+			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept = 0;
@@ -241,6 +240,7 @@ namespace Engine
 		class ICommandQueue : public IDeviceChild
 		{
 		public:
+			// TODO: Add parallel command encoding and fences
 			// TODO: FILL
 		};
 
