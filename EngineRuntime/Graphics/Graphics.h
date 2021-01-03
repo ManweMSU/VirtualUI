@@ -15,7 +15,7 @@ namespace Engine
 		class IDeviceResource;
 		class IBuffer;
 		class ITexture;
-		class ICommandQueue;
+		class IDeviceContext;
 
 		enum class PixelFormat {
 			Invalid,
@@ -68,6 +68,9 @@ namespace Engine
 		enum class ResourceType { Buffer, Texture };
 		enum class ResourceMemoryPool { Default, Immutable };
 		enum class TextureType { Type1D, TypeArray1D, Type2D, TypeArray2D, TypeCube, TypeArrayCube, Type3D };
+		enum class PrimitiveTopology { PointList, LineList, LineStrip, TriangleList, TriangleStrip };
+		enum class TextureLoadAction { DontCare, Load, Clear };
+		enum class IndexBufferFormat { UInt16, UInt32 };
 		
 		enum RenderTargetFlags {
 			RenderTargetFlagBlendingEnabled = 0x00000001,
@@ -81,15 +84,14 @@ namespace Engine
 			DepthStencilFlagStencilTestEnabled = 0x00000004,
 			DepthStencilFlagDepthWriteEnabled = 0x00000002
 		};
-		enum BufferResourceUsage {
-			BufferResourceUsageShaderResource = 0x00000001,
-			BufferResourceUsageIndexBuffer = 0x00000002
-		};
-		enum TextureResourceUsage {
-			TextureResourceUsageShaderRead = 0x00000001,
-			TextureResourceUsageShaderWrite = 0x00000002,
-			TextureResourceUsageRenderTarget = 0x00000004,
-			TextureResourceUsageDepthStencil = 0x00000008
+		enum ResourceUsage {
+			ResourceUsageShaderRead = 0x00000001,
+			ResourceUsageShaderWrite = 0x00000002,
+			ResourceUsageIndexBuffer = 0x00000004,
+			ResourceUsageRenderTarget = 0x00000008,
+			ResourceUsageDepthStencil = 0x00000010,
+			ResourceUsageCPURead = 0x00000020,
+			ResourceUsageCPUWrite = 0x00000040
 		};
 
 		struct SamplerDesc
@@ -151,12 +153,13 @@ namespace Engine
 			RenderTargetDesc RenderTarget[8];
 			DepthStencilDesc DepthStencil;
 			RasterizationDesc Rasterization;
+			PrimitiveTopology Topology;
 		};
 		struct BufferDesc
 		{
 			uint32 Length;
 			uint32 Stride;
-			BufferResourceUsage Usage;
+			ResourceUsage Usage;
 			ResourceMemoryPool MemoryPool;
 		};
 		struct TextureDesc
@@ -167,7 +170,7 @@ namespace Engine
 			uint32 Height;
 			uint32 DepthOrArraySize;
 			uint32 MipmapCount;
-			TextureResourceUsage Usage;
+			ResourceUsage Usage;
 			ResourceMemoryPool MemoryPool;
 		};
 		struct ResourceInitDesc
@@ -175,6 +178,43 @@ namespace Engine
 			const void * Data;
 			intptr DataPitch;
 			intptr DataSlicePitch;
+		};
+		struct ResourceDataDesc
+		{
+			void * Data;
+			intptr DataPitch;
+			intptr DataSlicePitch;
+		};
+		struct RenderTargetViewDesc
+		{
+			ITexture * Texture;
+			TextureLoadAction LoadAction;
+			float ClearValue[4];
+		};
+		struct DepthStencilViewDesc
+		{
+			ITexture * Texture;
+			TextureLoadAction DepthLoadAction;
+			TextureLoadAction StencilLoadAction;
+			float DepthClearValue;
+			uint8 StencilClearValue;
+		};
+
+		class VolumeIndex
+		{
+		public:
+			uint32 x, y, z;
+			VolumeIndex(void);
+			VolumeIndex(uint32 sx);
+			VolumeIndex(uint32 sx, uint32 sy);
+			VolumeIndex(uint32 sx, uint32 sy, uint32 sz);
+		};
+		class SubresourceIndex
+		{
+		public:
+			uint32 mip_level, array_index;
+			SubresourceIndex(void);
+			SubresourceIndex(uint32 mip, uint32 index);
 		};
 
 		class IDevice : public Object
@@ -186,7 +226,7 @@ namespace Engine
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept = 0;
-			virtual ICommandQueue * CreateCommandQueue(void) noexcept = 0;
+			virtual IDeviceContext * CreateDeviceContext(void) noexcept = 0;
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept = 0;
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept = 0;
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept = 0;
@@ -218,12 +258,12 @@ namespace Engine
 		public:
 			virtual ResourceType GetResourceType(void) noexcept = 0;
 			virtual ResourceMemoryPool GetMemoryPool(void) noexcept = 0;
+			virtual ResourceUsage GetResourceUsage(void) noexcept = 0;
 		};
 		class IBuffer : public IDeviceResource
 		{
 		public:
 			virtual uint32 GetLength(void) noexcept = 0;
-			virtual BufferResourceUsage GetBufferUsage(void) noexcept = 0;
 		};
 		class ITexture : public IDeviceResource
 		{
@@ -235,13 +275,34 @@ namespace Engine
 			virtual uint32 GetDepth(void) noexcept = 0;
 			virtual uint32 GetMipmapCount(void) noexcept = 0;
 			virtual uint32 GetArraySize(void) noexcept = 0;
-			virtual TextureResourceUsage GetTextureUsage(void) noexcept = 0;
 		};
-		class ICommandQueue : public IDeviceChild
+		class IDeviceContext : public IDeviceChild
 		{
 		public:
-			// TODO: Add parallel command encoding and fences
-			// TODO: FILL
+			virtual void BeginRenderingPass(uint32 rtc, const RenderTargetViewDesc * rtv, const DepthStencilViewDesc * dsv) noexcept = 0;
+			virtual void Begin2DRenderingPass(const RenderTargetViewDesc & rtv) noexcept = 0;
+			virtual void BeginMemoryManagementPass(void) noexcept = 0;
+			virtual void EndCurrentPass(void) noexcept = 0;
+			virtual void Wait(void) noexcept = 0;
+
+			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept = 0;
+			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept = 0;
+			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept = 0;
+			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept = 0;
+			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept = 0;
+			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept = 0;
+			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept = 0;
+			virtual void SetStencilReferenceValue(uint8 ref) noexcept = 0;
+			virtual void DrawPrimitives(uint32 vertex_count, uint32 first_vertex) noexcept = 0;
+			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept = 0;
+
+			virtual Object * Query2DRenderingDevice(void) noexcept = 0;
+
+			virtual void GenerateMipmaps(ITexture * texture) noexcept = 0;
+			virtual void CopyResourceData(IDeviceResource * dest, IDeviceResource * src) noexcept = 0;
+			virtual void CopySubresourceData(IDeviceResource * dest, SubresourceIndex dest_subres, VolumeIndex dest_origin, IDeviceResource * src, SubresourceIndex src_subres, VolumeIndex src_origin, VolumeIndex size) noexcept = 0;
+			virtual void UpdateResourceData(IDeviceResource * dest, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size, const ResourceInitDesc & src) noexcept = 0;
+			virtual void QueryResourceData(ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept = 0;
 		};
 
 		// TODO: CREATE DEFAULT DEVICE
