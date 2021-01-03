@@ -111,7 +111,7 @@ namespace Engine
 		struct RenderTargetDesc
 		{
 			PixelFormat Format;
-			RenderTargetFlags Flags;
+			uint32 Flags;
 			BlendingFunction BlendRGB;
 			BlendingFunction BlendAlpha;
 			BlendingFactor BaseFactorRGB;
@@ -129,7 +129,7 @@ namespace Engine
 		struct DepthStencilDesc
 		{
 			PixelFormat Format;
-			DepthStencilFlags Flags;
+			uint32 Flags;
 			CompareFunction DepthTestFunction;
 			uint8 StencilWriteMask;
 			uint8 StencilReadMask;
@@ -160,7 +160,7 @@ namespace Engine
 		{
 			uint32 Length;
 			uint32 Stride;
-			ResourceUsage Usage;
+			uint32 Usage;
 			ResourceMemoryPool MemoryPool;
 		};
 		struct TextureDesc
@@ -171,7 +171,7 @@ namespace Engine
 			uint32 Height;
 			uint32 DepthOrArraySize;
 			uint32 MipmapCount;
-			ResourceUsage Usage;
+			uint32 Usage;
 			ResourceMemoryPool MemoryPool;
 		};
 		struct ResourceInitDesc
@@ -228,7 +228,7 @@ namespace Engine
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept = 0;
-			virtual IDeviceContext * CreateDeviceContext(void) noexcept = 0;
+			virtual IDeviceContext * GetDeviceContext(void) noexcept = 0;
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept = 0;
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept = 0;
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept = 0;
@@ -260,7 +260,7 @@ namespace Engine
 		public:
 			virtual ResourceType GetResourceType(void) noexcept = 0;
 			virtual ResourceMemoryPool GetMemoryPool(void) noexcept = 0;
-			virtual ResourceUsage GetResourceUsage(void) noexcept = 0;
+			virtual uint32 GetResourceUsage(void) noexcept = 0;
 		};
 		class IBuffer : public IDeviceResource
 		{
@@ -318,6 +318,5 @@ namespace Engine
 
 		IDeviceFactory * CreateDeviceFactory(void);
 		IDevice * GetCommonDevice(void);
-		IDeviceContext * GetCommonDeviceContext(void);
 	}
 }

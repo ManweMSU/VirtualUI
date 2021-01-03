@@ -600,6 +600,7 @@ namespace Engine
 			if (Target) { Target->Release(); Target = 0; }
 			if (target) { Target = target; Target->AddRef(); }
 		}
+		void D2DRenderDevice::SetParentWrappedDevice(Graphics::IDevice * device) noexcept { ParentWrappedDevice.SetRetain(device); }
 		void D2DRenderDevice::TextureWasDestroyed(ITexture * texture) noexcept
 		{
 			for (int i = 0; i < TextureCache.Length(); i++) {
@@ -751,9 +752,15 @@ namespace Engine
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
 		{
 			if (!texture) return 0;
-			Direct3D::D3DTexture * wrapper = static_cast<Direct3D::D3DTexture *>(texture);
+			auto parent_device = ParentWrappedDevice ? ParentWrappedDevice.Inner() : Direct3D::WrappedDevice.Inner();
+			if (texture->GetParentDevice() != parent_device) return 0;
+			if (!(texture->GetResourceUsage() & Graphics::ResourceUsageShaderRead)) return 0;
+			if (texture->GetTextureType() != Graphics::TextureType::Type2D) return 0;
+			if (texture->GetPixelFormat() != Graphics::PixelFormat::B8G8R8A8_unorm) return 0;
+			if (texture->GetMipmapCount() != 1) return 0;
+			auto resource = static_cast<ID3D11Texture2D *>(Direct3D::QueryInnerObject(texture));
 			IDXGISurface * surface = 0;
-			if (wrapper->texture->QueryInterface(__uuidof(IDXGISurface), reinterpret_cast<void **>(&surface)) != S_OK) return 0;
+			if (resource->QueryInterface(__uuidof(IDXGISurface), reinterpret_cast<void **>(&surface)) != S_OK) return 0;
 			D2D1_BITMAP_PROPERTIES props;
 			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
 			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
@@ -770,8 +777,8 @@ namespace Engine
 				return 0;
 			}
 			cover->bitmap = bitmap;
-			cover->w = wrapper->width;
-			cover->h = wrapper->height;
+			cover->w = texture->GetWidth();
+			cover->h = texture->GetHeight();
 			auto info = new (std::nothrow) TextureRenderingInfo;
 			if (!info) return 0;
 			info->Texture = cover;
@@ -851,32 +858,20 @@ namespace Engine
 		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
 		{
-			if (!Direct3D::D3DDevice) return 0;
+			auto parent_device = ParentWrappedDevice ? ParentWrappedDevice.Inner() : Direct3D::WrappedDevice.Inner();
+			if (!parent_device) return 0;
 			if (width <= 0 || height <= 0) throw InvalidArgumentException();
 			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
-			D3D11_TEXTURE2D_DESC desc;
+			Graphics::TextureDesc desc;
+			desc.Type = Graphics::TextureType::Type2D;
+			desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
 			desc.Width = width;
 			desc.Height = height;
-			desc.MipLevels = 1;
-			desc.ArraySize = 1;
-			desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
-			desc.Usage = D3D11_USAGE_DEFAULT;
-			desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-			ID3D11Texture2D * texture = 0;
-			if (Direct3D::D3DDevice->CreateTexture2D(&desc, 0, &texture) != S_OK) return 0;
-			Direct3D::D3DTexture * wrapper = new (std::nothrow) Direct3D::D3DTexture;
-			if (!wrapper) {
-				texture->Release();
-				return 0;
-			}
-			wrapper->texture = texture;
-			wrapper->width = width;
-			wrapper->height = height;
-			return wrapper;
+			desc.DepthOrArraySize = 1;
+			desc.MipmapCount = 1;
+			desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
+			desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
+			return parent_device->CreateTexture(desc);
 		}
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
 		{

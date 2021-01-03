@@ -48,6 +48,7 @@ namespace Engine
 			Array<tex_pair> TextureCache;
 			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
 			SafePointer<IWICBitmap> BitmapTarget;
+			SafePointer<Graphics::IDevice> ParentWrappedDevice;
 			int BitmapTargetState;
 			int BitmapTargetResX, BitmapTargetResY;
 		public:
@@ -57,6 +58,7 @@ namespace Engine
 
 			ID2D1RenderTarget * GetRenderTarget(void) const noexcept;
 			void UpdateRenderTarget(ID2D1RenderTarget * target) noexcept;
+			void SetParentWrappedDevice(Graphics::IDevice * device) noexcept;
 			virtual void TextureWasDestroyed(ITexture * texture) noexcept override;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;

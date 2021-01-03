@@ -172,7 +172,61 @@ namespace Engine
 			if (SwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0) != S_OK) return false;
 			return true;
 		}
+
+		Graphics::IDeviceFactory * CreateDeviceFactoryD3D11(void)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
+		ID3D11Resource * QueryInnerObject(Graphics::IDeviceResource * resource)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
+		
+		// TODO: REMOVE
+		/*class D3DTexture : public Graphics::ITexture
+		{
+		public:
+			ID3D11Texture2D * texture;
+			int width, height;
+
+			D3DTexture(void);
+			virtual ~D3DTexture(void) override;
+		};
+
 		D3DTexture::D3DTexture(void) { texture = 0; }
 		D3DTexture::~D3DTexture(void) { if (texture) texture->Release(); }
+
+		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
+		{
+			if (!Direct3D::D3DDevice) return 0;
+			if (width <= 0 || height <= 0) throw InvalidArgumentException();
+			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
+			D3D11_TEXTURE2D_DESC desc;
+			desc.Width = width;
+			desc.Height = height;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = D3D11_USAGE_DEFAULT;
+			desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+			ID3D11Texture2D * texture = 0;
+			if (Direct3D::D3DDevice->CreateTexture2D(&desc, 0, &texture) != S_OK) return 0;
+			Direct3D::D3DTexture * wrapper = new (std::nothrow) Direct3D::D3DTexture;
+			if (!wrapper) {
+				texture->Release();
+				return 0;
+			}
+			wrapper->texture = texture;
+			wrapper->width = width;
+			wrapper->height = height;
+			return wrapper;
+		}*/
+		// TODO: END REMOVE
 	}
 }

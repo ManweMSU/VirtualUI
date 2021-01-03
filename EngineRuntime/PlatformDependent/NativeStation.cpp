@@ -106,6 +106,15 @@ namespace Engine
 			Direct2D::InitializeFactory();
 			return Direct2D::D2DRenderDevice::CreateD2DCompatibleTextureRenderingDevice(width, height, color);
 		}
+		Graphics::IDeviceFactory * CreateDeviceFactory(void) { return Direct3D::CreateDeviceFactoryD3D11(); }
+		Graphics::IDevice * GetCommonDevice(void)
+		{
+			Direct3D::CreateDevices();
+			if (Direct3D::WrappedDevice) {
+				Direct3D::WrappedDevice->Retain();
+				return Direct3D::WrappedDevice;
+			} else return 0;
+		}
 		class NativeStation : public HandleWindowStation
 		{
 			friend LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);

@@ -14,6 +14,7 @@ namespace Engine
 		extern SafePointer<ID2D1Device> D2DDevice;
 		extern SafePointer<IDXGIDevice1> DXGIDevice;
 		extern SafePointer<ID3D11DeviceContext> D3DDeviceContext;
+		extern SafePointer<Graphics::IDevice> WrappedDevice;
 
 		void CreateDevices(void);
 		void ReleaseDevices(void);
@@ -26,14 +27,7 @@ namespace Engine
 		bool ResizeRenderBufferForD2DDevice(ID2D1DeviceContext * Context, IDXGISwapChain1 * SwapChain);
 		bool ResizeRenderBufferForSwapChainDevice(IDXGISwapChain * SwapChain);
 
-		class D3DTexture : public Graphics::ITexture
-		{
-		public:
-			ID3D11Texture2D * texture;
-			int width, height;
-
-			D3DTexture(void);
-			virtual ~D3DTexture(void) override;
-		};
+		Graphics::IDeviceFactory * CreateDeviceFactoryD3D11(void);
+		ID3D11Resource * QueryInnerObject(Graphics::IDeviceResource * resource);
 	}
 }

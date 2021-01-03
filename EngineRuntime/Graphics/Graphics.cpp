@@ -14,6 +14,5 @@ namespace Engine
 		SubresourceIndex::SubresourceIndex(uint32 mip, uint32 index) : mip_level(mip), array_index(index) {}
 		IDeviceFactory * CreateDeviceFactory(void) { return NativeWindows::CreateDeviceFactory(); }
 		IDevice * GetCommonDevice(void) { return NativeWindows::GetCommonDevice(); }
-		IDeviceContext * GetCommonDeviceContext(void) { return NativeWindows::GetCommonDeviceContext(); }
 	}
 }
