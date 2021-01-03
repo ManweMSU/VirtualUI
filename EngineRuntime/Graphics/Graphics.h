@@ -16,6 +16,7 @@ namespace Engine
 		class IBuffer;
 		class ITexture;
 		class IDeviceContext;
+		class IDeviceFactory;
 
 		enum class PixelFormat {
 			Invalid,
@@ -222,6 +223,7 @@ namespace Engine
 		public:
 			virtual string GetDeviceName(void) noexcept = 0;
 			virtual uint64 GetDeviceIdentifier(void) noexcept = 0;
+			virtual bool DeviceIsValid(void) noexcept = 0;
 			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept = 0;
@@ -279,10 +281,10 @@ namespace Engine
 		class IDeviceContext : public IDeviceChild
 		{
 		public:
-			virtual void BeginRenderingPass(uint32 rtc, const RenderTargetViewDesc * rtv, const DepthStencilViewDesc * dsv) noexcept = 0;
-			virtual void Begin2DRenderingPass(const RenderTargetViewDesc & rtv) noexcept = 0;
-			virtual void BeginMemoryManagementPass(void) noexcept = 0;
-			virtual void EndCurrentPass(void) noexcept = 0;
+			virtual bool BeginRenderingPass(uint32 rtc, const RenderTargetViewDesc * rtv, const DepthStencilViewDesc * dsv) noexcept = 0;
+			virtual bool Begin2DRenderingPass(const RenderTargetViewDesc & rtv) noexcept = 0;
+			virtual bool BeginMemoryManagementPass(void) noexcept = 0;
+			virtual bool EndCurrentPass(void) noexcept = 0;
 			virtual void Wait(void) noexcept = 0;
 
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept = 0;
@@ -304,9 +306,18 @@ namespace Engine
 			virtual void UpdateResourceData(IDeviceResource * dest, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size, const ResourceInitDesc & src) noexcept = 0;
 			virtual void QueryResourceData(ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept = 0;
 		};
+		class IDeviceFactory : public Object
+		{
+		public:
+			virtual uint32 GetAvailableDeviceCount(void) noexcept = 0;
+			virtual uint64 GetDeviceIdentifier(uint32 index) noexcept = 0;
+			virtual string GetDeviceName(uint32 index) noexcept = 0;
+			virtual IDevice * CreateDevice(uint32 index) noexcept = 0;
+			virtual IDevice * CreateDefaultDevice(void) noexcept = 0;
+		};
 
-		// TODO: CREATE DEFAULT DEVICE
-		// TODO: ENUMERATE DEVICES
-		// TODO: CREATE SELECTED DEVICE
+		IDeviceFactory * CreateDeviceFactory(void);
+		IDevice * GetCommonDevice(void);
+		IDeviceContext * GetCommonDeviceContext(void);
 	}
 }

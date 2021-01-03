@@ -1,5 +1,7 @@
 #include "Graphics.h"
 
+#include "../PlatformDependent/NativeStation.h"
+
 namespace Engine
 {
 	namespace Graphics
@@ -10,5 +12,8 @@ namespace Engine
 		VolumeIndex::VolumeIndex(uint32 sx, uint32 sy, uint32 sz) : x(sx), y(sy), z(sz) {}
 		SubresourceIndex::SubresourceIndex(void) {}
 		SubresourceIndex::SubresourceIndex(uint32 mip, uint32 index) : mip_level(mip), array_index(index) {}
+		IDeviceFactory * CreateDeviceFactory(void) { return NativeWindows::CreateDeviceFactory(); }
+		IDevice * GetCommonDevice(void) { return NativeWindows::GetCommonDevice(); }
+		IDeviceContext * GetCommonDeviceContext(void) { return NativeWindows::GetCommonDeviceContext(); }
 	}
 }
