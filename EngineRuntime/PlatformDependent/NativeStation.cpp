@@ -169,6 +169,7 @@ namespace Engine
 				if (!Direct3D::CreateSwapChainForWindow(_window, SimpleSwapChain.InnerRef())) return false;
 				if (!Direct3D::CreateSwapChainDevice(SimpleSwapChain, SwapChainRenderTarget.InnerRef())) { SimpleSwapChain.SetReference(0); return false; }
 				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(SwapChainRenderTarget));
+				RenderingDevice->SetParentWrappedDevice(Direct3D::WrappedDevice);
 				SetRenderingDevice(RenderingDevice);
 				return true;
 			}
@@ -177,6 +178,7 @@ namespace Engine
 				if (!Direct3D::CreateD2DDeviceContextForWindow(_window, DeviceContext.InnerRef(), SwapChain.InnerRef())) return false;
 				if (!DeviceContext) return false;
 				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
+				RenderingDevice->SetParentWrappedDevice(Direct3D::WrappedDevice);
 				SetRenderingDevice(RenderingDevice);
 				return true;
 			}

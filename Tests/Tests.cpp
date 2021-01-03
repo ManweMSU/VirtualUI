@@ -241,19 +241,20 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
 	auto tex = Device->CreateIntermediateRenderTarget(Graphics::PixelFormat::B8G8R8A8_unorm, 256, 128);
 	cns.WriteLine(FormatString(L"INTERMEDIATE RENDER TARGET: %0", string((void *) tex)));
+
 	SafePointer<UI::Template::Shape> custom_tex_shape;
 	if (tex) {
 		auto shape = new RenderTargetShapeTemplate;
 		custom_tex_shape = shape;
 		custom_tex_shape->Position = UI::Template::Rectangle(UI::Template::Coordinate(0), UI::Template::Coordinate(0), UI::Template::Coordinate(0, 0.0, 1.0), UI::Template::Coordinate(0, 0.0, 1.0));
 		shape->texture = tex;
-		auto cast = static_cast<Direct3D::D3DTexture *>(tex);
+		/*auto cast = static_cast<Direct3D::D3DTexture *>(tex);
 		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
 		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
 			frame->SetPixel(x, y, UI::Color(x, 255, y, 255));
 		}
 		Direct3D::D3DDeviceContext->UpdateSubresource(cast->texture, 0, 0, frame->GetData(), frame->GetScanLineLength(), 0);
-		Direct3D::D3DDeviceContext->Flush();
+		Direct3D::D3DDeviceContext->Flush();*/
 	}
 
 	{
@@ -279,8 +280,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 				SafePointer<Template::BarShape> Fill = new Template::BarShape;
 				Fill->Gradient << GradientPoint(0xFF303050);
-				//back->Children.Append(Back);
-				back->Children.Append(custom_tex_shape);
+				if (custom_tex_shape) back->Children.Append(custom_tex_shape); else back->Children.Append(Back);
 				back->Children.Append(Fill);
 			}
 			Main->As<TopLevelWindow>()->Background.SetRetain(back);

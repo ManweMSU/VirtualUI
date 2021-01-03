@@ -752,8 +752,7 @@ namespace Engine
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
 		{
 			if (!texture) return 0;
-			auto parent_device = ParentWrappedDevice ? ParentWrappedDevice.Inner() : Direct3D::WrappedDevice.Inner();
-			if (texture->GetParentDevice() != parent_device) return 0;
+			if (texture->GetParentDevice() != ParentWrappedDevice.Inner()) return 0;
 			if (!(texture->GetResourceUsage() & Graphics::ResourceUsageShaderRead)) return 0;
 			if (texture->GetTextureType() != Graphics::TextureType::Type2D) return 0;
 			if (texture->GetPixelFormat() != Graphics::PixelFormat::B8G8R8A8_unorm) return 0;
@@ -858,8 +857,7 @@ namespace Engine
 		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
 		{
-			auto parent_device = ParentWrappedDevice ? ParentWrappedDevice.Inner() : Direct3D::WrappedDevice.Inner();
-			if (!parent_device) return 0;
+			if (!ParentWrappedDevice) return 0;
 			if (width <= 0 || height <= 0) throw InvalidArgumentException();
 			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
 			Graphics::TextureDesc desc;
@@ -871,7 +869,7 @@ namespace Engine
 			desc.MipmapCount = 1;
 			desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
 			desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
-			return parent_device->CreateTexture(desc);
+			return ParentWrappedDevice->CreateTexture(desc);
 		}
 		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
 		{

@@ -29,5 +29,7 @@ namespace Engine
 
 		Graphics::IDeviceFactory * CreateDeviceFactoryD3D11(void);
 		ID3D11Resource * QueryInnerObject(Graphics::IDeviceResource * resource);
+		ID3D11Device * CreateDeviceD3D11(IDXGIAdapter * adapter, D3D_DRIVER_TYPE driver);
+		Graphics::IDevice * CreateWrappedDeviceD3D11(ID3D11Device * device);
 	}
 }
