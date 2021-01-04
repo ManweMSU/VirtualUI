@@ -55,7 +55,7 @@ namespace Engine
 		};
 		enum class SamplerFilter { Point, Linear, Anisotropic };
 		enum class SamplerAddressMode { Wrap, Mirror, Clamp, Border };
-		enum class ShaderType { Vertex, Pixel };
+		enum class ShaderType { Unknown, Vertex, Pixel };
 		enum class BlendingFactor {
 			Zero, One,
 			OverColor, InvertedOverColor, OverAlpha, InvertedOverAlpha,

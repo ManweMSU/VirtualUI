@@ -1,6 +1,7 @@
 #include "Direct3D.h"
 
 #include "Direct2D.h"
+#include "../Storage/Archive.h"
 
 #include <VersionHelpers.h>
 
@@ -259,6 +260,88 @@ namespace Engine
 			}
 			virtual uint32 GetArraySize(void) noexcept override { return size; }
 			virtual string ToString(void) const override { return L"D3D11_Texture"; }
+		};
+		class D3D11_Shader : public Graphics::IShader
+		{
+			IDevice * wrapper;
+			string name;
+		public:
+			ID3D11VertexShader * vs;
+			ID3D11PixelShader * ps;
+
+			D3D11_Shader(IDevice * _wrapper, const string & _name) : wrapper(_wrapper), name(_name), vs(0), ps(0) {}
+			virtual ~D3D11_Shader(void) { if (vs) vs->Release(); if (ps) ps->Release(); }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual string GetName(void) noexcept override { return name; }
+			virtual ShaderType GetType(void) noexcept override
+			{
+				if (vs) return ShaderType::Vertex;
+				else if (ps) return ShaderType::Pixel;
+				else return ShaderType::Unknown;
+			}
+			virtual string ToString(void) const override { return L"D3D11_Shader"; }
+		};
+		class D3D11_ShaderLibrary : public Graphics::IShaderLibrary
+		{
+			IDevice * wrapper;
+			ID3D11Device * device;
+			SafePointer<Storage::Archive> shader_arc;
+		public:
+			D3D11_ShaderLibrary(IDevice * _wrapper, ID3D11Device * _device, Streaming::Stream * source) : wrapper(_wrapper), device(_device)
+			{
+				device->AddRef();
+				shader_arc = Storage::OpenArchive(source, Storage::ArchiveMetadataUsage::IgnoreMetadata);
+				if (!shader_arc) throw Exception();
+			}
+			virtual ~D3D11_ShaderLibrary(void) override { if (device) device->Release(); }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual Array<string> * GetShaderNames(void) noexcept override
+			{
+				try {
+					SafePointer< Array<string> > result = new Array<string>(0x10);
+					for (Storage::ArchiveFile file = 1; file <= shader_arc->GetFileCount(); file++) {
+						result->Append(shader_arc->GetFileName(file));
+					}
+					result->Retain();
+					return result;
+				} catch (...) { return 0; }
+			}
+			virtual IShader * CreateShader(const string & name) noexcept override
+			{
+				try {
+					auto file = shader_arc->FindArchiveFile(name);
+					if (!file) return 0;
+					auto attr = shader_arc->GetFileCustomData(file);
+					auto real_name = shader_arc->GetFileName(file);
+					SafePointer<Streaming::Stream> stream = shader_arc->QueryFileStream(file, Storage::ArchiveStream::Native);
+					SafePointer<DataBlock> data = stream->ReadAll();
+					SafePointer<D3D11_Shader> shader = new D3D11_Shader(wrapper, real_name);
+					if (attr == 1) {
+						if (device->CreateVertexShader(data->GetBuffer(), data->Length(), 0, &shader->vs) != S_OK) return 0;
+					} else if (attr == 2) {
+						if (device->CreatePixelShader(data->GetBuffer(), data->Length(), 0, &shader->ps) != S_OK) return 0;
+					} else return 0;
+					if (shader) {
+						shader->Retain();
+						return shader;
+					} else return 0;
+				} catch (...) { return 0; }
+			}
+			virtual string ToString(void) const override { return L"D3D11_ShaderLibrary"; }
+		};
+		class D3D11_PipelineState : public Graphics::IPipelineState
+		{
+			IDevice * wrapper;
+		public:
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual string ToString(void) const override { return L"D3D11_PipelineState"; }
+		};
+		class D3D11_SamplerState : public Graphics::ISamplerState
+		{
+			IDevice * wrapper;
+		public:
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual string ToString(void) const override { return L"D3D11_SamplerState"; }
 		};
 		class D3D11_DeviceContext : public Graphics::IDeviceContext
 		{
@@ -668,18 +751,20 @@ namespace Engine
 			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override { tech = L"Direct3D"; version = 11; }
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				try {
+					SafePointer<Streaming::Stream> storage = new Streaming::MemoryStream(length);
+					storage->Write(data, length);
+					return new D3D11_ShaderLibrary(this, device, storage);
+				} catch (...) { return 0; }
 			}
-			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept override
-			{
-				// TODO: IMPLEMENT
-				return 0;
-			}
+			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept override { return LoadShaderLibrary(data->GetBuffer(), data->Length()); }
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				try {
+					SafePointer<DataBlock> data = stream->ReadAll();
+					if (!data) return 0;
+					return LoadShaderLibrary(data);
+				} catch (...) { return 0; }
 			}
 			virtual IDeviceContext * GetDeviceContext(void) noexcept override { return context; }
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept override
