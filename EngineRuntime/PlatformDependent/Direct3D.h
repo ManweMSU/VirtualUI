@@ -14,6 +14,7 @@ namespace Engine
 		extern SafePointer<ID2D1Device> D2DDevice;
 		extern SafePointer<IDXGIDevice1> DXGIDevice;
 		extern SafePointer<ID3D11DeviceContext> D3DDeviceContext;
+		extern SafePointer<IDXGIFactory> DXGIFactory;
 		extern SafePointer<Graphics::IDevice> WrappedDevice;
 
 		void CreateDevices(void);
@@ -31,5 +32,6 @@ namespace Engine
 		ID3D11Resource * QueryInnerObject(Graphics::IDeviceResource * resource);
 		ID3D11Device * CreateDeviceD3D11(IDXGIAdapter * adapter, D3D_DRIVER_TYPE driver);
 		Graphics::IDevice * CreateWrappedDeviceD3D11(ID3D11Device * device);
+		DXGI_FORMAT MakeDxgiFormat(Graphics::PixelFormat format);
 	}
 }

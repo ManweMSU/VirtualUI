@@ -1,9 +1,11 @@
 #pragma once
 
 #include "../Streaming.h"
+#include "../Miscellaneous/Dictionary.h"
 
 namespace Engine
 {
+	namespace UI { class IRenderingDevice; }
 	namespace Graphics
 	{
 		class IDevice;
@@ -18,38 +20,38 @@ namespace Engine
 		class IDeviceContext;
 		class IDeviceFactory;
 
-		enum class PixelFormat {
-			Invalid,
+		enum class PixelFormat : uint32 {
+			Invalid = 0x00000000,
 			// Color formats
 			// 8 bpp
-			A8_unorm,
-			R8_unorm, R8_snorm, R8_uint, R8_sint,
+			A8_unorm = 0x81100001,
+			R8_unorm = 0x81100002, R8_snorm = 0x81100003, R8_uint = 0x81100004, R8_sint = 0x81100005,
 
 			// 16 bpp
-			R16_unorm, R16_snorm, R16_uint, R16_sint, R16_float,
-			R8G8_unorm, R8G8_snorm, R8G8_uint, R8G8_sint,
-			B5G6R5_unorm,
-			B5G5R5A1_unorm,
-			B4G4R4A4_unorm,
+			R16_unorm = 0x82100001, R16_snorm = 0x82100002, R16_uint = 0x82100003, R16_sint = 0x82100004, R16_float = 0x82100005,
+			R8G8_unorm = 0x82200001, R8G8_snorm = 0x82200002, R8G8_uint = 0x82200003, R8G8_sint = 0x82200004,
+			B5G6R5_unorm = 0x82300001,
+			B5G5R5A1_unorm = 0x82400001,
+			B4G4R4A4_unorm = 0x82400002,
 
 			// 32 bpp
-			R32_uint, R32_sint, R32_float,
-			R16G16_unorm, R16G16_snorm, R16G16_uint, R16G16_sint, R16G16_float,
-			B8G8R8A8_unorm,
-			R8G8B8A8_unorm, R8G8B8A8_snorm, R8G8B8A8_uint, R8G8B8A8_sint,
-			R10G10B10A2_unorm, R10G10B10A2_uint,
-			R11G11B10_float,
-			R9G9B9E5_float,
+			R32_uint = 0x83100001, R32_sint = 0x83100002, R32_float = 0x83100003,
+			R16G16_unorm = 0x83200001, R16G16_snorm = 0x83200002, R16G16_uint = 0x83200003, R16G16_sint = 0x83200004, R16G16_float = 0x83200005,
+			B8G8R8A8_unorm = 0x83400001,
+			R8G8B8A8_unorm = 0x83400002, R8G8B8A8_snorm = 0x83400003, R8G8B8A8_uint = 0x83400004, R8G8B8A8_sint = 0x83400005,
+			R10G10B10A2_unorm = 0x83400006, R10G10B10A2_uint = 0x83400007,
+			R11G11B10_float = 0x83300001,
+			R9G9B9E5_float = 0x83300002,
 
 			// 64 bpp
-			R32G32_uint, R32G32_sint, R32G32_float,
-			R16G16B16A16_unorm, R16G16B16A16_snorm, R16G16B16A16_uint, R16G16B16A16_sint, R16G16B16A16_float,
+			R32G32_uint = 0x84200001, R32G32_sint = 0x84200002, R32G32_float = 0x84200003,
+			R16G16B16A16_unorm = 0x84400001, R16G16B16A16_snorm = 0x84400002, R16G16B16A16_uint = 0x84400003, R16G16B16A16_sint = 0x84400004, R16G16B16A16_float = 0x84400005,
 
 			// 128 bpp
-			R32G32B32A32_uint, R32G32B32A32_sint, R32G32B32A32_float,
+			R32G32B32A32_uint = 0x85400001, R32G32B32A32_sint = 0x85400002, R32G32B32A32_float = 0x85400003,
 
 			// Depth/Stencil formats
-			D16_unorm, D32_float, D24S8_unorm, D32S8_float
+			D16_unorm = 0x42100001, D32_float = 0x43100001, D24S8_unorm = 0x43200001, D32S8_float = 0x44200001
 		};
 		enum class SamplerFilter { Point, Linear, Anisotropic };
 		enum class SamplerAddressMode { Wrap, Mirror, Clamp, Border };
@@ -234,7 +236,7 @@ namespace Engine
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept = 0;
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept = 0;
 			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept = 0;
-			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc & init) noexcept = 0;
+			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept = 0;
 		};
 		class IDeviceChild : public Object
 		{
@@ -290,15 +292,17 @@ namespace Engine
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept = 0;
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept = 0;
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept = 0;
+			virtual void SetVertexShaderResourceData(uint32 at, const void * data, int length) noexcept = 0;
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept = 0;
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept = 0;
+			virtual void SetPixelShaderResourceData(uint32 at, const void * data, int length) noexcept = 0;
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept = 0;
 			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept = 0;
 			virtual void SetStencilReferenceValue(uint8 ref) noexcept = 0;
 			virtual void DrawPrimitives(uint32 vertex_count, uint32 first_vertex) noexcept = 0;
 			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept = 0;
 
-			virtual Object * Query2DRenderingDevice(void) noexcept = 0;
+			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept = 0;
 
 			virtual void GenerateMipmaps(ITexture * texture) noexcept = 0;
 			virtual void CopyResourceData(IDeviceResource * dest, IDeviceResource * src) noexcept = 0;
@@ -309,14 +313,19 @@ namespace Engine
 		class IDeviceFactory : public Object
 		{
 		public:
-			virtual uint32 GetAvailableDeviceCount(void) noexcept = 0;
-			virtual uint64 GetDeviceIdentifier(uint32 index) noexcept = 0;
-			virtual string GetDeviceName(uint32 index) noexcept = 0;
-			virtual IDevice * CreateDevice(uint32 index) noexcept = 0;
+			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableDevices(void) noexcept = 0;
+			virtual IDevice * CreateDevice(uint64 identifier) noexcept = 0;
 			virtual IDevice * CreateDefaultDevice(void) noexcept = 0;
 		};
 
 		IDeviceFactory * CreateDeviceFactory(void);
 		IDevice * GetCommonDevice(void);
+
+		bool IsColorFormat(PixelFormat format);
+		bool IsDepthStencilFormat(PixelFormat format);
+		int GetFormatChannelCount(PixelFormat format);
+		int GetFormatBitsPerPixel(PixelFormat format);
 	}
 }
+
+#include "../UserInterface/ShapeBase.h"

@@ -239,22 +239,38 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
-	auto tex = Device->CreateIntermediateRenderTarget(Graphics::PixelFormat::B8G8R8A8_unorm, 256, 128);
-	cns.WriteLine(FormatString(L"INTERMEDIATE RENDER TARGET: %0", string((void *) tex)));
+	Device->SetParentWrappedDevice(Direct3D::WrappedDevice);
+	Graphics::ITexture * tex = 0;
+
+	auto fact = Graphics::CreateDeviceFactory();
+	auto dl = fact->GetAvailableDevices();
+	for (auto & d : dl->Elements()) cns.WriteLine(FormatString(L"%0: %1", d.value, d.key));
+	fact->Release();
+	dl->Release();
 
 	SafePointer<UI::Template::Shape> custom_tex_shape;
-	if (tex) {
+	if (!tex) {
+		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
+			frame->SetPixel(x, y, UI::Color(x, min(x, y), y, 255));
+		}
+		auto dev = Graphics::GetCommonDevice();
+		Graphics::TextureDesc desc;
+		desc.Type = Graphics::TextureType::Type2D;
+		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+		desc.Width = 256;
+		desc.Height = 128;
+		desc.MemoryPool = Graphics::ResourceMemoryPool::Immutable;
+		desc.MipmapCount = 1;
+		desc.Usage = Graphics::ResourceUsageShaderRead;
+		Graphics::ResourceInitDesc init;
+		init.Data = frame->GetData();
+		init.DataPitch = frame->GetScanLineLength();
+		tex = dev->CreateTexture(desc, &init);
 		auto shape = new RenderTargetShapeTemplate;
 		custom_tex_shape = shape;
 		custom_tex_shape->Position = UI::Template::Rectangle(UI::Template::Coordinate(0), UI::Template::Coordinate(0), UI::Template::Coordinate(0, 0.0, 1.0), UI::Template::Coordinate(0, 0.0, 1.0));
 		shape->texture = tex;
-		/*auto cast = static_cast<Direct3D::D3DTexture *>(tex);
-		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
-			frame->SetPixel(x, y, UI::Color(x, 255, y, 255));
-		}
-		Direct3D::D3DDeviceContext->UpdateSubresource(cast->texture, 0, 0, frame->GetData(), frame->GetScanLineLength(), 0);
-		Direct3D::D3DDeviceContext->Flush();*/
 	}
 
 	{
@@ -1090,6 +1106,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ReleaseDC(hWnd, hdc);
         }
         break;
+	case WM_KEYDOWN:
+		if (wParam == VK_RETURN) {
+			BOOL fs;
+			IDXGIOutput * out;
+			SwapChain->GetFullscreenState(&fs, &out);
+			SwapChain->SetFullscreenState(!fs, 0);
+		}
+		break;
 	case WM_SIZE:
 	{
 		RECT Rect;

@@ -171,6 +171,89 @@ namespace Engine
 			return true;
 		}
 
+		class D3D11_Buffer : public Graphics::IBuffer
+		{
+			IDevice * wrapper;
+		public:
+			ID3D11Buffer * buffer;
+			ID3D11Buffer * buffer_staging;
+			ID3D11ShaderResourceView * view;
+			ResourceMemoryPool pool;
+			uint32 usage_flags, length, stride;
+
+			D3D11_Buffer(IDevice * _wrapper) : wrapper(_wrapper), buffer(0), buffer_staging(0), view(0),
+				pool(ResourceMemoryPool::Default), usage_flags(0), length(0), stride(0) {}
+			virtual ~D3D11_Buffer(void) override
+			{
+				if (buffer) buffer->Release();
+				if (buffer_staging) buffer_staging->Release();
+				if (view) view->Release();
+			}
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual ResourceType GetResourceType(void) noexcept override { return ResourceType::Buffer; }
+			virtual ResourceMemoryPool GetMemoryPool(void) noexcept override { return pool; }
+			virtual uint32 GetResourceUsage(void) noexcept override { return usage_flags; }
+			virtual uint32 GetLength(void) noexcept override { return length; }
+			virtual string ToString(void) const override { return L"D3D11_Buffer"; }
+		};
+		class D3D11_Texture : public Graphics::ITexture
+		{
+			TextureType type;
+			IDevice * wrapper;
+		public:
+			ID3D11Texture1D * tex_1d;
+			ID3D11Texture2D * tex_2d;
+			ID3D11Texture3D * tex_3d;
+			ID3D11Texture1D * tex_staging_1d;
+			ID3D11Texture2D * tex_staging_2d;
+			ID3D11Texture3D * tex_staging_3d;
+			ID3D11ShaderResourceView * view;
+			ResourceMemoryPool pool;
+			PixelFormat format;
+			uint32 usage_flags;
+			uint32 width, height, depth, size;
+
+			D3D11_Texture(TextureType _type, IDevice * _wrapper) : type(_type), wrapper(_wrapper), tex_1d(0), tex_2d(0), tex_3d(0),
+				tex_staging_1d(0), tex_staging_2d(0), tex_staging_3d(0), view(0), pool(ResourceMemoryPool::Default),
+				format(PixelFormat::Invalid), usage_flags(0), width(0), height(0), depth(0), size(0) {}
+			virtual ~D3D11_Texture(void) override
+			{
+				if (tex_1d) tex_1d->Release();
+				if (tex_2d) tex_2d->Release();
+				if (tex_3d) tex_3d->Release();
+				if (tex_staging_1d) tex_staging_1d->Release();
+				if (tex_staging_2d) tex_staging_2d->Release();
+				if (tex_staging_3d) tex_staging_3d->Release();
+				if (view) view->Release();
+			}
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual ResourceType GetResourceType(void) noexcept override { return ResourceType::Texture; }
+			virtual ResourceMemoryPool GetMemoryPool(void) noexcept override { return pool; }
+			virtual uint32 GetResourceUsage(void) noexcept override { return usage_flags; }
+			virtual TextureType GetTextureType(void) noexcept override { return type; }
+			virtual PixelFormat GetPixelFormat(void) noexcept override { return format; }
+			virtual uint32 GetWidth(void) noexcept override { return width; }
+			virtual uint32 GetHeight(void) noexcept override { return height; }
+			virtual uint32 GetDepth(void) noexcept override { return depth; }
+			virtual uint32 GetMipmapCount(void) noexcept override
+			{
+				if (tex_1d) {
+					D3D11_TEXTURE1D_DESC desc;
+					tex_1d->GetDesc(&desc);
+					return desc.MipLevels;
+				} else if (tex_2d) {
+					D3D11_TEXTURE2D_DESC desc;
+					tex_2d->GetDesc(&desc);
+					return desc.MipLevels;
+				} else if (tex_3d) {
+					D3D11_TEXTURE3D_DESC desc;
+					tex_3d->GetDesc(&desc);
+					return desc.MipLevels;
+				} else return 0;
+			}
+			virtual uint32 GetArraySize(void) noexcept override { return size; }
+			virtual string ToString(void) const override { return L"D3D11_Texture"; }
+		};
 		class D3D11_DeviceContext : public Graphics::IDeviceContext
 		{
 			IDevice * wrapper;
@@ -183,13 +266,11 @@ namespace Engine
 				device = _device;
 				wrapper = _wrapper;
 				device->AddRef();
-				wrapper->Retain();
 				device->GetImmediateContext(&context);
 				// TODO: IMPLEMENT
 			}
 			virtual ~D3D11_DeviceContext(void) override
 			{
-				wrapper->Release();
 				device->Release();
 				context->Release();
 				// TODO: IMPLEMENT
@@ -231,11 +312,19 @@ namespace Engine
 			{
 				// TODO: IMPLEMENT
 			}
+			virtual void SetVertexShaderResourceData(uint32 at, const void * data, int length) noexcept override
+			{
+				// TODO: IMPLEMENT
+			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
 				// TODO: IMPLEMENT
 			}
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept override
+			{
+				// TODO: IMPLEMENT
+			}
+			virtual void SetPixelShaderResourceData(uint32 at, const void * data, int length) noexcept override
 			{
 				// TODO: IMPLEMENT
 			}
@@ -259,7 +348,7 @@ namespace Engine
 			{
 				// TODO: IMPLEMENT
 			}
-			virtual Object * Query2DRenderingDevice(void) noexcept override
+			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override
 			{
 				// TODO: IMPLEMENT
 				return 0;
@@ -290,20 +379,27 @@ namespace Engine
 		{
 			ID3D11Device * device;
 			IDeviceContext * context;
+			D3D11_SUBRESOURCE_DATA * _make_subres_data(const ResourceInitDesc * init, int length)
+			{
+				D3D11_SUBRESOURCE_DATA * result = reinterpret_cast<D3D11_SUBRESOURCE_DATA *>(malloc(length * sizeof(D3D11_SUBRESOURCE_DATA)));
+				if (!result) return 0;
+				for (int i = 0; i < length; i++) {
+					result[i].pSysMem = init[i].Data;
+					result[i].SysMemPitch = init[i].DataPitch;
+					result[i].SysMemSlicePitch = init[i].DataSlicePitch;
+				}
+				return result;
+			}
+			uint32 _calculate_mip_levels(uint32 w, uint32 h, uint32 d)
+			{
+				uint32 r = 1;
+				auto s = max(max(w, h), d);
+				while (s > 1) { s /= 2; r++; }
+				return r;
+			}
 		public:
-			D3D11_Device(ID3D11Device * _device)
-			{
-				context = new D3D11_DeviceContext(_device, this);
-				device = _device;
-				device->AddRef();
-				// TODO: IMPLEMENT
-			}
-			virtual ~D3D11_Device(void) override
-			{
-				device->Release();
-				context->Release();
-				// TODO: IMPLEMENT
-			}
+			D3D11_Device(ID3D11Device * _device) { context = new D3D11_DeviceContext(_device, this); device = _device; device->AddRef(); }
+			virtual ~D3D11_Device(void) override { device->Release(); context->Release(); }
 			virtual string GetDeviceName(void) noexcept override
 			{
 				IDXGIDevice * dxgi_device;
@@ -358,23 +454,581 @@ namespace Engine
 			}
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				if (desc.MemoryPool == ResourceMemoryPool::Immutable) return 0;
+				SafePointer<D3D11_Buffer> result = new (std::nothrow) D3D11_Buffer(this);
+				if (!result) return 0;
+				result->pool = desc.MemoryPool;
+				D3D11_BUFFER_DESC bd;
+				bd.ByteWidth = desc.Length;
+				bd.Usage = D3D11_USAGE_DEFAULT;
+				bd.BindFlags = 0;
+				bd.CPUAccessFlags = 0;
+				bd.MiscFlags = 0;
+				bd.StructureByteStride = desc.Stride;
+				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+					result->usage_flags |= ResourceUsageShaderRead;
+					result->usage_flags |= ResourceUsageShaderWrite;
+				}
+				if (desc.Usage & ResourceUsageIndexBuffer) {
+					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
+					result->usage_flags |= ResourceUsageIndexBuffer;
+				}
+				if (desc.Stride) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				if (device->CreateBuffer(&bd, 0, &result->buffer) != S_OK) return 0;
+				bool create_staging = false;
+				if (desc.Usage & ResourceUsageCPURead) {
+					create_staging = true;
+					result->usage_flags |= ResourceUsageCPURead;
+				}
+				if (desc.Usage & ResourceUsageCPUWrite) result->usage_flags |= ResourceUsageCPUWrite;
+				if (bd.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+					if (device->CreateShaderResourceView(result->buffer, 0, &result->view) != S_OK) return 0;
+				}
+				result->length = desc.Length;
+				result->stride = desc.Stride;
+				if (create_staging) {
+					bd.Usage = D3D11_USAGE_STAGING;
+					bd.BindFlags = 0;
+					bd.MiscFlags = 0;
+					if (desc.Usage & ResourceUsageCPURead) bd.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+					if (device->CreateBuffer(&bd, 0, &result->buffer_staging) != S_OK) return 0;
+				}
+				result->Retain();
+				return result;
 			}
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				if (desc.MemoryPool == ResourceMemoryPool::Immutable) return 0;
+				SafePointer<D3D11_Buffer> result = new (std::nothrow) D3D11_Buffer(this);
+				if (!result) return 0;
+				result->pool = desc.MemoryPool;
+				if (desc.MemoryPool == ResourceMemoryPool::Immutable) {
+					if (desc.Usage & ResourceUsageShaderWrite) return 0;
+					if (desc.Usage & ResourceUsageCPURead) return 0;
+					if (desc.Usage & ResourceUsageCPUWrite) return 0;
+				}
+				D3D11_BUFFER_DESC bd;
+				bd.ByteWidth = desc.Length;
+				if (desc.MemoryPool == ResourceMemoryPool::Default) bd.Usage = D3D11_USAGE_DEFAULT;
+				else if (desc.MemoryPool == ResourceMemoryPool::Immutable) bd.Usage = D3D11_USAGE_IMMUTABLE;
+				bd.BindFlags = 0;
+				bd.CPUAccessFlags = 0;
+				bd.MiscFlags = 0;
+				bd.StructureByteStride = desc.Stride;
+				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+					result->usage_flags |= ResourceUsageShaderRead;
+					if (desc.MemoryPool == ResourceMemoryPool::Default) result->usage_flags |= ResourceUsageShaderWrite;
+				}
+				if (desc.Usage & ResourceUsageIndexBuffer) {
+					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
+					result->usage_flags |= ResourceUsageIndexBuffer;
+				}
+				if (desc.Stride) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				D3D11_SUBRESOURCE_DATA sr;
+				sr.pSysMem = init.Data;
+				sr.SysMemPitch = sr.SysMemSlicePitch = 0;
+				if (device->CreateBuffer(&bd, &sr, &result->buffer) != S_OK) return 0;
+				bool create_staging = false;
+				if (desc.Usage & ResourceUsageCPURead) {
+					create_staging = true;
+					result->usage_flags |= ResourceUsageCPURead;
+				}
+				if (desc.Usage & ResourceUsageCPUWrite) result->usage_flags |= ResourceUsageCPUWrite;
+				if (bd.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+					if (device->CreateShaderResourceView(result->buffer, 0, &result->view) != S_OK) return 0;
+				}
+				result->length = desc.Length;
+				result->stride = desc.Stride;
+				if (create_staging) {
+					bd.Usage = D3D11_USAGE_STAGING;
+					bd.BindFlags = 0;
+					bd.MiscFlags = 0;
+					if (desc.Usage & ResourceUsageCPURead) bd.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+					if (device->CreateBuffer(&bd, 0, &result->buffer_staging) != S_OK) return 0;
+				}
+				result->Retain();
+				return result;
 			}
 			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				if (desc.MemoryPool == ResourceMemoryPool::Immutable) return 0;
+				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(desc.Type, this);
+				if (!result) return 0;
+				DXGI_FORMAT dxgi_format = MakeDxgiFormat(desc.Format);
+				if (dxgi_format == DXGI_FORMAT_UNKNOWN) return 0;
+				result->format = desc.Format;
+				result->pool = desc.MemoryPool;
+				if ((desc.Usage & ResourceUsageRenderTarget) && !IsColorFormat(desc.Format)) return 0;
+				if ((desc.Usage & ResourceUsageDepthStencil) && !IsDepthStencilFormat(desc.Format)) return 0;
+				if (desc.Type == TextureType::Type1D || desc.Type == TextureType::TypeArray1D) {
+					D3D11_TEXTURE1D_DESC td;
+					td.Width = desc.Width;
+					td.MipLevels = desc.MipmapCount;
+					td.ArraySize = (desc.Type == TextureType::TypeArray1D) ? desc.DepthOrArraySize : 1;
+					td.Format = dxgi_format;
+					td.Usage = D3D11_USAGE_DEFAULT;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					if (device->CreateTexture1D(&td, 0, &result->tex_1d) != S_OK) return 0;
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_1d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = result->depth = 1;
+					result->size = td.ArraySize;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = 0;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture1D(&td, 0, &result->tex_staging_1d) != S_OK) return 0;
+					}
+				} else if (desc.Type == TextureType::Type2D || desc.Type == TextureType::TypeArray2D) {
+					D3D11_TEXTURE2D_DESC td;
+					td.Width = desc.Width;
+					td.Height = desc.Height;
+					td.MipLevels = desc.MipmapCount;
+					td.ArraySize = (desc.Type == TextureType::TypeArray2D) ? desc.DepthOrArraySize : 1;
+					td.Format = dxgi_format;
+					td.SampleDesc.Count = 1;
+					td.SampleDesc.Quality = 0;
+					td.Usage = D3D11_USAGE_DEFAULT;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					if (device->CreateTexture2D(&td, 0, &result->tex_2d) != S_OK) return 0;
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = desc.Height;
+					result->depth = 1;
+					result->size = td.ArraySize;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = 0;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture2D(&td, 0, &result->tex_staging_2d) != S_OK) return 0;
+					}
+				} else if (desc.Type == TextureType::TypeCube || desc.Type == TextureType::TypeArrayCube) {
+					if (desc.Width != desc.Height) return 0;
+					D3D11_TEXTURE2D_DESC td;
+					td.Width = desc.Width;
+					td.Height = desc.Height;
+					td.MipLevels = desc.MipmapCount;
+					td.ArraySize = (desc.Type == TextureType::TypeArrayCube) ? (desc.DepthOrArraySize * 6) : 6;
+					td.Format = dxgi_format;
+					td.SampleDesc.Count = 1;
+					td.SampleDesc.Quality = 0;
+					td.Usage = D3D11_USAGE_DEFAULT;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					if (device->CreateTexture2D(&td, 0, &result->tex_2d) != S_OK) return 0;
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = desc.Height;
+					result->depth = 1;
+					result->size = td.ArraySize / 6;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture2D(&td, 0, &result->tex_staging_2d) != S_OK) return 0;
+					}
+				} else if (desc.Type == TextureType::Type3D) {
+					D3D11_TEXTURE3D_DESC td;
+					td.Width = desc.Width;
+					td.Height = desc.Height;
+					td.Depth = desc.DepthOrArraySize;
+					td.MipLevels = desc.MipmapCount;
+					td.Format = dxgi_format;
+					td.Usage = D3D11_USAGE_DEFAULT;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					if (device->CreateTexture3D(&td, 0, &result->tex_3d) != S_OK) return 0;
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_3d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = desc.Height;
+					result->depth = desc.DepthOrArraySize;
+					result->size = 1;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = 0;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture3D(&td, 0, &result->tex_staging_3d) != S_OK) return 0;
+					}
+				} else return 0;
+				result->Retain();
+				return result;
 			}
-			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc & init) noexcept override
+			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				if (!init) return 0;
+				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(desc.Type, this);
+				if (!result) return 0;
+				DXGI_FORMAT dxgi_format = MakeDxgiFormat(desc.Format);
+				if (dxgi_format == DXGI_FORMAT_UNKNOWN) return 0;
+				result->format = desc.Format;
+				result->pool = desc.MemoryPool;
+				if ((desc.Usage & ResourceUsageRenderTarget) && !IsColorFormat(desc.Format)) return 0;
+				if ((desc.Usage & ResourceUsageDepthStencil) && !IsDepthStencilFormat(desc.Format)) return 0;
+				if (desc.MemoryPool == ResourceMemoryPool::Immutable) {
+					if (desc.Usage & ResourceUsageShaderWrite) return 0;
+					if (desc.Usage & ResourceUsageRenderTarget) return 0;
+					if (desc.Usage & ResourceUsageDepthStencil) return 0;
+					if (desc.Usage & ResourceUsageCPURead) return 0;
+					if (desc.Usage & ResourceUsageCPUWrite) return 0;
+				}
+				if (desc.Type == TextureType::Type1D || desc.Type == TextureType::TypeArray1D) {
+					D3D11_TEXTURE1D_DESC td;
+					td.Width = desc.Width;
+					td.MipLevels = desc.MipmapCount;
+					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, 1, 1);
+					td.ArraySize = (desc.Type == TextureType::TypeArray1D) ? desc.DepthOrArraySize : 1;
+					td.Format = dxgi_format;
+					if (desc.MemoryPool == ResourceMemoryPool::Default) td.Usage = D3D11_USAGE_DEFAULT;
+					else if (desc.MemoryPool == ResourceMemoryPool::Immutable) td.Usage = D3D11_USAGE_IMMUTABLE;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						if (desc.MemoryPool == ResourceMemoryPool::Default) result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					auto sr = _make_subres_data(init, td.MipLevels * td.ArraySize);
+					if (!sr) return 0;
+					if (device->CreateTexture1D(&td, sr, &result->tex_1d) != S_OK) { free(sr); return 0; }
+					free(sr);
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_1d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = result->depth = 1;
+					result->size = td.ArraySize;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = 0;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture1D(&td, 0, &result->tex_staging_1d) != S_OK) return 0;
+					}
+				} else if (desc.Type == TextureType::Type2D || desc.Type == TextureType::TypeArray2D) {
+					D3D11_TEXTURE2D_DESC td;
+					td.Width = desc.Width;
+					td.Height = desc.Height;
+					td.MipLevels = desc.MipmapCount;
+					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, 1);
+					td.ArraySize = (desc.Type == TextureType::TypeArray2D) ? desc.DepthOrArraySize : 1;
+					td.Format = dxgi_format;
+					td.SampleDesc.Count = 1;
+					td.SampleDesc.Quality = 0;
+					if (desc.MemoryPool == ResourceMemoryPool::Default) td.Usage = D3D11_USAGE_DEFAULT;
+					else if (desc.MemoryPool == ResourceMemoryPool::Immutable) td.Usage = D3D11_USAGE_IMMUTABLE;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						if (desc.MemoryPool == ResourceMemoryPool::Default) result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					auto sr = _make_subres_data(init, td.MipLevels * td.ArraySize);
+					if (!sr) return 0;
+					if (device->CreateTexture2D(&td, sr, &result->tex_2d) != S_OK) { free(sr); return 0; }
+					free(sr);
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = desc.Height;
+					result->depth = 1;
+					result->size = td.ArraySize;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = 0;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture2D(&td, 0, &result->tex_staging_2d) != S_OK) return 0;
+					}
+				} else if (desc.Type == TextureType::TypeCube || desc.Type == TextureType::TypeArrayCube) {
+					if (desc.Width != desc.Height) return 0;
+					D3D11_TEXTURE2D_DESC td;
+					td.Width = desc.Width;
+					td.Height = desc.Height;
+					td.MipLevels = desc.MipmapCount;
+					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, 1);
+					td.ArraySize = (desc.Type == TextureType::TypeArrayCube) ? (desc.DepthOrArraySize * 6) : 6;
+					td.Format = dxgi_format;
+					td.SampleDesc.Count = 1;
+					td.SampleDesc.Quality = 0;
+					if (desc.MemoryPool == ResourceMemoryPool::Default) td.Usage = D3D11_USAGE_DEFAULT;
+					else if (desc.MemoryPool == ResourceMemoryPool::Immutable) td.Usage = D3D11_USAGE_IMMUTABLE;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						if (desc.MemoryPool == ResourceMemoryPool::Default) result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					auto sr = _make_subres_data(init, td.MipLevels * td.ArraySize);
+					if (!sr) return 0;
+					if (device->CreateTexture2D(&td, sr, &result->tex_2d) != S_OK) { free(sr); return 0; }
+					free(sr);
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = desc.Height;
+					result->depth = 1;
+					result->size = td.ArraySize / 6;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture2D(&td, 0, &result->tex_staging_2d) != S_OK) return 0;
+					}
+				} else if (desc.Type == TextureType::Type3D) {
+					D3D11_TEXTURE3D_DESC td;
+					td.Width = desc.Width;
+					td.Height = desc.Height;
+					td.Depth = desc.DepthOrArraySize;
+					td.MipLevels = desc.MipmapCount;
+					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, desc.DepthOrArraySize);
+					td.Format = dxgi_format;
+					if (desc.MemoryPool == ResourceMemoryPool::Default) td.Usage = D3D11_USAGE_DEFAULT;
+					else if (desc.MemoryPool == ResourceMemoryPool::Immutable) td.Usage = D3D11_USAGE_IMMUTABLE;
+					td.BindFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
+						td.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+						result->usage_flags |= ResourceUsageShaderRead;
+						if (desc.MemoryPool == ResourceMemoryPool::Default) result->usage_flags |= ResourceUsageShaderWrite;
+					}
+					if (desc.Usage & ResourceUsageRenderTarget) {
+						td.BindFlags |= D3D11_BIND_RENDER_TARGET;
+						result->usage_flags |= ResourceUsageRenderTarget;
+					}
+					if (desc.Usage & ResourceUsageDepthStencil) {
+						td.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+						result->usage_flags |= ResourceUsageDepthStencil;
+					}
+					td.CPUAccessFlags = 0;
+					td.MiscFlags = 0;
+					if ((desc.Usage & ResourceUsageShaderRead) && (desc.Usage & ResourceUsageRenderTarget)) {
+						td.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+					}
+					auto sr = _make_subres_data(init, td.MipLevels);
+					if (!sr) return 0;
+					if (device->CreateTexture3D(&td, sr, &result->tex_3d) != S_OK) { free(sr); return 0; }
+					free(sr);
+					bool create_staging = false;
+					if (desc.Usage & ResourceUsageCPURead) {
+						create_staging = true;
+						result->usage_flags |= ResourceUsageCPURead;
+					}
+					if (desc.Usage & ResourceUsageCPUWrite) {
+						if (desc.Usage & ResourceUsageDepthStencil) create_staging = true;
+						result->usage_flags |= ResourceUsageCPUWrite;
+					}
+					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
+						if (device->CreateShaderResourceView(result->tex_3d, 0, &result->view) != S_OK) return 0;
+					}
+					result->width = desc.Width;
+					result->height = desc.Height;
+					result->depth = desc.DepthOrArraySize;
+					result->size = 1;
+					if (create_staging) {
+						td.Usage = D3D11_USAGE_STAGING;
+						td.BindFlags = 0;
+						td.MiscFlags = 0;
+						if (desc.Usage & ResourceUsageCPURead) td.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
+						if (desc.Usage & ResourceUsageCPUWrite) td.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
+						if (device->CreateTexture3D(&td, 0, &result->tex_staging_3d) != S_OK) return 0;
+					}
+				} else return 0;
+				result->Retain();
+				return result;
 			}
 			virtual string ToString(void) const override { return L"D3D11_Device"; }
 		};
@@ -384,43 +1038,44 @@ namespace Engine
 		public:
 			D3D11_DeviceFactory(void) { dxgi_factory = DXGIFactory; dxgi_factory->AddRef(); }
 			virtual ~D3D11_DeviceFactory(void) override { if (dxgi_factory) dxgi_factory->Release(); }
-			virtual uint32 GetAvailableDeviceCount(void) noexcept override
+			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableDevices(void) noexcept override
 			{
-				uint32 count = 0;
+				try {
+					SafePointer< Dictionary::PlainDictionary<uint64, string> > result = new Dictionary::PlainDictionary<uint64, string>(0x10);
+					uint32 index = 0;
+					DXGI_ADAPTER_DESC desc;
+					while (true) {
+						IDXGIAdapter * adapter;
+						if (dxgi_factory->EnumAdapters(index, &adapter) != S_OK) break;
+						adapter->GetDesc(&desc);
+						adapter->Release();
+						result->Append(reinterpret_cast<uint64 &>(desc.AdapterLuid), string(desc.Description));
+						index++;
+					}
+					result->Retain();
+					return result;
+				} catch (...) { return 0; }
+			}
+			virtual IDevice * CreateDevice(uint64 identifier) noexcept override
+			{
+				uint32 index = 0;
+				DXGI_ADAPTER_DESC desc;
+				ID3D11Device * new_device;
 				while (true) {
 					IDXGIAdapter * adapter;
-					if (dxgi_factory->EnumAdapters(count, &adapter) != S_OK) return count;
+					if (dxgi_factory->EnumAdapters(index, &adapter) != S_OK) return 0;
+					adapter->GetDesc(&desc);
+					if (reinterpret_cast<uint64 &>(desc.AdapterLuid) == identifier) {
+						new_device = CreateDeviceD3D11(adapter, D3D_DRIVER_TYPE_UNKNOWN);
+						adapter->Release();
+						break;
+					}
 					adapter->Release();
-					count++;
+					index++;
 				}
-			}
-			virtual uint64 GetDeviceIdentifier(uint32 index) noexcept override
-			{
-				IDXGIAdapter * adapter;
-				if (dxgi_factory->EnumAdapters(index, &adapter) != S_OK) return 0;
-				DXGI_ADAPTER_DESC desc;
-				adapter->GetDesc(&desc);
-				adapter->Release();
-				return reinterpret_cast<uint64 &>(desc.AdapterLuid);
-			}
-			virtual string GetDeviceName(uint32 index) noexcept override
-			{
-				IDXGIAdapter * adapter;
-				if (dxgi_factory->EnumAdapters(index, &adapter) != S_OK) return L"";
-				DXGI_ADAPTER_DESC desc;
-				adapter->GetDesc(&desc);
-				adapter->Release();
-				return string(desc.Description);
-			}
-			virtual IDevice * CreateDevice(uint32 index) noexcept override
-			{
-				IDXGIAdapter * adapter;
-				if (dxgi_factory->EnumAdapters(index, &adapter) != S_OK) return 0;
-				auto device = CreateDeviceD3D11(adapter, D3D_DRIVER_TYPE_UNKNOWN);
-				adapter->Release();
-				if (!device) return 0;
-				auto wrapper = CreateWrappedDeviceD3D11(device);
-				device->Release();
+				if (!new_device) return 0;
+				auto wrapper = CreateWrappedDeviceD3D11(new_device);
+				new_device->Release();
 				return wrapper;
 			}
 			virtual IDevice * CreateDefaultDevice(void) noexcept override
@@ -442,8 +1097,16 @@ namespace Engine
 		}
 		ID3D11Resource * QueryInnerObject(Graphics::IDeviceResource * resource)
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			if (resource->GetResourceType() == ResourceType::Texture) {
+				auto object = static_cast<D3D11_Texture *>(resource);
+				if (object->tex_1d) return object->tex_1d;
+				else if (object->tex_2d) return object->tex_2d;
+				else if (object->tex_3d) return object->tex_3d;
+				else return 0;
+			} else if (resource->GetResourceType() == ResourceType::Buffer) {
+				auto object = static_cast<D3D11_Buffer *>(resource);
+				return object->buffer;
+			} else return 0;
 		}
 		ID3D11Device * CreateDeviceD3D11(IDXGIAdapter * adapter, D3D_DRIVER_TYPE driver)
 		{
@@ -462,50 +1125,73 @@ namespace Engine
 			return result;
 		}
 		Graphics::IDevice * CreateWrappedDeviceD3D11(ID3D11Device * device) { try { auto wrapper = new D3D11_Device(device); return wrapper; } catch (...) { return 0; } }
-		
-		// TODO: REMOVE
-		/*class D3DTexture : public Graphics::ITexture
+		DXGI_FORMAT MakeDxgiFormat(Graphics::PixelFormat format)
 		{
-		public:
-			ID3D11Texture2D * texture;
-			int width, height;
-
-			D3DTexture(void);
-			virtual ~D3DTexture(void) override;
-		};
-
-		D3DTexture::D3DTexture(void) { texture = 0; }
-		D3DTexture::~D3DTexture(void) { if (texture) texture->Release(); }
-
-		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
-		{
-			if (!Direct3D::D3DDevice) return 0;
-			if (width <= 0 || height <= 0) throw InvalidArgumentException();
-			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
-			D3D11_TEXTURE2D_DESC desc;
-			desc.Width = width;
-			desc.Height = height;
-			desc.MipLevels = 1;
-			desc.ArraySize = 1;
-			desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
-			desc.Usage = D3D11_USAGE_DEFAULT;
-			desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-			ID3D11Texture2D * texture = 0;
-			if (Direct3D::D3DDevice->CreateTexture2D(&desc, 0, &texture) != S_OK) return 0;
-			Direct3D::D3DTexture * wrapper = new (std::nothrow) Direct3D::D3DTexture;
-			if (!wrapper) {
-				texture->Release();
-				return 0;
-			}
-			wrapper->texture = texture;
-			wrapper->width = width;
-			wrapper->height = height;
-			return wrapper;
-		}*/
-		// TODO: END REMOVE
+			if (IsColorFormat(format)) {
+				auto bpp = GetFormatBitsPerPixel(format);
+				if (bpp == 8) {
+					if (format == PixelFormat::A8_unorm) return DXGI_FORMAT_A8_UNORM;
+					else if (format == PixelFormat::R8_unorm) return DXGI_FORMAT_R8_UNORM;
+					else if (format == PixelFormat::R8_snorm) return DXGI_FORMAT_R8_SNORM;
+					else if (format == PixelFormat::R8_uint) return DXGI_FORMAT_R8_UINT;
+					else if (format == PixelFormat::R8_sint) return DXGI_FORMAT_R8_SINT;
+					else return DXGI_FORMAT_UNKNOWN;
+				} else if (bpp == 16) {
+					if (format == PixelFormat::R16_unorm) return DXGI_FORMAT_R16_UNORM;
+					else if (format == PixelFormat::R16_snorm) return DXGI_FORMAT_R16_SNORM;
+					else if (format == PixelFormat::R16_uint) return DXGI_FORMAT_R16_UINT;
+					else if (format == PixelFormat::R16_sint) return DXGI_FORMAT_R16_SINT;
+					else if (format == PixelFormat::R16_float) return DXGI_FORMAT_R16_FLOAT;
+					else if (format == PixelFormat::R8G8_unorm) return DXGI_FORMAT_R8G8_UNORM;
+					else if (format == PixelFormat::R8G8_snorm) return DXGI_FORMAT_R8G8_SNORM;
+					else if (format == PixelFormat::R8G8_uint) return DXGI_FORMAT_R8G8_UINT;
+					else if (format == PixelFormat::R8G8_sint) return DXGI_FORMAT_R8G8_SINT;
+					else if (format == PixelFormat::B5G6R5_unorm) return DXGI_FORMAT_B5G6R5_UNORM;
+					else if (format == PixelFormat::B5G5R5A1_unorm) return DXGI_FORMAT_B5G5R5A1_UNORM;
+					else if (format == PixelFormat::B4G4R4A4_unorm) return DXGI_FORMAT_B4G4R4A4_UNORM;
+					else return DXGI_FORMAT_UNKNOWN;
+				} else if (bpp == 32) {
+					if (format == PixelFormat::R32_uint) return DXGI_FORMAT_R32_UINT;
+					else if (format == PixelFormat::R32_sint) return DXGI_FORMAT_R32_SINT;
+					else if (format == PixelFormat::R32_float) return DXGI_FORMAT_R32_FLOAT;
+					else if (format == PixelFormat::R16G16_unorm) return DXGI_FORMAT_R16G16_UNORM;
+					else if (format == PixelFormat::R16G16_snorm) return DXGI_FORMAT_R16G16_SNORM;
+					else if (format == PixelFormat::R16G16_uint) return DXGI_FORMAT_R16G16_UINT;
+					else if (format == PixelFormat::R16G16_sint) return DXGI_FORMAT_R16G16_SINT;
+					else if (format == PixelFormat::R16G16_float) return DXGI_FORMAT_R16G16_FLOAT;
+					else if (format == PixelFormat::B8G8R8A8_unorm) return DXGI_FORMAT_B8G8R8A8_UNORM;
+					else if (format == PixelFormat::R8G8B8A8_unorm) return DXGI_FORMAT_R8G8B8A8_UNORM;
+					else if (format == PixelFormat::R8G8B8A8_snorm) return DXGI_FORMAT_R8G8B8A8_SNORM;
+					else if (format == PixelFormat::R8G8B8A8_uint) return DXGI_FORMAT_R8G8B8A8_UINT;
+					else if (format == PixelFormat::R8G8B8A8_sint) return DXGI_FORMAT_R8G8B8A8_SINT;
+					else if (format == PixelFormat::R10G10B10A2_unorm) return DXGI_FORMAT_R10G10B10A2_UNORM;
+					else if (format == PixelFormat::R10G10B10A2_uint) return DXGI_FORMAT_R10G10B10A2_UINT;
+					else if (format == PixelFormat::R11G11B10_float) return DXGI_FORMAT_R11G11B10_FLOAT;
+					else if (format == PixelFormat::R9G9B9E5_float) return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
+					else return DXGI_FORMAT_UNKNOWN;
+				} else if (bpp == 64) {
+					if (format == PixelFormat::R32G32_uint) return DXGI_FORMAT_R32G32_UINT;
+					else if (format == PixelFormat::R32G32_sint) return DXGI_FORMAT_R32G32_SINT;
+					else if (format == PixelFormat::R32G32_float) return DXGI_FORMAT_R32G32_FLOAT;
+					else if (format == PixelFormat::R16G16B16A16_unorm) return DXGI_FORMAT_R16G16B16A16_UNORM;
+					else if (format == PixelFormat::R16G16B16A16_snorm) return DXGI_FORMAT_R16G16B16A16_SNORM;
+					else if (format == PixelFormat::R16G16B16A16_uint) return DXGI_FORMAT_R16G16B16A16_UINT;
+					else if (format == PixelFormat::R16G16B16A16_sint) return DXGI_FORMAT_R16G16B16A16_SINT;
+					else if (format == PixelFormat::R16G16B16A16_float) return DXGI_FORMAT_R16G16B16A16_FLOAT;
+					else return DXGI_FORMAT_UNKNOWN;
+				} else if (bpp == 128) {
+					if (format == PixelFormat::R32G32B32A32_uint) return DXGI_FORMAT_R32G32B32A32_UINT;
+					else if (format == PixelFormat::R32G32B32A32_sint) return DXGI_FORMAT_R32G32B32A32_SINT;
+					else if (format == PixelFormat::R32G32B32A32_float) return DXGI_FORMAT_R32G32B32A32_FLOAT;
+					else return DXGI_FORMAT_UNKNOWN;
+				} else return DXGI_FORMAT_UNKNOWN;
+			} else if (IsDepthStencilFormat(format)) {
+				if (format == PixelFormat::D16_unorm) return DXGI_FORMAT_D16_UNORM;
+				else if (format == PixelFormat::D32_float) return DXGI_FORMAT_D32_FLOAT;
+				else if (format == PixelFormat::D24S8_unorm) return DXGI_FORMAT_D24_UNORM_S8_UINT;
+				else if (format == PixelFormat::D32S8_float) return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+				else return DXGI_FORMAT_UNKNOWN;
+			} else return DXGI_FORMAT_UNKNOWN;
+		}
 	}
 }
