@@ -260,13 +260,53 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
 		desc.Width = 256;
 		desc.Height = 128;
-		desc.MemoryPool = Graphics::ResourceMemoryPool::Immutable;
+		desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
 		desc.MipmapCount = 1;
-		desc.Usage = Graphics::ResourceUsageShaderRead;
+		desc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageCPURead;
 		Graphics::ResourceInitDesc init;
 		init.Data = frame->GetData();
 		init.DataPitch = frame->GetScanLineLength();
 		tex = dev->CreateTexture(desc, &init);
+
+		Graphics::RenderTargetViewDesc vd;
+		vd.Texture = tex;
+		vd.LoadAction = Graphics::TextureLoadAction::Clear;
+		vd.ClearValue[0] = 0.5f;
+		vd.ClearValue[1] = 0.0f;
+		vd.ClearValue[2] = 1.0f;
+		vd.ClearValue[3] = 1.0f;
+		dev->GetDeviceContext()->BeginRenderingPass(1, &vd, 0);
+		dev->GetDeviceContext()->EndCurrentPass();
+
+		bool status = dev->GetDeviceContext()->Begin2DRenderingPass(tex);
+		cns.WriteLine(FormatString(L"Begin2DRenderingPass() status: %0", status));
+		auto device_2d = dev->GetDeviceContext()->Get2DRenderingDevice();
+		auto bar_info = device_2d->CreateBarRenderingInfo(UI::Color(128, 255, 0, 64));
+		device_2d->RenderBar(bar_info, UI::Box(64, 10, 128, 80));
+		bar_info->Release();
+		status = dev->GetDeviceContext()->EndCurrentPass();
+		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
+
+		status = dev->GetDeviceContext()->BeginMemoryManagementPass();
+		cns.WriteLine(FormatString(L"BeginMemoryManagementPass() status: %0", status));
+		Graphics::ResourceDataDesc rd;
+		SafePointer<Codec::Frame> frame_get = new Codec::Frame(128, 30, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+		rd.Data = frame_get->GetData();
+		rd.DataPitch = frame_get->GetScanLineLength();
+		rd.DataSlicePitch = 0;
+		dev->GetDeviceContext()->QueryResourceData(rd, tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(30, 40), Graphics::VolumeIndex(128, 30, 1));
+		SafePointer<Streaming::Stream> ss = new Streaming::FileStream(L"output.png", Streaming::AccessReadWrite, Streaming::CreateAlways);
+		Codec::EncodeFrame(ss, frame_get, L"PNG");
+		ss.SetReference(0);
+		Graphics::ResourceInitDesc id;
+		id.Data = frame_get->GetData();
+		id.DataPitch = frame_get->GetScanLineLength();
+		id.DataSlicePitch = 0;
+		dev->GetDeviceContext()->UpdateResourceData(tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(100, 70), Graphics::VolumeIndex(96, 30, 1), id);
+		status = dev->GetDeviceContext()->EndCurrentPass();
+		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
+
+
 		auto shape = new RenderTargetShapeTemplate;
 		custom_tex_shape = shape;
 		custom_tex_shape->Position = UI::Template::Rectangle(UI::Template::Coordinate(0), UI::Template::Coordinate(0), UI::Template::Coordinate(0, 0.0, 1.0), UI::Template::Coordinate(0, 0.0, 1.0));

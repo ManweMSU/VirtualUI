@@ -1,5 +1,7 @@
 #include "Direct3D.h"
 
+#include "Direct2D.h"
+
 #include <VersionHelpers.h>
 
 #pragma comment(lib, "d3d11.lib")
@@ -208,13 +210,15 @@ namespace Engine
 			ID3D11Texture2D * tex_staging_2d;
 			ID3D11Texture3D * tex_staging_3d;
 			ID3D11ShaderResourceView * view;
+			ID3D11RenderTargetView * rt_view;
+			ID3D11DepthStencilView * ds_view;
 			ResourceMemoryPool pool;
 			PixelFormat format;
 			uint32 usage_flags;
 			uint32 width, height, depth, size;
 
 			D3D11_Texture(TextureType _type, IDevice * _wrapper) : type(_type), wrapper(_wrapper), tex_1d(0), tex_2d(0), tex_3d(0),
-				tex_staging_1d(0), tex_staging_2d(0), tex_staging_3d(0), view(0), pool(ResourceMemoryPool::Default),
+				tex_staging_1d(0), tex_staging_2d(0), tex_staging_3d(0), view(0), rt_view(0), ds_view(0), pool(ResourceMemoryPool::Default),
 				format(PixelFormat::Invalid), usage_flags(0), width(0), height(0), depth(0), size(0) {}
 			virtual ~D3D11_Texture(void) override
 			{
@@ -225,6 +229,8 @@ namespace Engine
 				if (tex_staging_2d) tex_staging_2d->Release();
 				if (tex_staging_3d) tex_staging_3d->Release();
 				if (view) view->Release();
+				if (rt_view) rt_view->Release();
+				if (ds_view) ds_view->Release();
 			}
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual ResourceType GetResourceType(void) noexcept override { return ResourceType::Texture; }
@@ -259,54 +265,177 @@ namespace Engine
 			IDevice * wrapper;
 			ID3D11Device * device;
 			ID3D11DeviceContext * context;
+			ID2D1RenderTarget * device_2d_render_target;
+			ID2D1DeviceContext * device_2d_device_context;
+			Direct2D::D2DRenderDevice * device_2d;
+			int pass_mode;
+			bool pass_state;
 		public:
-			D3D11_DeviceContext(ID3D11Device * _device, IDevice * _wrapper)
+			D3D11_DeviceContext(ID3D11Device * _device, IDevice * _wrapper) : pass_mode(0), pass_state(false), context(0),
+				device_2d(0), device_2d_render_target(0), device_2d_device_context(0)
 			{
-				context = 0;
 				device = _device;
 				wrapper = _wrapper;
 				device->AddRef();
 				device->GetImmediateContext(&context);
-				// TODO: IMPLEMENT
 			}
 			virtual ~D3D11_DeviceContext(void) override
 			{
 				device->Release();
 				context->Release();
-				// TODO: IMPLEMENT
+				if (device_2d) device_2d->Release();
+				if (device_2d_render_target) device_2d_render_target->Release();
+				if (device_2d_device_context) device_2d_device_context->Release();
 			}
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual bool BeginRenderingPass(uint32 rtc, const RenderTargetViewDesc * rtv, const DepthStencilViewDesc * dsv) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return false;
+				if (pass_mode || !rtc || rtc > 8) return false;
+				ID3D11RenderTargetView * rtvv[8];
+				ID3D11DepthStencilView * dsvv;
+				for (uint i = 0; i < rtc; i++) {
+					auto object = static_cast<D3D11_Texture *>(rtv[i].Texture);
+					if (!object->rt_view) return false;
+					rtvv[i] = object->rt_view;
+				}
+				if (dsv) {
+					auto object = static_cast<D3D11_Texture *>(dsv->Texture);
+					if (!object->ds_view) return false;
+					dsvv = object->ds_view;
+				} else dsvv = 0;
+				context->OMSetRenderTargets(rtc, rtvv, dsvv);
+				for (uint i = 0; i < rtc; i++) if (rtv[i].LoadAction == TextureLoadAction::Clear) {
+					context->ClearRenderTargetView(rtvv[i], rtv[i].ClearValue);
+				}
+				if (dsv) {
+					UINT clr = 0;
+					if (dsv->DepthLoadAction == TextureLoadAction::Clear) clr |= D3D11_CLEAR_DEPTH;
+					if (dsv->StencilLoadAction == TextureLoadAction::Clear) clr |= D3D11_CLEAR_STENCIL;
+					if (clr) context->ClearDepthStencilView(dsvv, clr, dsv->DepthClearValue, dsv->StencilClearValue);
+				}
+				pass_mode = 1;
+				pass_state = true;
+				return true;
 			}
-			virtual bool Begin2DRenderingPass(const RenderTargetViewDesc & rtv) noexcept override
+			virtual bool Begin2DRenderingPass(ITexture * rt) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return false;
+				if (pass_mode || !rt || rt->GetTextureType() != TextureType::Type2D || rt->GetMipmapCount() != 1) return false;
+				if (rt->GetPixelFormat() != PixelFormat::B8G8R8A8_unorm) return false;
+				if (!(rt->GetResourceUsage() & ResourceUsageRenderTarget)) return false;
+				auto rsrc = QueryInnerObject(rt);
+				ID2D1RenderTarget * target = 0;
+				if (!device_2d) {
+					if (D2DDevice) {
+						if (D2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &device_2d_device_context) != S_OK) return false;
+						try { device_2d = new Direct2D::D2DRenderDevice(device_2d_device_context); }
+						catch (...) { device_2d_device_context->Release(); device_2d_device_context = 0; return false; }
+						device_2d->SetParentWrappedDevice(wrapper);
+						IDXGISurface * surface;
+						if (rsrc->QueryInterface(IID_PPV_ARGS(&surface)) != S_OK) {
+							device_2d_device_context->Release(); device_2d_device_context = 0;
+							device_2d->Release(); device_2d = 0; return false;
+						}
+						D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+							D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
+						ID2D1Bitmap1 * bitmap;
+						if (device_2d_device_context->CreateBitmapFromDxgiSurface(surface, props, &bitmap) != S_OK) {
+							device_2d_device_context->Release(); device_2d_device_context = 0;
+							device_2d->Release(); device_2d = 0; surface->Release(); return false;
+						}
+						device_2d_device_context->SetTarget(bitmap);
+						surface->Release();
+						bitmap->Release();
+						target = device_2d_device_context;
+					} else {
+						IDXGISurface * surface;
+						if (rsrc->QueryInterface(IID_PPV_ARGS(&surface)) != S_OK) return false;
+						D2D1_RENDER_TARGET_PROPERTIES props;
+						props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+						props.pixelFormat.format = DXGI_FORMAT_UNKNOWN;
+						props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+						props.dpiX = props.dpiY = 0.0f;
+						props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+						props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+						if (Direct2D::D2DFactory->CreateDxgiSurfaceRenderTarget(surface, &props, &device_2d_render_target) != S_OK) { surface->Release(); return false; }
+						surface->Release();
+						try { device_2d = new Direct2D::D2DRenderDevice(device_2d_render_target); }
+						catch (...) { device_2d_render_target->Release(); device_2d_render_target = 0; return false; }
+						device_2d->SetParentWrappedDevice(wrapper);
+						target = device_2d_render_target;
+					}
+				} else {
+					IDXGISurface * surface;
+					if (rsrc->QueryInterface(IID_PPV_ARGS(&surface)) != S_OK) return false;
+					if (device_2d_device_context) {
+						D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+							D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
+						ID2D1Bitmap1 * bitmap;
+						if (device_2d_device_context->CreateBitmapFromDxgiSurface(surface, props, &bitmap) != S_OK) { surface->Release(); return false; }
+						device_2d_device_context->SetTarget(bitmap);
+						bitmap->Release();
+						target = device_2d_device_context;
+					} else {
+						D2D1_RENDER_TARGET_PROPERTIES props;
+						props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+						props.pixelFormat.format = DXGI_FORMAT_UNKNOWN;
+						props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+						props.dpiX = props.dpiY = 0.0f;
+						props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+						props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+						if (Direct2D::D2DFactory->CreateDxgiSurfaceRenderTarget(surface, &props, &device_2d_render_target) != S_OK) { surface->Release(); return false; }
+						device_2d->UpdateRenderTarget(device_2d_render_target);
+						target = device_2d_render_target;
+					}
+					surface->Release();
+				}
+				target->SetDpi(96.0f, 96.0f);
+				target->BeginDraw();
+				pass_mode = 2;
+				pass_state = true;
+				return true;
 			}
 			virtual bool BeginMemoryManagementPass(void) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return false;
+				if (pass_mode) return false;
+				pass_mode = 3;
+				pass_state = true;
+				return true;
 			}
 			virtual bool EndCurrentPass(void) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return false;
+				if (pass_mode) {
+					if (pass_mode == 1) context->ClearState();
+					else if (pass_mode == 2) {
+						if (device_2d_device_context) {
+							if (device_2d_device_context->EndDraw() != S_OK) pass_state = false;
+							device_2d_device_context->SetTarget(0);
+						} else if (device_2d_render_target) {
+							if (device_2d_render_target->EndDraw() != S_OK) pass_state = false;
+							device_2d->UpdateRenderTarget(0);
+							device_2d_render_target->Release();
+							device_2d_render_target = 0;
+						}
+					}
+					pass_mode = 0;
+					return pass_state;
+				} else return false;
 			}
-			virtual void Wait(void) noexcept override
-			{
-				// TODO: IMPLEMENT
-			}
+			virtual void Wait(void) noexcept override { context->Flush(); }
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept override
 			{
 				// TODO: IMPLEMENT
 			}
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				D3D11_VIEWPORT vp;
+				vp.TopLeftX = top_left_x;
+				vp.TopLeftY = top_left_y;
+				vp.Width = width;
+				vp.Height = height;
+				vp.MinDepth = min_depth;
+				vp.MaxDepth = max_depth;
+				context->RSSetViewports(1, &vp);
 			}
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
@@ -348,30 +477,141 @@ namespace Engine
 			{
 				// TODO: IMPLEMENT
 			}
-			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override
-			{
-				// TODO: IMPLEMENT
-				return 0;
-			}
+			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
 			{
-				// TODO: IMPLEMENT
+				auto object = static_cast<D3D11_Texture *>(texture)->view;
+				if (!object || pass_mode != 3) { pass_state = false; return; }
+				context->GenerateMips(object);
 			}
 			virtual void CopyResourceData(IDeviceResource * dest, IDeviceResource * src) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 3) { pass_state = false; return; }
+				context->CopyResource(QueryInnerObject(dest), QueryInnerObject(src));
 			}
 			virtual void CopySubresourceData(IDeviceResource * dest, SubresourceIndex dest_subres, VolumeIndex dest_origin, IDeviceResource * src, SubresourceIndex src_subres, VolumeIndex src_origin, VolumeIndex size) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 3) { pass_state = false; return; }
+				if (!size.x || !size.y || !size.z) return;
+				UINT dest_sr, src_sr;
+				if (dest->GetResourceType() == ResourceType::Texture) {
+					dest_sr = D3D11CalcSubresource(dest_subres.mip_level, dest_subres.array_index, static_cast<ITexture *>(dest)->GetMipmapCount());
+				} else dest_sr = 0;
+				if (src->GetResourceType() == ResourceType::Texture) {
+					src_sr = D3D11CalcSubresource(src_subres.mip_level, src_subres.array_index, static_cast<ITexture *>(src)->GetMipmapCount());
+				} else src_sr = 0;
+				D3D11_BOX box;
+				box.left = src_origin.x;
+				box.top = src_origin.y;
+				box.front = src_origin.z;
+				box.right = src_origin.x + size.x;
+				box.bottom = src_origin.y + size.y;
+				box.back = src_origin.z + size.z;
+				context->CopySubresourceRegion(QueryInnerObject(dest), dest_sr, dest_origin.x, dest_origin.y, dest_origin.z, QueryInnerObject(src), src_sr, &box);
 			}
 			virtual void UpdateResourceData(IDeviceResource * dest, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size, const ResourceInitDesc & src) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 3) { pass_state = false; return; }
+				if (!size.x || !size.y || !size.z) return;
+				UINT dest_sr;
+				bool use_mapping = false;
+				if (dest->GetResourceType() == ResourceType::Texture) {
+					auto object = static_cast<ITexture *>(dest);
+					dest_sr = D3D11CalcSubresource(subres.mip_level, subres.array_index, object->GetMipmapCount());
+					if (object->GetResourceUsage() & ResourceUsageDepthStencil) use_mapping = true;
+				} else dest_sr = 0;
+				D3D11_BOX box;
+				box.left = origin.x;
+				box.top = origin.y;
+				box.front = origin.z;
+				box.right = origin.x + size.x;
+				box.bottom = origin.y + size.y;
+				box.back = origin.z + size.z;
+				if (use_mapping) {
+					ID3D11Resource * op = 0, * st = 0;
+					uint32 atom_size;
+					if (dest->GetResourceType() == ResourceType::Texture) {
+						auto object = static_cast<D3D11_Texture *>(dest);
+						if (object->tex_1d) {
+							op = object->tex_1d;
+							st = object->tex_staging_1d;
+						} else if (object->tex_2d) {
+							op = object->tex_2d;
+							st = object->tex_staging_2d;
+						} else if (object->tex_3d) {
+							op = object->tex_3d;
+							st = object->tex_staging_3d;
+						}
+						atom_size = GetFormatBitsPerPixel(object->GetPixelFormat()) / 8;
+					} else if (dest->GetResourceType() == ResourceType::Buffer) {
+						auto object = static_cast<D3D11_Buffer *>(dest);
+						op = object->buffer;
+						st = object->buffer_staging;
+						atom_size = 1;
+					}
+					if (!st) { pass_state = false; return; }
+					D3D11_MAPPED_SUBRESOURCE map;
+					if (context->Map(st, dest_sr, D3D11_MAP_WRITE, 0, &map) != S_OK) { pass_state = false; return; }
+					uint8 * dest_ptr = reinterpret_cast<uint8 *>(map.pData);
+					const uint8 * src_ptr = reinterpret_cast<const uint8 *>(src.Data);
+					auto copy = atom_size * size.x;
+					for (uint z = 0; z < size.z; z++) for (uint y = 0; y < size.y; y++) {
+						auto dest_offs = map.DepthPitch * (z + origin.z) + map.RowPitch * (y + origin.y) + atom_size * origin.x;
+						auto src_offs = src.DataSlicePitch * z + src.DataPitch * y;
+						MemoryCopy(dest_ptr + dest_offs, src_ptr + src_offs, copy);
+					}
+					context->Unmap(st, dest_sr);
+					context->CopySubresourceRegion(op, dest_sr, origin.x, origin.y, origin.z, st, dest_sr, &box);
+				} else context->UpdateSubresource(QueryInnerObject(dest), dest_sr, &box, src.Data, src.DataPitch, src.DataSlicePitch);
 			}
 			virtual void QueryResourceData(ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 3) { pass_state = false; return; }
+				if (!size.x || !size.y || !size.z) return;
+				ID3D11Resource * op = 0, * st = 0;
+				UINT src_sr;
+				uint32 atom_size;
+				if (src->GetResourceType() == ResourceType::Texture) {
+					auto object = static_cast<D3D11_Texture *>(src);
+					if (object->tex_1d) {
+						op = object->tex_1d;
+						st = object->tex_staging_1d;
+					} else if (object->tex_2d) {
+						op = object->tex_2d;
+						st = object->tex_staging_2d;
+					} else if (object->tex_3d) {
+						op = object->tex_3d;
+						st = object->tex_staging_3d;
+					}
+					atom_size = GetFormatBitsPerPixel(object->GetPixelFormat()) / 8;
+					src_sr = D3D11CalcSubresource(subres.mip_level, subres.array_index, object->GetMipmapCount());
+				} else if (src->GetResourceType() == ResourceType::Buffer) {
+					auto object = static_cast<D3D11_Buffer *>(src);
+					op = object->buffer;
+					st = object->buffer_staging;
+					src_sr = 0;
+					atom_size = 1;
+				}
+				if (!st) { pass_state = false; return; }
+				D3D11_BOX box;
+				box.left = origin.x;
+				box.top = origin.y;
+				box.front = origin.z;
+				box.right = origin.x + size.x;
+				box.bottom = origin.y + size.y;
+				box.back = origin.z + size.z;
+				context->CopySubresourceRegion(st, src_sr, origin.x, origin.y, origin.z, op, src_sr, &box);
+				D3D11_MAPPED_SUBRESOURCE map;
+				if (context->Map(st, src_sr, D3D11_MAP_READ, 0, &map) != S_OK) { pass_state = false; return; }
+				uint8 * dest_ptr = reinterpret_cast<uint8 *>(dest.Data);
+				const uint8 * src_ptr = reinterpret_cast<const uint8 *>(map.pData);
+				auto copy = atom_size * size.x;
+				for (uint z = 0; z < size.z; z++) for (uint y = 0; y < size.y; y++) {
+					auto dest_offs = dest.DataSlicePitch * z + dest.DataPitch * y;
+					auto src_offs = map.DepthPitch * (z + origin.z) + map.RowPitch * (y + origin.y) + atom_size * origin.x;
+					MemoryCopy(dest_ptr + dest_offs, src_ptr + src_offs, copy);
+				}
+				context->Unmap(st, src_sr);
 			}
 			virtual string ToString(void) const override { return L"D3D11_DeviceContext"; }
 		};
@@ -601,6 +841,12 @@ namespace Engine
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_1d, 0, &result->view) != S_OK) return 0;
 					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_1d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_1d, 0, &result->ds_view) != S_OK) return 0;
+					}
 					result->width = desc.Width;
 					result->height = result->depth = 1;
 					result->size = td.ArraySize;
@@ -653,6 +899,12 @@ namespace Engine
 					}
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_2d, 0, &result->ds_view) != S_OK) return 0;
 					}
 					result->width = desc.Width;
 					result->height = desc.Height;
@@ -709,6 +961,12 @@ namespace Engine
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
 					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_2d, 0, &result->ds_view) != S_OK) return 0;
+					}
 					result->width = desc.Width;
 					result->height = desc.Height;
 					result->depth = 1;
@@ -760,6 +1018,12 @@ namespace Engine
 					}
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_3d, 0, &result->view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_3d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_3d, 0, &result->ds_view) != S_OK) return 0;
 					}
 					result->width = desc.Width;
 					result->height = desc.Height;
@@ -839,6 +1103,12 @@ namespace Engine
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_1d, 0, &result->view) != S_OK) return 0;
 					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_1d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_1d, 0, &result->ds_view) != S_OK) return 0;
+					}
 					result->width = desc.Width;
 					result->height = result->depth = 1;
 					result->size = td.ArraySize;
@@ -896,6 +1166,12 @@ namespace Engine
 					}
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_2d, 0, &result->ds_view) != S_OK) return 0;
 					}
 					result->width = desc.Width;
 					result->height = desc.Height;
@@ -957,6 +1233,12 @@ namespace Engine
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
 					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_2d, 0, &result->ds_view) != S_OK) return 0;
+					}
 					result->width = desc.Width;
 					result->height = desc.Height;
 					result->depth = 1;
@@ -1013,6 +1295,12 @@ namespace Engine
 					}
 					if (td.BindFlags & D3D11_BIND_SHADER_RESOURCE) {
 						if (device->CreateShaderResourceView(result->tex_3d, 0, &result->view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_RENDER_TARGET) {
+						if (device->CreateRenderTargetView(result->tex_3d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					if (td.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
+						if (device->CreateDepthStencilView(result->tex_3d, 0, &result->ds_view) != S_OK) return 0;
 					}
 					result->width = desc.Width;
 					result->height = desc.Height;

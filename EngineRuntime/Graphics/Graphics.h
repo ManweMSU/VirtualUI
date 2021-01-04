@@ -284,7 +284,7 @@ namespace Engine
 		{
 		public:
 			virtual bool BeginRenderingPass(uint32 rtc, const RenderTargetViewDesc * rtv, const DepthStencilViewDesc * dsv) noexcept = 0;
-			virtual bool Begin2DRenderingPass(const RenderTargetViewDesc & rtv) noexcept = 0;
+			virtual bool Begin2DRenderingPass(ITexture * rt) noexcept = 0;
 			virtual bool BeginMemoryManagementPass(void) noexcept = 0;
 			virtual bool EndCurrentPass(void) noexcept = 0;
 			virtual void Wait(void) noexcept = 0;
