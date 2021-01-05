@@ -277,6 +277,9 @@
     <ClInclude Include="PlatformDependent\Cryptography.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
+    <ClInclude Include="Graphics\GraphicsHelper.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -503,6 +506,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\Cryptography.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\GraphicsHelper.cpp">
+      <Filter>Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

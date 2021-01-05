@@ -573,7 +573,24 @@ namespace Engine
 			virtual void SetVertexShaderResourceData(uint32 at, const void * data, int length) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				// TODO: IMPLEMENT
+				D3D11_BUFFER_DESC desc;
+				desc.ByteWidth = length;
+				desc.Usage = D3D11_USAGE_IMMUTABLE;
+				desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+				desc.CPUAccessFlags = 0;
+				desc.MiscFlags = 0;
+				desc.StructureByteStride = 0;
+				D3D11_SUBRESOURCE_DATA init;
+				init.pSysMem = data;
+				init.SysMemPitch = 0;
+				init.SysMemSlicePitch = 0;
+				ID3D11Buffer * buffer;
+				ID3D11ShaderResourceView * view;
+				if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
+				if (device->CreateShaderResourceView(buffer, 0, &view) != S_OK) { buffer->Release(); pass_state = false; return; }
+				buffer->Release();
+				context->VSSetShaderResources(at, 1, &view);
+				view->Release();
 			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
@@ -596,7 +613,24 @@ namespace Engine
 			virtual void SetPixelShaderResourceData(uint32 at, const void * data, int length) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				// TODO: IMPLEMENT
+				D3D11_BUFFER_DESC desc;
+				desc.ByteWidth = length;
+				desc.Usage = D3D11_USAGE_IMMUTABLE;
+				desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+				desc.CPUAccessFlags = 0;
+				desc.MiscFlags = 0;
+				desc.StructureByteStride = 0;
+				D3D11_SUBRESOURCE_DATA init;
+				init.pSysMem = data;
+				init.SysMemPitch = 0;
+				init.SysMemSlicePitch = 0;
+				ID3D11Buffer * buffer;
+				ID3D11ShaderResourceView * view;
+				if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
+				if (device->CreateShaderResourceView(buffer, 0, &view) != S_OK) { buffer->Release(); pass_state = false; return; }
+				buffer->Release();
+				context->PSSetShaderResources(at, 1, &view);
+				view->Release();
 			}
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{

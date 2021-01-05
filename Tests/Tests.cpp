@@ -1,9 +1,6 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
-#include <Miscellaneous/Time.h>
-#include <Processes/Process.h>
-#include <Processes/Threading.h>
 #include <Miscellaneous/DynamicString.h>
 #include <UserInterface/ShapeBase.h>
 #include <UserInterface/Templates.h>
@@ -11,8 +8,6 @@
 #include <Streaming.h>
 #include <PlatformDependent/Direct2D.h>
 #include <PlatformDependent/Direct3D.h>
-#include <PlatformDependent/Clipboard.h>
-#include <Miscellaneous/Dictionary.h>
 #include <UserInterface/ControlClasses.h>
 #include <UserInterface/BinaryLoader.h>
 #include <UserInterface/StaticControls.h>
@@ -24,47 +19,19 @@
 #include <UserInterface/ListControls.h>
 #include <UserInterface/CombinedControls.h>
 #include <UserInterface/RichEditControl.h>
-#include <Syntax/Tokenization.h>
-#include <Syntax/Grammar.h>
-#include <Syntax/MathExpression.h>
-#include <Syntax/Regular.h>
 #include <PlatformDependent/KeyCodes.h>
 #include <PlatformDependent/NativeStation.h>
-#include <ImageCodec/IconCodec.h>
-#include <Processes/Shell.h>
-#include <Network/HTTP.h>
-#include <Network/Socket.h>
-#include <Network/Punycode.h>
-#include <Storage/Registry.h>
-#include <Storage/TextRegistry.h>
-#include <Storage/TextRegistryGrammar.h>
-#include <Storage/Compression.h>
-#include <Storage/Chain.h>
-#include <Miscellaneous/ThreadPool.h>
 #include <Storage/Archive.h>
-#include <Storage/ImageVolume.h>
 #include <PlatformDependent/Assembly.h>
 #include <Storage/StringTable.h>
-#include <Math/MathBase.h>
-#include <Math/Complex.h>
-#include <Math/Vector.h>
-#include <Math/Matrix.h>
-#include <Math/Color.h>
 #include <PlatformSpecific/WindowsTaskbar.h>
-#include <PlatformSpecific/WindowsRegistry.h>
-#include <PlatformSpecific/WindowsShortcut.h>
 #include <PlatformSpecific/WindowsEffects.h>
 #include <PlatformDependent/SystemColors.h>
 #include <PlatformDependent/Console.h>
-#include <Storage/JSON.h>
-#include <Storage/Object.h>
-#include <PlatformDependent/Notifications.h>
+#include <Graphics/GraphicsHelper.h>
 
 #include "stdafx.h"
 #include "Tests.h"
-
-#include <dwmapi.h>
-#pragma comment(lib, "dwmapi.lib")
 
 #include <PlatformDependent/WindowStation.h>
 
@@ -104,47 +71,11 @@ Engine::UI::HandleWindowStation * station = 0;
 ID2D1DeviceContext * Target = 0;
 IDXGISwapChain1 * SwapChain = 0;
 
-SafePointer<Engine::Streaming::TextWriter> conout;
 SafePointer<Engine::UI::InterfaceTemplate> Template;
 
 UI::IInversionEffectRenderingInfo * Inversion = 0;
 
 SafePointer<Menus::Menu> menu;
-
-ENGINE_PACKED_STRUCTURE(TestPacked)
-	uint8 foo;
-	uint32 bar;
-	uint16 foobar;
-ENGINE_END_PACKED_STRUCTURE
-
-class Chronometer
-{
-	uint32 begin;
-public:
-	Chronometer(void) : begin(GetTimerValue()) {}
-	operator uint32 (void) const { return GetTimerValue() - begin; }
-};
-
-void CreateBlangSpelling(Syntax::Spelling & spelling)
-{
-	spelling.BooleanFalseLiteral = L"false";
-	spelling.BooleanTrueLiteral = L"true";
-	spelling.CommentEndOfLineWord = L"//";
-	spelling.CommentBlockOpeningWord = L"/*";
-	spelling.CommentBlockClosingWord = L"*/";
-	spelling.IsolatedChars << L'(';
-	spelling.IsolatedChars << L')';
-	spelling.IsolatedChars << L'[';
-	spelling.IsolatedChars << L']';
-	spelling.IsolatedChars << L'{';
-	spelling.IsolatedChars << L'}';
-	spelling.IsolatedChars << L',';
-	spelling.IsolatedChars << L';';
-	spelling.IsolatedChars << L'^';
-	spelling.IsolatedChars << L'.';
-	spelling.IsolatedChars << L'~';
-	spelling.IsolatedChars << L'@';
-}
 
 ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
 	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text1)
@@ -157,12 +88,9 @@ class RenderTargetShape : public UI::Shape
 public:
 	SafePointer<Graphics::ITexture> texture;
 	mutable SafePointer<ITextureRenderingInfo> info;
-	mutable SafePointer<IBarRenderingInfo> info2;
 	virtual void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override
 	{
-		if (!info2) info2 = Device->CreateBarRenderingInfo(UI::Color(0, 0, 255, 255));
 		if (!info) info = Device->CreateTextureRenderingInfo(texture);
-		Device->RenderBar(info2, Box(Position, Outer));
 		Device->RenderTexture(info, Box(Position, Outer));
 	}
 	virtual void ClearCache(void) noexcept override
@@ -206,15 +134,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		AllocConsole();
 		SetConsoleTitleW(L"ui tests");
 	}
-	SafePointer<Engine::Streaming::FileStream> constream = new Engine::Streaming::FileStream(Engine::IO::GetStandardOutput());
-	conout.SetReference(new Engine::Streaming::TextWriter(constream));
 
 	Console cns;
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	UI::Windows::InitializeCodecCollection();
-
-	WindowsSpecific::SetRenderingDeviceFeatureClass(WindowsSpecific::RenderingDeviceFeatureClass::DeviceD3D11);
 	
 	UI::Zoom = 2.0;
 
@@ -232,8 +156,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     {
         return FALSE;
     }
-
-	//WindowsSpecific::SetRenderingDeviceFeatureClass(WindowsSpecific::RenderingDeviceFeatureClass::D2DDevice11);
 
 	// Starting D3D
 	Direct3D::CreateDevices();
@@ -269,62 +191,34 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			-0.5f, -0.5f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 1.0f,
 			+0.5f, -0.5f, 0.0f, 1.0f,	0.0f, 1.0f, 0.0f, 1.0f,
 			+0.0f, +0.5f, 0.0f, 1.0f,	0.0f, 0.0f, 1.0f, 1.0f,
+			+1.0f, +1.0f, 0.0f, 1.0f,	1.0f, 1.0f, 1.0f, 1.0f,
 		};
-		Graphics::ResourceInitDesc vertex_init;
-		vertex_init.Data = vertex;
-		Graphics::BufferDesc vertex_buffer_desc;
-		vertex_buffer_desc.Length = sizeof(vertex);
-		vertex_buffer_desc.MemoryPool = Graphics::ResourceMemoryPool::Immutable;
-		vertex_buffer_desc.Usage = Graphics::ResourceUsageShaderRead;
-		vertex_buffer_desc.Stride = 8 * sizeof(float);
-		SafePointer<Graphics::IBuffer> vertex_buffer = dev->CreateBuffer(vertex_buffer_desc, vertex_init);
+		uint16 index[] = { 0, 1, 2, 1, 2, 3 };
+		SafePointer<Graphics::IBuffer> vertex_buffer = dev->CreateBuffer(
+			Graphics::CreateBufferDesc(sizeof(vertex), Graphics::ResourceUsageShaderRead, 8 * sizeof(float), Graphics::ResourceMemoryPool::Immutable),
+			Graphics::CreateInitDesc(vertex));
+		SafePointer<Graphics::IBuffer> index_buffer = dev->CreateBuffer(
+			Graphics::CreateBufferDesc(sizeof(index), Graphics::ResourceUsageIndexBuffer, 0, Graphics::ResourceMemoryPool::Immutable),
+			Graphics::CreateInitDesc(index));
 		cns.WriteLine(FormatString(L"Vertex buffer: %0", string(vertex_buffer.Inner())));
-		Graphics::PipelineStateDesc ps_desc;
-		ps_desc.VertexShader = vs;
-		ps_desc.PixelShader = ps;
-		ps_desc.RenderTargetCount = 1;
-		ps_desc.RenderTarget[0].Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-		ps_desc.RenderTarget[0].Flags = 0;
-		ps_desc.DepthStencil.Flags = 0;
-		ps_desc.Rasterization.Fill = Graphics::FillMode::Solid;
-		ps_desc.Rasterization.Cull = Graphics::CullMode::None;
-		ps_desc.Rasterization.FrontIsCounterClockwise = true;
-		ps_desc.Rasterization.DepthBias = 0;
-		ps_desc.Rasterization.DepthBiasClamp = 0.0f;
-		ps_desc.Rasterization.SlopeScaledDepthBias = 0.0f;
-		ps_desc.Rasterization.DepthClipEnable = true;
-		ps_desc.Topology = Graphics::PrimitiveTopology::TriangleList;
-		SafePointer<Graphics::IPipelineState> pipeline_state = dev->CreateRenderingPipelineState(ps_desc);
+		SafePointer<Graphics::IPipelineState> pipeline_state = dev->CreateRenderingPipelineState(Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm));
 		cns.WriteLine(FormatString(L"Pipeline state: %0", string(pipeline_state.Inner())));
 
-		Graphics::TextureDesc desc;
-		desc.Type = Graphics::TextureType::Type2D;
-		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-		desc.Width = 256;
-		desc.Height = 128;
-		desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
-		desc.MipmapCount = 1;
-		desc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageCPURead;
-		Graphics::ResourceInitDesc init;
-		init.Data = frame->GetData();
-		init.DataPitch = frame->GetScanLineLength();
-		tex = dev->CreateTexture(desc, &init);
+		tex = dev->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::B8G8R8A8_unorm, 256, 128, 1,
+			Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageCPURead),
+			&Graphics::CreateInitDesc(frame->GetData(), frame->GetScanLineLength()));
 
-		Graphics::RenderTargetViewDesc vd;
-		vd.Texture = tex;
-		vd.LoadAction = Graphics::TextureLoadAction::Clear;
-		vd.ClearValue[0] = 0.5f;
-		vd.ClearValue[1] = 0.0f;
-		vd.ClearValue[2] = 1.0f;
-		vd.ClearValue[3] = 1.0f;
-		dev->GetDeviceContext()->BeginRenderingPass(1, &vd, 0);
+		bool status = dev->GetDeviceContext()->BeginRenderingPass(1, &Graphics::CreateRenderTargetView(tex, Graphics::TextureLoadAction::Load), 0);
+		cns.WriteLine(FormatString(L"BeginRenderingPass() status: %0", status));
 		dev->GetDeviceContext()->SetViewport(0.0f, 0.0f, 256.0f, 128.0f, 0.0f, 1.0f);
 		dev->GetDeviceContext()->SetRenderingPipelineState(pipeline_state);
 		dev->GetDeviceContext()->SetVertexShaderResource(0, vertex_buffer);
-		dev->GetDeviceContext()->DrawPrimitives(3, 1);
-		dev->GetDeviceContext()->EndCurrentPass();
+		dev->GetDeviceContext()->SetIndexBuffer(index_buffer, Graphics::IndexBufferFormat::UInt16);
+		dev->GetDeviceContext()->DrawIndexedPrimitives(6, 0, 0);
+		status = dev->GetDeviceContext()->EndCurrentPass();
+		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
 
-		bool status = dev->GetDeviceContext()->Begin2DRenderingPass(tex);
+		status = dev->GetDeviceContext()->Begin2DRenderingPass(tex);
 		cns.WriteLine(FormatString(L"Begin2DRenderingPass() status: %0", status));
 		auto device_2d = dev->GetDeviceContext()->Get2DRenderingDevice();
 		auto bar_info = device_2d->CreateBarRenderingInfo(UI::Color(128, 255, 0, 64));
@@ -335,23 +229,16 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 		status = dev->GetDeviceContext()->BeginMemoryManagementPass();
 		cns.WriteLine(FormatString(L"BeginMemoryManagementPass() status: %0", status));
-		Graphics::ResourceDataDesc rd;
 		SafePointer<Codec::Frame> frame_get = new Codec::Frame(128, 30, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-		rd.Data = frame_get->GetData();
-		rd.DataPitch = frame_get->GetScanLineLength();
-		rd.DataSlicePitch = 0;
-		dev->GetDeviceContext()->QueryResourceData(rd, tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(30, 40), Graphics::VolumeIndex(128, 30, 1));
+		dev->GetDeviceContext()->QueryResourceData(Graphics::CreateDataDesc(frame_get->GetData(), frame_get->GetScanLineLength()),
+			tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(30, 40), Graphics::VolumeIndex(128, 30, 1));
 		SafePointer<Streaming::Stream> ss = new Streaming::FileStream(L"output.png", Streaming::AccessReadWrite, Streaming::CreateAlways);
 		Codec::EncodeFrame(ss, frame_get, L"PNG");
 		ss.SetReference(0);
-		Graphics::ResourceInitDesc id;
-		id.Data = frame_get->GetData();
-		id.DataPitch = frame_get->GetScanLineLength();
-		id.DataSlicePitch = 0;
-		dev->GetDeviceContext()->UpdateResourceData(tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(100, 70), Graphics::VolumeIndex(96, 30, 1), id);
+		dev->GetDeviceContext()->UpdateResourceData(tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(100, 70), Graphics::VolumeIndex(96, 30, 1),
+			Graphics::CreateInitDesc(frame_get->GetData(), frame_get->GetScanLineLength()));
 		status = dev->GetDeviceContext()->EndCurrentPass();
 		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
-
 
 		auto shape = new RenderTargetShapeTemplate;
 		custom_tex_shape = shape;
@@ -363,7 +250,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		{
 			::Template.SetReference(new Engine::UI::InterfaceTemplate());
 			{
-				//SafePointer<Streaming::Stream> Source = new Streaming::FileStream(L"Test.eui", Streaming::AccessRead, Streaming::OpenExisting);
 				SafePointer<Streaming::Stream> Source = Assembly::QueryResource(L"GUI");
 				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, resource_loader, 0);
 			}
@@ -486,11 +372,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			public:
 				virtual void OnInitialized(UI::Window * window) override
 				{
-					(*conout) << L"Callback: Initialized, window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
+					IO::Console cns;
+					cns << L"Callback: Initialized, window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
 				}
 				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 				{
-					(*conout) << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
+					IO::Console cns;
+					cns << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
 					if (!window) return;
 					if (event == Window::Event::Command || event == Window::Event::MenuCommand) {
 						if (ID == 876) {
@@ -520,14 +408,15 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				}
 				virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
 				{
-					(*conout) << L"Callback: ";
-					if (event == Windows::FrameEvent::Move) (*conout) << L"Move";
-					else if (event == Windows::FrameEvent::Close) (*conout) << L"Close";
-					else if (event == Windows::FrameEvent::Minimize) (*conout) << L"Minimize";
-					else if (event == Windows::FrameEvent::Maximize) (*conout) << L"Maximize";
-					else if (event == Windows::FrameEvent::Help) (*conout) << L"Help";
-					else if (event == Windows::FrameEvent::PopupMenuCancelled) (*conout) << L"Popup menu cancelled";
-					(*conout) << L", window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
+					IO::Console cns;
+					cns << L"Callback: ";
+					if (event == Windows::FrameEvent::Move) cns << L"Move";
+					else if (event == Windows::FrameEvent::Close) cns << L"Close";
+					else if (event == Windows::FrameEvent::Minimize) cns << L"Minimize";
+					else if (event == Windows::FrameEvent::Maximize) cns << L"Maximize";
+					else if (event == Windows::FrameEvent::Help) cns << L"Help";
+					else if (event == Windows::FrameEvent::PopupMenuCancelled) cns << L"Popup menu cancelled";
+					cns << L", window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
 				}
 			};
 			auto Callback = new _cb;
@@ -929,43 +818,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				}
 			};
 			auto Callback3 = new _cb3;
-			class _thl3 : public Controls::RichEdit::IRichEditHook
-			{
-			public:
-				virtual void InitializeContextMenu(Menus::Menu * menu, Controls::RichEdit * sender) override
-				{
 
-				}
-				virtual void LinkPressed(const string & resource, Controls::RichEdit * sender) override
-				{
-					IO::Console Console;
-					Console.SetTextColor(IO::Console::ColorGreen);
-					Console.WriteLine(L"RichEdit LinkPressed(): " + resource);
-					Console.SetTextColor(IO::Console::ColorDefault);
-				}
-				virtual void CaretPositionChanged(Controls::RichEdit * sender) override
-				{
-
-				}
-			};
-			auto Hook3 = new _thl3;
-
-			{
-				SafePointer<UI::Template::FrameShape> root = new UI::Template::FrameShape;
-				SafePointer<UI::Template::BarShape> left = new UI::Template::BarShape;
-
-				root->Position = Template::Rectangle(Template::Coordinate(0, 0.0, 0.0), Template::Coordinate(0, 0.0, 0.0),
-					Template::Coordinate(0, 0.0, 1.0), Template::Coordinate(0, 0.0, 1.0));
-				root->Children.Append(left);
-				left->Position = Template::Rectangle(Template::Coordinate(0, 0.0, 0.0), Template::Coordinate(0, 0.0, 0.0),
-					Template::Coordinate(0, 0.0, 0.5), Template::Coordinate(0, 0.0, 1.0));
-				left->Gradient << Template::GradientPoint(UI::Color(255, 255, 255, 128), 0.0);
-
-				::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
-				//::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Set<SafePointer<UI::Template::Shape>>(0);
-				::Template->Dialog[L"Test3"]->Properties->GetProperty(L"Background").Get<SafePointer<UI::Template::Shape>>().SetRetain(root.Inner());
-				::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
-			}
+			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
+			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
 
 			auto templ = ::Template->Dialog[L"Test4"];
 			{
@@ -1045,9 +900,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
 			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
-			//auto w5 = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), 0);
 			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], Callback3, UI::Rectangle::Invalid(), 0);
-			//w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(0xDDFF8040);
 
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(UI::GetSystemColor(UI::SystemColor::Theme));
 
@@ -1056,20 +909,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w->AddDialogStandardAccelerators();
 			w2->AddDialogStandardAccelerators();
 			w3->AddDialogStandardAccelerators();
-			//w5->AddDialogStandardAccelerators();
 			w6->AddDialogStandardAccelerators();
 			w4->GetStation()->GetVisualStyles() = station->GetVisualStyles();
 			w4->GetStation()->GetVisualStyles().ForcedVirtualMenu = true;
-			auto re = w6->FindChild(898911)->As<Controls::RichEdit>();
-			if (re) {
-				re->SetHook(Hook3);
-				//MessageBoxW(0, re->GetAttributedText(), L"", 0);
-			}
 
 			w->FindChild(101010)->As<Controls::Edit>()->CaretWidth = 4;
 			w->FindChild(101010)->As<Controls::Edit>()->CaretColor = UI::Color(64, 64, 128);
 			w->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
-			//w5->FindChild(101010)->As<Controls::Edit>()->SetHook(Hook);
 			w3->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
 			w4->FindChild(212121)->As<Controls::MultiLineEdit>()->SetHook(Hook2);
 
@@ -1078,14 +924,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w3->Show(true);
 			w6->Show(true);
 			w4->Show(true);
-			//w5->Show(true);
 
-			WindowsSpecific::SetWindowTaskbarProgressDisplayMode(w4, WindowsSpecific::WindowTaskbarProgressDisplayMode::Normal);
-			WindowsSpecific::SetWindowTaskbarProgressValue(w4, 0.7);
-			WindowsSpecific::ExtendFrameIntoClient(w4, -1, -1, -1, -1);
-			//WindowsSpecific::SetWindowTransparentcy(w4, 0.7);
-
-			(*conout) << L"Done!" << IO::NewLineChar;
+			cns << L"Done!" << IO::NewLineChar;
 		}
 	}
 

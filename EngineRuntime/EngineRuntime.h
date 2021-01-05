@@ -2,6 +2,7 @@
 
 #include "EngineBase.h"
 #include "Streaming.h"
+#include "Graphics/GraphicsHelper.h"
 #include "ImageCodec/CodecBase.h"
 #include "Math/Color.h"
 #include "Math/Complex.h"
