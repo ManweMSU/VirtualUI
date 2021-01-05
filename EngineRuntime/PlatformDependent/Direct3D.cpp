@@ -333,6 +333,22 @@ namespace Engine
 		{
 			IDevice * wrapper;
 		public:
+			ID3D11VertexShader * vs;
+			ID3D11PixelShader * ps;
+			ID3D11BlendState * bs;
+			ID3D11DepthStencilState * dss;
+			ID3D11RasterizerState * rs;
+			D3D11_PRIMITIVE_TOPOLOGY pt;
+
+			D3D11_PipelineState(IDevice * _wrapper) : wrapper(_wrapper), vs(0), ps(0), bs(0), dss(0), rs(0), pt(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED) {}
+			virtual ~D3D11_PipelineState(void) override
+			{
+				if (vs) vs->Release();
+				if (ps) ps->Release();
+				if (bs) bs->Release();
+				if (dss) dss->Release();
+				if (rs) rs->Release();
+			}
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual string ToString(void) const override { return L"D3D11_PipelineState"; }
 		};
@@ -340,6 +356,10 @@ namespace Engine
 		{
 			IDevice * wrapper;
 		public:
+			ID3D11SamplerState * state;
+
+			D3D11_SamplerState(IDevice * _wrapper) : wrapper(_wrapper), state(0) {}
+			virtual ~D3D11_SamplerState(void) override { if (state) state->Release(); }
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual string ToString(void) const override { return L"D3D11_SamplerState"; }
 		};
@@ -348,14 +368,16 @@ namespace Engine
 			IDevice * wrapper;
 			ID3D11Device * device;
 			ID3D11DeviceContext * context;
+			ID3D11DepthStencilState * depth_stencil_state;
 			ID2D1RenderTarget * device_2d_render_target;
 			ID2D1DeviceContext * device_2d_device_context;
 			Direct2D::D2DRenderDevice * device_2d;
 			int pass_mode;
 			bool pass_state;
+			uint32 stencil_ref;
 		public:
 			D3D11_DeviceContext(ID3D11Device * _device, IDevice * _wrapper) : pass_mode(0), pass_state(false), context(0),
-				device_2d(0), device_2d_render_target(0), device_2d_device_context(0)
+				device_2d(0), device_2d_render_target(0), device_2d_device_context(0), depth_stencil_state(0), stencil_ref(0)
 			{
 				device = _device;
 				wrapper = _wrapper;
@@ -369,6 +391,7 @@ namespace Engine
 				if (device_2d) device_2d->Release();
 				if (device_2d_render_target) device_2d_render_target->Release();
 				if (device_2d_device_context) device_2d_device_context->Release();
+				if (depth_stencil_state) depth_stencil_state->Release();
 			}
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual bool BeginRenderingPass(uint32 rtc, const RenderTargetViewDesc * rtv, const DepthStencilViewDesc * dsv) noexcept override
@@ -487,8 +510,12 @@ namespace Engine
 			virtual bool EndCurrentPass(void) noexcept override
 			{
 				if (pass_mode) {
-					if (pass_mode == 1) context->ClearState();
-					else if (pass_mode == 2) {
+					if (pass_mode == 1) {
+						context->ClearState();
+						if (depth_stencil_state) depth_stencil_state->Release();
+						depth_stencil_state = 0;
+						stencil_ref = 0;
+					} else if (pass_mode == 2) {
 						if (device_2d_device_context) {
 							if (device_2d_device_context->EndDraw() != S_OK) pass_state = false;
 							device_2d_device_context->SetTarget(0);
@@ -506,7 +533,17 @@ namespace Engine
 			virtual void Wait(void) noexcept override { context->Flush(); }
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				auto object = static_cast<D3D11_PipelineState *>(state);
+				if (depth_stencil_state) { depth_stencil_state->Release(); depth_stencil_state = 0; }
+				depth_stencil_state = object->dss;
+				if (depth_stencil_state) depth_stencil_state->AddRef();
+				context->VSSetShader(object->vs, 0, 0);
+				context->PSSetShader(object->ps, 0, 0);
+				context->OMSetBlendState(object->bs, 0, 0xFFFFFFFF);
+				context->OMSetDepthStencilState(depth_stencil_state, stencil_ref);
+				context->RSSetState(object->rs);
+				context->IASetPrimitiveTopology(object->pt);
 			}
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept override
 			{
@@ -522,43 +559,74 @@ namespace Engine
 			}
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				if (resource->GetResourceType() == ResourceType::Texture) {
+					auto object = static_cast<D3D11_Texture *>(resource);
+					if (!object->view) { pass_state = false; return; }
+					context->VSSetShaderResources(at, 1, &object->view);
+				} else if (resource->GetResourceType() == ResourceType::Buffer) {
+					auto object = static_cast<D3D11_Buffer *>(resource);
+					if (!object->view) { pass_state = false; return; }
+					context->VSSetShaderResources(at, 1, &object->view);
+				} else { pass_state = false; return; }
 			}
 			virtual void SetVertexShaderResourceData(uint32 at, const void * data, int length) noexcept override
 			{
+				if (pass_mode != 1) { pass_state = false; return; }
 				// TODO: IMPLEMENT
 			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				context->VSSetSamplers(at, 1, &static_cast<D3D11_SamplerState *>(sampler)->state);
 			}
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				if (resource->GetResourceType() == ResourceType::Texture) {
+					auto object = static_cast<D3D11_Texture *>(resource);
+					if (!object->view) { pass_state = false; return; }
+					context->PSSetShaderResources(at, 1, &object->view);
+				} else if (resource->GetResourceType() == ResourceType::Buffer) {
+					auto object = static_cast<D3D11_Buffer *>(resource);
+					if (!object->view) { pass_state = false; return; }
+					context->PSSetShaderResources(at, 1, &object->view);
+				} else { pass_state = false; return; }
 			}
 			virtual void SetPixelShaderResourceData(uint32 at, const void * data, int length) noexcept override
 			{
+				if (pass_mode != 1) { pass_state = false; return; }
 				// TODO: IMPLEMENT
 			}
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				context->PSSetSamplers(at, 1, &static_cast<D3D11_SamplerState *>(sampler)->state);
 			}
 			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				DXGI_FORMAT fmt;
+				if (format == IndexBufferFormat::UInt16) fmt = DXGI_FORMAT_R16_UINT;
+				else if (format == IndexBufferFormat::UInt32) fmt = DXGI_FORMAT_R32_UINT;
+				else { pass_state = false; return; }
+				context->IASetIndexBuffer(static_cast<D3D11_Buffer *>(index)->buffer, fmt, 0);
 			}
 			virtual void SetStencilReferenceValue(uint8 ref) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				stencil_ref = ref;
+				context->OMSetDepthStencilState(depth_stencil_state, stencil_ref);
 			}
 			virtual void DrawPrimitives(uint32 vertex_count, uint32 first_vertex) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				context->Draw(vertex_count, first_vertex);
 			}
 			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (pass_mode != 1) { pass_state = false; return; }
+				context->DrawIndexed(index_count, first_index, base_vertex);
 			}
 			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
@@ -702,6 +770,65 @@ namespace Engine
 		{
 			ID3D11Device * device;
 			IDeviceContext * context;
+			D3D11_COMPARISON_FUNC _make_comp_function(CompareFunction func)
+			{
+				if (func == CompareFunction::Always) return D3D11_COMPARISON_ALWAYS;
+				else if (func == CompareFunction::Lesser) return D3D11_COMPARISON_LESS;
+				else if (func == CompareFunction::Greater) return D3D11_COMPARISON_GREATER;
+				else if (func == CompareFunction::Equal) return D3D11_COMPARISON_EQUAL;
+				else if (func == CompareFunction::LesserEqual) return D3D11_COMPARISON_LESS_EQUAL;
+				else if (func == CompareFunction::GreaterEqual) return D3D11_COMPARISON_GREATER_EQUAL;
+				else if (func == CompareFunction::NotEqual) return D3D11_COMPARISON_NOT_EQUAL;
+				else if (func == CompareFunction::Never) return D3D11_COMPARISON_NEVER;
+				else return D3D11_COMPARISON_NEVER;
+			}
+			D3D11_STENCIL_OP _make_stencil_function(StencilFunction func)
+			{
+				if (func == StencilFunction::Keep) return D3D11_STENCIL_OP_KEEP;
+				else if (func == StencilFunction::SetZero) return D3D11_STENCIL_OP_ZERO;
+				else if (func == StencilFunction::Replace) return D3D11_STENCIL_OP_REPLACE;
+				else if (func == StencilFunction::IncrementWrap) return D3D11_STENCIL_OP_INCR;
+				else if (func == StencilFunction::DecrementWrap) return D3D11_STENCIL_OP_DECR;
+				else if (func == StencilFunction::IncrementClamp) return D3D11_STENCIL_OP_INCR_SAT;
+				else if (func == StencilFunction::DecrementClamp) return D3D11_STENCIL_OP_DECR_SAT;
+				else if (func == StencilFunction::Invert) return D3D11_STENCIL_OP_INVERT;
+				else return D3D11_STENCIL_OP_KEEP;
+			}
+			D3D11_BLEND_OP _make_blend_function(BlendingFunction func)
+			{
+				if (func == BlendingFunction::Add) return D3D11_BLEND_OP_ADD;
+				else if (func == BlendingFunction::SubtractBaseFromOver) return D3D11_BLEND_OP_SUBTRACT;
+				else if (func == BlendingFunction::SubtractOverFromBase) return D3D11_BLEND_OP_REV_SUBTRACT;
+				else if (func == BlendingFunction::Min) return D3D11_BLEND_OP_MIN;
+				else if (func == BlendingFunction::Max) return D3D11_BLEND_OP_MAX;
+				else return D3D11_BLEND_OP_ADD;
+			}
+			D3D11_BLEND _make_blend_factor(BlendingFactor fact)
+			{
+				if (fact == BlendingFactor::Zero) return D3D11_BLEND_ZERO;
+				else if (fact == BlendingFactor::One) return D3D11_BLEND_ONE;
+				else if (fact == BlendingFactor::OverColor) return D3D11_BLEND_SRC_COLOR;
+				else if (fact == BlendingFactor::InvertedOverColor) return D3D11_BLEND_INV_SRC_COLOR;
+				else if (fact == BlendingFactor::OverAlpha) return D3D11_BLEND_SRC_ALPHA;
+				else if (fact == BlendingFactor::InvertedOverAlpha) return D3D11_BLEND_INV_SRC_ALPHA;
+				else if (fact == BlendingFactor::BaseColor) return D3D11_BLEND_DEST_COLOR;
+				else if (fact == BlendingFactor::InvertedBaseColor) return D3D11_BLEND_INV_DEST_COLOR;
+				else if (fact == BlendingFactor::BaseAlpha) return D3D11_BLEND_DEST_ALPHA;
+				else if (fact == BlendingFactor::InvertedBaseAlpha) return D3D11_BLEND_INV_DEST_ALPHA;
+				else if (fact == BlendingFactor::SecondaryColor) return D3D11_BLEND_SRC1_COLOR;
+				else if (fact == BlendingFactor::InvertedSecondaryColor) return D3D11_BLEND_INV_SRC1_COLOR;
+				else if (fact == BlendingFactor::SecondaryAlpha) return D3D11_BLEND_SRC1_ALPHA;
+				else if (fact == BlendingFactor::InvertedSecondaryAlpha) return D3D11_BLEND_INV_SRC1_ALPHA;
+				else if (fact == BlendingFactor::OverAlphaSaturated) return D3D11_BLEND_SRC_ALPHA_SAT;
+				else return D3D11_BLEND_ZERO;
+			}
+			D3D11_TEXTURE_ADDRESS_MODE _make_address_mode(SamplerAddressMode mode)
+			{
+				if (mode == SamplerAddressMode::Border) return D3D11_TEXTURE_ADDRESS_BORDER;
+				else if (mode == SamplerAddressMode::Clamp) return D3D11_TEXTURE_ADDRESS_CLAMP;
+				else if (mode == SamplerAddressMode::Mirror) return D3D11_TEXTURE_ADDRESS_MIRROR;
+				else return D3D11_TEXTURE_ADDRESS_WRAP;
+			}
 			D3D11_SUBRESOURCE_DATA * _make_subres_data(const ResourceInitDesc * init, int length)
 			{
 				D3D11_SUBRESOURCE_DATA * result = reinterpret_cast<D3D11_SUBRESOURCE_DATA *>(malloc(length * sizeof(D3D11_SUBRESOURCE_DATA)));
@@ -769,13 +896,117 @@ namespace Engine
 			virtual IDeviceContext * GetDeviceContext(void) noexcept override { return context; }
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				if (!desc.RenderTargetCount) return 0;
+				SafePointer<D3D11_PipelineState> result = new (std::nothrow) D3D11_PipelineState(this);
+				if (!result) return 0;
+				if (desc.Topology == PrimitiveTopology::PointList) result->pt = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+				else if (desc.Topology == PrimitiveTopology::LineList) result->pt = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+				else if (desc.Topology == PrimitiveTopology::LineStrip) result->pt = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+				else if (desc.Topology == PrimitiveTopology::TriangleList) result->pt = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+				else if (desc.Topology == PrimitiveTopology::TriangleStrip) result->pt = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+				else return 0;
+				if (!desc.VertexShader || desc.VertexShader->GetType() != ShaderType::Vertex) return 0;
+				if (!desc.PixelShader || desc.PixelShader->GetType() != ShaderType::Pixel) return 0;
+				result->vs = static_cast<D3D11_Shader *>(desc.VertexShader)->vs;
+				result->ps = static_cast<D3D11_Shader *>(desc.PixelShader)->ps;
+				result->vs->AddRef();
+				result->ps->AddRef();
+				D3D11_BLEND_DESC bd;
+				ZeroMemory(&bd, sizeof(bd));
+				bool uniform_rtbd = true;
+				uint max_rt = 1;
+				for (uint rt = 1; rt < desc.RenderTargetCount; rt++) { if (MemoryCompare(&desc.RenderTarget[0], &desc.RenderTarget[rt], sizeof(RenderTargetDesc))) { uniform_rtbd = false; break; } }
+				if (!uniform_rtbd) { bd.IndependentBlendEnable = TRUE; max_rt = desc.RenderTargetCount; }
+				for (uint rt = 0; rt < max_rt; rt++) {
+					auto & rtbd = bd.RenderTarget[rt];
+					auto & src = desc.RenderTarget[rt];
+					if (!IsColorFormat(src.Format)) return 0;
+					rtbd.RenderTargetWriteMask = 0;
+					if (src.Flags & RenderTargetFlagBlendingEnabled) rtbd.BlendEnable = TRUE; else rtbd.BlendEnable = FALSE;
+					if (!(src.Flags & RenderTargetFlagRestrictWriteRed)) rtbd.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_RED;
+					if (!(src.Flags & RenderTargetFlagRestrictWriteGreen)) rtbd.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_GREEN;
+					if (!(src.Flags & RenderTargetFlagRestrictWriteBlue)) rtbd.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_BLUE;
+					if (!(src.Flags & RenderTargetFlagRestrictWriteAlpha)) rtbd.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
+					rtbd.BlendOp = _make_blend_function(src.BlendRGB);
+					rtbd.BlendOpAlpha = _make_blend_function(src.BlendAlpha);
+					rtbd.DestBlend = _make_blend_factor(src.BaseFactorRGB);
+					rtbd.DestBlendAlpha = _make_blend_factor(src.BaseFactorAlpha);
+					rtbd.SrcBlend = _make_blend_factor(src.OverFactorRGB);
+					rtbd.SrcBlendAlpha = _make_blend_factor(src.OverFactorAlpha);
+				}
+				if (device->CreateBlendState(&bd, &result->bs) != S_OK) return 0;
+				D3D11_DEPTH_STENCIL_DESC dsd;
+				if (desc.DepthStencil.Flags & DepthStencilFlagDepthTestEnabled) dsd.DepthEnable = TRUE; else dsd.DepthEnable = FALSE;
+				if (desc.DepthStencil.Flags & DepthStencilFlagDepthWriteEnabled) dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; else dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+				if (desc.DepthStencil.Flags & DepthStencilFlagStencilTestEnabled) dsd.StencilEnable = TRUE; else dsd.StencilEnable = FALSE;
+				dsd.DepthFunc = _make_comp_function(desc.DepthStencil.DepthTestFunction);
+				dsd.StencilReadMask = desc.DepthStencil.StencilReadMask;
+				dsd.StencilWriteMask = desc.DepthStencil.StencilWriteMask;
+				dsd.FrontFace.StencilFunc = _make_comp_function(desc.DepthStencil.FrontStencil.TestFunction);
+				dsd.FrontFace.StencilFailOp = _make_stencil_function(desc.DepthStencil.FrontStencil.OnStencilTestFailed);
+				dsd.FrontFace.StencilDepthFailOp = _make_stencil_function(desc.DepthStencil.FrontStencil.OnDepthTestFailed);
+				dsd.FrontFace.StencilPassOp = _make_stencil_function(desc.DepthStencil.FrontStencil.OnTestsPassed);
+				dsd.BackFace.StencilFunc = _make_comp_function(desc.DepthStencil.BackStencil.TestFunction);
+				dsd.BackFace.StencilFailOp = _make_stencil_function(desc.DepthStencil.BackStencil.OnStencilTestFailed);
+				dsd.BackFace.StencilDepthFailOp = _make_stencil_function(desc.DepthStencil.BackStencil.OnDepthTestFailed);
+				dsd.BackFace.StencilPassOp = _make_stencil_function(desc.DepthStencil.BackStencil.OnTestsPassed);
+				if (device->CreateDepthStencilState(&dsd, &result->dss) != S_OK) return 0;
+				D3D11_RASTERIZER_DESC rd;
+				if (desc.Rasterization.Fill == FillMode::Solid) rd.FillMode = D3D11_FILL_SOLID;
+				else if (desc.Rasterization.Fill == FillMode::Wireframe) rd.FillMode = D3D11_FILL_WIREFRAME;
+				else return 0;
+				if (desc.Rasterization.Cull == CullMode::None) rd.CullMode = D3D11_CULL_NONE;
+				else if (desc.Rasterization.Cull == CullMode::Front) rd.CullMode = D3D11_CULL_FRONT;
+				else if (desc.Rasterization.Cull == CullMode::Back) rd.CullMode = D3D11_CULL_BACK;
+				else return 0;
+				if (desc.Rasterization.FrontIsCounterClockwise) rd.FrontCounterClockwise = TRUE; else rd.FrontCounterClockwise = FALSE;
+				rd.DepthBias = desc.Rasterization.DepthBias;
+				rd.DepthBiasClamp = desc.Rasterization.DepthBiasClamp;
+				rd.SlopeScaledDepthBias = desc.Rasterization.SlopeScaledDepthBias;
+				if (desc.Rasterization.DepthClipEnable) rd.DepthClipEnable = TRUE; else rd.DepthClipEnable = FALSE;
+				rd.ScissorEnable = FALSE;
+				rd.MultisampleEnable = FALSE;
+				rd.AntialiasedLineEnable = FALSE;
+				if (device->CreateRasterizerState(&rd, &result->rs) != S_OK) return 0;
+				result->Retain();
+				return result;
 			}
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				SafePointer<D3D11_SamplerState> result = new (std::nothrow) D3D11_SamplerState(this);
+				if (!result) return 0;
+				D3D11_SAMPLER_DESC sd;
+				if (desc.MinificationFilter == SamplerFilter::Point && desc.MagnificationFilter == SamplerFilter::Point && desc.MipFilter == SamplerFilter::Point) {
+					sd.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+				} else if (desc.MinificationFilter == SamplerFilter::Point && desc.MagnificationFilter == SamplerFilter::Point && desc.MipFilter == SamplerFilter::Linear) {
+					sd.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+				} else if (desc.MinificationFilter == SamplerFilter::Point && desc.MagnificationFilter == SamplerFilter::Linear && desc.MipFilter == SamplerFilter::Point) {
+					sd.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+				} else if (desc.MinificationFilter == SamplerFilter::Point && desc.MagnificationFilter == SamplerFilter::Linear && desc.MipFilter == SamplerFilter::Linear) {
+					sd.Filter = D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+				} else if (desc.MinificationFilter == SamplerFilter::Linear && desc.MagnificationFilter == SamplerFilter::Point && desc.MipFilter == SamplerFilter::Point) {
+					sd.Filter = D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+				} else if (desc.MinificationFilter == SamplerFilter::Linear && desc.MagnificationFilter == SamplerFilter::Point && desc.MipFilter == SamplerFilter::Linear) {
+					sd.Filter = D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+				} else if (desc.MinificationFilter == SamplerFilter::Linear && desc.MagnificationFilter == SamplerFilter::Linear && desc.MipFilter == SamplerFilter::Point) {
+					sd.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+				} else if (desc.MinificationFilter == SamplerFilter::Linear && desc.MagnificationFilter == SamplerFilter::Linear && desc.MipFilter == SamplerFilter::Linear) {
+					sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+				} else if (desc.MinificationFilter == SamplerFilter::Anisotropic && desc.MagnificationFilter == SamplerFilter::Anisotropic && desc.MipFilter == SamplerFilter::Anisotropic) {
+					sd.Filter = D3D11_FILTER_ANISOTROPIC;
+				} else return 0;
+				sd.AddressU = _make_address_mode(desc.AddressU);
+				sd.AddressV = _make_address_mode(desc.AddressV);
+				sd.AddressW = _make_address_mode(desc.AddressW);
+				sd.MipLODBias = 0.0f;
+				sd.MaxAnisotropy = desc.MaximalAnisotropy;
+				sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+				sd.BorderColor[0] = desc.BorderColor[0]; sd.BorderColor[1] = desc.BorderColor[1]; sd.BorderColor[2] = desc.BorderColor[2]; sd.BorderColor[3] = desc.BorderColor[3];
+				sd.MinLOD = desc.MinimalLOD;
+				sd.MaxLOD = desc.MaximalLOD;
+				if (device->CreateSamplerState(&sd, &result->state) != S_OK) return 0;
+				result->Retain();
+				return result;
 			}
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept override
 			{
