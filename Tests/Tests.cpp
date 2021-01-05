@@ -255,6 +255,48 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			frame->SetPixel(x, y, UI::Color(x, min(x, y), y, 255));
 		}
 		auto dev = Graphics::GetCommonDevice();
+		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
+		cns.WriteLine(FormatString(L"Shader Library stream: %0", string(slrs_stream.Inner())));
+		SafePointer<Graphics::IShaderLibrary> sl = dev->LoadShaderLibrary(slrs_stream);
+		cns.WriteLine(FormatString(L"Shader Library object: %0", string(sl.Inner())));
+		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"vertex");
+		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"pixel");
+		slrs_stream.SetReference(0);
+		sl.SetReference(0);
+		cns.WriteLine(FormatString(L"Shaders: %0, %1", string(vs.Inner()), string(ps.Inner())));
+
+		float vertex[] = {
+			-0.5f, -0.5f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 1.0f,
+			+0.5f, -0.5f, 0.0f, 1.0f,	0.0f, 1.0f, 0.0f, 1.0f,
+			+0.0f, +0.5f, 0.0f, 1.0f,	0.0f, 0.0f, 1.0f, 1.0f,
+		};
+		Graphics::ResourceInitDesc vertex_init;
+		vertex_init.Data = vertex;
+		Graphics::BufferDesc vertex_buffer_desc;
+		vertex_buffer_desc.Length = sizeof(vertex);
+		vertex_buffer_desc.MemoryPool = Graphics::ResourceMemoryPool::Immutable;
+		vertex_buffer_desc.Usage = Graphics::ResourceUsageShaderRead;
+		vertex_buffer_desc.Stride = 8 * sizeof(float);
+		SafePointer<Graphics::IBuffer> vertex_buffer = dev->CreateBuffer(vertex_buffer_desc, vertex_init);
+		cns.WriteLine(FormatString(L"Vertex buffer: %0", string(vertex_buffer.Inner())));
+		Graphics::PipelineStateDesc ps_desc;
+		ps_desc.VertexShader = vs;
+		ps_desc.PixelShader = ps;
+		ps_desc.RenderTargetCount = 1;
+		ps_desc.RenderTarget[0].Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+		ps_desc.RenderTarget[0].Flags = 0;
+		ps_desc.DepthStencil.Flags = 0;
+		ps_desc.Rasterization.Fill = Graphics::FillMode::Solid;
+		ps_desc.Rasterization.Cull = Graphics::CullMode::None;
+		ps_desc.Rasterization.FrontIsCounterClockwise = true;
+		ps_desc.Rasterization.DepthBias = 0;
+		ps_desc.Rasterization.DepthBiasClamp = 0.0f;
+		ps_desc.Rasterization.SlopeScaledDepthBias = 0.0f;
+		ps_desc.Rasterization.DepthClipEnable = true;
+		ps_desc.Topology = Graphics::PrimitiveTopology::TriangleList;
+		SafePointer<Graphics::IPipelineState> pipeline_state = dev->CreateRenderingPipelineState(ps_desc);
+		cns.WriteLine(FormatString(L"Pipeline state: %0", string(pipeline_state.Inner())));
+
 		Graphics::TextureDesc desc;
 		desc.Type = Graphics::TextureType::Type2D;
 		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
@@ -276,6 +318,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		vd.ClearValue[2] = 1.0f;
 		vd.ClearValue[3] = 1.0f;
 		dev->GetDeviceContext()->BeginRenderingPass(1, &vd, 0);
+		dev->GetDeviceContext()->SetViewport(0.0f, 0.0f, 256.0f, 128.0f, 0.0f, 1.0f);
+		dev->GetDeviceContext()->SetRenderingPipelineState(pipeline_state);
+		dev->GetDeviceContext()->SetVertexShaderResource(0, vertex_buffer);
+		dev->GetDeviceContext()->DrawPrimitives(3, 1);
 		dev->GetDeviceContext()->EndCurrentPass();
 
 		bool status = dev->GetDeviceContext()->Begin2DRenderingPass(tex);

@@ -57,4 +57,9 @@
   <ItemGroup>
     <CustomBuild Include="test.eui" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="TestShaders.hlsl">
+      <Filter>Файлы исходного кода</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

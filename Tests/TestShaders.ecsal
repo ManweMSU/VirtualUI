@@ -1,0 +1,12 @@
+﻿ECSAL
+ExcludeMetadata = true
+"000000001" {
+	Custom = 2
+	Name = "pixel"
+	Source = "<ListPath>\\TestShaders.pso"
+}
+"000000002" {
+	Custom = 1
+	Name = "vertex"
+	Source = "<ListPath>\\TestShaders.vso"
+}

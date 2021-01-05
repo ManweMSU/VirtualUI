@@ -715,7 +715,7 @@ namespace Engine
 					context->CopySubresourceRegion(op, dest_sr, origin.x, origin.y, origin.z, st, dest_sr, &box);
 				} else context->UpdateSubresource(QueryInnerObject(dest), dest_sr, &box, src.Data, src.DataPitch, src.DataSlicePitch);
 			}
-			virtual void QueryResourceData(ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept override
+			virtual void QueryResourceData(const ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept override
 			{
 				if (pass_mode != 3) { pass_state = false; return; }
 				if (!size.x || !size.y || !size.z) return;
@@ -1055,7 +1055,6 @@ namespace Engine
 			}
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept override
 			{
-				if (desc.MemoryPool == ResourceMemoryPool::Immutable) return 0;
 				SafePointer<D3D11_Buffer> result = new (std::nothrow) D3D11_Buffer(this);
 				if (!result) return 0;
 				result->pool = desc.MemoryPool;
