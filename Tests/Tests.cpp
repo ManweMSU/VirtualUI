@@ -28,8 +28,7 @@
 #include <PlatformDependent/SystemColors.h>
 #include <PlatformDependent/Console.h>
 #include <Graphics/GraphicsHelper.h>
-#include <PlatformDependent/Direct2D.h>
-#include <PlatformDependent/Direct3D.h>
+#include <PlatformDependent/ComInterop.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -55,48 +54,142 @@ Engine::UI::Window * main_window = 0;
 
 class main_window_callback_class : public Engine::UI::Windows::IWindowEventCallback
 {
+	Controls::VirtualStation * station;
+	SafePointer<Graphics::IDevice> device;
+	SafePointer<Graphics::IWindowLayer> layer;
+	SafePointer<Graphics::IBuffer> vertex_buffer;
+	SafePointer<Graphics::IBuffer> index_buffer;
+	SafePointer<Graphics::ITexture> depth_buffer;
+	SafePointer<Graphics::IPipelineState> state;
+	uint32 nvert;
 public:
+	struct vertex_struct { Math::Vector3f pos; Math::Vector3f clr; };
 	virtual void OnInitialized(Engine::UI::Window * window) override
 	{
-		// TODO: IMPLEMENT
+		auto overlapped = window->As<Controls::OverlappedWindow>();
+		overlapped->GetAcceleratorTable() << Accelerators::AcceleratorCommand(668, KeyCodes::Return, false, false, true);
+		station = window->FindChild(667)->As<Controls::VirtualStation>();
+		station->GetInnerStation()->RequireRefreshRate(Window::RefreshPeriod::Cinematic);
+		auto size = station->GetDesktopDimensions();
+		SafePointer<Graphics::IDeviceFactory> factory = Graphics::CreateDeviceFactory();
+		device = factory->CreateDefaultDevice();
+		// Loading shaders
+		layer = device->CreateWindowLayer(window, Graphics::CreateWindowLayerDesc(size.x, size.y));
+		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
+		SafePointer<Graphics::IShaderLibrary> sl = device->LoadShaderLibrary(slrs_stream);
+		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"vertex");
+		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"pixel");
+		slrs_stream.SetReference(0);
+		sl.SetReference(0);
+		// Creating buffers
+		Array<vertex_struct> vertex(0x100);
+		Array<uint16> index(0x100);
+		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
+		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
+		for (int i = 0; i < 100; i++) {
+			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
+			float c = cos(rad);
+			float s = sin(rad);
+			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
+			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			if (i) {
+				index << 0;
+				index << vertex.Length() - 4;
+				index << vertex.Length() - 2;
+				index << 1;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 1;
+				index << vertex.Length() - 4;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 2;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 2;
+				index << vertex.Length() - 1;
+			}
+		}
+		index << 0;
+		index << 2;
+		index << vertex.Length() - 2;
+		index << 1;
+		index << 3;
+		index << vertex.Length() - 1;
+		index << vertex.Length() - 2;
+		index << vertex.Length() - 1;
+		index << 2;
+		index << vertex.Length() - 1;
+		index << 2;
+		index << 3;
+		nvert = index.Length();
+	
+		vertex_buffer = device->CreateBuffer(
+			Graphics::CreateBufferDesc(vertex.Length() * sizeof(vertex_struct), Graphics::ResourceUsageShaderRead, sizeof(vertex_struct), Graphics::ResourceMemoryPool::Immutable),
+			Graphics::CreateInitDesc(vertex.GetBuffer()));
+		index_buffer = device->CreateBuffer(
+			Graphics::CreateBufferDesc(index.Length() * sizeof(uint16), Graphics::ResourceUsageIndexBuffer, 0, Graphics::ResourceMemoryPool::Immutable),
+			Graphics::CreateInitDesc(index.GetBuffer()));
+		depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, size.x, size.y, 1, Graphics::ResourceUsageDepthStencil));
+		state = device->CreateRenderingPipelineState(Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm, true, Graphics::PixelFormat::D32_float));
 	}
 	virtual void OnControlEvent(Engine::UI::Window * window, int ID, Engine::UI::Window::Event event, Engine::UI::Window * sender) override
 	{
-		// TODO: IMPLEMENT
+		if (ID == 668) {
+			IO::Console console;
+			if (layer->IsFullscreen()) {
+				console.WriteLine(L"Going windowed.");
+				if (!layer->SwitchToWindow()) console.WriteLine(L"Transition to window failed.");
+			} else {
+				console.WriteLine(L"Going to fullscreen.");
+				if (!layer->SwitchToFullscreen()) console.WriteLine(L"Transition to fullscreen failed.");
+			}
+		}
 	}
 	virtual void OnFrameEvent(Engine::UI::Window * window, Engine::UI::Windows::FrameEvent event) override
 	{
-		// TODO: IMPLEMENT
+		if (event == Windows::FrameEvent::Close) {
+			layer.SetReference(0);
+			device.SetReference(0);
+			window->Destroy();
+		} else if (event == Windows::FrameEvent::Move) {
+			// DO NOTHING OR RESIZE BUFFERS AND STATION
+		} else if (event == Windows::FrameEvent::Activate) {
+			station->SetFocus();
+		} else if (event == Windows::FrameEvent::Deactivate) {
+			if (layer) layer->SwitchToWindow();
+		} else if (event == Windows::FrameEvent::Draw) {
+			SafePointer<Graphics::ITexture> rt = layer->QuerySurface();
+			auto context = device->GetDeviceContext();
+			auto angle = (GetTimerValue() % 20000) * 2.0 * ENGINE_PI / 20000.0;
+			auto a2 = (GetTimerValue() % 12000) * 2.0 * ENGINE_PI / 12000.0;
+			auto cam = (Math::Vector3f(cos(angle), sin(angle), 0.0) + Math::Vector3f(0.0f, 0.0f, sin(a2))) * 2.0f;
+			auto view = Graphics::MakeLookAtTransform(cam, -cam, Math::Vector3f(0.0f, 0.0f, 1.0f));
+			auto proj = Graphics::MakePerspectiveViewTransformFoV(ENGINE_PI / 2.0f, float(rt->GetWidth()) / float(rt->GetHeight()), 0.01f, 10.0f);
+			auto mat = proj * view;
+			if (device->GetDeviceContext()->BeginRenderingPass(1, &Graphics::CreateRenderTargetView(rt, Math::Vector4f(0.25f, 0.0f, 0.5f, 1.0f)),
+				&Graphics::CreateDepthStencilView(depth_buffer, 1.0f))) {
+				device->GetDeviceContext()->SetViewport(0.0f, 0.0f, rt->GetWidth(), rt->GetHeight(), 0.0f, 1.0f);
+				device->GetDeviceContext()->SetRenderingPipelineState(state);
+				device->GetDeviceContext()->SetVertexShaderResource(0, vertex_buffer);
+				device->GetDeviceContext()->SetVertexShaderResourceData(1, &mat, sizeof(Math::Matrix4x4f));
+				device->GetDeviceContext()->SetIndexBuffer(index_buffer, Graphics::IndexBufferFormat::UInt16);
+				device->GetDeviceContext()->DrawIndexedPrimitives(nvert, 0, 0);
+				device->GetDeviceContext()->EndCurrentPass();
+			}
+			context->Begin2DRenderingPass(rt);
+			auto device_2d = context->Get2DRenderingDevice();
+			device_2d->SetTimerValue(GetTimerValue());
+			station->GetInnerStation()->SetRenderingDevice(device_2d);
+			station->GetInnerStation()->Animate();
+			station->GetInnerStation()->Render();
+			context->EndCurrentPass();
+			layer->Present();
+		}
 	}
 };
 main_window_callback_class main_window_callback;
 
-//#define MAX_LOADSTRING 100
-//
-//// Глобальные переменные:
-//HINSTANCE hInst;                                // текущий экземпляр
-//WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
-//WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
-//HWND Window;
-//
-//// Отправить объявления функций, включенных в этот модуль кода:
-//ATOM                MyRegisterClass(HINSTANCE hInstance);
-//BOOL                InitInstance(HINSTANCE, int);
-//LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-
-//Engine::Direct2D::D2DRenderDevice * Device;
-//Engine::UI::FrameShape * Shape;
-//Engine::UI::ITexture * Texture;
-
-//Engine::UI::HandleWindowStation * station = 0;
-//
-//ID2D1DeviceContext * Target = 0;
-//IDXGISwapChain1 * SwapChain = 0;
-
 SafePointer<Engine::UI::InterfaceTemplate> Template;
-
 UI::IInversionEffectRenderingInfo * Inversion = 0;
-
 SafePointer<Menus::Menu> menu;
 
 ENGINE_REFLECTED_CLASS(lv_item, Reflection::Reflected)
@@ -170,10 +263,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		station_desc->ControlPosition = UI::Rectangle::Entire();
 		station_desc->Disabled = false;
 		station_desc->Invisible = false;
-		station_desc->Autosize = true;// false;
-		station_desc->Render = true;// false;
-		station_desc->Width = 800;
-		station_desc->Height = 600;
+		station_desc->Autosize = false;
+		station_desc->Render = false;
+		station_desc->Width = desktop.Right - desktop.Left;
+		station_desc->Height = desktop.Bottom - desktop.Top;
 		station_desc->ID = 667;
 		SafePointer<Engine::UI::Template::ControlTemplate> mwt =
 			Engine::UI::Controls::CreateOverlappedWindowTemplate(L"Test Graphics Window", Engine::UI::Rectangle(0, 0, 0.7 * desktop.Right, 0.7 * desktop.Bottom),
@@ -185,107 +278,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		main_window->Show(true);
 	}
 
-    // TODO: разместите код здесь.
-
-    // Инициализация глобальных строк
-	//wcscpy_s(szTitle, L"Tests");
-	//wcscpy_s(szWindowClass, L"TESTS_WND_CLASS");
- //   MyRegisterClass(hInstance);
-
- //   // Выполнить инициализацию приложения:
- //   if (!InitInstance (hInstance, nCmdShow))
- //   {
- //       return FALSE;
- //   }
-
-	// Starting D3D
-	/*Direct3D::CreateDevices();
-	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
-	Device = new Engine::Direct2D::D2DRenderDevice(Target);
-	Device->SetParentWrappedDevice(Direct3D::WrappedDevice);*/
-	Graphics::ITexture * tex = 0;
-
 	auto fact = Graphics::CreateDeviceFactory();
 	auto dl = fact->GetAvailableDevices();
 	for (auto & d : dl->Elements()) cns.WriteLine(FormatString(L"%0: %1", d.value, d.key));
 	fact->Release();
 	dl->Release();
-
-	SafePointer<UI::Template::Shape> custom_tex_shape;
-	if (!tex) {
-		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
-			frame->SetPixel(x, y, UI::Color(x, min(x, y), y, 255));
-		}
-		auto dev = Graphics::GetCommonDevice();
-		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
-		cns.WriteLine(FormatString(L"Shader Library stream: %0", string(slrs_stream.Inner())));
-		SafePointer<Graphics::IShaderLibrary> sl = dev->LoadShaderLibrary(slrs_stream);
-		cns.WriteLine(FormatString(L"Shader Library object: %0", string(sl.Inner())));
-		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"vertex");
-		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"pixel");
-		slrs_stream.SetReference(0);
-		sl.SetReference(0);
-		cns.WriteLine(FormatString(L"Shaders: %0, %1", string(vs.Inner()), string(ps.Inner())));
-
-		float vertex[] = {
-			-0.5f, -0.5f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 1.0f,
-			+0.5f, -0.5f, 0.0f, 1.0f,	0.0f, 1.0f, 0.0f, 1.0f,
-			+0.0f, +0.5f, 0.0f, 1.0f,	0.0f, 0.0f, 1.0f, 1.0f,
-			+1.0f, +1.0f, 0.0f, 1.0f,	1.0f, 1.0f, 1.0f, 1.0f,
-		};
-		uint16 index[] = { 0, 1, 2, 1, 2, 3 };
-		SafePointer<Graphics::IBuffer> vertex_buffer = dev->CreateBuffer(
-			Graphics::CreateBufferDesc(sizeof(vertex), Graphics::ResourceUsageShaderRead, 8 * sizeof(float), Graphics::ResourceMemoryPool::Immutable),
-			Graphics::CreateInitDesc(vertex));
-		SafePointer<Graphics::IBuffer> index_buffer = dev->CreateBuffer(
-			Graphics::CreateBufferDesc(sizeof(index), Graphics::ResourceUsageIndexBuffer, 0, Graphics::ResourceMemoryPool::Immutable),
-			Graphics::CreateInitDesc(index));
-		cns.WriteLine(FormatString(L"Vertex buffer: %0", string(vertex_buffer.Inner())));
-		SafePointer<Graphics::IPipelineState> pipeline_state = dev->CreateRenderingPipelineState(Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm));
-		cns.WriteLine(FormatString(L"Pipeline state: %0", string(pipeline_state.Inner())));
-
-		tex = dev->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::B8G8R8A8_unorm, 256, 128, 1,
-			Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageCPURead),
-			&Graphics::CreateInitDesc(frame->GetData(), frame->GetScanLineLength()));
-
-		bool status = dev->GetDeviceContext()->BeginRenderingPass(1, &Graphics::CreateRenderTargetView(tex, Graphics::TextureLoadAction::Load), 0);
-		cns.WriteLine(FormatString(L"BeginRenderingPass() status: %0", status));
-		dev->GetDeviceContext()->SetViewport(0.0f, 0.0f, 256.0f, 128.0f, 0.0f, 1.0f);
-		dev->GetDeviceContext()->SetRenderingPipelineState(pipeline_state);
-		dev->GetDeviceContext()->SetVertexShaderResource(0, vertex_buffer);
-		dev->GetDeviceContext()->SetIndexBuffer(index_buffer, Graphics::IndexBufferFormat::UInt16);
-		dev->GetDeviceContext()->DrawIndexedPrimitives(6, 0, 0);
-		status = dev->GetDeviceContext()->EndCurrentPass();
-		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
-
-		status = dev->GetDeviceContext()->Begin2DRenderingPass(tex);
-		cns.WriteLine(FormatString(L"Begin2DRenderingPass() status: %0", status));
-		auto device_2d = dev->GetDeviceContext()->Get2DRenderingDevice();
-		auto bar_info = device_2d->CreateBarRenderingInfo(UI::Color(128, 255, 0, 64));
-		device_2d->RenderBar(bar_info, UI::Box(64, 10, 128, 80));
-		bar_info->Release();
-		status = dev->GetDeviceContext()->EndCurrentPass();
-		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
-
-		status = dev->GetDeviceContext()->BeginMemoryManagementPass();
-		cns.WriteLine(FormatString(L"BeginMemoryManagementPass() status: %0", status));
-		SafePointer<Codec::Frame> frame_get = new Codec::Frame(128, 30, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-		dev->GetDeviceContext()->QueryResourceData(Graphics::CreateDataDesc(frame_get->GetData(), frame_get->GetScanLineLength()),
-			tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(30, 40), Graphics::VolumeIndex(128, 30, 1));
-		SafePointer<Streaming::Stream> ss = new Streaming::FileStream(L"output.png", Streaming::AccessReadWrite, Streaming::CreateAlways);
-		Codec::EncodeFrame(ss, frame_get, L"PNG");
-		ss.SetReference(0);
-		dev->GetDeviceContext()->UpdateResourceData(tex, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(100, 70), Graphics::VolumeIndex(96, 30, 1),
-			Graphics::CreateInitDesc(frame_get->GetData(), frame_get->GetScanLineLength()));
-		status = dev->GetDeviceContext()->EndCurrentPass();
-		cns.WriteLine(FormatString(L"EndCurrentPass() status: %0", status));
-
-		auto shape = new RenderTargetShapeTemplate;
-		custom_tex_shape = shape;
-		custom_tex_shape->Position = UI::Template::Rectangle(UI::Template::Coordinate(0), UI::Template::Coordinate(0), UI::Template::Coordinate(0, 0.0, 1.0), UI::Template::Coordinate(0, 0.0, 1.0));
-		shape->texture = tex;
-	}
 
 	{
 		{
@@ -295,25 +292,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, resource_loader, 0);
 			}
 			auto station = main_window->FindChild(667)->As<Controls::VirtualStation>()->GetInnerStation();
-			/*station = new HandleWindowStation(::Window);
-			station->SetRenderingDevice(Device);*/
-			auto Main = station->GetDesktop();
-			//SendMessageW(::Window, WM_SIZE, 0, 0);
-			SafePointer<Template::FrameShape> back = new Template::FrameShape;
-			{
-				SafePointer<Template::TextureShape> Back = new Template::TextureShape;
-				Back->From = Rectangle::Entire();
-				Back->RenderMode = TextureShape::TextureRenderMode::Fit;
-				Back->Position = Rectangle::Entire();
-
-				Back->Texture = ::Template->Texture[L"Wallpaper"];
-
-				SafePointer<Template::BarShape> Fill = new Template::BarShape;
-				Fill->Gradient << GradientPoint(0xFF303050);
-				if (custom_tex_shape) back->Children.Append(custom_tex_shape); else back->Children.Append(Back);
-				back->Children.Append(Fill);
-			}
-			Main->As<TopLevelWindow>()->Background.SetRetain(back);
 
 			station->GetVisualStyles().MenuArrow.SetReference(::Template->Application[L"a"]);
 			SafePointer<Template::FrameShape> MenuBack = new Template::FrameShape;
@@ -978,116 +956,3 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     
     return 0;
 }
-
-//ATOM MyRegisterClass(HINSTANCE hInstance)
-//{
-//    WNDCLASSEXW wcex;
-//
-//    wcex.cbSize = sizeof(WNDCLASSEX);
-//
-//    wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-//    wcex.lpfnWndProc    = WndProc;
-//    wcex.cbClsExtra     = 0;
-//    wcex.cbWndExtra     = 0;
-//    wcex.hInstance      = hInstance;
-//    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TESTS));
-//    wcex.hCursor        = 0;
-//    wcex.hbrBackground  = 0;
-//    wcex.lpszMenuName   = 0;
-//    wcex.lpszClassName  = szWindowClass;
-//    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_TESTS));
-//
-//    return RegisterClassExW(&wcex);
-//}
-//
-//BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-//{
-//   hInst = hInstance; // Сохранить дескриптор экземпляра в глобальной переменной
-//
-//   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-//      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
-//
-//   ::Window = hWnd;
-//
-//   if (!hWnd)
-//   {
-//      return FALSE;
-//   }
-//
-//   ShowWindow(hWnd, nCmdShow);
-//   UpdateWindow(hWnd);
-//
-//   return TRUE;
-//}
-//
-//bool renderer_ok = true;
-//
-//LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-//{
-//    switch (message)
-//    {
-//    case WM_COMMAND:
-//		return DefWindowProc(hWnd, message, wParam, lParam);
-//        break;
-//	case WM_ACTIVATE:
-//		SetTimer(hWnd, 1, 25, 0);
-//		break;
-//	case WM_TIMER:
-//		InvalidateRect(hWnd, 0, FALSE);
-//		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
-//		return DefWindowProc(hWnd, message, wParam, lParam);
-//    case WM_PAINT:
-//        {
-//			if (!renderer_ok) {
-//				ValidateRect(hWnd, 0);
-//				return 0;
-//			}
-//			RECT Rect;
-//			GetClientRect(hWnd, &Rect);
-//            HDC hdc = GetDC(hWnd);
-//
-//			if (Target) {
-//				Device->SetTimerValue(GetTimerValue());
-//				if (station) station->Animate();
-//				Target->SetDpi(96.0f, 96.0f);
-//				Target->BeginDraw();
-//				if (station) station->Render();
-//				HRESULT result = Target->EndDraw();
-//				if (result != S_OK) {
-//					IO::Console cns;
-//					cns.WriteLine(FormatString(L"RENDERING FAILED (%0)", string(uint(result), HexadecimalBase, 8)));
-//					cns.WriteLine(L"STOPPING RENDERING.");
-//					ValidateRect(hWnd, 0);
-//					renderer_ok = false;
-//				}
-//				SwapChain->Present(1, 0);
-//			}
-//			ValidateRect(hWnd, 0);
-//            ReleaseDC(hWnd, hdc);
-//        }
-//        break;
-//	case WM_KEYDOWN:
-//		if (wParam == VK_RETURN) {
-//			BOOL fs;
-//			IDXGIOutput * out;
-//			SwapChain->GetFullscreenState(&fs, &out);
-//			SwapChain->SetFullscreenState(!fs, 0);
-//		}
-//		break;
-//	case WM_SIZE:
-//	{
-//		RECT Rect;
-//		GetClientRect(hWnd, &Rect);
-//		Direct3D::ResizeRenderBufferForD2DDevice(Target, SwapChain);
-//		if (station) station->ProcessWindowEvents(message, wParam, lParam);
-//	}
-//		break;
-//    case WM_DESTROY:
-//		NativeWindows::ExitMainLoop();
-//        break;
-//    default:
-//		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
-//        return DefWindowProc(hWnd, message, wParam, lParam);
-//    }
-//    return 0;
-//}

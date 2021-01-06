@@ -102,6 +102,7 @@ namespace Engine
 			SafePointer<IDXGIFactory2> Factory;
 			Adapter->GetParent(IID_PPV_ARGS(Factory.InnerRef()));
 			if (Factory->CreateSwapChainForHwnd(D3DDevice, Window, &SwapChainDescription, 0, 0, SwapChainResult.InnerRef()) != S_OK) return false;
+			Factory->MakeWindowAssociation(Window, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN);
 			DXGIDevice->SetMaximumFrameLatency(1);
 
 			D2D1_BITMAP_PROPERTIES1 props = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
@@ -120,7 +121,7 @@ namespace Engine
 		}
 		bool CreateSwapChainForWindow(HWND Window, IDXGISwapChain ** SwapChain)
 		{
-			if (!D3DDevice || !DXGIFactory) return false;
+			if (!D3DDevice) return false;
 			DXGI_SWAP_CHAIN_DESC SwapChainDescription;
 			ZeroMemory(&SwapChainDescription, sizeof(SwapChainDescription));
 			SwapChainDescription.BufferDesc.Width = 0;
@@ -135,7 +136,14 @@ namespace Engine
 			SwapChainDescription.BufferCount = 1;
 			SwapChainDescription.OutputWindow = Window;
 			SwapChainDescription.Windowed = TRUE;
-			if (DXGIFactory->CreateSwapChain(D3DDevice, &SwapChainDescription, SwapChain) != S_OK) return false;
+			SafePointer<IDXGIDevice> dxgi_device;
+			SafePointer<IDXGIAdapter> dxgi_adapter;
+			SafePointer<IDXGIFactory> factory;
+			if (D3DDevice->QueryInterface(IID_PPV_ARGS(dxgi_device.InnerRef())) != S_OK) return false;
+			if (dxgi_device->GetAdapter(dxgi_adapter.InnerRef()) != S_OK) return false;
+			if (dxgi_adapter->GetParent(IID_PPV_ARGS(factory.InnerRef())) != S_OK) return false;
+			if (factory->CreateSwapChain(D3DDevice, &SwapChainDescription, SwapChain) != S_OK) return false;
+			factory->MakeWindowAssociation(Window, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN);
 			return true;
 		}
 		bool CreateSwapChainDevice(IDXGISwapChain * SwapChain, ID2D1RenderTarget ** Target)
@@ -435,8 +443,16 @@ namespace Engine
 				auto rsrc = QueryInnerObject(rt);
 				ID2D1RenderTarget * target = 0;
 				if (!device_2d) {
-					if (D2DDevice) {
-						if (D2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &device_2d_device_context) != S_OK) return false;
+					if (!Direct2D::D2DFactory) Direct2D::InitializeFactory();
+					ID2D1Device * d2d1_device = 0;
+					IDXGIDevice1 * dxgi_device;
+					if (Direct2D::D2DFactory1 && device->QueryInterface(IID_PPV_ARGS(&dxgi_device)) == S_OK) {
+						if (Direct2D::D2DFactory1->CreateDevice(dxgi_device, &d2d1_device) != S_OK) d2d1_device = 0;
+						dxgi_device->Release();
+					}
+					if (d2d1_device) {
+						if (d2d1_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &device_2d_device_context) != S_OK) { d2d1_device->Release(); return false; }
+						d2d1_device->Release();
 						try { device_2d = new Direct2D::D2DRenderDevice(device_2d_device_context); }
 						catch (...) { device_2d_device_context->Release(); device_2d_device_context = 0; return false; }
 						device_2d->SetParentWrappedDevice(wrapper);
@@ -457,6 +473,7 @@ namespace Engine
 						bitmap->Release();
 						target = device_2d_device_context;
 					} else {
+						if (!Direct2D::D2DFactory) return false;
 						IDXGISurface * surface;
 						if (rsrc->QueryInterface(IID_PPV_ARGS(&surface)) != S_OK) return false;
 						D2D1_RENDER_TARGET_PROPERTIES props;
@@ -582,8 +599,8 @@ namespace Engine
 				desc.Usage = D3D11_USAGE_IMMUTABLE;
 				desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = 0;
-				desc.StructureByteStride = 0;
+				desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.StructureByteStride = length;
 				D3D11_SUBRESOURCE_DATA init;
 				init.pSysMem = data;
 				init.SysMemPitch = 0;
@@ -622,8 +639,8 @@ namespace Engine
 				desc.Usage = D3D11_USAGE_IMMUTABLE;
 				desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = 0;
-				desc.StructureByteStride = 0;
+				desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.StructureByteStride = length;
 				D3D11_SUBRESOURCE_DATA init;
 				init.pSysMem = data;
 				init.SysMemPitch = 0;
@@ -1133,8 +1150,8 @@ namespace Engine
 				bd.Usage = D3D11_USAGE_DEFAULT;
 				bd.BindFlags = 0;
 				bd.CPUAccessFlags = 0;
-				bd.MiscFlags = 0;
-				bd.StructureByteStride = desc.Stride;
+				bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				bd.StructureByteStride = desc.Stride ? desc.Stride : desc.Length;
 				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
 					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
 					result->usage_flags |= ResourceUsageShaderRead;
@@ -1144,7 +1161,6 @@ namespace Engine
 					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
 					result->usage_flags |= ResourceUsageIndexBuffer;
 				}
-				if (desc.Stride) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 				if (device->CreateBuffer(&bd, 0, &result->buffer) != S_OK) return 0;
 				bool create_staging = false;
 				if (desc.Usage & ResourceUsageCPURead) {
@@ -1184,8 +1200,8 @@ namespace Engine
 				else if (desc.MemoryPool == ResourceMemoryPool::Immutable) bd.Usage = D3D11_USAGE_IMMUTABLE;
 				bd.BindFlags = 0;
 				bd.CPUAccessFlags = 0;
-				bd.MiscFlags = 0;
-				bd.StructureByteStride = desc.Stride;
+				bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				bd.StructureByteStride = desc.Stride ? desc.Stride : desc.Length;
 				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
 					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
 					result->usage_flags |= ResourceUsageShaderRead;
@@ -1195,7 +1211,6 @@ namespace Engine
 					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
 					result->usage_flags |= ResourceUsageIndexBuffer;
 				}
-				if (desc.Stride) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 				D3D11_SUBRESOURCE_DATA sr;
 				sr.pSysMem = init.Data;
 				sr.SysMemPitch = sr.SysMemSlicePitch = 0;
@@ -1782,7 +1797,17 @@ namespace Engine
 				swcd.Windowed = TRUE;
 				swcd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 				swcd.Flags = 0;
-				if (DXGIFactory->CreateSwapChain(device, &swcd, &result->swapchain) != S_OK) return 0;
+				IDXGIDevice * dxgi_device;
+				IDXGIAdapter * dxgi_adapter;
+				IDXGIFactory * dxgi_factory;
+				if (device->QueryInterface(IID_PPV_ARGS(&dxgi_device)) != S_OK) return false;
+				if (dxgi_device->GetAdapter(&dxgi_adapter) != S_OK) { dxgi_device->Release(); return false; }
+				dxgi_device->Release();
+				if (dxgi_adapter->GetParent(IID_PPV_ARGS(&dxgi_factory)) != S_OK) { dxgi_adapter->Release(); return false; }
+				dxgi_adapter->Release();
+				if (dxgi_factory->CreateSwapChain(device, &swcd, &result->swapchain) != S_OK) { dxgi_factory->Release(); return 0; }
+				if (dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN) != S_OK) { dxgi_factory->Release(); return 0; }
+				dxgi_factory->Release();
 				result->device = device;
 				result->device->AddRef();
 				result->format = desc.Format;

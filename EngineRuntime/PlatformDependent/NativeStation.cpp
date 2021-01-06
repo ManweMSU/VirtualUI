@@ -262,7 +262,7 @@ namespace Engine
 				int ur = int(InternalRate);
 				CurrentRate = max(max(fr, ar), ur);
 				if (CurrentRate == 0) KillTimer(GetHandle(), 1);
-				else if (CurrentRate == 1) ::SetTimer(GetHandle(), 1, GetRenderingDevice()->GetCaretBlinkHalfTime(), 0);
+				else if (CurrentRate == 1) ::SetTimer(GetHandle(), 1, GetCaretBlinkTime(), 0);
 				else if (CurrentRate == 2) { KillTimer(GetHandle(), 1); InvalidateRect(GetHandle(), 0, FALSE); }
 			}
 			virtual void FocusWindowChanged(void) override { InvalidateRect(GetHandle(), 0, 0); AnimationStateChanged(); }

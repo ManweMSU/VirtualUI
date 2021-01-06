@@ -8,22 +8,32 @@ namespace Engine
 		{
 			VirtualStation::VirtualWindowStation::VirtualWindowStation(VirtualStation * host_window) : host(host_window) { host_station = host->GetStation(); }
 			VirtualStation::VirtualWindowStation::~VirtualWindowStation(void) {}
-			void VirtualStation::VirtualWindowStation::SetFocus(Window * window) { host_station->SetFocus(host); if (host_station->GetFocus() == host) WindowStation::SetFocus(window); }
+			void VirtualStation::VirtualWindowStation::SetFocus(Window * window)
+			{
+				host_station->SetFocus(host);
+				if (host_station->GetFocus() == host) WindowStation::SetFocus(window);
+			}
 			Window * VirtualStation::VirtualWindowStation::GetFocus(void) { if (host_station->GetFocus() == host) return WindowStation::GetFocus(); else return 0; }
 			void VirtualStation::VirtualWindowStation::SetCapture(Window * window)
 			{
-				if (window) host_station->SetCapture(host); else if (!WindowStation::GetExclusiveWindow()) host_station->ReleaseCapture();
+				if (window) {
+					if (host_station->GetCapture() != host) host_station->SetCapture(host);
+				} else if (!WindowStation::GetExclusiveWindow() && host_station->GetCapture()) host_station->ReleaseCapture();
 				WindowStation::SetCapture(window);
 			}
 			Window * VirtualStation::VirtualWindowStation::GetCapture(void) { if (host_station->GetCapture() == host) return WindowStation::GetCapture(); else return 0; }
-			void VirtualStation::VirtualWindowStation::ReleaseCapture(void) { if (!WindowStation::GetExclusiveWindow()) host_station->ReleaseCapture(); WindowStation::SetCapture(0); }
+			void VirtualStation::VirtualWindowStation::ReleaseCapture(void)
+			{
+				if (!WindowStation::GetExclusiveWindow() && host_station->GetCapture()) host_station->ReleaseCapture();
+				WindowStation::SetCapture(0);
+			}
 			void VirtualStation::VirtualWindowStation::SetExclusiveWindow(Window * window)
 			{
 				if (window) {
-					host_station->SetCapture(host);
+					if (host_station->GetCapture() != host) host_station->SetCapture(host);
 					WindowStation::SetExclusiveWindow(window);
 				} else {
-					if (!WindowStation::GetCapture()) host_station->ReleaseCapture();
+					if (!WindowStation::GetCapture() && host_station->GetCapture()) host_station->ReleaseCapture();
 					WindowStation::SetExclusiveWindow(0);
 				}
 			}
@@ -65,7 +75,10 @@ namespace Engine
 
 			VirtualStation::VirtualStation(Window * Parent, WindowStation * Station) : _width(1), _height(1), _station(0),
 				_enabled(true), _visible(true), _autosize(false), _render(false), _id(0), _rect(Rectangle::Invalid()), Window(Parent, Station)
-			{ _station = new VirtualWindowStation(this); }
+			{
+				_station = new VirtualWindowStation(this);
+				SetDesktopDimensions(Point(_width, _height));
+			}
 			VirtualStation::VirtualStation(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : _station(0), Window(Parent, Station)
 			{
 				if (Template->Properties->GetTemplateClass() != L"VirtualStation") throw InvalidArgumentException();
@@ -79,6 +92,7 @@ namespace Engine
 				_enabled = !init.Disabled;
 				_id = init.ID;
 				_station = new VirtualWindowStation(this);
+				SetDesktopDimensions(Point(_width, _height));
 			}
 			VirtualStation::~VirtualStation(void) { if (_station) _station->DestroyStation(); }
 			void VirtualStation::Render(const Box & at)
