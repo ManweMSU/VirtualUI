@@ -1150,7 +1150,7 @@ namespace Engine
 				bd.Usage = D3D11_USAGE_DEFAULT;
 				bd.BindFlags = 0;
 				bd.CPUAccessFlags = 0;
-				bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				bd.MiscFlags = 0;
 				bd.StructureByteStride = desc.Stride ? desc.Stride : desc.Length;
 				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
 					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
@@ -1161,6 +1161,7 @@ namespace Engine
 					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
 					result->usage_flags |= ResourceUsageIndexBuffer;
 				}
+				if (bd.BindFlags & D3D11_BIND_SHADER_RESOURCE) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 				if (device->CreateBuffer(&bd, 0, &result->buffer) != S_OK) return 0;
 				bool create_staging = false;
 				if (desc.Usage & ResourceUsageCPURead) {
@@ -1200,7 +1201,7 @@ namespace Engine
 				else if (desc.MemoryPool == ResourceMemoryPool::Immutable) bd.Usage = D3D11_USAGE_IMMUTABLE;
 				bd.BindFlags = 0;
 				bd.CPUAccessFlags = 0;
-				bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+				bd.MiscFlags = 0;
 				bd.StructureByteStride = desc.Stride ? desc.Stride : desc.Length;
 				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
 					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
@@ -1214,6 +1215,7 @@ namespace Engine
 				D3D11_SUBRESOURCE_DATA sr;
 				sr.pSysMem = init.Data;
 				sr.SysMemPitch = sr.SysMemSlicePitch = 0;
+				if (bd.BindFlags & D3D11_BIND_SHADER_RESOURCE) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 				if (device->CreateBuffer(&bd, &sr, &result->buffer) != S_OK) return 0;
 				bool create_staging = false;
 				if (desc.Usage & ResourceUsageCPURead) {

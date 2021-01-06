@@ -842,8 +842,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			};
 			auto Callback3 = new _cb3;
 
-			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"BackgroundColor").Set<UI::Color>(0);
-			::Template->Dialog[L"Test3"]->Properties->GetProperty(L"DefaultBackground").Set<bool>(false);
+			auto & pp = *static_cast<UI::Template::Controls::DialogFrame *>(::Template->Dialog[L"Test3"]->Properties);
+			pp.Background.SetReference(0);
+			pp.BackgroundColor = 0;
+			pp.DefaultBackground = true;
 
 			auto templ = ::Template->Dialog[L"Test4"];
 			{
