@@ -270,10 +270,7 @@ namespace Engine
 		}
 		void WindowStation::SetBox(const Box & box) { Position = box; if (TopLevelWindow) { TopLevelWindow->WindowPosition = box; TopLevelWindow->ArrangeChildren(); } }
 		Box WindowStation::GetBox(void) { return Position; }
-		void WindowStation::Render(void)
-		{
-			if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position);
-		}
+		void WindowStation::Render(const Point & origin) { if (TopLevelWindow.Inner()) TopLevelWindow->Render(Box(Position.Left + origin.x, Position.Top + origin.y, Position.Right + origin.x, Position.Bottom + origin.y)); }
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
 		Window * WindowStation::GetDesktop(void) { return TopLevelWindow; }
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner() && NativeHitTest(at)) return TopLevelWindow->HitTest(at); else return 0; }

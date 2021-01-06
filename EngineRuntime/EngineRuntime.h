@@ -57,3 +57,4 @@
 #include "UserInterface/ShapeBase.h"
 #include "UserInterface/StaticControls.h"
 #include "UserInterface/Templates.h"
+#include "UserInterface/VirtualStation.h"

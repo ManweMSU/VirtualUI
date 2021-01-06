@@ -8,6 +8,7 @@
 #include "ListControls.h"
 #include "CombinedControls.h"
 #include "RichEditControl.h"
+#include "VirtualStation.h"
 
 #include "../PlatformDependent/NativeStation.h"
 #include "../PlatformDependent/KeyCodes.h"
@@ -438,6 +439,8 @@ namespace Engine
 					// Combined controls
 					else if (child->Properties->GetTemplateClass() == L"ComboBox") return on->GetStation()->CreateWindow<ComboBox>(on, child);
 					else if (child->Properties->GetTemplateClass() == L"TextComboBox") return on->GetStation()->CreateWindow<TextComboBox>(on, child);
+					// Virtual window station
+					else if (child->Properties->GetTemplateClass() == L"VirtualStation") return on->GetStation()->CreateWindow<VirtualStation>(on, child);
 					// Technical class
 					else if (child->Properties->GetTemplateClass() == L"FrameExtendedData") return 0;
 					// That's all

@@ -6,8 +6,6 @@
 #include <UserInterface/Templates.h>
 #include <UserInterface/ControlBase.h>
 #include <Streaming.h>
-#include <PlatformDependent/Direct2D.h>
-#include <PlatformDependent/Direct3D.h>
 #include <UserInterface/ControlClasses.h>
 #include <UserInterface/BinaryLoader.h>
 #include <UserInterface/StaticControls.h>
@@ -19,6 +17,7 @@
 #include <UserInterface/ListControls.h>
 #include <UserInterface/CombinedControls.h>
 #include <UserInterface/RichEditControl.h>
+#include <UserInterface/VirtualStation.h>
 #include <PlatformDependent/KeyCodes.h>
 #include <PlatformDependent/NativeStation.h>
 #include <Storage/Archive.h>
@@ -29,6 +28,8 @@
 #include <PlatformDependent/SystemColors.h>
 #include <PlatformDependent/Console.h>
 #include <Graphics/GraphicsHelper.h>
+#include <PlatformDependent/Direct2D.h>
+#include <PlatformDependent/Direct3D.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -45,31 +46,52 @@
 #undef CreateSemaphore
 #undef CreateSymbolicLink
 
+
 using namespace Engine;
 using namespace Engine::UI;
 using namespace Engine::IO::ConsoleControl;
 
-#define MAX_LOADSTRING 100
+Engine::UI::Window * main_window = 0;
 
-// Глобальные переменные:
-HINSTANCE hInst;                                // текущий экземпляр
-WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
-WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
-HWND Window;
+class main_window_callback_class : public Engine::UI::Windows::IWindowEventCallback
+{
+public:
+	virtual void OnInitialized(Engine::UI::Window * window) override
+	{
+		// TODO: IMPLEMENT
+	}
+	virtual void OnControlEvent(Engine::UI::Window * window, int ID, Engine::UI::Window::Event event, Engine::UI::Window * sender) override
+	{
+		// TODO: IMPLEMENT
+	}
+	virtual void OnFrameEvent(Engine::UI::Window * window, Engine::UI::Windows::FrameEvent event) override
+	{
+		// TODO: IMPLEMENT
+	}
+};
+main_window_callback_class main_window_callback;
 
-// Отправить объявления функций, включенных в этот модуль кода:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+//#define MAX_LOADSTRING 100
+//
+//// Глобальные переменные:
+//HINSTANCE hInst;                                // текущий экземпляр
+//WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
+//WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
+//HWND Window;
+//
+//// Отправить объявления функций, включенных в этот модуль кода:
+//ATOM                MyRegisterClass(HINSTANCE hInstance);
+//BOOL                InitInstance(HINSTANCE, int);
+//LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 
-Engine::Direct2D::D2DRenderDevice * Device;
-Engine::UI::FrameShape * Shape;
-Engine::UI::ITexture * Texture;
+//Engine::Direct2D::D2DRenderDevice * Device;
+//Engine::UI::FrameShape * Shape;
+//Engine::UI::ITexture * Texture;
 
-Engine::UI::HandleWindowStation * station = 0;
-
-ID2D1DeviceContext * Target = 0;
-IDXGISwapChain1 * SwapChain = 0;
+//Engine::UI::HandleWindowStation * station = 0;
+//
+//ID2D1DeviceContext * Target = 0;
+//IDXGISwapChain1 * SwapChain = 0;
 
 SafePointer<Engine::UI::InterfaceTemplate> Template;
 
@@ -139,29 +161,48 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	UI::Windows::InitializeCodecCollection();
-	
-	UI::Zoom = 2.0;
 
 	SafePointer<IResourceLoader> resource_loader = Engine::NativeWindows::CreateCompatibleResourceLoader();
+	if (!main_window) {
+		UI::Zoom = UI::Windows::GetScreenScale();
+		auto desktop = Engine::UI::Windows::GetScreenDimensions();
+		auto station_desc = new UI::Template::Controls::VirtualStation;
+		station_desc->ControlPosition = UI::Rectangle::Entire();
+		station_desc->Disabled = false;
+		station_desc->Invisible = false;
+		station_desc->Autosize = true;// false;
+		station_desc->Render = true;// false;
+		station_desc->Width = 800;
+		station_desc->Height = 600;
+		station_desc->ID = 667;
+		SafePointer<Engine::UI::Template::ControlTemplate> mwt =
+			Engine::UI::Controls::CreateOverlappedWindowTemplate(L"Test Graphics Window", Engine::UI::Rectangle(0, 0, 0.7 * desktop.Right, 0.7 * desktop.Bottom),
+				Engine::UI::Controls::OverlappedWindowCaptioned | Engine::UI::Controls::OverlappedWindowCloseButton |
+				Engine::UI::Controls::OverlappedWindowSizeble | Engine::UI::Controls::OverlappedWindowMinimizeButton, 400, 200);
+		SafePointer<Engine::UI::Template::ControlTemplate> vst = new Engine::UI::Template::ControlTemplate(station_desc);
+		mwt->Children.Append(vst);
+		main_window = Engine::UI::Windows::CreateFramedDialog(mwt, &main_window_callback, Engine::UI::Rectangle::Entire());// , 0, true);
+		main_window->Show(true);
+	}
 
     // TODO: разместите код здесь.
 
     // Инициализация глобальных строк
-	wcscpy_s(szTitle, L"Tests");
-	wcscpy_s(szWindowClass, L"TESTS_WND_CLASS");
-    MyRegisterClass(hInstance);
+	//wcscpy_s(szTitle, L"Tests");
+	//wcscpy_s(szWindowClass, L"TESTS_WND_CLASS");
+ //   MyRegisterClass(hInstance);
 
-    // Выполнить инициализацию приложения:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+ //   // Выполнить инициализацию приложения:
+ //   if (!InitInstance (hInstance, nCmdShow))
+ //   {
+ //       return FALSE;
+ //   }
 
 	// Starting D3D
-	Direct3D::CreateDevices();
+	/*Direct3D::CreateDevices();
 	Direct3D::CreateD2DDeviceContextForWindow(::Window, &Target, &SwapChain);
 	Device = new Engine::Direct2D::D2DRenderDevice(Target);
-	Device->SetParentWrappedDevice(Direct3D::WrappedDevice);
+	Device->SetParentWrappedDevice(Direct3D::WrappedDevice);*/
 	Graphics::ITexture * tex = 0;
 
 	auto fact = Graphics::CreateDeviceFactory();
@@ -253,10 +294,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				SafePointer<Streaming::Stream> Source = Assembly::QueryResource(L"GUI");
 				Engine::UI::Loader::LoadUserInterfaceFromBinary(*::Template, Source, resource_loader, 0);
 			}
-			station = new HandleWindowStation(::Window);
-			station->SetRenderingDevice(Device);
+			auto station = main_window->FindChild(667)->As<Controls::VirtualStation>()->GetInnerStation();
+			/*station = new HandleWindowStation(::Window);
+			station->SetRenderingDevice(Device);*/
 			auto Main = station->GetDesktop();
-			SendMessageW(::Window, WM_SIZE, 0, 0);
+			//SendMessageW(::Window, WM_SIZE, 0, 0);
 			SafePointer<Template::FrameShape> back = new Template::FrameShape;
 			{
 				SafePointer<Template::TextureShape> Back = new Template::TextureShape;
@@ -382,7 +424,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					if (!window) return;
 					if (event == Window::Event::Command || event == Window::Event::MenuCommand) {
 						if (ID == 876) {
-							menu->RunPopup(sender, station->GetCursorPos());
+							menu->RunPopup(sender, window->GetStation()->GetCursorPos());
 						} else if (ID == 2) {
 							auto bar = static_cast<Controls::ProgressBar *>(window->FindChild(888));
 							bar->SetValue(min(max(bar->GetValue() + 0.05, 0.0), 1.0));
@@ -937,115 +979,115 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     return 0;
 }
 
-ATOM MyRegisterClass(HINSTANCE hInstance)
-{
-    WNDCLASSEXW wcex;
-
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
-    wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TESTS));
-    wcex.hCursor        = 0;
-    wcex.hbrBackground  = 0;
-    wcex.lpszMenuName   = 0;
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_TESTS));
-
-    return RegisterClassExW(&wcex);
-}
-
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-   hInst = hInstance; // Сохранить дескриптор экземпляра в глобальной переменной
-
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
-
-   ::Window = hWnd;
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
-}
-
-bool renderer_ok = true;
-
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_COMMAND:
-		return DefWindowProc(hWnd, message, wParam, lParam);
-        break;
-	case WM_ACTIVATE:
-		SetTimer(hWnd, 1, 25, 0);
-		break;
-	case WM_TIMER:
-		InvalidateRect(hWnd, 0, FALSE);
-		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
-		return DefWindowProc(hWnd, message, wParam, lParam);
-    case WM_PAINT:
-        {
-			if (!renderer_ok) {
-				ValidateRect(hWnd, 0);
-				return 0;
-			}
-			RECT Rect;
-			GetClientRect(hWnd, &Rect);
-            HDC hdc = GetDC(hWnd);
-
-			if (Target) {
-				Device->SetTimerValue(GetTimerValue());
-				if (station) station->Animate();
-				Target->SetDpi(96.0f, 96.0f);
-				Target->BeginDraw();
-				if (station) station->Render();
-				HRESULT result = Target->EndDraw();
-				if (result != S_OK) {
-					IO::Console cns;
-					cns.WriteLine(FormatString(L"RENDERING FAILED (%0)", string(uint(result), HexadecimalBase, 8)));
-					cns.WriteLine(L"STOPPING RENDERING.");
-					ValidateRect(hWnd, 0);
-					renderer_ok = false;
-				}
-				SwapChain->Present(1, 0);
-			}
-			ValidateRect(hWnd, 0);
-            ReleaseDC(hWnd, hdc);
-        }
-        break;
-	case WM_KEYDOWN:
-		if (wParam == VK_RETURN) {
-			BOOL fs;
-			IDXGIOutput * out;
-			SwapChain->GetFullscreenState(&fs, &out);
-			SwapChain->SetFullscreenState(!fs, 0);
-		}
-		break;
-	case WM_SIZE:
-	{
-		RECT Rect;
-		GetClientRect(hWnd, &Rect);
-		Direct3D::ResizeRenderBufferForD2DDevice(Target, SwapChain);
-		if (station) station->ProcessWindowEvents(message, wParam, lParam);
-	}
-		break;
-    case WM_DESTROY:
-		NativeWindows::ExitMainLoop();
-        break;
-    default:
-		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
+//ATOM MyRegisterClass(HINSTANCE hInstance)
+//{
+//    WNDCLASSEXW wcex;
+//
+//    wcex.cbSize = sizeof(WNDCLASSEX);
+//
+//    wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+//    wcex.lpfnWndProc    = WndProc;
+//    wcex.cbClsExtra     = 0;
+//    wcex.cbWndExtra     = 0;
+//    wcex.hInstance      = hInstance;
+//    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TESTS));
+//    wcex.hCursor        = 0;
+//    wcex.hbrBackground  = 0;
+//    wcex.lpszMenuName   = 0;
+//    wcex.lpszClassName  = szWindowClass;
+//    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_TESTS));
+//
+//    return RegisterClassExW(&wcex);
+//}
+//
+//BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+//{
+//   hInst = hInstance; // Сохранить дескриптор экземпляра в глобальной переменной
+//
+//   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+//      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+//
+//   ::Window = hWnd;
+//
+//   if (!hWnd)
+//   {
+//      return FALSE;
+//   }
+//
+//   ShowWindow(hWnd, nCmdShow);
+//   UpdateWindow(hWnd);
+//
+//   return TRUE;
+//}
+//
+//bool renderer_ok = true;
+//
+//LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+//{
+//    switch (message)
+//    {
+//    case WM_COMMAND:
+//		return DefWindowProc(hWnd, message, wParam, lParam);
+//        break;
+//	case WM_ACTIVATE:
+//		SetTimer(hWnd, 1, 25, 0);
+//		break;
+//	case WM_TIMER:
+//		InvalidateRect(hWnd, 0, FALSE);
+//		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
+//		return DefWindowProc(hWnd, message, wParam, lParam);
+//    case WM_PAINT:
+//        {
+//			if (!renderer_ok) {
+//				ValidateRect(hWnd, 0);
+//				return 0;
+//			}
+//			RECT Rect;
+//			GetClientRect(hWnd, &Rect);
+//            HDC hdc = GetDC(hWnd);
+//
+//			if (Target) {
+//				Device->SetTimerValue(GetTimerValue());
+//				if (station) station->Animate();
+//				Target->SetDpi(96.0f, 96.0f);
+//				Target->BeginDraw();
+//				if (station) station->Render();
+//				HRESULT result = Target->EndDraw();
+//				if (result != S_OK) {
+//					IO::Console cns;
+//					cns.WriteLine(FormatString(L"RENDERING FAILED (%0)", string(uint(result), HexadecimalBase, 8)));
+//					cns.WriteLine(L"STOPPING RENDERING.");
+//					ValidateRect(hWnd, 0);
+//					renderer_ok = false;
+//				}
+//				SwapChain->Present(1, 0);
+//			}
+//			ValidateRect(hWnd, 0);
+//            ReleaseDC(hWnd, hdc);
+//        }
+//        break;
+//	case WM_KEYDOWN:
+//		if (wParam == VK_RETURN) {
+//			BOOL fs;
+//			IDXGIOutput * out;
+//			SwapChain->GetFullscreenState(&fs, &out);
+//			SwapChain->SetFullscreenState(!fs, 0);
+//		}
+//		break;
+//	case WM_SIZE:
+//	{
+//		RECT Rect;
+//		GetClientRect(hWnd, &Rect);
+//		Direct3D::ResizeRenderBufferForD2DDevice(Target, SwapChain);
+//		if (station) station->ProcessWindowEvents(message, wParam, lParam);
+//	}
+//		break;
+//    case WM_DESTROY:
+//		NativeWindows::ExitMainLoop();
+//        break;
+//    default:
+//		if (station) return station->ProcessWindowEvents(message, wParam, lParam);
+//        return DefWindowProc(hWnd, message, wParam, lParam);
+//    }
+//    return 0;
+//}

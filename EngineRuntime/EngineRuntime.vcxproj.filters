@@ -280,6 +280,9 @@
     <ClInclude Include="Graphics\GraphicsHelper.h">
       <Filter>Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="UserInterface\VirtualStation.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -509,6 +512,9 @@
     </ClCompile>
     <ClCompile Include="Graphics\GraphicsHelper.cpp">
       <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\VirtualStation.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

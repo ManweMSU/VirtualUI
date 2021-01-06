@@ -99,6 +99,7 @@
     <ClInclude Include="UserInterface\ShapeBase.h" />
     <ClInclude Include="UserInterface\StaticControls.h" />
     <ClInclude Include="UserInterface\Templates.h" />
+    <ClInclude Include="UserInterface\VirtualStation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp" />
@@ -177,6 +178,7 @@
     <ClCompile Include="UserInterface\ShapeBase.cpp" />
     <ClCompile Include="UserInterface\StaticControls.cpp" />
     <ClCompile Include="UserInterface\Templates.cpp" />
+    <ClCompile Include="UserInterface\VirtualStation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineRuntime.natvis" />

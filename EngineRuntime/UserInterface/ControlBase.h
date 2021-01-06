@@ -218,7 +218,7 @@ namespace Engine
 			void DestroyStation(void);
 			void SetBox(const Box & box);
 			Box GetBox(void);
-			void Render(void);
+			void Render(const Point & origin = Point(0, 0));
 			void ResetCache(void);
 			Window * GetDesktop(void);
 			Window * HitTest(Point at);
