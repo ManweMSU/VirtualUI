@@ -422,6 +422,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto Callback = new _cb;
 			class _cb2 : public Windows::IWindowEventCallback
 			{
+				SafePointer<Graphics::IWindowLayer> layer;
 			public:
 				virtual void OnInitialized(UI::Window * window) override
 				{
@@ -474,6 +475,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 							sender->As<Controls::TreeView>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
 						}
 					} else if (ID == 1) {
+						if (layer) layer->SwitchToWindow();
+						if (!layer) {
+							auto box = window->GetStation()->GetBox();
+							auto dev = Graphics::GetCommonDevice();
+							layer = dev->CreateWindowLayer(window, Graphics::CreateWindowLayerDesc(box.Right - box.Left, box.Bottom - box.Top));
+						}
 						auto group1 = window->FindChild(101);
 						auto group2 = window->FindChild(102);
 						if (group1->IsVisible()) {
@@ -492,6 +499,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (ID == 202) {
 						window->FindChild(6602)->Show(false);
 					} else if (ID == 2) {
+						if (layer) layer->SwitchToFullscreen();
 						auto group1 = window->FindChild(101);
 						auto group2 = window->FindChild(102);
 						if (group1->IsVisible()) {
@@ -516,6 +524,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (event == Windows::FrameEvent::Move) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Move Window");
+						if (layer) {
+							auto box = window->GetStation()->GetBox();
+							layer->ResizeSurface(box.Right - box.Left, box.Bottom - box.Top);
+						}
 					} else if (event == Windows::FrameEvent::Minimize) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Minimize Window");
@@ -531,12 +543,34 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (event == Windows::FrameEvent::Deactivate) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Deactivate Window");
+						if (layer) layer->SwitchToWindow();
 					} else if (event == Windows::FrameEvent::SessionEnding) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Session is ending");
 					} else if (event == Windows::FrameEvent::SessionEnd) {
 						console.SetTextColor(14);
 						console.WriteLine(L"End session");
+					} else if (event == Windows::FrameEvent::Draw) {
+						console.SetTextColor(14);
+						console.WriteLine(L"Draw");
+						if (layer) {
+							auto dc = Graphics::GetCommonDevice()->GetDeviceContext();
+							auto rt = layer->QuerySurface();
+							if (rt) {
+								dc->Begin2DRenderingPass(rt);
+								auto dev = dc->Get2DRenderingDevice();
+								if (!window->GetStation()->GetRenderingDevice()) {
+									window->GetStation()->SetRenderingDevice(dev);
+									window->GetStation()->ResetCache();
+								}
+								dev->SetTimerValue(GetTimerValue());
+								window->GetStation()->Animate();
+								window->GetStation()->Render();
+								dc->EndCurrentPass();
+								rt->Release();
+							}
+							layer->Present();
+						}
 					}
 					if (NativeWindows::IsWindowActive(window->GetStation())) {
 						console.SetTextColor(10);

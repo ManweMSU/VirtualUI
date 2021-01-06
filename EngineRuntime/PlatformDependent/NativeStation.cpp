@@ -124,6 +124,7 @@ namespace Engine
 			NativeStation * _parent = 0;
 			int last_x = 0x80000000, last_y = 0x80000000;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
+			Windows::IWindowEventCallback * main_callback = 0;
 
 			void _release_devices(void)
 			{
@@ -224,7 +225,11 @@ namespace Engine
 				}
 			};
 		
-			NativeStation(HWND Handle, DesktopWindowFactory * Factory) : HandleWindowStation(Handle, Factory), _slaves(0x10) { _init_device_by_feature_set(); }
+			NativeStation(HWND Handle, DesktopWindowFactory * Factory, bool use_custom_renderer = false) : HandleWindowStation(Handle, Factory), _slaves(0x10)
+			{
+				if (use_custom_renderer) UseCustomRendering(true);
+				else _init_device_by_feature_set();
+			}
 			virtual ~NativeStation(void) override {}
 			virtual bool IsNativeStationWrapper(void) const override { return true; }
 			virtual void OnDesktopDestroy(void) override
@@ -275,9 +280,24 @@ namespace Engine
 			}
 			virtual void RequireRedraw(void) override { InvalidateRect(GetHandle(), 0, 0); }
 
+			virtual void UseCustomRendering(bool use) override
+			{
+				if (use) {
+					SetRenderingDevice(0);
+					_release_devices();
+				} else _init_device_by_feature_set();
+				_use_custom_device = use;
+			}
 			bool RenderContent(void)
 			{
-				if (DeviceContext) {
+				if (_use_custom_device) {
+					if (!main_callback) {
+						main_callback = GetDesktop()->As<Controls::OverlappedWindow>()->GetCallback();
+						if (!main_callback) return true;
+					}
+					main_callback->OnFrameEvent(GetDesktop(), Windows::FrameEvent::Draw);
+					return true;
+				} else if (DeviceContext) {
 					bool result = _render(DeviceContext);
 					if (result) SwapChain->Present(1, 0);
 					return result;

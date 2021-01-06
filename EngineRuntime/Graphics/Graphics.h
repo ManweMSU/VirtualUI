@@ -5,7 +5,7 @@
 
 namespace Engine
 {
-	namespace UI { class IRenderingDevice; }
+	namespace UI { class IRenderingDevice; class Window; }
 	namespace Graphics
 	{
 		class IDevice;
@@ -17,6 +17,7 @@ namespace Engine
 		class IDeviceResource;
 		class IBuffer;
 		class ITexture;
+		class IWindowLayer;
 		class IDeviceContext;
 		class IDeviceFactory;
 
@@ -94,7 +95,11 @@ namespace Engine
 			ResourceUsageRenderTarget = 0x00000008,
 			ResourceUsageDepthStencil = 0x00000010,
 			ResourceUsageCPURead = 0x00000020,
-			ResourceUsageCPUWrite = 0x00000040
+			ResourceUsageCPUWrite = 0x00000040,
+			ResourceUsageShaderAll = ResourceUsageShaderRead | ResourceUsageShaderWrite,
+			ResourceUsageCPUAll = ResourceUsageCPURead | ResourceUsageCPUWrite,
+			ResourceUsageBufferMask = ResourceUsageShaderAll | ResourceUsageIndexBuffer | ResourceUsageCPUAll,
+			ResourceUsageTextureMask = ResourceUsageShaderAll | ResourceUsageRenderTarget | ResourceUsageDepthStencil | ResourceUsageCPUAll
 		};
 
 		struct SamplerDesc
@@ -176,6 +181,13 @@ namespace Engine
 			uint32 Usage;
 			ResourceMemoryPool MemoryPool;
 		};
+		struct WindowLayerDesc
+		{
+			PixelFormat Format;
+			uint32 Width;
+			uint32 Height;
+			uint32 Usage;
+		};
 		struct ResourceInitDesc
 		{
 			const void * Data;
@@ -237,6 +249,7 @@ namespace Engine
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept = 0;
 			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept = 0;
 			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept = 0;
+			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept = 0;
 		};
 		class IDeviceChild : public Object
 		{
@@ -279,6 +292,16 @@ namespace Engine
 			virtual uint32 GetDepth(void) noexcept = 0;
 			virtual uint32 GetMipmapCount(void) noexcept = 0;
 			virtual uint32 GetArraySize(void) noexcept = 0;
+		};
+		class IWindowLayer : public IDeviceChild
+		{
+		public:
+			virtual bool Present(void) noexcept = 0;
+			virtual ITexture * QuerySurface(void) noexcept = 0;
+			virtual bool ResizeSurface(uint32 width, uint32 height) noexcept = 0;
+			virtual bool SwitchToFullscreen(void) noexcept = 0;
+			virtual bool SwitchToWindow(void) noexcept = 0;
+			virtual bool IsFullscreen(void) noexcept = 0;
 		};
 		class IDeviceContext : public IDeviceChild
 		{

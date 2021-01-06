@@ -24,7 +24,8 @@ namespace Engine
 				~WindowsCursor(void) override { if (Owned) DestroyCursor(Handle); }
 			};
 		}
-		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory), _window(window), _timers(0x10), _clear_background(false)
+		HandleWindowStation::HandleWindowStation(HWND window, IDesktopWindowFactory * Factory) : WindowStation(Factory),
+			_window(window), _timers(0x10), _clear_background(false), _use_custom_device(false)
 		{
 			_arrow.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_ARROW)));
 			_beam.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_IBEAM)));
@@ -210,6 +211,7 @@ namespace Engine
 			_fx_blur_behind = enable;
 			_reset_dwm();
 		}
+		void HandleWindowStation::UseCustomRendering(bool use) {}
 		eint HandleWindowStation::ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam)
 		{
 			if (Msg == WM_DWMCOMPOSITIONCHANGED) {

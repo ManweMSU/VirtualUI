@@ -1,6 +1,10 @@
 #include "Direct3D.h"
 
+#undef CreateWindow
+#undef LoadCursor
+
 #include "Direct2D.h"
+#include "WindowStation.h"
 #include "../Storage/Archive.h"
 
 #include <VersionHelpers.h>
@@ -800,6 +804,72 @@ namespace Engine
 			}
 			virtual string ToString(void) const override { return L"D3D11_DeviceContext"; }
 		};
+		class D3D11_WindowLayer : public Graphics::IWindowLayer
+		{
+			IDevice * wrapper;
+		public:
+			ID3D11Device * device;
+			IDXGISwapChain * swapchain;
+			PixelFormat format;
+			DXGI_FORMAT dxgi_format;
+			uint32 usage, width, height;
+
+			D3D11_WindowLayer(IDevice * _wrapper) : wrapper(_wrapper), device(0), swapchain(0), format(PixelFormat::Invalid),
+				dxgi_format(DXGI_FORMAT_UNKNOWN), usage(0), width(0), height(0) {}
+			virtual ~D3D11_WindowLayer(void) override
+			{
+				if (IsFullscreen()) SwitchToWindow();
+				if (device) device->Release();
+				if (swapchain) swapchain->Release();
+			}
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual bool Present(void) noexcept override { if (swapchain->Present(0, 0) != S_OK) return false; return true; }
+			virtual ITexture * QuerySurface(void) noexcept override
+			{
+				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(TextureType::Type2D, wrapper);
+				if (!result) return 0;
+				if (swapchain->GetBuffer(0, IID_PPV_ARGS(&result->tex_2d)) != S_OK) return 0;
+				if (usage & ResourceUsageShaderRead) {
+					if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+				}
+				if (usage & ResourceUsageRenderTarget) {
+					if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
+				}
+				result->pool = ResourceMemoryPool::Default;
+				result->format = format;
+				result->usage_flags = usage;
+				result->width = width;
+				result->height = height;
+				result->depth = result->size = 1;
+				result->Retain();
+				return result;
+			}
+			virtual bool ResizeSurface(uint32 width, uint32 height) noexcept override
+			{
+				if (!width || !height) return false;
+				if (swapchain->ResizeBuffers(1, width, height, dxgi_format, 0) != S_OK) return false;
+				return true;
+			}
+			virtual bool SwitchToFullscreen(void) noexcept override
+			{
+				if (swapchain->SetFullscreenState(TRUE, 0) != S_OK) return false;
+				return true;
+			}
+			virtual bool SwitchToWindow(void) noexcept override
+			{
+				if (swapchain->SetFullscreenState(FALSE, 0) != S_OK) return false;
+				return true;
+			}
+			virtual bool IsFullscreen(void) noexcept override
+			{
+				BOOL result;
+				IDXGIOutput * output;
+				if (swapchain->GetFullscreenState(&result, &output) != S_OK) return false;
+				if (output) output->Release();
+				return result;
+			}
+			virtual string ToString(void) const override { return L"D3D11_WindowLayer"; }
+		};
 		class D3D11_Device : public Graphics::IDevice
 		{
 			ID3D11Device * device;
@@ -1045,6 +1115,7 @@ namespace Engine
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept override
 			{
 				if (desc.MemoryPool == ResourceMemoryPool::Immutable) return 0;
+				if (desc.Usage & ~ResourceUsageBufferMask) return 0;
 				SafePointer<D3D11_Buffer> result = new (std::nothrow) D3D11_Buffer(this);
 				if (!result) return 0;
 				result->pool = desc.MemoryPool;
@@ -1089,6 +1160,7 @@ namespace Engine
 			}
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept override
 			{
+				if (desc.Usage & ~ResourceUsageBufferMask) return 0;
 				SafePointer<D3D11_Buffer> result = new (std::nothrow) D3D11_Buffer(this);
 				if (!result) return 0;
 				result->pool = desc.MemoryPool;
@@ -1143,6 +1215,7 @@ namespace Engine
 			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept override
 			{
 				if (desc.MemoryPool == ResourceMemoryPool::Immutable) return 0;
+				if (desc.Usage & ~ResourceUsageTextureMask) return 0;
 				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(desc.Type, this);
 				if (!result) return 0;
 				DXGI_FORMAT dxgi_format = MakeDxgiFormat(desc.Format);
@@ -1393,6 +1466,7 @@ namespace Engine
 			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept override
 			{
 				if (!init) return 0;
+				if (desc.Usage & ~ResourceUsageTextureMask) return 0;
 				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(desc.Type, this);
 				if (!result) return 0;
 				DXGI_FORMAT dxgi_format = MakeDxgiFormat(desc.Format);
@@ -1664,6 +1738,49 @@ namespace Engine
 						if (device->CreateTexture3D(&td, 0, &result->tex_staging_3d) != S_OK) return 0;
 					}
 				} else return 0;
+				result->Retain();
+				return result;
+			}
+			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept override
+			{
+				if (!window->GetStation()->IsNativeStationWrapper()) return 0;
+				if (!IsColorFormat(desc.Format)) return 0;
+				if (!desc.Width || !desc.Height) return 0;
+				if (desc.Usage & ~ResourceUsageTextureMask) return 0;
+				if (desc.Usage & ResourceUsageShaderWrite) return 0;
+				if (desc.Usage & ResourceUsageDepthStencil) return 0;
+				if (desc.Usage & ResourceUsageCPUAll) return 0;
+				SafePointer<D3D11_WindowLayer> result = new (std::nothrow) D3D11_WindowLayer(this);
+				if (!result) return 0;
+				auto station = static_cast<UI::HandleWindowStation *>(window->GetStation());
+				auto hwnd = station->Handle();
+				station->UseCustomRendering(true);
+				DXGI_SWAP_CHAIN_DESC swcd;
+				swcd.BufferDesc.Width = desc.Width;
+				swcd.BufferDesc.Height = desc.Height;
+				swcd.BufferDesc.RefreshRate.Numerator = 60;
+				swcd.BufferDesc.RefreshRate.Denominator = 1;
+				swcd.BufferDesc.Format = MakeDxgiFormat(desc.Format);
+				swcd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+				swcd.BufferDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
+				swcd.SampleDesc.Count = 1;
+				swcd.SampleDesc.Quality = 0;
+				swcd.BufferUsage = 0;
+				if (desc.Usage & ResourceUsageShaderRead) swcd.BufferUsage |= DXGI_USAGE_SHADER_INPUT;
+				if (desc.Usage & ResourceUsageRenderTarget) swcd.BufferUsage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				swcd.BufferCount = 1;
+				swcd.OutputWindow = hwnd;
+				swcd.Windowed = TRUE;
+				swcd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+				swcd.Flags = 0;
+				if (DXGIFactory->CreateSwapChain(device, &swcd, &result->swapchain) != S_OK) return 0;
+				result->device = device;
+				result->device->AddRef();
+				result->format = desc.Format;
+				result->dxgi_format = swcd.BufferDesc.Format;
+				result->usage = desc.Usage;
+				result->width = desc.Width;
+				result->height = desc.Height;
 				result->Retain();
 				return result;
 			}

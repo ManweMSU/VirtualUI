@@ -17,6 +17,7 @@ namespace Engine
 		protected:
 			HWND _window;
 			bool _clear_background;
+			bool _use_custom_device;
 
 			HandleWindowStation(HWND window, IDesktopWindowFactory * Factory);
 		private:
@@ -67,6 +68,8 @@ namespace Engine
 			Color GetClearBackgroundColor(void);
 			void SetFrameMargins(int left, int top, int right, int bottom);
 			void SetBlurBehind(bool enable);
+
+			virtual void UseCustomRendering(bool use);
 
 			eint ProcessWindowEvents(uint32 Msg, eint WParam, eint LParam);
 		};

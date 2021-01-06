@@ -35,7 +35,7 @@ namespace Engine
 		{
 			enum class FrameEvent {
 				Close, Move, Maximize, Minimize, Restore,
-				SessionEnding, SessionEnd,
+				SessionEnding, SessionEnd, Draw,
 				Help, Activate, Deactivate, PopupMenuCancelled, Timer
 			};
 			class IWindowEventCallback

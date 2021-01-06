@@ -91,6 +91,15 @@ namespace Engine
 			result.MemoryPool = pool;
 			return result;
 		}
+		WindowLayerDesc CreateWindowLayerDesc(uint32 width, uint32 height, PixelFormat format, uint32 usage)
+		{
+			WindowLayerDesc result;
+			result.Format = format;
+			result.Width = width;
+			result.Height = height;
+			result.Usage = usage;
+			return result;
+		}
 		ResourceInitDesc CreateInitDesc(const void * data, uint32 pitch, uint32 slice_pitch)
 		{
 			ResourceInitDesc result;
@@ -150,6 +159,165 @@ namespace Engine
 			result.DepthClearValue = clear_depth;
 			result.StencilClearValue = clear_stencil;
 			return result;
+		}
+		
+		Math::Matrix4x4f MakeTranslateTransform(const Math::Vector3f & shift)
+		{
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(1.0f, 0.0f, 0.0f, shift.x);
+			result.row[1] = Math::Vector4f(0.0f, 1.0f, 0.0f, shift.y);
+			result.row[2] = Math::Vector4f(0.0f, 0.0f, 1.0f, shift.z);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeScaleTransform(const Math::Vector3f & scale)
+		{
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(scale.x, 0.0f, 0.0f, 0.0f);
+			result.row[1] = Math::Vector4f(0.0f, scale.y, 0.0f, 0.0f);
+			result.row[2] = Math::Vector4f(0.0f, 0.0f, scale.z, 0.0f);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeRotateTransformX(float angle)
+		{
+			auto c = Math::cos(angle);
+			auto s = Math::sin(angle);
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(1.0f, 0.0f, 0.0f, 0.0f);
+			result.row[1] = Math::Vector4f(0.0f, c, -s, 0.0f);
+			result.row[2] = Math::Vector4f(0.0f, s, c, 0.0f);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeRotateTransformY(float angle)
+		{
+			auto c = Math::cos(angle);
+			auto s = Math::sin(angle);
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(c, 0.0f, s, 0.0f);
+			result.row[1] = Math::Vector4f(0.0f, 1.0f, 0.0f, 0.0f);
+			result.row[2] = Math::Vector4f(-s, 0.0f, c, 0.0f);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeRotateTransformZ(float angle)
+		{
+			auto c = Math::cos(angle);
+			auto s = Math::sin(angle);
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(c, -s, 0.0f, 0.0f);
+			result.row[1] = Math::Vector4f(s, c, 0.0f, 0.0f);
+			result.row[2] = Math::Vector4f(0.0f, 0.0f, 1.0f, 0.0f);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeRotateTransform(float angle, const Math::Vector3f & axis)
+		{
+			auto c = Math::cos(angle);
+			auto s = Math::sin(angle);
+			auto z = Math::normalize(axis);
+			Math::Vector3f orth;
+			if (z.x > 0.5f) orth = Math::Vector3f(0.0f, 1.0f, 0.0f);
+			else orth = Math::Vector3f(1.0f, 0.0f, 0.0f);
+			auto x = Math::normalize(Math::cross(z, orth));
+			auto y = Math::cross(z, x);
+			Math::Matrix3x3f trans, rot;
+			trans.row[0] = x;
+			trans.row[1] = y;
+			trans.row[2] = z;
+			Math::Matrix3x3f rev = Math::transpone(trans);
+			rot.row[0] = Math::Vector3f(c, -s, 0.0f);
+			rot.row[1] = Math::Vector3f(s, c, 0.0f);
+			rot.row[2] = Math::Vector3f(0.0f, 0.0f, 1.0f);
+			Math::Matrix3x3f full = rev * rot * trans;
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(full.row[0].x, full.row[0].y, full.row[0].z, 0.0f);
+			result.row[1] = Math::Vector4f(full.row[1].x, full.row[1].y, full.row[1].z, 0.0f);
+			result.row[2] = Math::Vector4f(full.row[2].x, full.row[2].y, full.row[2].z, 0.0f);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeReflectTransform(const Math::Vector4f & plane)
+		{
+			auto norm = float(Math::sqrt(plane.x * plane.x + plane.y * plane.y + plane.z * plane.z));
+			auto p = plane / norm;
+			Math::Matrix4x4f result;
+			result.row[0] = -2.0f * p.x * p;
+			result.row[1] = -2.0f * p.y * p;
+			result.row[2] = -2.0f * p.z * p;
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
+			return result + Math::identity<float, 4>();
+		}
+		Math::Matrix4x4f MakeLookAtTransform(const Math::Vector3f & cam, const Math::Vector3f & dir, const Math::Vector3f & up)
+		{
+			auto z = -Math::normalize(dir);
+			auto x = Math::normalize(Math::cross(up, z));
+			auto y = Math::cross(z, x);
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(x.x, x.y, x.z, -Math::dot(x, cam));
+			result.row[1] = Math::Vector4f(y.x, y.y, y.z, -Math::dot(y, cam));
+			result.row[2] = Math::Vector4f(z.x, z.y, z.z, -Math::dot(z, cam));
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakeOrthogonalViewTransform(float width, float height, float near_plane, float far_plane)
+		{
+			auto inv_depth = 1.0f / (near_plane - far_plane);
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(2.0f / width, 0.0f, 0.0f, 0.0f);
+			result.row[1] = Math::Vector4f(0.0f, 2.0f / height, 0.0f, 0.0f);
+			result.row[2] = Math::Vector4f(0.0f, 0.0f, inv_depth, inv_depth * near_plane);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakePerspectiveViewTransform(float near_width, float near_height, float near_plane, float far_plane)
+		{
+			auto inv_depth = 1.0f / (near_plane - far_plane);
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(2.0f * near_plane / near_width, 0.0f, 0.0f, 0.0f);
+			result.row[1] = Math::Vector4f(0.0f, 2.0f * near_plane / near_height, 0.0f, 0.0f);
+			result.row[2] = Math::Vector4f(0.0f, 0.0f, inv_depth * far_plane, inv_depth * far_plane * near_plane);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, -1.0f, 0.0f);
+			return result;
+		}
+		Math::Matrix4x4f MakePerspectiveViewTransformFoV(float fov_angle, float aspect, float near_plane, float far_plane)
+		{
+			auto inv_depth = 1.0f / (near_plane - far_plane);
+			auto scale_y = Math::ctg(fov_angle / 2.0f);
+			auto scale_x = scale_y / aspect;
+			Math::Matrix4x4f result;
+			result.row[0] = Math::Vector4f(scale_x, 0.0f, 0.0f, 0.0f);
+			result.row[1] = Math::Vector4f(0.0f, scale_y, 0.0f, 0.0f);
+			result.row[2] = Math::Vector4f(0.0f, 0.0f, inv_depth * far_plane, inv_depth * far_plane * near_plane);
+			result.row[3] = Math::Vector4f(0.0f, 0.0f, -1.0f, 0.0f);
+			return result;
+		}
+
+		ITexture * LoadTexture(IDevice * device, Codec::Frame * frame, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
+		ITexture * LoadTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
+		ITexture * LoadCubeTexture(IDevice * device, Codec::Image * image, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
+		ITexture * LoadCubeTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
+		}
+		Codec::Frame * CreateMipLevel(Codec::Frame * source)
+		{
+			// TODO: IMPLEMENT
+			return nullptr;
 		}
 	}
 }
