@@ -124,7 +124,8 @@ namespace Engine
 			NativeStation * _parent = 0;
 			int last_x = 0x80000000, last_y = 0x80000000;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
-			Windows::IWindowEventCallback * main_callback = 0;
+			int CurrentRate = 0;
+			Controls::OverlappedWindow * root_window = 0;
 
 			void _release_devices(void)
 			{
@@ -259,14 +260,10 @@ namespace Engine
 				int fr = int(GetFocus() ? GetFocus()->FocusedRefreshPeriod() : Window::RefreshPeriod::None);
 				int ar = int(IsPlayingAnimation() ? Window::RefreshPeriod::Cinematic : Window::RefreshPeriod::None);
 				int ur = int(InternalRate);
-				int mr = max(max(fr, ar), ur);
-				if (!mr) KillTimer(GetHandle(), 1); else {
-					if (mr == 1) ::SetTimer(GetHandle(), 1, GetRenderingDevice()->GetCaretBlinkHalfTime(), 0);
-					else if (mr == 2) {
-						if (::GetActiveWindow() == GetHandle()) ::SetTimer(GetHandle(), 1, 25, 0);
-						else ::SetTimer(GetHandle(), 1, 100, 0);
-					}
-				}
+				CurrentRate = max(max(fr, ar), ur);
+				if (CurrentRate == 0) KillTimer(GetHandle(), 1);
+				else if (CurrentRate == 1) ::SetTimer(GetHandle(), 1, GetRenderingDevice()->GetCaretBlinkHalfTime(), 0);
+				else if (CurrentRate == 2) { KillTimer(GetHandle(), 1); InvalidateRect(GetHandle(), 0, FALSE); }
 			}
 			virtual void FocusWindowChanged(void) override { InvalidateRect(GetHandle(), 0, 0); AnimationStateChanged(); }
 			virtual Box GetDesktopBox(void) override { return GetScreenDimensions(); }
@@ -291,11 +288,8 @@ namespace Engine
 			bool RenderContent(void)
 			{
 				if (_use_custom_device) {
-					if (!main_callback) {
-						main_callback = GetDesktop()->As<Controls::OverlappedWindow>()->GetCallback();
-						if (!main_callback) return true;
-					}
-					main_callback->OnFrameEvent(GetDesktop(), Windows::FrameEvent::Draw);
+					if (!root_window) root_window = GetDesktop()->As<Controls::OverlappedWindow>();
+					root_window->GetCallback()->OnFrameEvent(GetDesktop(), Windows::FrameEvent::Draw);
 					return true;
 				} else if (DeviceContext) {
 					bool result = _render(DeviceContext);
@@ -346,7 +340,7 @@ namespace Engine
 			int & GetMinHeight(void) { return MinHeight; }
 			void MakeParent(NativeStation * child) { _slaves << child; child->_parent = this; }
 		};
-		UI::WindowStation * CreateOverlappedWindow(Template::ControlTemplate * Template, const UI::Rectangle & Position, WindowStation * ParentStation)
+		UI::WindowStation * CreateOverlappedWindow(Template::ControlTemplate * Template, const UI::Rectangle & Position, WindowStation * ParentStation, bool NoDevice)
 		{
 			InitializeWindowSystem();
 			UI::Template::Controls::FrameExtendedData * ex_data = 0;
@@ -388,14 +382,14 @@ namespace Engine
 			if (!props->MinimizeButton) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_MINIMIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 			if (!props->Sizeble) EnableMenuItem(GetSystemMenu(Handle, FALSE), SC_SIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 			NativeStation::DesktopWindowFactory Factory(Template);
-			SafePointer<NativeStation> Station = new NativeStation(Handle, &Factory);
+			SafePointer<NativeStation> Station = new NativeStation(Handle, &Factory, NoDevice);
 			if (ParentStation) static_cast<NativeStation *>(ParentStation)->MakeParent(Station);
 			SetWindowLongPtrW(Handle, 0, reinterpret_cast<LONG_PTR>(Station.Inner()));
 			Station->GetMinWidth() = mRect.right - mRect.left;
 			Station->GetMinHeight() = mRect.bottom - mRect.top;
 			Controls::OverlappedWindow * Desktop = Station->GetDesktop()->As<Controls::OverlappedWindow>();
 			Desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
-			if (!props->Background) {
+			if (!props->Background && !NoDevice) {
 				Color BackgroundColor = 0;
 				if (props->DefaultBackground) {
 					BackgroundColor = GetSysColor(COLOR_BTNFACE);
@@ -767,8 +761,10 @@ namespace Engine
 					}
 				}
 			} else if (Msg == WM_PAINT) {
-				if (station && ::IsWindowVisible(Wnd)) {
-					if (station->RenderContent()) ValidateRect(Wnd, 0);
+				if (station) {
+					if (::IsWindowVisible(Wnd)) {
+						if (station->RenderContent() && station->CurrentRate != 2) ValidateRect(Wnd, 0);
+					} else ValidateRect(Wnd, 0);
 				}
 			} else if (Msg == WM_MOUSEACTIVATE) {
 				if (GetWindowLongPtr(Wnd, GWL_EXSTYLE) & WS_EX_NOACTIVATE) return MA_NOACTIVATE;

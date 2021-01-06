@@ -807,6 +807,7 @@ namespace Engine
 		class D3D11_WindowLayer : public Graphics::IWindowLayer
 		{
 			IDevice * wrapper;
+			SafePointer<ITexture> backbuffer;
 		public:
 			ID3D11Device * device;
 			IDXGISwapChain * swapchain;
@@ -826,6 +827,10 @@ namespace Engine
 			virtual bool Present(void) noexcept override { if (swapchain->Present(0, 0) != S_OK) return false; return true; }
 			virtual ITexture * QuerySurface(void) noexcept override
 			{
+				if (backbuffer) {
+					backbuffer->Retain();
+					return backbuffer;
+				}
 				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(TextureType::Type2D, wrapper);
 				if (!result) return 0;
 				if (swapchain->GetBuffer(0, IID_PPV_ARGS(&result->tex_2d)) != S_OK) return 0;
@@ -842,12 +847,16 @@ namespace Engine
 				result->height = height;
 				result->depth = result->size = 1;
 				result->Retain();
+				backbuffer.SetRetain(result);
 				return result;
 			}
-			virtual bool ResizeSurface(uint32 width, uint32 height) noexcept override
+			virtual bool ResizeSurface(uint32 _width, uint32 _height) noexcept override
 			{
-				if (!width || !height) return false;
-				if (swapchain->ResizeBuffers(1, width, height, dxgi_format, 0) != S_OK) return false;
+				if (!_width || !_height) return false;
+				backbuffer.SetReference(0);
+				if (swapchain->ResizeBuffers(1, _width, _height, dxgi_format, 0) != S_OK) return false;
+				width = _width;
+				height = _height;
 				return true;
 			}
 			virtual bool SwitchToFullscreen(void) noexcept override

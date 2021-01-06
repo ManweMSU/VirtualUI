@@ -16,7 +16,7 @@ namespace Engine
 		Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color);
 		Graphics::IDeviceFactory * CreateDeviceFactory(void);
 		Graphics::IDevice * GetCommonDevice(void);
-		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation);
+		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation, bool NoDevice = false);
 		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation);
 		void ShowWindow(UI::WindowStation * Station, bool Show);
 		void EnableWindow(UI::WindowStation * Station, bool Enable);

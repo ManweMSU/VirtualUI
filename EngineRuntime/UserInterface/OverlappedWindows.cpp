@@ -371,6 +371,33 @@ namespace Engine
 			Rectangle ContentFrame::GetRectangle(void) { return ControlPosition; }
 			string ContentFrame::GetControlClass(void) { return L"ContentFrame"; }
 
+			Template::ControlTemplate * CreateOverlappedWindowTemplate(const string & title, const Rectangle & position, uint32 flags, int min_width, int min_height, Color background)
+			{
+				auto base = new (std::nothrow) Template::Controls::DialogFrame;
+				if (!base) throw OutOfMemoryException();
+				try {
+					Reflection::PropertyZeroInitializer initializer;
+					base->EnumerateProperties(initializer);
+					base->ControlPosition = position;
+					base->Title = title;
+					if (flags & OverlappedWindowCaptioned) base->Captioned = true;
+					if (flags & OverlappedWindowCloseButton) base->CloseButton = true;
+					if (flags & OverlappedWindowMaximizeButton) base->MaximizeButton = true;
+					if (flags & OverlappedWindowMinimizeButton) base->MinimizeButton = true;
+					if (flags & OverlappedWindowHelpButton) base->HelpButton = true;
+					if (flags & OverlappedWindowSizeble) base->Sizeble = true;
+					if (flags & OverlappedWindowToolWindow) base->ToolWindow = true;
+					if (flags & OverlappedWindowDefaultBackground) base->DefaultBackground = true;
+					base->BackgroundColor = background;
+					base->MinimalWidth = min_width;
+					base->MinimalHeight = min_height;
+				} catch (...) { delete base; throw; }
+				SafePointer<Template::ControlTemplate> result = new (std::nothrow) Template::ControlTemplate(base);
+				if (!result) { delete base; throw OutOfMemoryException(); }
+				result->Retain();
+				return result;
+			}
+
 			namespace Constructor
 			{
 				void ConstructChildren(Window * on, Template::ControlTemplate * source)
@@ -438,11 +465,11 @@ namespace Engine
 				if (Callback) Callback->OnInitialized(window);
 				return window;
 			}
-			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station)
+			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station, bool NoDevice)
 			{
 				Controls::OverlappedWindow * window = 0;
 				if (!Station || Station->IsNativeStationWrapper()) {
-					WindowStation * new_native = NativeWindows::CreateOverlappedWindow(Template, Position, Station);
+					WindowStation * new_native = NativeWindows::CreateOverlappedWindow(Template, Position, Station, NoDevice);
 					new_native->GetVisualStyles().CaretWidth = int(Zoom);
 					window = new_native->GetDesktop()->As<Controls::OverlappedWindow>();
 					window->_visible = true;

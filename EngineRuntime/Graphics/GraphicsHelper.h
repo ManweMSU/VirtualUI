@@ -41,8 +41,6 @@ namespace Engine
 			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable);
 		ITexture * LoadCubeTexture(IDevice * device, Codec::Image * image, uint32 mip_levels = 0, uint32 usage = ResourceUsageShaderRead,
 			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable);
-		ITexture * LoadCubeTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels = 0, uint32 usage = ResourceUsageShaderRead,
-			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable);
 		Codec::Frame * CreateMipLevel(Codec::Frame * source);
 	}
 }

@@ -147,8 +147,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     // TODO: разместите код здесь.
 
     // Инициализация глобальных строк
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_TESTS, szWindowClass, MAX_LOADSTRING);
+	wcscpy_s(szTitle, L"Tests");
+	wcscpy_s(szWindowClass, L"TESTS_WND_CLASS");
     MyRegisterClass(hInstance);
 
     // Выполнить инициализацию приложения:
@@ -422,7 +422,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto Callback = new _cb;
 			class _cb2 : public Windows::IWindowEventCallback
 			{
-				SafePointer<Graphics::IWindowLayer> layer;
 			public:
 				virtual void OnInitialized(UI::Window * window) override
 				{
@@ -475,12 +474,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 							sender->As<Controls::TreeView>()->CreateEmbeddedEditor(::Template->Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
 						}
 					} else if (ID == 1) {
-						if (layer) layer->SwitchToWindow();
-						if (!layer) {
-							auto box = window->GetStation()->GetBox();
-							auto dev = Graphics::GetCommonDevice();
-							layer = dev->CreateWindowLayer(window, Graphics::CreateWindowLayerDesc(box.Right - box.Left, box.Bottom - box.Top));
-						}
 						auto group1 = window->FindChild(101);
 						auto group2 = window->FindChild(102);
 						if (group1->IsVisible()) {
@@ -499,7 +492,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (ID == 202) {
 						window->FindChild(6602)->Show(false);
 					} else if (ID == 2) {
-						if (layer) layer->SwitchToFullscreen();
 						auto group1 = window->FindChild(101);
 						auto group2 = window->FindChild(102);
 						if (group1->IsVisible()) {
@@ -524,10 +516,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (event == Windows::FrameEvent::Move) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Move Window");
-						if (layer) {
-							auto box = window->GetStation()->GetBox();
-							layer->ResizeSurface(box.Right - box.Left, box.Bottom - box.Top);
-						}
 					} else if (event == Windows::FrameEvent::Minimize) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Minimize Window");
@@ -543,7 +531,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (event == Windows::FrameEvent::Deactivate) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Deactivate Window");
-						if (layer) layer->SwitchToWindow();
 					} else if (event == Windows::FrameEvent::SessionEnding) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Session is ending");
@@ -553,24 +540,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					} else if (event == Windows::FrameEvent::Draw) {
 						console.SetTextColor(14);
 						console.WriteLine(L"Draw");
-						if (layer) {
-							auto dc = Graphics::GetCommonDevice()->GetDeviceContext();
-							auto rt = layer->QuerySurface();
-							if (rt) {
-								dc->Begin2DRenderingPass(rt);
-								auto dev = dc->Get2DRenderingDevice();
-								if (!window->GetStation()->GetRenderingDevice()) {
-									window->GetStation()->SetRenderingDevice(dev);
-									window->GetStation()->ResetCache();
-								}
-								dev->SetTimerValue(GetTimerValue());
-								window->GetStation()->Animate();
-								window->GetStation()->Render();
-								dc->EndCurrentPass();
-								rt->Release();
-							}
-							layer->Present();
-						}
 					}
 					if (NativeWindows::IsWindowActive(window->GetStation())) {
 						console.SetTextColor(10);
@@ -933,8 +902,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			auto w = Windows::CreateFramedDialog(::Template->Dialog[L"Test2"], 0, UI::Rectangle::Invalid(), station);
 			auto w2 = Windows::CreateFramedDialog(::Template->Dialog[L"Test"], Callback, UI::Rectangle(0, 0, Coordinate(0, 0.0, 0.7), Coordinate(0, 0.0, 0.55)), station);
 			auto w3 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), station);
-			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid(), 0);
-			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], Callback3, UI::Rectangle::Invalid(), 0);
+			auto w4 = Windows::CreateFramedDialog(::Template->Dialog[L"Test3"], Callback2, UI::Rectangle::Invalid());
+			auto w6 = Windows::CreateFramedDialog(::Template->Dialog[L"Test4"], Callback3, UI::Rectangle::Invalid());
 
 			w2->FindChild(7777)->As<Controls::ColorView>()->SetColor(UI::GetSystemColor(UI::SystemColor::Theme));
 
@@ -984,7 +953,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hbrBackground  = 0;
     wcex.lpszMenuName   = 0;
     wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_TESTS));
 
     return RegisterClassExW(&wcex);
 }
@@ -1016,18 +985,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Разобрать выбор в меню:
-            switch (wmId)
-            {
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
+		return DefWindowProc(hWnd, message, wParam, lParam);
         break;
 	case WM_ACTIVATE:
 		SetTimer(hWnd, 1, 25, 0);

@@ -309,11 +309,6 @@ namespace Engine
 			// TODO: IMPLEMENT
 			return nullptr;
 		}
-		ITexture * LoadCubeTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
-		{
-			// TODO: IMPLEMENT
-			return nullptr;
-		}
 		Codec::Frame * CreateMipLevel(Codec::Frame * source)
 		{
 			// TODO: IMPLEMENT
