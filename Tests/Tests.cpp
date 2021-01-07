@@ -63,7 +63,8 @@ class main_window_callback_class : public Engine::UI::Windows::IWindowEventCallb
 	SafePointer<Graphics::IPipelineState> state;
 	uint32 nvert;
 public:
-	struct vertex_struct { Math::Vector3f pos; Math::Vector3f clr; };
+	struct vertex_struct { Math::Vector3f pos, norm, clr; };
+	struct world_struct { Math::Matrix4x4f proj; Math::Vector3f light; float light_power; float ambient_power; };
 	virtual void OnInitialized(Engine::UI::Window * window) override
 	{
 		auto overlapped = window->As<Controls::OverlappedWindow>();
@@ -84,27 +85,21 @@ public:
 		// Creating buffers
 		Array<vertex_struct> vertex(0x100);
 		Array<uint16> index(0x100);
-		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
-		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
+		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
+		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
 		for (int i = 0; i < 100; i++) {
 			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
 			float c = cos(rad);
 			float s = sin(rad);
 			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
-			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
-			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
 			if (i) {
 				index << 0;
 				index << vertex.Length() - 4;
 				index << vertex.Length() - 2;
 				index << 1;
 				index << vertex.Length() - 3;
-				index << vertex.Length() - 1;
-				index << vertex.Length() - 4;
-				index << vertex.Length() - 3;
-				index << vertex.Length() - 2;
-				index << vertex.Length() - 3;
-				index << vertex.Length() - 2;
 				index << vertex.Length() - 1;
 			}
 		}
@@ -114,12 +109,29 @@ public:
 		index << 1;
 		index << 3;
 		index << vertex.Length() - 1;
+		auto vstart = vertex.Length();
+		for (int i = 0; i < 100; i++) {
+			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
+			float c = cos(rad);
+			float s = sin(rad);
+			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
+			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(c, s, 0.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(c, s, 0.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			if (i) {
+				index << vertex.Length() - 4;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 2;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 2;
+				index << vertex.Length() - 1;
+			}
+		}
 		index << vertex.Length() - 2;
 		index << vertex.Length() - 1;
-		index << 2;
+		index << vstart;
 		index << vertex.Length() - 1;
-		index << 2;
-		index << 3;
+		index << vstart;
+		index << vstart + 1;
 		nvert = index.Length();
 	
 		vertex_buffer = device->CreateBuffer(
@@ -165,16 +177,22 @@ public:
 			auto context = device->GetDeviceContext();
 			auto angle = (GetTimerValue() % 20000) * 2.0 * ENGINE_PI / 20000.0;
 			auto a2 = (GetTimerValue() % 12000) * 2.0 * ENGINE_PI / 12000.0;
+			auto a3 = (GetTimerValue() % 8000) * 2.0 * ENGINE_PI / 8000.0;
 			auto cam = (Math::Vector3f(cos(angle), sin(angle), 0.0) + Math::Vector3f(0.0f, 0.0f, sin(a2))) * 2.0f;
 			auto view = Graphics::MakeLookAtTransform(cam, -cam, Math::Vector3f(0.0f, 0.0f, 1.0f));
 			auto proj = Graphics::MakePerspectiveViewTransformFoV(ENGINE_PI / 2.0f, float(rt->GetWidth()) / float(rt->GetHeight()), 0.01f, 10.0f);
-			auto mat = proj * view;
-			if (device->GetDeviceContext()->BeginRenderingPass(1, &Graphics::CreateRenderTargetView(rt, Math::Vector4f(0.25f, 0.0f, 0.5f, 1.0f)),
+			world_struct world;
+			world.proj = proj * view;
+			world.light_power = 0.7f;
+			world.ambient_power = 0.3f;
+			world.light = Math::Vector3f(cos(a3), 0.0f, sin(a3));
+			if (device->GetDeviceContext()->BeginRenderingPass(1, &Graphics::CreateRenderTargetView(rt, Math::Vector4f(0.2f, 0.0f, 0.4f, 1.0f)),
 				&Graphics::CreateDepthStencilView(depth_buffer, 1.0f))) {
 				device->GetDeviceContext()->SetViewport(0.0f, 0.0f, rt->GetWidth(), rt->GetHeight(), 0.0f, 1.0f);
 				device->GetDeviceContext()->SetRenderingPipelineState(state);
 				device->GetDeviceContext()->SetVertexShaderResource(0, vertex_buffer);
-				device->GetDeviceContext()->SetVertexShaderResourceData(1, &mat, sizeof(Math::Matrix4x4f));
+				device->GetDeviceContext()->SetVertexShaderConstant(0, &world, sizeof(world));
+				device->GetDeviceContext()->SetPixelShaderConstant(0, &world, sizeof(world));
 				device->GetDeviceContext()->SetIndexBuffer(index_buffer, Graphics::IndexBufferFormat::UInt16);
 				device->GetDeviceContext()->DrawIndexedPrimitives(nvert, 0, 0);
 				device->GetDeviceContext()->EndCurrentPass();

@@ -591,27 +591,40 @@ namespace Engine
 					context->VSSetShaderResources(at, 1, &object->view);
 				} else { pass_state = false; return; }
 			}
-			virtual void SetVertexShaderResourceData(uint32 at, const void * data, int length) noexcept override
+			virtual void SetVertexShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				D3D11_BUFFER_DESC desc;
-				desc.ByteWidth = length;
-				desc.Usage = D3D11_USAGE_IMMUTABLE;
-				desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-				desc.StructureByteStride = length;
-				D3D11_SUBRESOURCE_DATA init;
-				init.pSysMem = data;
-				init.SysMemPitch = 0;
-				init.SysMemSlicePitch = 0;
-				ID3D11Buffer * buffer;
-				ID3D11ShaderResourceView * view;
-				if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
-				if (device->CreateShaderResourceView(buffer, 0, &view) != S_OK) { buffer->Release(); pass_state = false; return; }
-				buffer->Release();
-				context->VSSetShaderResources(at, 1, &view);
-				view->Release();
+				auto object = static_cast<D3D11_Buffer *>(buffer);
+				context->VSSetConstantBuffers(at, 1, &object->buffer);
+			}
+			virtual void SetVertexShaderConstant(uint32 at, const void * data, int length) noexcept override
+			{
+				if (length & 0x0000000F) {
+					auto aligned_length = (length + 15) & 0xFFFFFFF0;
+					auto aligned_data = malloc(aligned_length);
+					if (aligned_data) {
+						MemoryCopy(aligned_data, data, length);
+						SetVertexShaderConstant(at, aligned_data, aligned_length);
+						free(aligned_data);
+					} else pass_state = false;
+				} else {
+					if (pass_mode != 1) { pass_state = false; return; }
+					D3D11_BUFFER_DESC desc;
+					desc.ByteWidth = length;
+					desc.Usage = D3D11_USAGE_IMMUTABLE;
+					desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+					desc.CPUAccessFlags = 0;
+					desc.MiscFlags = 0;
+					desc.StructureByteStride = 0;
+					D3D11_SUBRESOURCE_DATA init;
+					init.pSysMem = data;
+					init.SysMemPitch = 0;
+					init.SysMemSlicePitch = 0;
+					ID3D11Buffer * buffer;
+					if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
+					context->VSSetConstantBuffers(at, 1, &buffer);
+					buffer->Release();
+				}
 			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
@@ -631,27 +644,40 @@ namespace Engine
 					context->PSSetShaderResources(at, 1, &object->view);
 				} else { pass_state = false; return; }
 			}
-			virtual void SetPixelShaderResourceData(uint32 at, const void * data, int length) noexcept override
+			virtual void SetPixelShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				D3D11_BUFFER_DESC desc;
-				desc.ByteWidth = length;
-				desc.Usage = D3D11_USAGE_IMMUTABLE;
-				desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-				desc.StructureByteStride = length;
-				D3D11_SUBRESOURCE_DATA init;
-				init.pSysMem = data;
-				init.SysMemPitch = 0;
-				init.SysMemSlicePitch = 0;
-				ID3D11Buffer * buffer;
-				ID3D11ShaderResourceView * view;
-				if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
-				if (device->CreateShaderResourceView(buffer, 0, &view) != S_OK) { buffer->Release(); pass_state = false; return; }
-				buffer->Release();
-				context->PSSetShaderResources(at, 1, &view);
-				view->Release();
+				auto object = static_cast<D3D11_Buffer *>(buffer);
+				context->PSSetConstantBuffers(at, 1, &object->buffer);
+			}
+			virtual void SetPixelShaderConstant(uint32 at, const void * data, int length) noexcept override
+			{
+				if (length & 0x0000000F) {
+					auto aligned_length = (length + 15) & 0xFFFFFFF0;
+					auto aligned_data = malloc(aligned_length);
+					if (aligned_data) {
+						MemoryCopy(aligned_data, data, length);
+						SetPixelShaderConstant(at, aligned_data, aligned_length);
+						free(aligned_data);
+					} else pass_state = false;
+				} else {
+					if (pass_mode != 1) { pass_state = false; return; }
+					D3D11_BUFFER_DESC desc;
+					desc.ByteWidth = length;
+					desc.Usage = D3D11_USAGE_IMMUTABLE;
+					desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+					desc.CPUAccessFlags = 0;
+					desc.MiscFlags = 0;
+					desc.StructureByteStride = 0;
+					D3D11_SUBRESOURCE_DATA init;
+					init.pSysMem = data;
+					init.SysMemPitch = 0;
+					init.SysMemSlicePitch = 0;
+					ID3D11Buffer * buffer;
+					if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
+					context->PSSetConstantBuffers(at, 1, &buffer);
+					buffer->Release();
+				}
 			}
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
@@ -678,10 +704,20 @@ namespace Engine
 				if (pass_mode != 1) { pass_state = false; return; }
 				context->Draw(vertex_count, first_vertex);
 			}
+			virtual void DrawInstancedPrimitives(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance) noexcept override
+			{
+				if (pass_mode != 1) { pass_state = false; return; }
+				context->DrawInstanced(vertex_count, instance_count, first_vertex, first_instance);
+			}
 			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
 				context->DrawIndexed(index_count, first_index, base_vertex);
+			}
+			virtual void DrawIndexedInstancedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex, uint32 instance_count, uint32 first_instance) noexcept override
+			{
+				if (pass_mode != 1) { pass_state = false; return; }
+				context->DrawIndexedInstanced(index_count, instance_count, first_index, base_vertex, first_instance);
 			}
 			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
@@ -1152,6 +1188,7 @@ namespace Engine
 				bd.CPUAccessFlags = 0;
 				bd.MiscFlags = 0;
 				bd.StructureByteStride = desc.Stride ? desc.Stride : desc.Length;
+				if ((bd.ByteWidth & 0x0000000F) && (desc.Usage & ResourceUsageConstantBuffer)) bd.ByteWidth = (bd.ByteWidth + 15) & 0xFFFFFFF0;
 				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
 					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
 					result->usage_flags |= ResourceUsageShaderRead;
@@ -1160,6 +1197,10 @@ namespace Engine
 				if (desc.Usage & ResourceUsageIndexBuffer) {
 					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
 					result->usage_flags |= ResourceUsageIndexBuffer;
+				}
+				if (desc.Usage & ResourceUsageConstantBuffer) {
+					bd.BindFlags |= D3D11_BIND_CONSTANT_BUFFER;
+					result->usage_flags |= ResourceUsageConstantBuffer;
 				}
 				if (bd.BindFlags & D3D11_BIND_SHADER_RESOURCE) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 				if (device->CreateBuffer(&bd, 0, &result->buffer) != S_OK) return 0;
@@ -1203,6 +1244,7 @@ namespace Engine
 				bd.CPUAccessFlags = 0;
 				bd.MiscFlags = 0;
 				bd.StructureByteStride = desc.Stride ? desc.Stride : desc.Length;
+				if ((bd.ByteWidth & 0x0000000F) && (desc.Usage & ResourceUsageConstantBuffer)) bd.ByteWidth = (bd.ByteWidth + 15) & 0xFFFFFFF0;
 				if ((desc.Usage & ResourceUsageShaderRead) || (desc.Usage & ResourceUsageShaderWrite)) {
 					bd.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
 					result->usage_flags |= ResourceUsageShaderRead;
@@ -1212,11 +1254,22 @@ namespace Engine
 					bd.BindFlags |= D3D11_BIND_INDEX_BUFFER;
 					result->usage_flags |= ResourceUsageIndexBuffer;
 				}
+				if (desc.Usage & ResourceUsageConstantBuffer) {
+					bd.BindFlags |= D3D11_BIND_CONSTANT_BUFFER;
+					result->usage_flags |= ResourceUsageConstantBuffer;
+				}
+				void * aligned_data = 0;
 				D3D11_SUBRESOURCE_DATA sr;
-				sr.pSysMem = init.Data;
+				if (bd.ByteWidth > desc.Length) {
+					aligned_data = malloc(bd.ByteWidth);
+					if (!aligned_data) return 0;
+					MemoryCopy(aligned_data, init.Data, desc.Length);
+					sr.pSysMem = aligned_data;
+				} else sr.pSysMem = init.Data;
 				sr.SysMemPitch = sr.SysMemSlicePitch = 0;
 				if (bd.BindFlags & D3D11_BIND_SHADER_RESOURCE) bd.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-				if (device->CreateBuffer(&bd, &sr, &result->buffer) != S_OK) return 0;
+				if (device->CreateBuffer(&bd, &sr, &result->buffer) != S_OK) { free(aligned_data); return 0; }
+				free(aligned_data);
 				bool create_staging = false;
 				if (desc.Usage & ResourceUsageCPURead) {
 					create_staging = true;

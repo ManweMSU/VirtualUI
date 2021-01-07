@@ -91,14 +91,15 @@ namespace Engine
 		enum ResourceUsage {
 			ResourceUsageShaderRead = 0x00000001,
 			ResourceUsageShaderWrite = 0x00000002,
-			ResourceUsageIndexBuffer = 0x00000004,
-			ResourceUsageRenderTarget = 0x00000008,
-			ResourceUsageDepthStencil = 0x00000010,
-			ResourceUsageCPURead = 0x00000020,
-			ResourceUsageCPUWrite = 0x00000040,
+			ResourceUsageConstantBuffer = 0x00000004,
+			ResourceUsageIndexBuffer = 0x00000008,
+			ResourceUsageRenderTarget = 0x00000010,
+			ResourceUsageDepthStencil = 0x00000020,
+			ResourceUsageCPURead = 0x00000040,
+			ResourceUsageCPUWrite = 0x00000080,
 			ResourceUsageShaderAll = ResourceUsageShaderRead | ResourceUsageShaderWrite,
 			ResourceUsageCPUAll = ResourceUsageCPURead | ResourceUsageCPUWrite,
-			ResourceUsageBufferMask = ResourceUsageShaderAll | ResourceUsageIndexBuffer | ResourceUsageCPUAll,
+			ResourceUsageBufferMask = ResourceUsageShaderAll | ResourceUsageConstantBuffer | ResourceUsageIndexBuffer | ResourceUsageCPUAll,
 			ResourceUsageTextureMask = ResourceUsageShaderAll | ResourceUsageRenderTarget | ResourceUsageDepthStencil | ResourceUsageCPUAll
 		};
 
@@ -315,15 +316,19 @@ namespace Engine
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept = 0;
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept = 0;
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept = 0;
-			virtual void SetVertexShaderResourceData(uint32 at, const void * data, int length) noexcept = 0;
+			virtual void SetVertexShaderConstant(uint32 at, IBuffer * buffer) noexcept = 0;
+			virtual void SetVertexShaderConstant(uint32 at, const void * data, int length) noexcept = 0;
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept = 0;
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept = 0;
-			virtual void SetPixelShaderResourceData(uint32 at, const void * data, int length) noexcept = 0;
+			virtual void SetPixelShaderConstant(uint32 at, IBuffer * buffer) noexcept = 0;
+			virtual void SetPixelShaderConstant(uint32 at, const void * data, int length) noexcept = 0;
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept = 0;
 			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept = 0;
 			virtual void SetStencilReferenceValue(uint8 ref) noexcept = 0;
 			virtual void DrawPrimitives(uint32 vertex_count, uint32 first_vertex) noexcept = 0;
+			virtual void DrawInstancedPrimitives(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance) noexcept = 0;
 			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept = 0;
+			virtual void DrawIndexedInstancedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex, uint32 instance_count, uint32 first_instance) noexcept = 0;
 
 			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept = 0;
 
