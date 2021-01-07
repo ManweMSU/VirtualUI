@@ -151,7 +151,11 @@ public:
 			device.SetReference(0);
 			window->Destroy();
 		} else if (event == Windows::FrameEvent::Move) {
-			// DO NOTHING OR RESIZE BUFFERS AND STATION
+			auto box = station->GetPosition();
+			auto size = Point(box.Right - box.Left, box.Bottom - box.Left);
+			depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, size.x, size.y, 1, Graphics::ResourceUsageDepthStencil));
+			layer->ResizeSurface(size.x, size.y);
+			station->SetDesktopDimensions(size);
 		} else if (event == Windows::FrameEvent::Activate) {
 			station->SetFocus();
 		} else if (event == Windows::FrameEvent::Deactivate) {
@@ -265,8 +269,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		station_desc->Invisible = false;
 		station_desc->Autosize = false;
 		station_desc->Render = false;
-		station_desc->Width = desktop.Right - desktop.Left;
-		station_desc->Height = desktop.Bottom - desktop.Top;
+		station_desc->Width = 2600;
+		station_desc->Height = 1300;
 		station_desc->ID = 667;
 		SafePointer<Engine::UI::Template::ControlTemplate> mwt =
 			Engine::UI::Controls::CreateOverlappedWindowTemplate(L"Test Graphics Window", Engine::UI::Rectangle(0, 0, 0.7 * desktop.Right, 0.7 * desktop.Bottom),
