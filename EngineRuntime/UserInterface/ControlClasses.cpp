@@ -57,6 +57,7 @@ namespace Engine
 					else TEST_CLASS(TouchBarSlider)
 
 					else TEST_CLASS(FrameExtendedData)
+					else TEST_CLASS(VirtualStationData)
 					else return 0;
 				}
 			}

@@ -141,7 +141,9 @@ public:
 			Graphics::CreateBufferDesc(index.Length() * sizeof(uint16), Graphics::ResourceUsageIndexBuffer, 0, Graphics::ResourceMemoryPool::Immutable),
 			Graphics::CreateInitDesc(index.GetBuffer()));
 		depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, size.x, size.y, 1, Graphics::ResourceUsageDepthStencil));
-		state = device->CreateRenderingPipelineState(Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm, true, Graphics::PixelFormat::D32_float));
+		auto state_desc = Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm, true, Graphics::PixelFormat::D32_float);
+		state_desc.Rasterization.Fill = Graphics::FillMode::Wireframe;
+		state = device->CreateRenderingPipelineState(state_desc);
 	}
 	virtual void OnControlEvent(Engine::UI::Window * window, int ID, Engine::UI::Window::Event event, Engine::UI::Window * sender) override
 	{
@@ -392,6 +394,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				Active->Children.Append(Decor);
 				Active->Children.Append(BkActive);
 				Active->Children.Append(Blur);
+				Active->Children.Append(MenuShadow);
 				SafePointer<Template::FrameShape> Inactive = new Template::FrameShape;
 				Inactive->Position = Rectangle::Entire();
 				Inactive->Children.Append(Decor);

@@ -93,6 +93,34 @@ namespace Engine
 				_id = init.ID;
 				_station = new VirtualWindowStation(this);
 				SetDesktopDimensions(Point(_width, _height));
+				if (Template->Children.Length()) {
+					auto child = Template->Children.FirstElement();
+					if (child->Properties->GetTemplateClass() != L"VirtualStationData") throw InvalidArgumentException();
+					auto & data = static_cast<Template::Controls::VirtualStationData &>(*child->Properties);
+					auto & styles = _station->GetVisualStyles();
+					styles.WindowActiveView = data.WindowActiveView;
+					styles.WindowInactiveView = data.WindowInactiveView;
+					styles.WindowSmallActiveView = data.WindowSmallActiveView;
+					styles.WindowSmallInactiveView = data.WindowSmallInactiveView;
+					styles.WindowDefaultBackground = data.WindowDefaultBackground;
+					styles.MenuShadow = data.MenuShadow;
+					styles.MenuBackground = data.MenuBackground;
+					styles.MenuArrow = data.MenuArrow;
+					styles.WindowCloseButton = data.WindowCloseButton;
+					styles.WindowMaximizeButton = data.WindowMaximizeButton;
+					styles.WindowMinimizeButton = data.WindowMinimizeButton;
+					styles.WindowHelpButton = data.WindowHelpButton;
+					styles.WindowSmallCloseButton = data.WindowSmallCloseButton;
+					styles.WindowSmallMaximizeButton = data.WindowSmallMaximizeButton;
+					styles.WindowSmallMinimizeButton = data.WindowSmallMinimizeButton;
+					styles.WindowSmallHelpButton = data.WindowSmallHelpButton;
+					styles.WindowFixedBorder = data.WindowFixedBorder;
+					styles.WindowSizableBorder = data.WindowSizableBorder;
+					styles.WindowCaptionHeight = data.WindowCaptionHeight;
+					styles.WindowSmallCaptionHeight = data.WindowSmallCaptionHeight;
+					styles.MenuBorder = data.MenuBorder;
+					styles.CaretWidth = data.CaretWidth;
+				}
 			}
 			VirtualStation::~VirtualStation(void) { if (_station) _station->DestroyStation(); }
 			void VirtualStation::Render(const Box & at)
@@ -122,13 +150,13 @@ namespace Engine
 			void VirtualStation::SetPosition(const Box & box) { Window::SetPosition(box); if (_autosize) SetDesktopDimensions(Point(box.Right - box.Left, box.Bottom - box.Top)); }
 			void VirtualStation::FocusChanged(bool got_focus) { _station->FocusChanged(got_focus); }
 			void VirtualStation::CaptureChanged(bool got_capture) { _station->CaptureChanged(got_capture); }
-			void VirtualStation::LeftButtonDown(Point at) { SetFocus(); _station->LeftButtonDown(OuterToInner(at)); }
-			void VirtualStation::LeftButtonUp(Point at) { _station->LeftButtonUp(OuterToInner(at)); }
-			void VirtualStation::LeftButtonDoubleClick(Point at) { _station->LeftButtonDoubleClick(OuterToInner(at)); }
-			void VirtualStation::RightButtonDown(Point at) { SetFocus(); _station->RightButtonDown(OuterToInner(at)); }
-			void VirtualStation::RightButtonUp(Point at) { _station->RightButtonUp(OuterToInner(at)); }
-			void VirtualStation::RightButtonDoubleClick(Point at) { _station->RightButtonDoubleClick(OuterToInner(at)); }
-			void VirtualStation::MouseMove(Point at) { _station->MouseMove(OuterToInner(at)); }
+			void VirtualStation::LeftButtonDown(Point at) { SetFocus(); auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->LeftButtonDown(p); }
+			void VirtualStation::LeftButtonUp(Point at) { auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->LeftButtonUp(p); }
+			void VirtualStation::LeftButtonDoubleClick(Point at) { auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->LeftButtonDoubleClick(p); }
+			void VirtualStation::RightButtonDown(Point at) { SetFocus(); auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->RightButtonDown(p); }
+			void VirtualStation::RightButtonUp(Point at) { auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->RightButtonUp(p); }
+			void VirtualStation::RightButtonDoubleClick(Point at) { auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->RightButtonDoubleClick(p); }
+			void VirtualStation::MouseMove(Point at) { auto p = OuterToInner(at); if (GetCapture() == this || _station->NativeHitTest(p)) _station->MouseMove(p); }
 			void VirtualStation::ScrollVertically(double delta) { SetFocus(); _station->ScrollVertically(delta); }
 			void VirtualStation::ScrollHorizontally(double delta) { SetFocus(); _station->ScrollHorizontally(delta); }
 			bool VirtualStation::KeyDown(int key_code) { return _station->KeyDown(key_code); }

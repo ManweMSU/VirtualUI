@@ -16,10 +16,13 @@ struct vertex_output
 	float4 position : SV_Position;
 	float4 color : COLOR0;
 	float3 normal : TEXCOORD0;
+	float3 source : TEXCOORD1;
 };
 
 StructuredBuffer<vertex_input> verticies : register(t0);
 transform_input transform : register(b0);
+Texture2D tex : register(t0);
+sampler s : register(s0);
 
 vertex_output vertex_shader(uint id : SV_VertexID)
 {
@@ -28,6 +31,7 @@ vertex_output vertex_shader(uint id : SV_VertexID)
 	result.position = mul(float4(v.position, 1.0f), transform.proj);
 	result.color = float4(v.color, 1.0f);
 	result.normal = v.normal;
+	result.source = v.position;
 	return result;
 }
 

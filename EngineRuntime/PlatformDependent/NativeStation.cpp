@@ -263,7 +263,7 @@ namespace Engine
 				CurrentRate = max(max(fr, ar), ur);
 				if (CurrentRate == 0) KillTimer(GetHandle(), 1);
 				else if (CurrentRate == 1) ::SetTimer(GetHandle(), 1, GetCaretBlinkTime(), 0);
-				else if (CurrentRate == 2) { KillTimer(GetHandle(), 1); InvalidateRect(GetHandle(), 0, FALSE); }
+				else if (CurrentRate == 2) { ::SetTimer(GetHandle(), 1, 16, 0); }
 			}
 			virtual void FocusWindowChanged(void) override { InvalidateRect(GetHandle(), 0, 0); AnimationStateChanged(); }
 			virtual Box GetDesktopBox(void) override { return GetScreenDimensions(); }
@@ -763,7 +763,7 @@ namespace Engine
 			} else if (Msg == WM_PAINT) {
 				if (station) {
 					if (::IsWindowVisible(Wnd)) {
-						if (station->RenderContent() && station->CurrentRate != 2) ValidateRect(Wnd, 0);
+						if (station->RenderContent()) ValidateRect(Wnd, 0);
 					} else ValidateRect(Wnd, 0);
 				}
 			} else if (Msg == WM_MOUSEACTIVATE) {

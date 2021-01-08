@@ -1,5 +1,7 @@
 #include "GraphicsHelper.h"
 
+#include "../Math/Color.h"
+
 namespace Engine
 {
 	namespace Graphics
@@ -296,23 +298,145 @@ namespace Engine
 
 		ITexture * LoadTexture(IDevice * device, Codec::Frame * frame, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			Codec::PixelFormat codec_format;
+			if (format == PixelFormat::Invalid) {
+				if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8U8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8U8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::A8) format = PixelFormat::A8_unorm;
+				else format = PixelFormat::B8G8R8A8_unorm;
+			}
+			if (format == PixelFormat::B8G8R8A8_unorm) codec_format = Codec::PixelFormat::B8G8R8A8;
+			else if (format == PixelFormat::R8G8B8A8_unorm) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::R8G8B8A8_snorm) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::R8G8B8A8_uint) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::R8G8B8A8_sint) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::A8_unorm) codec_format = Codec::PixelFormat::A8;
+			else throw InvalidArgumentException();
+			SafePointer<Codec::Frame> converted;
+			bool convert = false;
+			if (frame->GetPixelFormat() != codec_format) convert = true;
+			if (frame->GetAlphaMode() != Codec::AlphaMode::Normal) convert = true;
+			if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
+			if (convert) converted = frame->ConvertFormat(Codec::FrameFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown));
+			else converted.SetRetain(frame);
+			Array<ResourceInitDesc> init(0x10);
+			ObjectArray<Codec::Frame> mips(0x10);
+			TextureDesc desc;
+			desc.Type = TextureType::Type2D;
+			desc.Format = format;
+			desc.Width = converted->GetWidth();
+			desc.Height = converted->GetHeight();
+			desc.DepthOrArraySize = 0;
+			desc.MipmapCount = mip_levels;
+			desc.Usage = usage;
+			desc.MemoryPool = pool;
+			uint current_mip = 0;
+			do {
+				if (!converted) throw InvalidArgumentException();
+				mips.Append(converted);
+				init.Append(CreateInitDesc(converted->GetData(), converted->GetScanLineLength()));
+				converted = CreateMipLevel(converted);
+				current_mip++;
+				if (!mip_levels) desc.MipmapCount++;
+			} while ((mip_levels && current_mip < mip_levels) || (!mip_levels && converted));
+			return device->CreateTexture(desc, init.GetBuffer());
 		}
 		ITexture * LoadTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			SafePointer<Codec::Frame> frame = Codec::DecodeFrame(stream);
+			if (!frame) throw InvalidFormatException();
+			return LoadTexture(device, frame, mip_levels, usage, format, pool);
 		}
 		ITexture * LoadCubeTexture(IDevice * device, Codec::Image * image, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			if (image->Frames.Length() != 6) throw InvalidArgumentException();
+			for (int i = 0; i < image->Frames.Length(); i++) {
+				if (image->Frames[i].GetWidth() != image->Frames[i].GetHeight()) throw InvalidArgumentException();
+				if (image->Frames[i].GetWidth() != image->Frames[0].GetWidth()) throw InvalidArgumentException();
+			}
+			Codec::PixelFormat codec_format;
+			if (format == PixelFormat::Invalid) {
+				if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8U8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8U8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::A8) format = PixelFormat::A8_unorm;
+				else format = PixelFormat::B8G8R8A8_unorm;
+			}
+			if (format == PixelFormat::B8G8R8A8_unorm) codec_format = Codec::PixelFormat::B8G8R8A8;
+			else if (format == PixelFormat::R8G8B8A8_unorm) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::R8G8B8A8_snorm) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::R8G8B8A8_uint) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::R8G8B8A8_sint) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::A8_unorm) codec_format = Codec::PixelFormat::A8;
+			else throw InvalidArgumentException();
+			Array<ResourceInitDesc> init(0x10);
+			ObjectArray<Codec::Frame> mips(0x10);
+			TextureDesc desc;
+			desc.Type = TextureType::TypeCube;
+			desc.Format = format;
+			desc.Width = image->Frames[0].GetWidth();
+			desc.Height = image->Frames[0].GetHeight();
+			desc.DepthOrArraySize = 0;
+			desc.MipmapCount = mip_levels;
+			desc.Usage = usage;
+			desc.MemoryPool = pool;
+			for (int k = 0; k < image->Frames.Length(); k++) {
+				auto frame = image->Frames.ElementAt(k);
+				SafePointer<Codec::Frame> converted;
+				bool convert = false;
+				if (frame->GetPixelFormat() != codec_format) convert = true;
+				if (frame->GetAlphaMode() != Codec::AlphaMode::Normal) convert = true;
+				if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
+				if (convert) converted = frame->ConvertFormat(Codec::FrameFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown));
+				else converted.SetRetain(frame);
+				uint current_mip = 0;
+				do {
+					if (!converted) throw InvalidArgumentException();
+					mips.Append(converted);
+					init.Append(CreateInitDesc(converted->GetData(), converted->GetScanLineLength()));
+					converted = CreateMipLevel(converted);
+					current_mip++;
+					if (!mip_levels) desc.MipmapCount++;
+				} while ((mip_levels && current_mip < mip_levels) || (!mip_levels && converted));
+				if (!mip_levels) mip_levels = desc.MipmapCount;
+			}
+			return device->CreateTexture(desc, init.GetBuffer());
 		}
 		Codec::Frame * CreateMipLevel(Codec::Frame * source)
 		{
-			// TODO: IMPLEMENT
-			return nullptr;
+			int width = source->GetWidth();
+			int height = source->GetHeight();
+			int mw = max(width / 2, 1);
+			int mh = max(height / 2, 1);
+			if (width == 1 && height == 1) return 0;
+			SafePointer<Codec::Frame> mip = new Codec::Frame(mw, mh, -1, source->GetPixelFormat(), source->GetAlphaMode(), source->GetScanOrigin());
+			for (int y = 0; y < mh; y++) for (int x = 0; x < mw; x++) {
+				Math::Color sum = Math::Color(UI::Color(source->GetPixel(x << 1, y << 1)));
+				int c = 1;
+				if (width > 1) {
+					sum += Math::Color(UI::Color(source->GetPixel((x << 1) + 1, y << 1)));
+					c++;
+					if (height > 1) {
+						sum += Math::Color(UI::Color(source->GetPixel(x << 1, (y << 1) + 1)));
+						sum += Math::Color(UI::Color(source->GetPixel((x << 1) + 1, (y << 1) + 1)));
+						c += 2;
+					}
+				} else {
+					sum += Math::Color(UI::Color(source->GetPixel(x << 1, (y << 1) + 1)));
+					c++;
+				}
+				auto pixel = UI::Color(sum / double(c));
+				mip->SetPixel(x, y, pixel);
+			}
+			mip->Retain();
+			return mip;
 		}
 	}
 }

@@ -77,6 +77,7 @@ namespace Engine
 		void Window::SetCapture(void) { Station->SetCapture(this); }
 		Window * Window::GetCapture(void) { return Station->GetCapture(); }
 		void Window::ReleaseCapture(void) { Station->ReleaseCapture(); }
+		IRenderingDevice * Window::GetRenderingDevice(void) { return Station->GetRenderingDevice(); }
 		void Window::Destroy(void) { Station->DestroyWindow(this); }
 		Box Window::GetAbsolutePosition(void)
 		{
@@ -639,7 +640,13 @@ namespace Engine
 			if (BackgroundShape) {
 				BackgroundShape->Render(GetStation()->GetRenderingDevice(), at);
 			}
-			ParentWindow::Render(at);
+			auto Device = GetStation()->GetRenderingDevice();
+			for (int i = 0; i < Children.Length(); i++) {
+				auto & child = Children[i];
+				if (!child.IsVisible()) continue;
+				Box rect = Box(child.WindowPosition.Left + at.Left, child.WindowPosition.Top + at.Top, child.WindowPosition.Right + at.Left, child.WindowPosition.Bottom + at.Top);
+				child.Render(rect);
+			}
 		}
 		void TopLevelWindow::ResetCache(void) { BackgroundShape.SetReference(0); }
 		Rectangle TopLevelWindow::GetRectangle(void) { return Rectangle::Entire(); }

@@ -39,6 +39,7 @@ namespace Engine
 		{
 			friend class WindowStation;
 			friend class ParentWindow;
+			friend class TopLevelWindow;
 		public:
 			enum class DepthOrder { SetFirst = 0, SetLast = 1, MoveUp = 2, MoveDown = 3 };
 			enum class Event { Command = 0, AcceleratorCommand = 1, MenuCommand = 2, DoubleClick = 3, ContextClick = 4, ValueChange = 5, Deferred = 6 };
@@ -105,6 +106,7 @@ namespace Engine
 			void SetCapture(void);
 			Window * GetCapture(void);
 			void ReleaseCapture(void);
+			IRenderingDevice * GetRenderingDevice(void);
 			void Destroy(void);
 			Box GetAbsolutePosition(void);
 			bool IsGeneralizedParent(Window * window);
