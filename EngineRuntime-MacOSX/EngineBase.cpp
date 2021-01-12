@@ -381,7 +381,7 @@ namespace Engine
 			for (int i = 0; i < repeats; i++) text[i] = src; text[repeats] = 0;
 		} else text = 0;
 	}
-	ImmutableString::ImmutableString(const Object * object) : ImmutableString(object->ToString()) {}
+	ImmutableString::ImmutableString(const Object * object) : ImmutableString(object ? object->ToString() : string(L"null")) {}
 	ImmutableString::~ImmutableString(void) { delete[] text; }
 	ImmutableString & ImmutableString::operator=(const ImmutableString & src)
 	{

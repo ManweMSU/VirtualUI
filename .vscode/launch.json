@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             //"program": "${workspaceFolder}/Controller Test/_build/macosx/contest.app/Contents/MacOS/contest",
-            "program": "${workspaceFolder}/Unix Tests/_build/debug_mac/Test Application.app/Contents/MacOS/testapp",
+            "program": "${workspaceFolder}/Unix Tests/_build/Test Application.app/Contents/MacOS/testapp",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

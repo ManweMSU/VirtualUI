@@ -6,6 +6,7 @@
 #include "CocoaInterop.h"
 #include "QuartzDevice.h"
 #include "MetalDevice.h"
+#include "MetalGraphics.h"
 #include "CocoaKeyCodes.h"
 #include "KeyCodes.h"
 #include "AppleCodec.h"
@@ -21,7 +22,7 @@
 using namespace Engine::UI;
 
 static void RenderStationContent(Engine::UI::WindowStation * station);
-static Engine::UI::IRenderingDevice * GetStationMetalDevice(Engine::UI::WindowStation * station);
+static Engine::MetalGraphics::MetalPresentationInterface * GetStationPresentationInterface(Engine::UI::WindowStation * station);
 static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
 static void ScreenToView(double sx, double sy, NSView * view, int & ox, int & oy)
 {
@@ -242,7 +243,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 }
 - (void) drawRect : (NSRect) dirtyRect
 {
-	if (station && !GetStationMetalDevice(station)) {
+	if (station && !GetStationPresentationInterface(station)) {
 		RenderStationContent(station);
 	}
 }
@@ -275,7 +276,7 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 - (void) require_contents_update
 {
 	if (!station) return;
-	if (GetStationMetalDevice(station)) Engine::Cocoa::InvalidateMetalDeviceContents(GetStationMetalDevice(station));
+	if (GetStationPresentationInterface(station)) GetStationPresentationInterface(station)->InvalidateContents();
 	else [self setNeedsDisplay: YES];
 }
 - (void) mouseMoved: (NSEvent *) event
@@ -776,9 +777,12 @@ namespace Engine
 			Array<EngineRuntimeTimerTarget *> _timers;
 			Window::RefreshPeriod InternalRate = Window::RefreshPeriod::None;
 		public:
+			NSView * main_window_view;
 			SafePointer<Object> TouchBar;
 			SafePointer<Cocoa::QuartzRenderingDevice> RenderingDevice;
 			SafePointer<UI::IRenderingDevice> MetalRenderingDevice;
+			SafePointer<MetalGraphics::MetalPresentationInterface> MetalInterface;
+			Controls::OverlappedWindow * top_level_window;
 			class DesktopWindowFactory : public WindowStation::IDesktopWindowFactory
 			{
 				Template::ControlTemplate * _template = 0;
@@ -800,14 +804,16 @@ namespace Engine
 			};
 			static void FreeDataCallback(void * info, const void * data, size_t size) { free(info); }
 		
-			NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory) : _window(window), WindowStation(factory), _slaves(0x10), _timers(0x10)
+			NativeStation(NSWindow * window, WindowStation::IDesktopWindowFactory * factory, bool create_dev = true) : _window(window), WindowStation(factory), _slaves(0x10), _timers(0x10)
 			{
-				auto feature_class = MacOSXSpecific::GetRenderingDeviceFeatureClass();
-				if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::DontCare) feature_class = MacOSXSpecific::RenderingDeviceFeatureClass::Metal;
-				if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::Quartz) {
-					RenderingDevice = new Cocoa::QuartzRenderingDevice;
-					SetRenderingDevice(RenderingDevice);
-				} else if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::Metal) {}
+				if (create_dev) {
+					auto feature_class = MacOSXSpecific::GetRenderingDeviceFeatureClass();
+					if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::DontCare) feature_class = MacOSXSpecific::RenderingDeviceFeatureClass::Metal;
+					if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::Quartz) {
+						RenderingDevice = new Cocoa::QuartzRenderingDevice;
+						SetRenderingDevice(RenderingDevice);
+					} else if (feature_class == MacOSXSpecific::RenderingDeviceFeatureClass::Metal) {}
+				}
 				_arrow.SetReference(new CocoaCursor([NSCursor arrowCursor], false));
 				_beam.SetReference(new CocoaCursor([NSCursor IBeamCursor], false));
 				_link.SetReference(new CocoaCursor([NSCursor pointingHandCursor], false));
@@ -816,6 +822,7 @@ namespace Engine
 				_size_left_up_right_down.SetReference(new CocoaCursor([NSCursor resizeLeftRightCursor], false));
 				_size_left_down_right_up.SetReference(new CocoaCursor([NSCursor resizeLeftRightCursor], false));
 				_size_all.SetReference(new CocoaCursor([NSCursor openHandCursor], false));
+				top_level_window = GetDesktop()->As<Controls::OverlappedWindow>();
 			}
 			virtual ~NativeStation(void) override
 			{
@@ -951,9 +958,9 @@ namespace Engine
 				int ur = int(InternalRate);
 				int mr = max(max(fr, ar), ur);
 				if (!mr) LowLevelSetTimer(0, 0); else {
-					if (mr == 1) LowLevelSetTimer(0, GetRenderingDevice()->GetCaretBlinkHalfTime());
+					if (mr == 1) LowLevelSetTimer(0, 500);
 					else if (mr == 2) {
-						if ([_window isKeyWindow]) LowLevelSetTimer(0, 25);
+						if ([_window isKeyWindow]) LowLevelSetTimer(0, 16);
 						else LowLevelSetTimer(0, 100);
 					}
 				}
@@ -1053,11 +1060,25 @@ namespace Engine
 					RenderingDevice->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
 					Render();
 				} else if (MetalRenderingDevice) {
+					// TODO: BEGIN WRAPER, REWORK
+					id<CAMetalDrawable> drawable = MetalInterface->GetLayerDrawable();
+					auto size = MetalInterface->GetLayerSize();
+					MTLRenderPassDescriptor * descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+					descriptor.colorAttachments[0].texture = drawable.texture;
+					descriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+					descriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
+					Engine::Cocoa::SetMetalRenderingDeviceState(MetalRenderingDevice, size.x, size.y);
+					Engine::Cocoa::MetalRenderingDeviceBeginDraw(MetalRenderingDevice, descriptor);
+					// TODO: END WRAPPER
 					MetalRenderingDevice->SetTimerValue(GetTimerValue());
 					Animate();
 					Render();
-				}
+					// TODO: BEGIN WRAPER
+					Engine::Cocoa::MetalRenderingDeviceEndDraw(MetalRenderingDevice, drawable, true);
+					// TODO: END WRAPPER, END REWORK
+				} else top_level_window->GetCallback()->OnFrameEvent(top_level_window, Windows::FrameEvent::Draw);
 			}
+			void CreateMetalInterface(void) { if (!MetalInterface) MetalInterface = new MetalGraphics::MetalPresentationInterface(main_window_view, this, RenderStationContent); }
 			NSWindow * GetWindow(void) const { return _window; }
 		};
 
@@ -1205,7 +1226,7 @@ namespace Engine
 		{
 			return Cocoa::QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(width, height, color);
 		}
-		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation)
+		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation, bool NoDevice)
 		{
 			InitializeWindowSystem();
 			UI::Template::Controls::FrameExtendedData * ex_data = 0;
@@ -1257,10 +1278,11 @@ namespace Engine
 			[window setContentMinSize: minimal_rect.size];
 			[title release];
 			NativeStation::DesktopWindowFactory factory(Template);
-			SafePointer<NativeStation> station = new NativeStation(window, &factory);
+			SafePointer<NativeStation> station = new NativeStation(window, &factory, !NoDevice);
 			if (ParentStation) station->SetParent(static_cast<NativeStation *>(ParentStation));
 			EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
 			EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
+			station->main_window_view = view;
 			view->window_delegate = delegate;
 			delegate->view = view;
 			[window setAcceptsMouseMovedEvents: YES];
@@ -1286,8 +1308,9 @@ namespace Engine
 			} else {
 				[window setContentView: view];
 			}
-			if (!station->RenderingDevice) {
-				station->MetalRenderingDevice = Cocoa::CreateMetalDeviceAndView(view, station, RenderStationContent);
+			if (!NoDevice && !station->RenderingDevice) {
+				station->CreateMetalInterface();
+				station->MetalRenderingDevice = Cocoa::CreateMetalDevice(station->MetalInterface);
 				station->SetRenderingDevice(station->MetalRenderingDevice);
 			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
@@ -1311,7 +1334,7 @@ namespace Engine
 			[view release];
 			Controls::OverlappedWindow * local_desktop = station->GetDesktop()->As<Controls::OverlappedWindow>();
 			local_desktop->GetContentFrame()->SetRectangle(UI::Rectangle::Entire());
-			if (!props->Background) {
+			if (!NoDevice && !props->Background) {
 				Color BackgroundColor = 0;
 				if (!props->DefaultBackground) {
 					BackgroundColor = props->BackgroundColor;
@@ -1368,6 +1391,7 @@ namespace Engine
 			SafePointer<NativeStation> station = new NativeStation(window, &factory);
 			EngineRuntimeContentView * view = [[EngineRuntimeContentView alloc] initWithStation: station.Inner()];
 			EngineRuntimeWindowDelegate * delegate = [[EngineRuntimeWindowDelegate alloc] initWithStation: station.Inner()];
+			station->main_window_view = view;
 			view->window_delegate = delegate;
 			delegate->view = view;
 			[window setAcceptsMouseMovedEvents: YES];
@@ -1383,7 +1407,8 @@ namespace Engine
 				[window setContentView: view];
 			}
 			if (!station->RenderingDevice) {
-				station->MetalRenderingDevice = Cocoa::CreateMetalDeviceAndView(view, station, RenderStationContent);
+				station->CreateMetalInterface();
+				station->MetalRenderingDevice = Cocoa::CreateMetalDevice(station->MetalInterface);
 				station->SetRenderingDevice(station->MetalRenderingDevice);
 			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
@@ -1630,6 +1655,15 @@ namespace Engine
 			state->Retain();
 			return state;
 		}
+		MetalGraphics::MetalPresentationInterface * InitWindowPresentationInterface(UI::WindowStation * Station)
+		{
+			static_cast<NativeStation *>(Station)->CreateMetalInterface();
+			static_cast<NativeStation *>(Station)->MetalRenderingDevice.SetReference(0);
+			static_cast<NativeStation *>(Station)->RenderingDevice.SetReference(0);
+			return static_cast<NativeStation *>(Station)->MetalInterface;
+		}
+		Graphics::IDeviceFactory * CreateDeviceFactory(void) { return MetalGraphics::CreateMetalDeviceFactory(); }
+		Graphics::IDevice * GetCommonDevice(void) { return MetalGraphics::GetMetalCommonDevice(); }
 	}
 }
 
@@ -1637,9 +1671,9 @@ static void RenderStationContent(Engine::UI::WindowStation * station)
 {
 	static_cast<Engine::NativeWindows::NativeStation *>(station)->RenderContent();
 }
-static Engine::UI::IRenderingDevice * GetStationMetalDevice(Engine::UI::WindowStation * station)
+static Engine::MetalGraphics::MetalPresentationInterface * GetStationPresentationInterface(Engine::UI::WindowStation * station)
 {
-	return static_cast<Engine::NativeWindows::NativeStation *>(station)->MetalRenderingDevice;
+	return static_cast<Engine::NativeWindows::NativeStation *>(station)->MetalInterface;
 }
 static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 {

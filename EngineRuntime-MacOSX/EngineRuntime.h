@@ -2,6 +2,7 @@
 
 #include "EngineBase.h"
 #include "Streaming.h"
+#include "Graphics/GraphicsHelper.h"
 #include "ImageCodec/CodecBase.h"
 #include "Math/Color.h"
 #include "Math/Complex.h"
@@ -56,3 +57,4 @@
 #include "UserInterface/ShapeBase.h"
 #include "UserInterface/StaticControls.h"
 #include "UserInterface/Templates.h"
+#include "UserInterface/VirtualStation.h"

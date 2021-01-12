@@ -4,12 +4,11 @@
 #include "MetalDeviceShaders.h"
 #include "CocoaInterop.h"
 
-#import "QuartzCore/QuartzCore.h"
-
 using namespace Engine;
 using namespace Engine::Codec;
 using namespace Engine::Streaming;
 using namespace Engine::UI;
+// TODO: REMOVE
 namespace Engine
 {
 	namespace Cocoa
@@ -19,66 +18,7 @@ namespace Engine
 		CocoaPointer< id<MTLLibrary> > common_library;
 	}
 }
-
-@interface EngineMetalView : NSView<CALayerDelegate>
-{
-@public
-	Engine::UI::IRenderingDevice * engine_device_ref;
-	Engine::UI::WindowStation * station_ref;
-	Engine::Cocoa::RenderContentsCallback callback_ref;
-	CAMetalLayer * layer;
-	double w, h;
-}
-- (instancetype) init;
-- (void) displayLayer: (CALayer *) layer;
-- (void) setFrame: (NSRect) frame;
-- (void) setFrameSize: (NSSize) newSize;
-@end
-@implementation EngineMetalView
-- (instancetype) init
-{
-	[super init];
-	layer = [CAMetalLayer layer];
-	[layer setDelegate: self];
-	[self setLayer: layer];
-	[self setWantsLayer: YES];
-	[layer setDevice: Engine::Cocoa::common_device];
-	[layer setFramebufferOnly: NO];
-	[layer setOpaque: NO];
-	w = h = 1;
-	return self;
-}
-- (void) displayLayer: (CALayer *) sender
-{
-	if (engine_device_ref) {
-		@autoreleasepool {
-			id<CAMetalDrawable> drawable = [layer nextDrawable];
-			MTLRenderPassDescriptor * descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-			descriptor.colorAttachments[0].texture = drawable.texture;
-			descriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-			descriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
-			Engine::Cocoa::SetMetalRenderingDeviceState(engine_device_ref, w, h);
-			Engine::Cocoa::MetalRenderingDeviceBeginDraw(engine_device_ref, descriptor);
-			if (callback_ref) callback_ref(station_ref);
-			Engine::Cocoa::MetalRenderingDeviceEndDraw(engine_device_ref, drawable, true);
-		}
-	}
-}
-- (void) setFrame: (NSRect) frame
-{
-	[super setFrame: frame];
-	double scale = [[self window] backingScaleFactor];
-	w = max(frame.size.width * scale, 1.0); h = max(frame.size.height * scale, 1.0);
-	[layer setDrawableSize: NSMakeSize(w, h)]; [layer setNeedsDisplay];
-}
-- (void) setFrameSize: (NSSize) newSize
-{
-	[super setFrameSize: newSize];
-	double scale = [[self window] backingScaleFactor];
-	w = max(newSize.width * scale, 1.0); h = max(newSize.height * scale, 1.0);
-	[layer setDrawableSize: NSMakeSize(w, h)]; [layer setNeedsDisplay];
-}
-@end
+// TODO: END REMOVE
 
 namespace Engine
 {
@@ -270,7 +210,6 @@ namespace Engine
 			Array<double> layer_alpha;
 			int width, height;
 			MTLPixelFormat pixel_format;
-			EngineMetalView * metal_view;
 
 			MetalDevice(void) : clipping(0x20), layers(0x20), brush_cache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), texture_cache(0x100),
 				layer_texture(0x10), layer_alpha(0x10)
@@ -282,7 +221,6 @@ namespace Engine
 				device = 0; library = 0; queue = 0; command_buffer = 0; encoder = 0;
 				base_descriptor = 0; width = height = 1;
 				pixel_format = MTLPixelFormatInvalid;
-				metal_view = 0;
 			}
 			virtual ~MetalDevice(void) override
 			{
@@ -298,12 +236,6 @@ namespace Engine
 				[device release];
 				[library release];
 				[queue release];
-				if (metal_view) {
-					metal_view->engine_device_ref = 0;
-					metal_view->station_ref = 0;
-					metal_view->callback_ref = 0;
-				}
-				[metal_view release];
 				for (int i = 0; i < texture_cache.Length(); i++) {
 					texture_cache[i].base->DeviceWasDestroyed(this);
 					texture_cache[i].spec->DeviceWasDestroyed(this);
@@ -671,23 +603,25 @@ namespace Engine
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return LoaderDevice->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override
 			{
-				MTLPixelFormat metal_format;
-				if (width <= 0 || height <= 0) throw InvalidArgumentException();
-				if (format == Graphics::PixelFormat::B8G8R8A8_unorm) metal_format = MTLPixelFormatBGRA8Unorm;
-				else if (format == Graphics::PixelFormat::R8G8B8A8_unorm) metal_format = MTLPixelFormatRGBA8Unorm;
-				else throw InvalidArgumentException();
-				id<MTLTexture> texture = 0;
-				@autoreleasepool {
-					auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: metal_format width: width height: height mipmapped: NO];
-					[tex_desc setUsage: MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget];
-					texture = [device newTextureWithDescriptor: tex_desc];
-				}
-				if (!texture) return 0;
-				MetalWrappedTexture * info = new (std::nothrow) MetalWrappedTexture;
-				if (!info) { [texture release]; return 0; }
-				info->frame = texture;
-				info->w = width; info->h = height;
-				return info;
+				// TODO: REIMPLEMENT
+				// MTLPixelFormat metal_format;
+				// if (width <= 0 || height <= 0) throw InvalidArgumentException();
+				// if (format == Graphics::PixelFormat::B8G8R8A8_unorm) metal_format = MTLPixelFormatBGRA8Unorm;
+				// else if (format == Graphics::PixelFormat::R8G8B8A8_unorm) metal_format = MTLPixelFormatRGBA8Unorm;
+				// else throw InvalidArgumentException();
+				// id<MTLTexture> texture = 0;
+				// @autoreleasepool {
+				// 	auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: metal_format width: width height: height mipmapped: NO];
+				// 	[tex_desc setUsage: MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget];
+				// 	texture = [device newTextureWithDescriptor: tex_desc];
+				// }
+				// if (!texture) return 0;
+				// MetalWrappedTexture * info = new (std::nothrow) MetalWrappedTexture;
+				// if (!info) { [texture release]; return 0; }
+				// info->frame = texture;
+				// info->w = width; info->h = height;
+				// return info;
+				return 0;
 			}
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override
 			{
@@ -943,7 +877,7 @@ namespace Engine
 			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override { return 0; }
 		};
 
-		UI::IRenderingDevice * CreateMetalDeviceAndView(NSView * parent_view, UI::WindowStation * station, RenderContentsCallback callback)
+		UI::IRenderingDevice * CreateMetalDevice(MetalGraphics::MetalPresentationInterface * presentation)
 		{
 			SafePointer<MetalDevice> engine_device = new (std::nothrow) MetalDevice;
 			if (!engine_device) return 0;
@@ -974,19 +908,15 @@ namespace Engine
 					[queue release];
 				}
 			}
-			EngineMetalView * metal_view = [[EngineMetalView alloc] init];
-			engine_device->metal_view = metal_view;
-			metal_view->engine_device_ref = engine_device;
-			metal_view->station_ref = station;
-			metal_view->callback_ref = callback;
+			presentation->SetLayerDevice(common_device);
+			presentation->SetLayerAutosize(true);
+			presentation->SetLayerOpaque(false);
+			presentation->SetLayerFramebufferOnly(false);
+			presentation->InvalidateContents();
 			SetMetalRenderingDeviceHandle(engine_device, common_device);
-			SetMetalRenderingDeviceShaderLibrary(engine_device, common_library, [metal_view->layer pixelFormat]);
+			SetMetalRenderingDeviceShaderLibrary(engine_device, common_library, presentation->GetPixelFormat());
 			SetMetalRenderingDeviceQueue(engine_device, common_queue);
 			[device release];
-			[parent_view addSubview: metal_view];
-			[parent_view setWantsLayer: YES];
-			[metal_view setFrameSize: [parent_view frame].size];
-			[metal_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
 			engine_device->Retain();
 			return engine_device;
 		}
@@ -1038,12 +968,11 @@ namespace Engine
 			dev->encoder = 0;
 			dev->command_buffer = 0;
 		}
-		void InvalidateMetalDeviceContents(UI::IRenderingDevice * device) { [[reinterpret_cast<MetalDevice *>(device)->metal_view layer] setNeedsDisplay]; }
 
-		id<MTLTexture> QueryTextureMetalSurface(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->frame; }
-		int QueryTextureWidth(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->w; }
-		int QueryTextureHeight(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->h; }
-		id<MTLDevice> GetMetalSharedDevice(void) { return common_device; }
-		id<MTLCommandQueue> GetMetalSharedQueue(void) { return common_queue; }
+		// id<MTLTexture> QueryTextureMetalSurface(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->frame; }
+		// int QueryTextureWidth(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->w; }
+		// int QueryTextureHeight(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->h; }
+		// id<MTLDevice> GetMetalSharedDevice(void) { return common_device; }
+		// id<MTLCommandQueue> GetMetalSharedQueue(void) { return common_queue; }
 	}
 }

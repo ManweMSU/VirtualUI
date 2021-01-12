@@ -77,6 +77,7 @@ namespace Engine
 		void Window::SetCapture(void) { Station->SetCapture(this); }
 		Window * Window::GetCapture(void) { return Station->GetCapture(); }
 		void Window::ReleaseCapture(void) { Station->ReleaseCapture(); }
+		IRenderingDevice * Window::GetRenderingDevice(void) { return Station->GetRenderingDevice(); }
 		void Window::Destroy(void) { Station->DestroyWindow(this); }
 		Box Window::GetAbsolutePosition(void)
 		{
@@ -270,10 +271,7 @@ namespace Engine
 		}
 		void WindowStation::SetBox(const Box & box) { Position = box; if (TopLevelWindow) { TopLevelWindow->WindowPosition = box; TopLevelWindow->ArrangeChildren(); } }
 		Box WindowStation::GetBox(void) { return Position; }
-		void WindowStation::Render(void)
-		{
-			if (TopLevelWindow.Inner()) TopLevelWindow->Render(Position);
-		}
+		void WindowStation::Render(const Point & origin) { if (TopLevelWindow.Inner()) TopLevelWindow->Render(Box(Position.Left + origin.x, Position.Top + origin.y, Position.Right + origin.x, Position.Bottom + origin.y)); }
 		void WindowStation::ResetCache(void) { if (TopLevelWindow.Inner()) TopLevelWindow->ResetCache(); }
 		Window * WindowStation::GetDesktop(void) { return TopLevelWindow; }
 		Window * WindowStation::HitTest(Point at) { if (TopLevelWindow.Inner() && NativeHitTest(at)) return TopLevelWindow->HitTest(at); else return 0; }
@@ -642,7 +640,13 @@ namespace Engine
 			if (BackgroundShape) {
 				BackgroundShape->Render(GetStation()->GetRenderingDevice(), at);
 			}
-			ParentWindow::Render(at);
+			auto Device = GetStation()->GetRenderingDevice();
+			for (int i = 0; i < Children.Length(); i++) {
+				auto & child = Children[i];
+				if (!child.IsVisible()) continue;
+				Box rect = Box(child.WindowPosition.Left + at.Left, child.WindowPosition.Top + at.Top, child.WindowPosition.Right + at.Left, child.WindowPosition.Bottom + at.Top);
+				child.Render(rect);
+			}
 		}
 		void TopLevelWindow::ResetCache(void) { BackgroundShape.SetReference(0); }
 		Rectangle TopLevelWindow::GetRectangle(void) { return Rectangle::Entire(); }

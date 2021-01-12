@@ -4,6 +4,7 @@
 @import AppKit;
 
 #include "../UserInterface/Menus.h"
+#include "MetalGraphics.h"
 
 @interface EngineRuntimeApplicationDelegate : NSObject<NSApplicationDelegate>
 - (void) close_all: (id) sender;
@@ -21,6 +22,7 @@ namespace Engine
 {
 	namespace NativeWindows
 	{
+		MetalGraphics::MetalPresentationInterface * InitWindowPresentationInterface(UI::WindowStation * Station);
         void InternalShowWindow(UI::WindowStation * Station, bool Show);
         void SetTouchBarObject(UI::WindowStation * Station, Object * Bar);
 		Object * GetTouchBarObject(UI::WindowStation * Station);

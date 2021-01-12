@@ -35,7 +35,7 @@ namespace Engine
 		{
 			enum class FrameEvent {
 				Close, Move, Maximize, Minimize, Restore,
-				SessionEnding, SessionEnd,
+				SessionEnding, SessionEnd, Draw,
 				Help, Activate, Deactivate, PopupMenuCancelled, Timer
 			};
 			class IWindowEventCallback
@@ -46,8 +46,8 @@ namespace Engine
 				virtual void OnFrameEvent(Window * window, FrameEvent event) = 0;
 			};
 			Controls::OverlappedWindow * CreateFramelessDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
-			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
-			Controls::OverlappedWindow * CreatePopupDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station = 0, bool NoDevice = false);
+			Controls::OverlappedWindow * CreatePopupDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station = 0);
 
 			void InitializeCodecCollection(void);
 			IResourceLoader * CreateNativeCompatibleResourceLoader(void);
@@ -74,7 +74,7 @@ namespace Engine
 			class OverlappedWindow : public ParentWindow
 			{
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramelessDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
-				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramedDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
+				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreateFramedDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station, bool NoDevice);
 				friend Controls::OverlappedWindow * ::Engine::UI::Windows::CreatePopupDialog(Template::ControlTemplate * Template, Windows::IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station);
 				friend class ContentFrame;
 			private:
@@ -164,6 +164,18 @@ namespace Engine
 				virtual Rectangle GetRectangle(void) override;
 				virtual string GetControlClass(void) override;
 			};
+
+			enum OverlappedWindowFlags {
+				OverlappedWindowCaptioned = 0x0001,
+				OverlappedWindowCloseButton = 0x0002,
+				OverlappedWindowMaximizeButton = 0x0004,
+				OverlappedWindowMinimizeButton = 0x0008,
+				OverlappedWindowHelpButton = 0x0010,
+				OverlappedWindowSizeble = 0x0020,
+				OverlappedWindowToolWindow = 0x0040,
+				OverlappedWindowDefaultBackground = 0x0080,
+			};
+			Template::ControlTemplate * CreateOverlappedWindowTemplate(const string & title, const Rectangle & position, uint32 flags, int min_width = 0, int min_height = 0, Color background = 0);
 
 			namespace Constructor
 			{
