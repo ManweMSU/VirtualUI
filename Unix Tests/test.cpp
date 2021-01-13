@@ -17,11 +17,15 @@ UI::InterfaceTemplate interface;
 
 MacOSXSpecific::TouchBar * tb;
 
+SafePointer<Graphics::IDevice> device;
+SafePointer<Graphics::IWindowLayer> layer;
+
 class _cb2 : public Windows::IWindowEventCallback
 {
 public:
 	virtual void OnInitialized(UI::Window * window) override
 	{
+		window->As<Controls::OverlappedWindow>()->GetAcceleratorTable() << Accelerators::AcceleratorCommand(192939, KeyCodes::Return, false, false, true);
 		auto list = window->FindChild(343434)->As<Controls::ListView>();
 		for (int i = 1; i <= 10; i++) {
 			lv_item item;
@@ -121,6 +125,12 @@ public:
 		} else if (ID == 10101) {
 			double value = static_cast<MacOSXSpecific::TouchBarSlider *>(tb->FindChild(10101))->GetPosition();
 			Streaming::TextWriter(SafePointer<Streaming::Stream>(new Streaming::FileStream(IO::GetStandardOutput()))).WriteLine(L"Slider: " + string(value));
+		} else if (ID == 192939 && layer) {
+			if (layer->IsFullscreen()) {
+				layer->SwitchToWindow();
+			} else {
+				layer->SwitchToFullscreen();
+			}
 		}
 	}
 	virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
@@ -133,6 +143,8 @@ public:
 		} else if (event == Windows::FrameEvent::Move) {
 			console.SetTextColor(14);
 			console.WriteLine(L"Move Window");
+			auto box = window->GetStation()->GetBox();
+			if (layer) layer->ResizeSurface(box.Right - box.Left, box.Bottom - box.Top);
 		} else if (event == Windows::FrameEvent::Minimize) {
 			console.SetTextColor(14);
 			console.WriteLine(L"Minimize Window");
@@ -154,6 +166,22 @@ public:
 		} else if (event == Windows::FrameEvent::SessionEnd) {
 			console.SetTextColor(14);
 			console.WriteLine(L"End session");
+		} else if (event == Windows::FrameEvent::Draw) {
+			console.SetTextColor(14);
+			console.WriteLine(L"Draw");
+			SafePointer<Graphics::ITexture> rt = layer->QuerySurface();
+			IO::Console cns;
+			cns.WriteLine(string(rt.Inner()));
+			auto context = device->GetDeviceContext();
+			if (context->Begin2DRenderingPass(rt)) {
+				auto device_2d = context->Get2DRenderingDevice();
+				device_2d->SetTimerValue(GetTimerValue());
+				window->GetStation()->SetRenderingDevice(device_2d);
+				window->GetStation()->Animate();
+				window->GetStation()->Render();
+				if (!context->EndCurrentPass()) cns.WriteLine(L"2D rendering pass finalization failed");
+			} else cns.WriteLine(L"2D rendering pass failed");
+			layer->Present();
 		}
 		if (Windows::IsWindowActive(window)) {
 			console.SetTextColor(10);
@@ -233,31 +261,57 @@ int Main(void)
 
 	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
 
-	MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
-		MacOSXSpecific::CreationAttribute::EffectBackground);
-
-	{
-		SafePointer<Graphics::IDeviceFactory> fact = Graphics::CreateDeviceFactory();
-		SafePointer<Graphics::IDevice> dev = fact->CreateDefaultDevice();
-		Console << string(dev.Inner()) << L"\n";
-		string tech;
-		uint32 ver;
-		dev->GetImplementationInfo(tech, ver);
-		Console << tech << L"/" << ver << L"\n";
-		Console << dev->GetDeviceName() << L" :: " << dev->GetDeviceIdentifier() << L"\n";
-	}
-
 	auto Callback2 = new _cb2;
 	auto templ = interface.Dialog[L"Test3"];
 	templ->Properties->GetProperty(L"Background").Get< SafePointer<UI::Template::Shape> >().SetReference(0);
 	templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
 	templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
 	tex->Release();
-	auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0, false);
+	auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0, true);
 	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
-	MacOSXSpecific::SetWindowBackgroundColor(w4, UI::Color(255, 0, 255, 128));
-	MacOSXSpecific::SetEffectBackgroundMaterial(w4, MacOSXSpecific::EffectBackgroundMaterial::Popover);
 	if (w4) w4->Show(true);
+
+	{
+		SafePointer<Graphics::IDeviceFactory> fact = Graphics::CreateDeviceFactory();
+		device = fact->CreateDefaultDevice();
+		Console << string(device.Inner()) << L"\n";
+		string tech;
+		uint32 ver;
+		device->GetImplementationInfo(tech, ver);
+		Console << tech << L"/" << ver << L"\n";
+		Console << device->GetDeviceName() << L" :: " << device->GetDeviceIdentifier() << L"\n";
+		auto box = w4->GetStation()->GetBox();
+		Graphics::WindowLayerDesc desc;
+		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+		desc.Width = box.Right - box.Left;
+		desc.Height = box.Bottom - box.Top;
+		desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
+		layer = device->CreateWindowLayer(w4, desc);
+		Console << string(layer.Inner()) << L"\n";
+		w4->RequireRedraw();
+
+		Graphics::TextureDesc tdesc;
+		tdesc.Type = Graphics::TextureType::Type2D;
+		tdesc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+		tdesc.Width = 256;
+		tdesc.Height = 128;
+		tdesc.MipmapCount = 1;
+		tdesc.MemoryPool = Graphics::ResourceMemoryPool::Default;
+		tdesc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageCPUWrite;
+
+		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
+		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
+			Math::Color clr(x / 255.0, 0.5, y / 128.0);
+			frame->SetPixel(x, y, UI::Color(clr));
+		}
+		Graphics::ResourceInitDesc idesc;
+		idesc.Data = frame->GetData();
+		idesc.DataPitch = frame->GetScanLineLength();
+		SafePointer<Graphics::ITexture> tex = device->CreateTexture(tdesc, &idesc);
+		Console << string(tex.Inner()) << L"\n";
+		Console << string(tex->GetMipmapCount()) << L"\n";
+		// TODO: TEST TO RENDER
+	}
 
 	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();
 	status->SetIconColorUsage(UI::Windows::StatusBarIconColorUsage::Monochromic);

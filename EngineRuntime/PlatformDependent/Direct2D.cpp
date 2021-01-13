@@ -579,12 +579,12 @@ namespace Engine
 		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
 			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
 			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
+			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0), ParentWrappedDevice(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) :
 			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
 			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0)
+			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0), ParentWrappedDevice(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
 		D2DRenderDevice::~D2DRenderDevice(void)
 		{
@@ -600,7 +600,7 @@ namespace Engine
 			if (Target) { Target->Release(); Target = 0; }
 			if (target) { Target = target; Target->AddRef(); }
 		}
-		void D2DRenderDevice::SetParentWrappedDevice(Graphics::IDevice * device) noexcept { ParentWrappedDevice.SetRetain(device); }
+		void D2DRenderDevice::SetParentWrappedDevice(Graphics::IDevice * device) noexcept { ParentWrappedDevice = device; }
 		void D2DRenderDevice::TextureWasDestroyed(ITexture * texture) noexcept
 		{
 			for (int i = 0; i < TextureCache.Length(); i++) {
@@ -752,7 +752,7 @@ namespace Engine
 		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
 		{
 			if (!texture) return 0;
-			if (texture->GetParentDevice() != ParentWrappedDevice.Inner()) return 0;
+			if (texture->GetParentDevice() != ParentWrappedDevice) return 0;
 			if (!(texture->GetResourceUsage() & Graphics::ResourceUsageShaderRead)) return 0;
 			if (texture->GetTextureType() != Graphics::TextureType::Type2D) return 0;
 			if (texture->GetPixelFormat() != Graphics::PixelFormat::B8G8R8A8_unorm) return 0;

@@ -179,7 +179,7 @@ namespace Engine
 			SafePointer<UI::IInversionEffectRenderingInfo> inversion;
 			Array<tex_pair> texture_cache;
 		public:
-			SafePointer<Graphics::IDevice> engine_device;
+			Graphics::IDevice * engine_device;
 			id<MTLDevice> device;
 			id<MTLLibrary> library;
 			id<MTLCommandBuffer> command_buffer;
@@ -194,6 +194,7 @@ namespace Engine
 			MetalDevice(void) : clipping(0x20), layers(0x20), brush_cache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), texture_cache(0x100),
 				layer_texture(0x10), layer_alpha(0x10)
 			{
+				engine_device = 0;
 				LoaderDevice = new Cocoa::QuartzRenderingDevice();
 				main_state = tile_state = invert_state = layer_state = blur_state = 0;
 				white_texture = 0;
@@ -545,16 +546,14 @@ namespace Engine
 			}
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override
 			{
-				// SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
-				// if (!info) return 0;
-				// auto wrapper = static_cast<MetalWrappedTexture *>(texture);
-				// info->wrapped.SetRetain(wrapper);
-				// info->verticies = 0;
-				// info->vertex_count = 6;
-				// info->tile_render = false;
-				// info->Retain();
-				// return info;
-				return 0;
+				SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
+				if (!info) return 0;
+				info->wrapped.SetRetain(texture);
+				info->verticies = 0;
+				info->vertex_count = 6;
+				info->tile_render = false;
+				info->Retain();
+				return info;
 			}
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
 			{
@@ -582,25 +581,18 @@ namespace Engine
 			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return LoaderDevice->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override
 			{
-				// TODO: REIMPLEMENT
-				// MTLPixelFormat metal_format;
-				// if (width <= 0 || height <= 0) throw InvalidArgumentException();
-				// if (format == Graphics::PixelFormat::B8G8R8A8_unorm) metal_format = MTLPixelFormatBGRA8Unorm;
-				// else if (format == Graphics::PixelFormat::R8G8B8A8_unorm) metal_format = MTLPixelFormatRGBA8Unorm;
-				// else throw InvalidArgumentException();
-				// id<MTLTexture> texture = 0;
-				// @autoreleasepool {
-				// 	auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: metal_format width: width height: height mipmapped: NO];
-				// 	[tex_desc setUsage: MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget];
-				// 	texture = [device newTextureWithDescriptor: tex_desc];
-				// }
-				// if (!texture) return 0;
-				// MetalWrappedTexture * info = new (std::nothrow) MetalWrappedTexture;
-				// if (!info) { [texture release]; return 0; }
-				// info->frame = texture;
-				// info->w = width; info->h = height;
-				// return info;
-				return 0;
+				if (width <= 0 || height <= 0) throw InvalidArgumentException();
+				if (format != Graphics::PixelFormat::B8G8R8A8_unorm && format != Graphics::PixelFormat::R8G8B8A8_unorm) throw InvalidArgumentException();
+				Graphics::TextureDesc desc;
+				desc.Type = Graphics::TextureType::Type2D;
+				desc.Format = format;
+				desc.Width = width;
+				desc.Height = height;
+				desc.DepthOrArraySize = 0;
+				desc.MipmapCount = 1;
+				desc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget;
+				desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
+				return engine_device->CreateTexture(desc);
 			}
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override
 			{
@@ -638,17 +630,16 @@ namespace Engine
 					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
 					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
 				} else if (info->wrapped) {
-					// TODO: REWORK
-					// LayerEndInfo rinfo;
-					// rinfo.render_at = At;
-					// rinfo.size = UI::Point(info->wrapped->w, info->wrapped->h);
-					// rinfo.opacity = 1.0f;
-					// [encoder setRenderPipelineState: layer_state];
-					// [encoder setFragmentTexture: info->wrapped->frame atIndex: 0];
-					// [encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
-					// [encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
-					// [encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
-					// TODO: END REWORK
+					engine_device->GetDeviceContext()->Wait();
+					LayerEndInfo rinfo;
+					rinfo.render_at = At;
+					rinfo.size = UI::Point(info->wrapped->GetWidth(), info->wrapped->GetHeight());
+					rinfo.opacity = 1.0f;
+					[encoder setRenderPipelineState: layer_state];
+					[encoder setFragmentTexture: MetalGraphics::GetInnerMetalTexture(info->wrapped) atIndex: 0];
+					[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
+					[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
+					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
 				}
 			}
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept override
@@ -864,7 +855,7 @@ namespace Engine
 			SafePointer<MetalDevice> engine_device = new (std::nothrow) MetalDevice;
 			if (!engine_device) return 0;
 			Graphics::IDevice * engine_graphics_device = MetalGraphics::GetMetalCommonDevice();
-			engine_device->engine_device.SetRetain(engine_graphics_device);
+			engine_device->engine_device = engine_graphics_device;
 			engine_device->device = MetalGraphics::GetInnerMetalDevice(engine_graphics_device);
 			if (common_library) {
 				engine_device->library = common_library;
@@ -880,6 +871,18 @@ namespace Engine
 			presentation->SetLayerFramebufferOnly(false);
 			presentation->InvalidateContents();
 			engine_device->pixel_format = presentation->GetPixelFormat();
+			engine_device->CreateRenderingStates();
+			engine_device->Retain();
+			return engine_device;
+		}
+		UI::IRenderingDevice * CreateMetalRenderingDevice(Graphics::IDevice * device)
+		{
+			SafePointer<MetalDevice> engine_device = new (std::nothrow) MetalDevice;
+			if (!engine_device) return 0;
+			engine_device->engine_device = device;
+			engine_device->device = MetalGraphics::GetInnerMetalDevice(device);
+			engine_device->library = CreateMetalRenderingDeviceShaders(engine_device->device);
+			engine_device->pixel_format = MTLPixelFormatBGRA8Unorm;
 			engine_device->CreateRenderingStates();
 			engine_device->Retain();
 			return engine_device;
@@ -927,13 +930,26 @@ namespace Engine
 			engine_device->encoder = 0;
 			engine_device->command_buffer = 0;
 		}
-
-		// TODO: REMOVE
-		// id<MTLTexture> QueryTextureMetalSurface(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->frame; }
-		// int QueryTextureWidth(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->w; }
-		// int QueryTextureHeight(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->h; }
-		// id<MTLDevice> GetMetalSharedDevice(void) { return common_device; }
-		// id<MTLCommandQueue> GetMetalSharedQueue(void) { return common_queue; }
-		// TODO: END REMOVE
+		void PureMetalRenderingDeviceBeginDraw(UI::IRenderingDevice * device, id<MTLCommandBuffer> command, id<MTLTexture> texture, uint width, uint height)
+		{
+			auto engine_device = static_cast<MetalDevice *>(device);
+			MTLRenderPassDescriptor * descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+			descriptor.colorAttachments[0].texture = texture;
+			descriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
+			engine_device->width = width;
+			engine_device->height = height;
+			engine_device->base_descriptor = descriptor;
+			engine_device->command_buffer = command;
+			engine_device->encoder = [command renderCommandEncoderWithDescriptor: descriptor];
+			[engine_device->encoder setViewport: (MTLViewport) { 0.0, 0.0, double(width), double(height), 0.0, 1.0 }];
+			engine_device->InitDraw();
+		}
+		void PureMetalRenderingDeviceEndDraw(UI::IRenderingDevice * device)
+		{
+			auto engine_device = static_cast<MetalDevice *>(device);
+			[engine_device->encoder endEncoding];
+			engine_device->encoder = 0;
+			engine_device->command_buffer = 0;
+		}
 	}
 }

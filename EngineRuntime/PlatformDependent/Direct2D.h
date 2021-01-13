@@ -48,7 +48,7 @@ namespace Engine
 			Array<tex_pair> TextureCache;
 			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
 			SafePointer<IWICBitmap> BitmapTarget;
-			SafePointer<Graphics::IDevice> ParentWrappedDevice;
+			Graphics::IDevice * ParentWrappedDevice;
 			int BitmapTargetState;
 			int BitmapTargetResX, BitmapTargetResY;
 		public:

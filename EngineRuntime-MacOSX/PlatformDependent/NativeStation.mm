@@ -1065,7 +1065,7 @@ namespace Engine
 					Animate();
 					Render();
 					Cocoa::CoreMetalRenderingDeviceEndDraw(MetalRenderingDevice, drawable, true);
-				} else top_level_window->GetCallback()->OnFrameEvent(top_level_window, Windows::FrameEvent::Draw);
+				} else if (top_level_window->GetCallback()) top_level_window->GetCallback()->OnFrameEvent(top_level_window, Windows::FrameEvent::Draw);
 			}
 			void CreateMetalInterface(void) { if (!MetalInterface) MetalInterface = new MetalGraphics::MetalPresentationInterface(main_window_view, this, RenderStationContent); }
 			NSWindow * GetWindow(void) const { return _window; }

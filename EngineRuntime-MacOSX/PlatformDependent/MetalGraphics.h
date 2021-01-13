@@ -40,5 +40,8 @@ namespace Engine
 
 		id<MTLDevice> GetInnerMetalDevice(Graphics::IDevice * wrapper);
 		id<MTLCommandQueue> GetInnerMetalQueue(Graphics::IDevice * wrapper);
+		id<MTLBuffer> GetInnerMetalBuffer(Graphics::IBuffer * buffer);
+		id<MTLTexture> GetInnerMetalTexture(Graphics::ITexture * texture);
+		MTLPixelFormat MakeMetalPixelFormat(Graphics::PixelFormat format);
 	}
 }
