@@ -1,6 +1,7 @@
 #include "MetalGraphics.h"
 
 #include "NativeStationBackdoors.h"
+#include "CocoaInterop.h"
 
 using namespace Engine;
 using namespace Engine::Graphics;
@@ -110,15 +111,160 @@ namespace Engine
 
 		// Engine::NativeWindows::InitWindowPresentationInterface(station)  - to create layer
 
+		class MTL_Device : public IDevice
+		{
+		public:
+			id<MTLDevice> device;
+			id<MTLCommandQueue> queue;
+
+			MTL_Device(id<MTLDevice> _device) : device(_device)
+			{
+				[device retain];
+				queue = [device newCommandQueue];
+			}
+			virtual ~MTL_Device(void) override
+			{
+				[device release];
+				[queue release];
+			}
+			virtual string GetDeviceName(void) noexcept override { return Cocoa::EngineString([device name]); }
+			virtual uint64 GetDeviceIdentifier(void) noexcept override { return [device registryID]; }
+			virtual bool DeviceIsValid(void) noexcept override { return true; }
+			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override
+			{
+				tech = L"Metal";
+				if ([device supportsFamily: MTLGPUFamilyMac2]) version = 2;
+				else if ([device supportsFamily: MTLGPUFamilyMac1]) version = 2;
+				else version = 0;
+			}
+			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IDeviceContext * GetDeviceContext(void) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+			virtual string ToString(void) const override { return L"MTL_Device"; }
+		};
+		class MTL_Factory : public IDeviceFactory
+		{
+		public:
+			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableDevices(void) noexcept override
+			{
+				SafePointer< Dictionary::PlainDictionary<uint64, string> > result = new (std::nothrow) Dictionary::PlainDictionary<uint64, string>(0x10);
+				NSArray< id<MTLDevice> > * devs = MTLCopyAllDevices();
+				try {
+					for (int i = 0; i < [devs count]; i++) {
+						auto dev = [devs objectAtIndex: i];
+						result->Append([dev registryID], Cocoa::EngineString([dev name]));
+					}
+				} catch (...) {
+					[devs release];
+					return 0;
+				}
+				[devs release];
+				result->Retain();
+				return result;
+			}
+			virtual IDevice * CreateDevice(uint64 identifier) noexcept override
+			{
+				NSArray< id<MTLDevice> > * devs = MTLCopyAllDevices();
+				id<MTLDevice> selected = 0;
+				for (int i = 0; i < [devs count]; i++) {
+					auto dev = [devs objectAtIndex: i];
+					if ([dev registryID] == identifier) { selected = dev; break; }
+				}
+				if (selected) {
+					SafePointer<MTL_Device> device = new (std::nothrow) MTL_Device(selected);
+					[devs release];
+					if (!device) return 0;
+					device->Retain();
+					return device;
+				} else {
+					[devs release];
+					return 0;
+				}
+			}
+			virtual IDevice * CreateDefaultDevice(void) noexcept override
+			{
+				id<MTLDevice> dev = MTLCreateSystemDefaultDevice();
+				SafePointer<MTL_Device> device = new (std::nothrow) MTL_Device(dev);
+				[dev release];
+				if (!device) return 0;
+				device->Retain();
+				return device;
+			}
+			virtual string ToString(void) const override { return L"MTL_Factory"; }
+		};
+
+		SafePointer<MTL_Device> common_device;
+
 		Graphics::IDeviceFactory * CreateMetalDeviceFactory(void)
 		{
-			// TODO: IMPLEMENT
-			return 0;
+			SafePointer<MTL_Factory> factory = new (std::nothrow) MTL_Factory;
+			if (!factory) return 0;
+			factory->Retain();
+			return factory;
 		}
 		Graphics::IDevice * GetMetalCommonDevice(void)
 		{
-			// TODO: IMPLEMENT
-			return 0;
+			if (!common_device) {
+				id<MTLDevice> dev = MTLCreateSystemDefaultDevice();
+				common_device = new (std::nothrow) MTL_Device(dev);
+				[dev release];
+			}
+			return common_device;
 		}
+
+		id<MTLDevice> GetInnerMetalDevice(Graphics::IDevice * wrapper) { return static_cast<MTL_Device *>(wrapper)->device; }
+		id<MTLCommandQueue> GetInnerMetalQueue(Graphics::IDevice * wrapper) { return static_cast<MTL_Device *>(wrapper)->queue; }
 	}
 }

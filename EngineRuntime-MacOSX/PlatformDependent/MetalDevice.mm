@@ -8,23 +8,14 @@ using namespace Engine;
 using namespace Engine::Codec;
 using namespace Engine::Streaming;
 using namespace Engine::UI;
-// TODO: REMOVE
-namespace Engine
-{
-	namespace Cocoa
-	{
-		CocoaPointer< id<MTLDevice> > common_device;
-		CocoaPointer< id<MTLCommandQueue> > common_queue;
-		CocoaPointer< id<MTLLibrary> > common_library;
-	}
-}
-// TODO: END REMOVE
 
 namespace Engine
 {
 	namespace Cocoa
 	{
-		id<MTLDevice> GetMetalDeviceHandle(UI::IRenderingDevice * device);
+		CocoaPointer< id<MTLLibrary> > common_library;
+		id<MTLDevice> GetInnerMetalDevice(UI::IRenderingDevice * device);
+
 		struct MetalVertex {
 			Math::Vector2f position;
 			Math::Vector4f color;
@@ -94,7 +85,7 @@ namespace Engine
 				} else conv.SetRetain(source);
 				if (conv->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) pf = MTLPixelFormatRGBA8Unorm;
 				else if (conv->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) pf = MTLPixelFormatBGRA8Unorm;
-				auto dev = GetMetalDeviceHandle(factory_device);
+				auto dev = GetInnerMetalDevice(factory_device);
 				[frame release];
 				@autoreleasepool {
 					frame = [dev newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pf width: w height: h mipmapped: NO]];
@@ -117,24 +108,13 @@ namespace Engine
 			}
 			virtual string ToString(void) const override { return L"Engine.Cocoa.MetalTexture"; }
 		};
-		class MetalWrappedTexture : public Graphics::ITexture
-		{
-		public:
-			id<MTLTexture> frame;
-			int w, h;
-
-			MetalWrappedTexture(void) : frame(0) {}
-			virtual ~MetalWrappedTexture(void) override { [frame release]; }
-			
-			virtual string ToString(void) const override { return L"Engine.Cocoa.MetalWrappedTexture"; }
-		};
 		class MetalTextureRenderingInfo : public ITextureRenderingInfo
 		{
 		public:
 			id<MTLBuffer> verticies;
 			int vertex_count;
 			SafePointer<MetalTexture> texture;
-			SafePointer<MetalWrappedTexture> wrapped;
+			SafePointer<Graphics::ITexture> wrapped;
 			bool tile_render;
 
 			virtual ~MetalTextureRenderingInfo(void) override
@@ -199,9 +179,9 @@ namespace Engine
 			SafePointer<UI::IInversionEffectRenderingInfo> inversion;
 			Array<tex_pair> texture_cache;
 		public:
+			SafePointer<Graphics::IDevice> engine_device;
 			id<MTLDevice> device;
 			id<MTLLibrary> library;
-			id<MTLCommandQueue> queue;
 			id<MTLCommandBuffer> command_buffer;
 			id<MTLRenderCommandEncoder> encoder;
 			MTLRenderPassDescriptor * base_descriptor;
@@ -218,7 +198,7 @@ namespace Engine
 				main_state = tile_state = invert_state = layer_state = blur_state = 0;
 				white_texture = 0;
 				viewport_data = box_data = layer_vertex = 0;
-				device = 0; library = 0; queue = 0; command_buffer = 0; encoder = 0;
+				device = 0; library = 0; command_buffer = 0; encoder = 0;
 				base_descriptor = 0; width = height = 1;
 				pixel_format = MTLPixelFormatInvalid;
 			}
@@ -233,9 +213,7 @@ namespace Engine
 				[viewport_data release];
 				[box_data release];
 				[layer_vertex release];
-				[device release];
 				[library release];
-				[queue release];
 				for (int i = 0; i < texture_cache.Length(); i++) {
 					texture_cache[i].base->DeviceWasDestroyed(this);
 					texture_cache[i].spec->DeviceWasDestroyed(this);
@@ -567,15 +545,16 @@ namespace Engine
 			}
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override
 			{
-				SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
-				if (!info) return 0;
-				auto wrapper = static_cast<MetalWrappedTexture *>(texture);
-				info->wrapped.SetRetain(wrapper);
-				info->verticies = 0;
-				info->vertex_count = 6;
-				info->tile_render = false;
-				info->Retain();
-				return info;
+				// SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
+				// if (!info) return 0;
+				// auto wrapper = static_cast<MetalWrappedTexture *>(texture);
+				// info->wrapped.SetRetain(wrapper);
+				// info->verticies = 0;
+				// info->vertex_count = 6;
+				// info->tile_render = false;
+				// info->Retain();
+				// return info;
+				return 0;
 			}
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
 			{
@@ -659,15 +638,17 @@ namespace Engine
 					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
 					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
 				} else if (info->wrapped) {
-					LayerEndInfo rinfo;
-					rinfo.render_at = At;
-					rinfo.size = UI::Point(info->wrapped->w, info->wrapped->h);
-					rinfo.opacity = 1.0f;
-					[encoder setRenderPipelineState: layer_state];
-					[encoder setFragmentTexture: info->wrapped->frame atIndex: 0];
-					[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
-					[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
-					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+					// TODO: REWORK
+					// LayerEndInfo rinfo;
+					// rinfo.render_at = At;
+					// rinfo.size = UI::Point(info->wrapped->w, info->wrapped->h);
+					// rinfo.opacity = 1.0f;
+					// [encoder setRenderPipelineState: layer_state];
+					// [encoder setFragmentTexture: info->wrapped->frame atIndex: 0];
+					// [encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
+					// [encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
+					// [encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
+					// TODO: END REWORK
 				}
 			}
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept override
@@ -877,102 +858,82 @@ namespace Engine
 			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override { return 0; }
 		};
 
-		UI::IRenderingDevice * CreateMetalDevice(MetalGraphics::MetalPresentationInterface * presentation)
+		id<MTLDevice> GetInnerMetalDevice(UI::IRenderingDevice * device) { return static_cast<MetalDevice *>(device)->device; }
+		UI::IRenderingDevice * CreateMetalRenderingDevice(MetalGraphics::MetalPresentationInterface * presentation)
 		{
 			SafePointer<MetalDevice> engine_device = new (std::nothrow) MetalDevice;
 			if (!engine_device) return 0;
-			id<MTLDevice> device;
-			if (common_device) device = common_device;
-			else device = common_device = MTLCreateSystemDefaultDevice();
-			if (!device) return 0;
-			[device retain];
-			if (!common_library || !common_queue) {
-				@autoreleasepool {
-					const void * shaders_data;
-					int shaders_size;
-					NSError * error;
-					GetMetalDeviceShaders(&shaders_data, &shaders_size);
-					dispatch_data_t data_handle = dispatch_data_create(shaders_data, shaders_size, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
-					auto library = [device newLibraryWithData: data_handle error: &error];
-					[data_handle release];
-					if (!common_library) {
-						common_library = library;
-						[library retain];
-					}
-					[library release];
-					auto queue = [device newCommandQueue];
-					if (!common_queue) {
-						common_queue = queue;
-						[queue retain];
-					}
-					[queue release];
-				}
+			Graphics::IDevice * engine_graphics_device = MetalGraphics::GetMetalCommonDevice();
+			engine_device->engine_device.SetRetain(engine_graphics_device);
+			engine_device->device = MetalGraphics::GetInnerMetalDevice(engine_graphics_device);
+			if (common_library) {
+				engine_device->library = common_library;
+				[engine_device->library retain];
+			} else {
+				engine_device->library = CreateMetalRenderingDeviceShaders(engine_device->device);
+				common_library = engine_device->library;
+				[engine_device->library retain];
 			}
-			presentation->SetLayerDevice(common_device);
+			presentation->SetLayerDevice(engine_device->device);
 			presentation->SetLayerAutosize(true);
 			presentation->SetLayerOpaque(false);
 			presentation->SetLayerFramebufferOnly(false);
 			presentation->InvalidateContents();
-			SetMetalRenderingDeviceHandle(engine_device, common_device);
-			SetMetalRenderingDeviceShaderLibrary(engine_device, common_library, presentation->GetPixelFormat());
-			SetMetalRenderingDeviceQueue(engine_device, common_queue);
-			[device release];
+			engine_device->pixel_format = presentation->GetPixelFormat();
+			engine_device->CreateRenderingStates();
 			engine_device->Retain();
 			return engine_device;
 		}
-		void SetMetalRenderingDeviceHandle(UI::IRenderingDevice * device, id<MTLDevice> mtl_device)
+		id<MTLLibrary> CreateMetalRenderingDeviceShaders(id<MTLDevice> device)
 		{
-			[reinterpret_cast<MetalDevice *>(device)->device release];
-			[mtl_device retain];
-			reinterpret_cast<MetalDevice *>(device)->device = mtl_device;
+			id<MTLLibrary> library = 0;
+			@autoreleasepool {
+				const void * shaders_data;
+				int shaders_size;
+				NSError * error;
+				GetMetalDeviceShaders(&shaders_data, &shaders_size);
+				dispatch_data_t data_handle = dispatch_data_create(shaders_data, shaders_size, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+				library = [device newLibraryWithData: data_handle error: &error];
+				[data_handle release];
+				if (error) [error release];
+			}
+			return library;
 		}
-		void SetMetalRenderingDeviceShaderLibrary(UI::IRenderingDevice * device, id<MTLLibrary> mtl_shaders, MTLPixelFormat format)
+		id<MTLDrawable> CoreMetalRenderingDeviceBeginDraw(UI::IRenderingDevice * device, MetalGraphics::MetalPresentationInterface * presentation)
 		{
-			[reinterpret_cast<MetalDevice *>(device)->library release];
-			[mtl_shaders retain];
-			reinterpret_cast<MetalDevice *>(device)->library = mtl_shaders;
-			reinterpret_cast<MetalDevice *>(device)->pixel_format = format;
-			reinterpret_cast<MetalDevice *>(device)->CreateRenderingStates();
+			auto engine_device = static_cast<MetalDevice *>(device);
+			auto drawable = presentation->GetLayerDrawable();
+			auto size = presentation->GetLayerSize();
+			MTLRenderPassDescriptor * descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+			descriptor.colorAttachments[0].texture = drawable.texture;
+			descriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+			descriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
+			engine_device->width = size.x;
+			engine_device->height = size.y;
+			engine_device->base_descriptor = descriptor;
+			engine_device->command_buffer = [MetalGraphics::GetInnerMetalQueue(engine_device->engine_device) commandBuffer];
+			engine_device->encoder = [engine_device->command_buffer renderCommandEncoderWithDescriptor: descriptor];
+			[engine_device->encoder setViewport: (MTLViewport) { 0.0, 0.0, double(engine_device->width), double(engine_device->height), 0.0, 1.0 }];
+			engine_device->InitDraw();
+			return drawable;
 		}
-		void SetMetalRenderingDeviceQueue(UI::IRenderingDevice * device, id<MTLCommandQueue> mtl_queue)
+		void CoreMetalRenderingDeviceEndDraw(UI::IRenderingDevice * device, id<MTLDrawable> drawable, bool wait)
 		{
-			[reinterpret_cast<MetalDevice *>(device)->queue release];
-			[mtl_queue retain];
-			reinterpret_cast<MetalDevice *>(device)->queue = mtl_queue;
-		}
-		void SetMetalRenderingDeviceState(UI::IRenderingDevice * device, int view_width, int view_height)
-		{
-			reinterpret_cast<MetalDevice *>(device)->width = view_width;
-			reinterpret_cast<MetalDevice *>(device)->height = view_height;
-		}
-		id<MTLDevice> GetMetalDeviceHandle(UI::IRenderingDevice * device)
-		{
-			return static_cast<MetalDevice *>(device)->device;
-		}
-		void MetalRenderingDeviceBeginDraw(UI::IRenderingDevice * device, MTLRenderPassDescriptor * pass_descriptor)
-		{
-			auto dev = reinterpret_cast<MetalDevice *>(device);
-			dev->base_descriptor = pass_descriptor;
-			dev->command_buffer = [dev->queue commandBuffer];
-			dev->encoder = [dev->command_buffer renderCommandEncoderWithDescriptor: pass_descriptor];
-			[dev->encoder setViewport: (MTLViewport) { 0.0, 0.0, double(dev->width), double(dev->height), 0.0, 1.0 }];
-			dev->InitDraw();
-		}
-		void MetalRenderingDeviceEndDraw(UI::IRenderingDevice * device, id<MTLDrawable> drawable, bool wait)
-		{
-			auto dev = reinterpret_cast<MetalDevice *>(device);
-			[dev->encoder endEncoding];
-			[dev->command_buffer presentDrawable: drawable];
-			[dev->command_buffer commit];
-			if (wait) [dev->command_buffer waitUntilCompleted];
-			dev->encoder = 0;
-			dev->command_buffer = 0;
+			auto engine_device = static_cast<MetalDevice *>(device);
+			[engine_device->encoder endEncoding];
+			[engine_device->command_buffer presentDrawable: drawable];
+			[engine_device->command_buffer commit];
+			if (wait) [engine_device->command_buffer waitUntilCompleted];
+			engine_device->encoder = 0;
+			engine_device->command_buffer = 0;
 		}
 
+		// TODO: REMOVE
 		// id<MTLTexture> QueryTextureMetalSurface(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->frame; }
 		// int QueryTextureWidth(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->w; }
 		// int QueryTextureHeight(Graphics::ITexture * texture) { return static_cast<MetalWrappedTexture *>(texture)->h; }
 		// id<MTLDevice> GetMetalSharedDevice(void) { return common_device; }
 		// id<MTLCommandQueue> GetMetalSharedQueue(void) { return common_queue; }
+		// TODO: END REMOVE
 	}
 }

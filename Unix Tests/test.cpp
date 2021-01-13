@@ -234,7 +234,18 @@ int Main(void)
 	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
 
 	MacOSXSpecific::SetWindowCreationAttribute(MacOSXSpecific::CreationAttribute::Transparent | MacOSXSpecific::CreationAttribute::TransparentTitle |
-		MacOSXSpecific::CreationAttribute::EffectBackground | MacOSXSpecific::CreationAttribute::Shadowless);
+		MacOSXSpecific::CreationAttribute::EffectBackground);
+
+	{
+		SafePointer<Graphics::IDeviceFactory> fact = Graphics::CreateDeviceFactory();
+		SafePointer<Graphics::IDevice> dev = fact->CreateDefaultDevice();
+		Console << string(dev.Inner()) << L"\n";
+		string tech;
+		uint32 ver;
+		dev->GetImplementationInfo(tech, ver);
+		Console << tech << L"/" << ver << L"\n";
+		Console << dev->GetDeviceName() << L" :: " << dev->GetDeviceIdentifier() << L"\n";
+	}
 
 	auto Callback2 = new _cb2;
 	auto templ = interface.Dialog[L"Test3"];

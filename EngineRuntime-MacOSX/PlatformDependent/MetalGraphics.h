@@ -37,5 +37,8 @@ namespace Engine
 
 		Graphics::IDeviceFactory * CreateMetalDeviceFactory(void);
 		Graphics::IDevice * GetMetalCommonDevice(void);
+
+		id<MTLDevice> GetInnerMetalDevice(Graphics::IDevice * wrapper);
+		id<MTLCommandQueue> GetInnerMetalQueue(Graphics::IDevice * wrapper);
 	}
 }

@@ -1060,22 +1060,11 @@ namespace Engine
 					RenderingDevice->SetContext(context, box.Right, box.Bottom, (scale > 1.5f) ? 2 : 1);
 					Render();
 				} else if (MetalRenderingDevice) {
-					// TODO: BEGIN WRAPER, REWORK
-					id<CAMetalDrawable> drawable = MetalInterface->GetLayerDrawable();
-					auto size = MetalInterface->GetLayerSize();
-					MTLRenderPassDescriptor * descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-					descriptor.colorAttachments[0].texture = drawable.texture;
-					descriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-					descriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
-					Engine::Cocoa::SetMetalRenderingDeviceState(MetalRenderingDevice, size.x, size.y);
-					Engine::Cocoa::MetalRenderingDeviceBeginDraw(MetalRenderingDevice, descriptor);
-					// TODO: END WRAPPER
+					auto drawable = Cocoa::CoreMetalRenderingDeviceBeginDraw(MetalRenderingDevice, MetalInterface);
 					MetalRenderingDevice->SetTimerValue(GetTimerValue());
 					Animate();
 					Render();
-					// TODO: BEGIN WRAPER
-					Engine::Cocoa::MetalRenderingDeviceEndDraw(MetalRenderingDevice, drawable, true);
-					// TODO: END WRAPPER, END REWORK
+					Cocoa::CoreMetalRenderingDeviceEndDraw(MetalRenderingDevice, drawable, true);
 				} else top_level_window->GetCallback()->OnFrameEvent(top_level_window, Windows::FrameEvent::Draw);
 			}
 			void CreateMetalInterface(void) { if (!MetalInterface) MetalInterface = new MetalGraphics::MetalPresentationInterface(main_window_view, this, RenderStationContent); }
@@ -1310,7 +1299,7 @@ namespace Engine
 			}
 			if (!NoDevice && !station->RenderingDevice) {
 				station->CreateMetalInterface();
-				station->MetalRenderingDevice = Cocoa::CreateMetalDevice(station->MetalInterface);
+				station->MetalRenderingDevice = Cocoa::CreateMetalRenderingDevice(station->MetalInterface);
 				station->SetRenderingDevice(station->MetalRenderingDevice);
 			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
@@ -1408,7 +1397,7 @@ namespace Engine
 			}
 			if (!station->RenderingDevice) {
 				station->CreateMetalInterface();
-				station->MetalRenderingDevice = Cocoa::CreateMetalDevice(station->MetalInterface);
+				station->MetalRenderingDevice = Cocoa::CreateMetalRenderingDevice(station->MetalInterface);
 				station->SetRenderingDevice(station->MetalRenderingDevice);
 			}
 			if (MacOSXSpecific::GetWindowCreationAttribute() & MacOSXSpecific::CreationAttribute::TransparentTitle) {
