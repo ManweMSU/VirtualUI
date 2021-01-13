@@ -311,7 +311,7 @@ namespace Engine
 			virtual bool Begin2DRenderingPass(ITexture * rt) noexcept = 0;
 			virtual bool BeginMemoryManagementPass(void) noexcept = 0;
 			virtual bool EndCurrentPass(void) noexcept = 0;
-			virtual void Wait(void) noexcept = 0;
+			virtual void Flush(void) noexcept = 0;
 
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept = 0;
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept = 0;

@@ -551,7 +551,7 @@ namespace Engine
 					return pass_state;
 				} else return false;
 			}
-			virtual void Wait(void) noexcept override { context->Flush(); }
+			virtual void Flush(void) noexcept override { context->Flush(); }
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
