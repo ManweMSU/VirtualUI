@@ -150,9 +150,23 @@ namespace Engine
 			virtual uint32 GetArraySize(void) noexcept override { return size; }
 			virtual string ToString(void) const override { return L"MTL_Texture"; }
 		};
+		class MTL_SamplerState : public ISamplerState
+		{
+			IDevice * wrapper;
+		public:
+			id<MTLSamplerState> state;
+
+			MTL_SamplerState(IDevice * _wrapper) : wrapper(_wrapper), state(0) {}
+			virtual ~MTL_SamplerState(void) override { [state release]; }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual string ToString(void) const override { return L"MTL_SamplerState"; }
+		};
 		class MTL_DeviceContext : public IDeviceContext
 		{
 			SafePointer<UI::IRenderingDevice> device_2d;
+			SafePointer<MTL_Buffer> index_buffer;
+			MTLIndexType index_buffer_format;
+			MTLPrimitiveType primitive_type;
 			IDevice * wrapper;
 		public:
 			id<MTLDevice> device;
@@ -284,6 +298,7 @@ namespace Engine
 				if (state == 1) {
 					[render_command_encoder endEncoding];
 					render_command_encoder = 0;
+					index_buffer.SetReference(0);
 				} else if (state == 2) {
 					Cocoa::PureMetalRenderingDeviceEndDraw(device_2d);
 				} else if (state == 3) {
@@ -303,69 +318,105 @@ namespace Engine
 					current_command = 0;
 				}
 			}
-			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept override
+			virtual void SetRenderingPipelineState(IPipelineState * _state) noexcept override
 			{
+				if (state != 1) { error_state = false; return; }
 				// TODO: IMPLEMENT
 			}
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				MTLViewport viewport;
+				viewport.originX = top_left_x;
+				viewport.originY = top_left_y;
+				viewport.width = width;
+				viewport.height = height;
+				viewport.znear = min_depth;
+				viewport.zfar = max_depth;
+				[render_command_encoder setViewport: viewport];
 			}
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				if (resource->GetResourceType() == ResourceType::Buffer) {
+					[render_command_encoder setVertexBuffer: static_cast<MTL_Buffer *>(resource)->buffer offset: 0 atIndex: at];
+				} else if (resource->GetResourceType() == ResourceType::Texture) {
+					[render_command_encoder setVertexTexture: static_cast<MTL_Texture *>(resource)->texture atIndex: at];
+				}
 			}
 			virtual void SetVertexShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setVertexBuffer: static_cast<MTL_Buffer *>(buffer)->buffer offset: 0 atIndex: at];
 			}
 			virtual void SetVertexShaderConstant(uint32 at, const void * data, int length) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setVertexBytes: data length: length atIndex: at];
 			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setVertexSamplerState: static_cast<MTL_SamplerState *>(sampler)->state atIndex: at];
 			}
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				if (resource->GetResourceType() == ResourceType::Buffer) {
+					[render_command_encoder setFragmentBuffer: static_cast<MTL_Buffer *>(resource)->buffer offset: 0 atIndex: at];
+				} else if (resource->GetResourceType() == ResourceType::Texture) {
+					[render_command_encoder setFragmentTexture: static_cast<MTL_Texture *>(resource)->texture atIndex: at];
+				}
 			}
 			virtual void SetPixelShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setFragmentBuffer: static_cast<MTL_Buffer *>(buffer)->buffer offset: 0 atIndex: at];
 			}
 			virtual void SetPixelShaderConstant(uint32 at, const void * data, int length) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setFragmentBytes: data length: length atIndex: at];
 			}
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setFragmentSamplerState: static_cast<MTL_SamplerState *>(sampler)->state atIndex: at];
 			}
 			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				index_buffer.SetRetain(static_cast<MTL_Buffer *>(index));
+				if (format == IndexBufferFormat::UInt16) index_buffer_format = MTLIndexTypeUInt16;
+				else if (format == IndexBufferFormat::UInt32) index_buffer_format = MTLIndexTypeUInt32;
 			}
 			virtual void SetStencilReferenceValue(uint8 ref) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder setStencilReferenceValue: ref];
 			}
 			virtual void DrawPrimitives(uint32 vertex_count, uint32 first_vertex) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder drawPrimitives: primitive_type vertexStart: first_vertex vertexCount: vertex_count];
 			}
 			virtual void DrawInstancedPrimitives(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1) { error_state = false; return; }
+				[render_command_encoder drawPrimitives: primitive_type vertexStart: first_vertex vertexCount: vertex_count
+					instanceCount: instance_count baseInstance: first_instance];
 			}
 			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1 || !index_buffer) { error_state = false; return; }
+				[render_command_encoder drawIndexedPrimitives: primitive_type indexCount: index_count indexType: index_buffer_format
+					indexBuffer: index_buffer->buffer indexBufferOffset: 0 instanceCount: 1 baseVertex: base_vertex baseInstance: 0];
 			}
 			virtual void DrawIndexedInstancedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex, uint32 instance_count, uint32 first_instance) noexcept override
 			{
-				// TODO: IMPLEMENT
+				if (state != 1 || !index_buffer) { error_state = false; return; }
+				[render_command_encoder drawIndexedPrimitives: primitive_type indexCount: index_count indexType: index_buffer_format
+					indexBuffer: index_buffer->buffer indexBufferOffset: 0 instanceCount: instance_count baseVertex: base_vertex baseInstance: first_instance];
 			}
 			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
@@ -611,6 +662,25 @@ namespace Engine
 		class MTL_Device : public IDevice
 		{
 			SafePointer<MTL_DeviceContext> context;
+
+			MTLSamplerMinMagFilter _make_min_mag_filter(SamplerFilter filter)
+			{
+				if (filter == SamplerFilter::Point) return MTLSamplerMinMagFilterNearest;
+				else return MTLSamplerMinMagFilterLinear;
+			}
+			MTLSamplerMipFilter _make_mip_filter(SamplerFilter filter)
+			{
+				if (filter == SamplerFilter::Point) return MTLSamplerMipFilterNearest;
+				else return MTLSamplerMipFilterLinear;
+			}
+			MTLSamplerAddressMode _make_address_mode(SamplerAddressMode mode)
+			{
+				if (mode == SamplerAddressMode::Wrap) return MTLSamplerAddressModeRepeat;
+				else if (mode == SamplerAddressMode::Mirror) return MTLSamplerAddressModeMirrorRepeat;
+				else if (mode == SamplerAddressMode::Clamp) return MTLSamplerAddressModeClampToEdge;
+				else if (mode == SamplerAddressMode::Border) return MTLSamplerAddressModeClampToBorderColor;
+				else return MTLSamplerAddressModeRepeat;
+			}
 		public:
 			id<MTLDevice> device;
 			id<MTLCommandQueue> queue;
@@ -659,8 +729,29 @@ namespace Engine
 			}
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				SafePointer<MTL_SamplerState> sampler = new (std::nothrow) MTL_SamplerState(this);
+				if (!sampler) return 0;
+				MTLSamplerDescriptor * descriptor = [[MTLSamplerDescriptor alloc] init];
+				descriptor.normalizedCoordinates = YES;
+				descriptor.sAddressMode = _make_address_mode(desc.AddressU);
+				descriptor.tAddressMode = _make_address_mode(desc.AddressV);
+				descriptor.rAddressMode = _make_address_mode(desc.AddressW);
+				if (desc.BorderColor[3] < 0.5f) descriptor.borderColor = MTLSamplerBorderColorTransparentBlack;
+				else if (desc.BorderColor[0] < 0.5f && desc.BorderColor[1] < 0.5f && desc.BorderColor[2] < 0.5f) descriptor.borderColor = MTLSamplerBorderColorOpaqueBlack;
+				else descriptor.borderColor = MTLSamplerBorderColorOpaqueWhite;
+				descriptor.minFilter = _make_min_mag_filter(desc.MinificationFilter);
+				descriptor.magFilter = _make_min_mag_filter(desc.MagnificationFilter);
+				descriptor.mipFilter = _make_mip_filter(desc.MipFilter);
+				descriptor.lodMinClamp = desc.MinimalLOD;
+				descriptor.lodMaxClamp = desc.MaximalLOD;
+				if (desc.MinificationFilter == SamplerFilter::Anisotropic && desc.MagnificationFilter == SamplerFilter::Anisotropic && desc.MipFilter == SamplerFilter::Anisotropic) {
+					descriptor.maxAnisotropy = desc.MaximalAnisotropy;
+				} else descriptor.maxAnisotropy = 1;
+				sampler->state = [device newSamplerStateWithDescriptor: descriptor];
+				[descriptor release];
+				if (!sampler->state) return 0;
+				sampler->Retain();
+				return sampler;
 			}
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc) noexcept override
 			{
