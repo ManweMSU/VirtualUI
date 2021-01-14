@@ -297,7 +297,7 @@ int Main(void)
 		tdesc.Height = 128;
 		tdesc.MipmapCount = 1;
 		tdesc.MemoryPool = Graphics::ResourceMemoryPool::Default;
-		tdesc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageCPUWrite;
+		tdesc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageCPUWrite | Graphics::ResourceUsageRenderTarget;
 
 		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
@@ -307,10 +307,41 @@ int Main(void)
 		Graphics::ResourceInitDesc idesc;
 		idesc.Data = frame->GetData();
 		idesc.DataPitch = frame->GetScanLineLength();
-		SafePointer<Graphics::ITexture> tex = device->CreateTexture(tdesc, &idesc);
-		Console << string(tex.Inner()) << L"\n";
-		Console << string(tex->GetMipmapCount()) << L"\n";
-		// TODO: TEST TO RENDER
+		SafePointer<Graphics::ITexture> tex3d = device->CreateTexture(tdesc, &idesc);
+		Console << string(tex3d.Inner()) << L"\n";
+		Console << string(tex3d->GetMipmapCount()) << L"\n";
+		auto context = device->GetDeviceContext();
+		Graphics::RenderTargetViewDesc rtd;
+		rtd.Texture = tex3d;
+		rtd.LoadAction = Graphics::TextureLoadAction::Clear;
+		rtd.ClearValue[0] = 0.5;
+		rtd.ClearValue[1] = 0.0;
+		rtd.ClearValue[2] = 1.0;
+		rtd.ClearValue[3] = 1.0;
+		context->BeginRenderingPass(1, &rtd, 0);
+		context->EndCurrentPass();
+		context->BeginMemoryManagementPass();
+		Graphics::ResourceInitDesc urdesc;
+		urdesc.Data = frame->GetData();
+		urdesc.DataPitch = frame->GetScanLineLength();
+		context->UpdateResourceData(tex3d, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(100, 10, 0), Graphics::VolumeIndex(96, 96, 1), urdesc);
+		context->EndCurrentPass();
+		auto hstat = context->Begin2DRenderingPass(tex3d);
+		auto font = context->Get2DRenderingDevice()->LoadFont(L"Arial", 128, 400, false, false, false);
+		auto text = context->Get2DRenderingDevice()->CreateTextRenderingInfo(font, L"TEXT", 1, 1, UI::Color(255, 255, 255));
+		context->Get2DRenderingDevice()->RenderText(text, Box(0, 0, 256, 128), false);
+		text->Release();
+		font->Release();
+		hstat = context->EndCurrentPass();
+		hstat = context->BeginMemoryManagementPass();
+		Graphics::ResourceDataDesc ddesc;
+		ddesc.Data = frame->GetData();
+		ddesc.DataPitch = frame->GetScanLineLength();
+		context->QueryResourceData(ddesc, tex3d, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(0, 0), Graphics::VolumeIndex(256, 128, 1));
+		hstat = context->EndCurrentPass();
+		Codec::Image image;
+		image.Frames.Append(frame);
+		UI::Windows::SetApplicationIcon(&image);
 	}
 
 	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();

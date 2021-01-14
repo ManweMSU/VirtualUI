@@ -630,7 +630,7 @@ namespace Engine
 					[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
 					[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
 				} else if (info->wrapped) {
-					engine_device->GetDeviceContext()->Wait();
+					engine_device->GetDeviceContext()->Flush();
 					LayerEndInfo rinfo;
 					rinfo.render_at = At;
 					rinfo.size = UI::Point(info->wrapped->GetWidth(), info->wrapped->GetHeight());
