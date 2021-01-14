@@ -161,6 +161,74 @@ namespace Engine
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual string ToString(void) const override { return L"MTL_SamplerState"; }
 		};
+		class MTL_Shader : public IShader
+		{
+			IDevice * wrapper;
+		public:
+			id<MTLFunction> func;
+
+			MTL_Shader(IDevice * _wrapper) : wrapper(_wrapper), func(0) {}
+			virtual ~MTL_Shader(void) override { [func release]; }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual string GetName(void) noexcept override { return Cocoa::EngineString(func.name); }
+			virtual ShaderType GetType(void) noexcept override
+			{
+				if (func.functionType == MTLFunctionTypeVertex) return ShaderType::Vertex;
+				else if (func.functionType == MTLFunctionTypeFragment) return ShaderType::Pixel;
+				else return ShaderType::Unknown;
+			}
+			virtual string ToString(void) const override { return L"MTL_Shader"; }
+		};
+		class MTL_ShaderLibrary : public IShaderLibrary
+		{
+			IDevice * wrapper;
+		public:
+			id<MTLLibrary> ref;
+
+			MTL_ShaderLibrary(IDevice * _wrapper) : wrapper(_wrapper), ref(0) {}
+			virtual ~MTL_ShaderLibrary(void) override { [ref release]; }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual Array<string> * GetShaderNames(void) noexcept override
+			{
+				try {
+					SafePointer< Array<string> > result = new Array<string>(0x10);
+					for (int i = 0; i < [ref.functionNames count]; i++) result->Append(Cocoa::EngineString([ref.functionNames objectAtIndex: i]));
+					result->Retain();
+					return result;
+				} catch (...) { return 0; }
+			}
+			virtual IShader * CreateShader(const string & name) noexcept override
+			{
+				SafePointer<MTL_Shader> result = new (std::nothrow) MTL_Shader(wrapper);
+				NSString * obj_name = Cocoa::CocoaString(name);
+				result->func = [ref newFunctionWithName: obj_name];
+				[obj_name release];
+				if (!result->func) return 0;
+				result->Retain();
+				return result;
+			}
+			virtual string ToString(void) const override { return L"MTL_ShaderLibrary"; }
+		};
+		class MTL_PipelineState : public IPipelineState
+		{
+			IDevice * wrapper;
+		public:
+			id<MTLRenderPipelineState> state;
+			id<MTLDepthStencilState> ds_state;
+			MTLTriangleFillMode fill_mode;
+			MTLCullMode cull_mode;
+			MTLWinding front_winding;
+			MTLPrimitiveType primitive_type;
+			int depth_bias;
+			float depth_bias_clamp;
+			float slope_scaled_depth_bias;
+			MTLDepthClipMode depth_clip;
+
+			MTL_PipelineState(IDevice * _wrapper) : wrapper(_wrapper), state(0), ds_state(0) {}
+			virtual ~MTL_PipelineState(void) override { [state release]; [ds_state release]; }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual string ToString(void) const override { return L"MTL_PipelineState"; }
+		};
 		class MTL_DeviceContext : public IDeviceContext
 		{
 			SafePointer<UI::IRenderingDevice> device_2d;
@@ -321,7 +389,15 @@ namespace Engine
 			virtual void SetRenderingPipelineState(IPipelineState * _state) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				// TODO: IMPLEMENT
+				auto wr = static_cast<MTL_PipelineState *>(_state);
+				[render_command_encoder setRenderPipelineState: wr->state];
+				[render_command_encoder setTriangleFillMode: wr->fill_mode];
+				[render_command_encoder setFrontFacingWinding: wr->front_winding];
+				[render_command_encoder setCullMode: wr->cull_mode];
+				[render_command_encoder setDepthBias: wr->depth_bias slopeScale: wr->slope_scaled_depth_bias clamp: wr->depth_bias_clamp];
+				[render_command_encoder setDepthClipMode: wr->depth_clip];
+				if (wr->ds_state) [render_command_encoder setDepthStencilState: wr->ds_state];
+				primitive_type = wr->primitive_type;
 			}
 			virtual void SetViewport(float top_left_x, float top_left_y, float width, float height, float min_depth, float max_depth) noexcept override
 			{
@@ -663,6 +739,34 @@ namespace Engine
 		{
 			SafePointer<MTL_DeviceContext> context;
 
+			MTLBlendOperation _make_blend_op(BlendingFunction func)
+			{
+				if (func == BlendingFunction::Add) return MTLBlendOperationAdd;
+				else if (func == BlendingFunction::SubtractOverFromBase) return MTLBlendOperationReverseSubtract;
+				else if (func == BlendingFunction::SubtractBaseFromOver) return MTLBlendOperationSubtract;
+				else if (func == BlendingFunction::Min) return MTLBlendOperationMin;
+				else if (func == BlendingFunction::Max) return MTLBlendOperationMax;
+				else return MTLBlendOperationAdd;
+			}
+			MTLBlendFactor _make_blend_fact(BlendingFactor fact)
+			{
+				if (fact == BlendingFactor::Zero) return MTLBlendFactorZero;
+				else if (fact == BlendingFactor::One) return MTLBlendFactorOne;
+				else if (fact == BlendingFactor::OverColor) return MTLBlendFactorSourceColor;
+				else if (fact == BlendingFactor::InvertedOverColor) return MTLBlendFactorOneMinusSourceColor;
+				else if (fact == BlendingFactor::OverAlpha) return MTLBlendFactorSourceAlpha;
+				else if (fact == BlendingFactor::InvertedOverAlpha) return MTLBlendFactorOneMinusSourceAlpha;
+				else if (fact == BlendingFactor::BaseColor) return MTLBlendFactorDestinationColor;
+				else if (fact == BlendingFactor::InvertedBaseColor) return MTLBlendFactorOneMinusDestinationColor;
+				else if (fact == BlendingFactor::BaseAlpha) return MTLBlendFactorDestinationAlpha;
+				else if (fact == BlendingFactor::InvertedBaseAlpha) return MTLBlendFactorOneMinusDestinationAlpha;
+				else if (fact == BlendingFactor::SecondaryColor) return MTLBlendFactorSource1Color;
+				else if (fact == BlendingFactor::InvertedSecondaryColor) return MTLBlendFactorOneMinusSource1Color;
+				else if (fact == BlendingFactor::SecondaryAlpha) return MTLBlendFactorSource1Alpha;
+				else if (fact == BlendingFactor::InvertedSecondaryAlpha) return MTLBlendFactorOneMinusSource1Alpha;
+				else if (fact == BlendingFactor::OverAlphaSaturated) return MTLBlendFactorSourceAlphaSaturated;
+				else return MTLBlendFactorZero;
+			}
 			MTLSamplerMinMagFilter _make_min_mag_filter(SamplerFilter filter)
 			{
 				if (filter == SamplerFilter::Point) return MTLSamplerMinMagFilterNearest;
@@ -680,6 +784,30 @@ namespace Engine
 				else if (mode == SamplerAddressMode::Clamp) return MTLSamplerAddressModeClampToEdge;
 				else if (mode == SamplerAddressMode::Border) return MTLSamplerAddressModeClampToBorderColor;
 				else return MTLSamplerAddressModeRepeat;
+			}
+			MTLCompareFunction _make_comp_func(CompareFunction func)
+			{
+				if (func == CompareFunction::Always) return MTLCompareFunctionAlways;
+				else if (func == CompareFunction::Lesser) return MTLCompareFunctionLess;
+				else if (func == CompareFunction::Greater) return MTLCompareFunctionGreater;
+				else if (func == CompareFunction::Equal) return MTLCompareFunctionEqual;
+				else if (func == CompareFunction::LesserEqual) return MTLCompareFunctionLessEqual;
+				else if (func == CompareFunction::GreaterEqual) return MTLCompareFunctionGreaterEqual;
+				else if (func == CompareFunction::NotEqual) return MTLCompareFunctionNotEqual;
+				else if (func == CompareFunction::Never) return MTLCompareFunctionNever;
+				else return MTLCompareFunctionNever;
+			}
+			MTLStencilOperation _make_stencil_func(StencilFunction func)
+			{
+				if (func == StencilFunction::Keep) return MTLStencilOperationKeep;
+				else if (func == StencilFunction::SetZero) return MTLStencilOperationZero;
+				else if (func == StencilFunction::Replace) return MTLStencilOperationReplace;
+				else if (func == StencilFunction::IncrementWrap) return MTLStencilOperationIncrementWrap;
+				else if (func == StencilFunction::DecrementWrap) return MTLStencilOperationDecrementWrap;
+				else if (func == StencilFunction::IncrementClamp) return MTLStencilOperationIncrementClamp;
+				else if (func == StencilFunction::DecrementClamp) return MTLStencilOperationDecrementClamp;
+				else if (func == StencilFunction::Invert) return MTLStencilOperationInvert;
+				else return MTLStencilOperationKeep;
 			}
 		public:
 			id<MTLDevice> device;
@@ -708,24 +836,140 @@ namespace Engine
 			}
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				SafePointer<MTL_ShaderLibrary> lib = new (std::nothrow) MTL_ShaderLibrary(this);
+				if (!lib) return 0;
+				NSError * error;
+				dispatch_data_t data_handle = dispatch_data_create(data, length, dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+				if (!data_handle) return 0;
+				lib->ref = [device newLibraryWithData: data_handle error: &error];
+				[data_handle release];
+				if (error) { [error release]; return 0; }
+				lib->Retain();
+				return lib;
 			}
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				try { return LoadShaderLibrary(data->GetBuffer(), data->Length()); }
+				catch (...) { return 0; }
 			}
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				try {
+					SafePointer<DataBlock> data = stream->ReadAll();
+					return LoadShaderLibrary(data);
+				} catch (...) { return 0; }
 			}
 			virtual IDeviceContext * GetDeviceContext(void) noexcept override { return context; }
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept override
 			{
-				// TODO: IMPLEMENT
-				return 0;
+				if (!desc.VertexShader || desc.VertexShader->GetType() != ShaderType::Vertex) return 0;
+				if (!desc.PixelShader || desc.PixelShader->GetType() != ShaderType::Pixel) return 0;
+				SafePointer<MTL_PipelineState> result = new (std::nothrow) MTL_PipelineState(this);
+				if (!result) return 0;
+				MTLRenderPipelineDescriptor * descriptor = [[MTLRenderPipelineDescriptor alloc] init];
+				descriptor.vertexFunction = static_cast<MTL_Shader *>(desc.VertexShader)->func;
+				descriptor.fragmentFunction = static_cast<MTL_Shader *>(desc.PixelShader)->func;
+				try {
+					if (!desc.RenderTargetCount || desc.RenderTargetCount > 8) throw Exception();
+					for (uint i = 0; i < desc.RenderTargetCount; i++) {
+						auto & rtd = desc.RenderTarget[i];
+						if (!IsColorFormat(rtd.Format)) throw Exception();
+						MTLRenderPipelineColorAttachmentDescriptor * cad = [[MTLRenderPipelineColorAttachmentDescriptor alloc] init];
+						cad.pixelFormat = MakeMetalPixelFormat(rtd.Format);
+						MTLColorWriteMask wrmask = 0;
+						if (!(rtd.Flags & RenderTargetFlagRestrictWriteRed)) wrmask |= MTLColorWriteMaskRed;
+						if (!(rtd.Flags & RenderTargetFlagRestrictWriteGreen)) wrmask |= MTLColorWriteMaskGreen;
+						if (!(rtd.Flags & RenderTargetFlagRestrictWriteBlue)) wrmask |= MTLColorWriteMaskBlue;
+						if (!(rtd.Flags & RenderTargetFlagRestrictWriteAlpha)) wrmask |= MTLColorWriteMaskAlpha;
+						cad.writeMask = wrmask;
+						if (rtd.Flags & RenderTargetFlagBlendingEnabled) cad.blendingEnabled = YES;
+						else cad.blendingEnabled = NO;
+						cad.alphaBlendOperation = _make_blend_op(rtd.BlendAlpha);
+						cad.rgbBlendOperation = _make_blend_op(rtd.BlendRGB);
+						cad.destinationAlphaBlendFactor = _make_blend_fact(rtd.BaseFactorAlpha);
+						cad.destinationRGBBlendFactor = _make_blend_fact(rtd.BaseFactorRGB);
+						cad.sourceAlphaBlendFactor = _make_blend_fact(rtd.OverFactorAlpha);
+						cad.sourceRGBBlendFactor = _make_blend_fact(rtd.OverFactorRGB);
+						[descriptor.colorAttachments setObject: cad atIndexedSubscript: i];
+						[cad release];
+					}
+					if (desc.DepthStencil.Flags) {
+						if (!IsDepthStencilFormat(desc.DepthStencil.Format)) throw Exception();
+						descriptor.depthAttachmentPixelFormat = MakeMetalPixelFormat(desc.DepthStencil.Format);
+						if (desc.DepthStencil.Format == PixelFormat::D24S8_unorm || desc.DepthStencil.Format == PixelFormat::D32S8_float) {
+							descriptor.stencilAttachmentPixelFormat = MakeMetalPixelFormat(desc.DepthStencil.Format);
+						}
+					}
+					descriptor.rasterizationEnabled = YES;
+				} catch (...) { [descriptor release]; return 0; }
+				NSError * error;
+				result->state = [device newRenderPipelineStateWithDescriptor: descriptor error: &error];
+				[descriptor release];
+				if (error) { [error release]; return 0; }
+				if ((desc.DepthStencil.Flags & DepthStencilFlagDepthTestEnabled) || (desc.DepthStencil.Flags & DepthStencilFlagStencilTestEnabled)) {
+					MTLDepthStencilDescriptor * ds_descriptor = [[MTLDepthStencilDescriptor alloc] init];
+					auto & ds_desc = desc.DepthStencil;
+					if (desc.DepthStencil.Flags & DepthStencilFlagDepthTestEnabled) {
+						ds_descriptor.depthCompareFunction = _make_comp_func(ds_desc.DepthTestFunction);
+						if (desc.DepthStencil.Flags & DepthStencilFlagDepthWriteEnabled) ds_descriptor.depthWriteEnabled = YES;
+						else ds_descriptor.depthWriteEnabled = NO;
+					} else {
+						ds_descriptor.depthCompareFunction = MTLCompareFunctionAlways;
+						ds_descriptor.depthWriteEnabled = NO;
+					}
+					if (desc.DepthStencil.Flags & DepthStencilFlagStencilTestEnabled) {
+						ds_descriptor.frontFaceStencil.readMask = ds_desc.StencilReadMask;
+						ds_descriptor.backFaceStencil.readMask = ds_desc.StencilReadMask;
+						ds_descriptor.frontFaceStencil.writeMask = ds_desc.StencilWriteMask;
+						ds_descriptor.backFaceStencil.writeMask = ds_desc.StencilWriteMask;
+						ds_descriptor.frontFaceStencil.stencilFailureOperation = _make_stencil_func(ds_desc.FrontStencil.OnStencilTestFailed);
+						ds_descriptor.frontFaceStencil.depthFailureOperation = _make_stencil_func(ds_desc.FrontStencil.OnDepthTestFailed);
+						ds_descriptor.frontFaceStencil.depthStencilPassOperation = _make_stencil_func(ds_desc.FrontStencil.OnTestsPassed);
+						ds_descriptor.frontFaceStencil.stencilCompareFunction = _make_comp_func(ds_desc.FrontStencil.TestFunction);
+						ds_descriptor.backFaceStencil.stencilFailureOperation = _make_stencil_func(ds_desc.BackStencil.OnStencilTestFailed);
+						ds_descriptor.backFaceStencil.depthFailureOperation = _make_stencil_func(ds_desc.BackStencil.OnDepthTestFailed);
+						ds_descriptor.backFaceStencil.depthStencilPassOperation = _make_stencil_func(ds_desc.BackStencil.OnTestsPassed);
+						ds_descriptor.backFaceStencil.stencilCompareFunction = _make_comp_func(ds_desc.BackStencil.TestFunction);
+					} else {
+						ds_descriptor.frontFaceStencil.stencilFailureOperation = MTLStencilOperationKeep;
+						ds_descriptor.frontFaceStencil.depthFailureOperation = MTLStencilOperationKeep;
+						ds_descriptor.frontFaceStencil.depthStencilPassOperation = MTLStencilOperationKeep;
+						ds_descriptor.frontFaceStencil.stencilCompareFunction = MTLCompareFunctionAlways;
+						ds_descriptor.frontFaceStencil.readMask = 0;
+						ds_descriptor.frontFaceStencil.writeMask = 0;
+						ds_descriptor.backFaceStencil.stencilFailureOperation = MTLStencilOperationKeep;
+						ds_descriptor.backFaceStencil.depthFailureOperation = MTLStencilOperationKeep;
+						ds_descriptor.backFaceStencil.depthStencilPassOperation = MTLStencilOperationKeep;
+						ds_descriptor.backFaceStencil.stencilCompareFunction = MTLCompareFunctionAlways;
+						ds_descriptor.backFaceStencil.readMask = 0;
+						ds_descriptor.backFaceStencil.writeMask = 0;
+					}
+					result->ds_state = [device newDepthStencilStateWithDescriptor: ds_descriptor];
+					[ds_descriptor release];
+					if (!result->ds_state) return 0;
+				}
+				result->depth_bias = desc.Rasterization.DepthBias;
+				result->depth_bias_clamp = desc.Rasterization.DepthBiasClamp;
+				result->slope_scaled_depth_bias = desc.Rasterization.SlopeScaledDepthBias;
+				if (desc.Rasterization.DepthClipEnable) result->depth_clip = MTLDepthClipModeClip;
+				else result->depth_clip = MTLDepthClipModeClamp;
+				if (desc.Rasterization.Fill == FillMode::Solid) result->fill_mode = MTLTriangleFillModeFill;
+				else if (desc.Rasterization.Fill == FillMode::Wireframe) result->fill_mode = MTLTriangleFillModeLines;
+				else result->fill_mode = MTLTriangleFillModeFill;
+				if (desc.Rasterization.Cull == CullMode::None) result->cull_mode = MTLCullModeNone;
+				else if (desc.Rasterization.Cull == CullMode::Front) result->cull_mode = MTLCullModeFront;
+				else if (desc.Rasterization.Cull == CullMode::Back) result->cull_mode = MTLCullModeBack;
+				else result->cull_mode = MTLCullModeNone;
+				if (desc.Rasterization.FrontIsCounterClockwise) result->front_winding = MTLWindingCounterClockwise;
+				else result->front_winding = MTLWindingClockwise;
+				if (desc.Topology == PrimitiveTopology::PointList) result->primitive_type = MTLPrimitiveTypePoint;
+				else if (desc.Topology == PrimitiveTopology::LineList) result->primitive_type = MTLPrimitiveTypeLine;
+				else if (desc.Topology == PrimitiveTopology::LineStrip) result->primitive_type = MTLPrimitiveTypeLineStrip;
+				else if (desc.Topology == PrimitiveTopology::TriangleList) result->primitive_type = MTLPrimitiveTypeTriangle;
+				else if (desc.Topology == PrimitiveTopology::TriangleStrip) result->primitive_type = MTLPrimitiveTypeTriangleStrip;
+				else result->primitive_type = MTLPrimitiveTypeTriangle;
+				result->Retain();
+				return result;
 			}
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept override
 			{

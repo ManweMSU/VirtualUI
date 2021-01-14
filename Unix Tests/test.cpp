@@ -22,7 +22,14 @@ SafePointer<Graphics::IWindowLayer> layer;
 
 class _cb2 : public Windows::IWindowEventCallback
 {
+	uint nvert;
+	SafePointer<Graphics::IBuffer> vertex_buffer;
+	SafePointer<Graphics::IBuffer> index_buffer;
+	SafePointer<Graphics::ITexture> depth_buffer;
+	SafePointer<Graphics::IPipelineState> state;
 public:
+	struct vertex_struct { Math::Vector3f pos, norm, clr; };
+	struct world_struct { Math::Matrix4x4f proj; Math::Vector3f light; float light_power; float ambient_power; };
 	virtual void OnInitialized(UI::Window * window) override
 	{
 		window->As<Controls::OverlappedWindow>()->GetAcceleratorTable() << Accelerators::AcceleratorCommand(192939, KeyCodes::Return, false, false, true);
@@ -57,6 +64,100 @@ public:
 		auto box = window->FindChild(575757)->As<Controls::TextComboBox>();
 		for (int i = 0; i < 100; i++) box->AddItem(L"Text Combo Box Item " + string(i + 1));
 		box->AddItem(L"kornevgen pidor");
+
+		// Creating the device and layer
+		IO::Console console;
+		window->GetStation()->RequireRefreshRate(Window::RefreshPeriod::Cinematic);
+		SafePointer<Graphics::IDeviceFactory> fact = Graphics::CreateDeviceFactory();
+		device = fact->CreateDefaultDevice();
+		console << string(device.Inner()) << L"\n";
+		string tech;
+		uint32 ver;
+		device->GetImplementationInfo(tech, ver);
+		console << tech << L"/" << ver << L"\n";
+		console << device->GetDeviceName() << L" :: " << device->GetDeviceIdentifier() << L"\n";
+		auto dbox = window->GetStation()->GetBox();
+		Graphics::WindowLayerDesc desc;
+		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+		desc.Width = dbox.Right - dbox.Left;
+		desc.Height = dbox.Bottom - dbox.Top;
+		desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
+		layer = device->CreateWindowLayer(window, desc);
+		console << string(layer.Inner()) << L"\n";
+		// Loading shaders
+		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
+		SafePointer<Graphics::IShaderLibrary> sl = device->LoadShaderLibrary(slrs_stream);
+		console << string(sl.Inner()) << L"\n";
+		SafePointer< Array<string> > snames = sl->GetShaderNames();
+		for (auto & name : *snames) console << name << L"\n";
+		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"vertex_shader");
+		console << string(vs.Inner()) << L"\n";
+		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"pixel_shader");
+		console << string(ps.Inner()) << L"\n";
+		slrs_stream.SetReference(0);
+		sl.SetReference(0);
+		// Creating resources
+		Array<vertex_struct> vertex(0x100);
+		Array<uint16> index(0x100);
+		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
+		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
+		for (int i = 0; i < 100; i++) {
+			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
+			float c = cos(rad);
+			float s = sin(rad);
+			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
+			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			if (i) {
+				index << 0;
+				index << vertex.Length() - 4;
+				index << vertex.Length() - 2;
+				index << 1;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 1;
+			}
+		}
+		index << 0;
+		index << 2;
+		index << vertex.Length() - 2;
+		index << 1;
+		index << 3;
+		index << vertex.Length() - 1;
+		auto vstart = vertex.Length();
+		for (int i = 0; i < 100; i++) {
+			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
+			float c = cos(rad);
+			float s = sin(rad);
+			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
+			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(c, s, 0.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(c, s, 0.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
+			if (i) {
+				index << vertex.Length() - 4;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 2;
+				index << vertex.Length() - 3;
+				index << vertex.Length() - 2;
+				index << vertex.Length() - 1;
+			}
+		}
+		index << vertex.Length() - 2;
+		index << vertex.Length() - 1;
+		index << vstart;
+		index << vertex.Length() - 1;
+		index << vstart;
+		index << vstart + 1;
+		nvert = index.Length();
+	
+		vertex_buffer = device->CreateBuffer(
+			Graphics::CreateBufferDesc(vertex.Length() * sizeof(vertex_struct), Graphics::ResourceUsageShaderRead, sizeof(vertex_struct), Graphics::ResourceMemoryPool::Immutable),
+			Graphics::CreateInitDesc(vertex.GetBuffer()));
+		index_buffer = device->CreateBuffer(
+			Graphics::CreateBufferDesc(index.Length() * sizeof(uint16), Graphics::ResourceUsageIndexBuffer, 0, Graphics::ResourceMemoryPool::Immutable),
+			Graphics::CreateInitDesc(index.GetBuffer()));
+		depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, desc.Width, desc.Height, 1, Graphics::ResourceUsageDepthStencil));
+		auto state_desc = Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm, true, Graphics::PixelFormat::D32_float);
+		//state_desc.Rasterization.Fill = Graphics::FillMode::Wireframe;
+		state = device->CreateRenderingPipelineState(state_desc);
 	}
 	virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 	{
@@ -145,6 +246,7 @@ public:
 			console.WriteLine(L"Move Window");
 			auto box = window->GetStation()->GetBox();
 			if (layer) layer->ResizeSurface(box.Right - box.Left, box.Bottom - box.Top);
+			depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, box.Right - box.Left, box.Bottom - box.Top, 1, Graphics::ResourceUsageDepthStencil));
 		} else if (event == Windows::FrameEvent::Minimize) {
 			console.SetTextColor(14);
 			console.WriteLine(L"Minimize Window");
@@ -170,17 +272,38 @@ public:
 			console.SetTextColor(14);
 			console.WriteLine(L"Draw");
 			SafePointer<Graphics::ITexture> rt = layer->QuerySurface();
-			IO::Console cns;
-			cns.WriteLine(string(rt.Inner()));
 			auto context = device->GetDeviceContext();
+			auto angle = (GetTimerValue() % 20000) * 2.0 * ENGINE_PI / 20000.0;
+			auto a2 = (GetTimerValue() % 12000) * 2.0 * ENGINE_PI / 12000.0;
+			auto a3 = (GetTimerValue() % 8000) * 2.0 * ENGINE_PI / 8000.0;
+			auto cam = (Math::Vector3f(cos(angle), sin(angle), 0.0) + Math::Vector3f(0.0f, 0.0f, sin(a2))) * 2.0f;
+			auto view = Graphics::MakeLookAtTransform(cam, -cam, Math::Vector3f(0.0f, 0.0f, 1.0f));
+			auto proj = Graphics::MakePerspectiveViewTransformFoV(ENGINE_PI / 2.0f, float(rt->GetWidth()) / float(rt->GetHeight()), 0.01f, 10.0f);
+			world_struct world;
+			world.proj = proj * view;
+			world.light_power = 0.7f;
+			world.ambient_power = 0.3f;
+			world.light = Math::Vector3f(cos(a3), 0.0f, sin(a3));
+			auto rtdesc = Graphics::CreateRenderTargetView(rt, Math::Vector4f(0.2f, 0.0f, 0.4f, 1.0f));
+			auto dsdesc = Graphics::CreateDepthStencilView(depth_buffer, 1.0f);
+			if (context->BeginRenderingPass(1, &rtdesc, &dsdesc)) {
+				context->SetViewport(0.0f, 0.0f, rt->GetWidth(), rt->GetHeight(), 0.0f, 1.0f);
+				context->SetRenderingPipelineState(state);
+				context->SetVertexShaderResource(1, vertex_buffer);
+				context->SetVertexShaderConstant(0, &world, sizeof(world));
+				context->SetPixelShaderConstant(0, &world, sizeof(world));
+				context->SetIndexBuffer(index_buffer, Graphics::IndexBufferFormat::UInt16);
+				context->DrawIndexedPrimitives(nvert, 0, 0);
+				context->EndCurrentPass();
+			}
 			if (context->Begin2DRenderingPass(rt)) {
 				auto device_2d = context->Get2DRenderingDevice();
 				device_2d->SetTimerValue(GetTimerValue());
 				window->GetStation()->SetRenderingDevice(device_2d);
 				window->GetStation()->Animate();
 				window->GetStation()->Render();
-				if (!context->EndCurrentPass()) cns.WriteLine(L"2D rendering pass finalization failed");
-			} else cns.WriteLine(L"2D rendering pass failed");
+				context->EndCurrentPass();
+			}
 			layer->Present();
 		}
 		if (Windows::IsWindowActive(window)) {
@@ -270,79 +393,6 @@ int Main(void)
 	auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0, true);
 	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
 	if (w4) w4->Show(true);
-
-	{
-		SafePointer<Graphics::IDeviceFactory> fact = Graphics::CreateDeviceFactory();
-		device = fact->CreateDefaultDevice();
-		Console << string(device.Inner()) << L"\n";
-		string tech;
-		uint32 ver;
-		device->GetImplementationInfo(tech, ver);
-		Console << tech << L"/" << ver << L"\n";
-		Console << device->GetDeviceName() << L" :: " << device->GetDeviceIdentifier() << L"\n";
-		auto box = w4->GetStation()->GetBox();
-		Graphics::WindowLayerDesc desc;
-		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-		desc.Width = box.Right - box.Left;
-		desc.Height = box.Bottom - box.Top;
-		desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
-		layer = device->CreateWindowLayer(w4, desc);
-		Console << string(layer.Inner()) << L"\n";
-		w4->RequireRedraw();
-
-		Graphics::TextureDesc tdesc;
-		tdesc.Type = Graphics::TextureType::Type2D;
-		tdesc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-		tdesc.Width = 256;
-		tdesc.Height = 128;
-		tdesc.MipmapCount = 1;
-		tdesc.MemoryPool = Graphics::ResourceMemoryPool::Default;
-		tdesc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageCPUWrite | Graphics::ResourceUsageRenderTarget;
-
-		SafePointer<Codec::Frame> frame = new Codec::Frame(256, 128, -1, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
-		for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++) {
-			Math::Color clr(x / 255.0, 0.5, y / 128.0);
-			frame->SetPixel(x, y, UI::Color(clr));
-		}
-		Graphics::ResourceInitDesc idesc;
-		idesc.Data = frame->GetData();
-		idesc.DataPitch = frame->GetScanLineLength();
-		SafePointer<Graphics::ITexture> tex3d = device->CreateTexture(tdesc, &idesc);
-		Console << string(tex3d.Inner()) << L"\n";
-		Console << string(tex3d->GetMipmapCount()) << L"\n";
-		auto context = device->GetDeviceContext();
-		Graphics::RenderTargetViewDesc rtd;
-		rtd.Texture = tex3d;
-		rtd.LoadAction = Graphics::TextureLoadAction::Clear;
-		rtd.ClearValue[0] = 0.5;
-		rtd.ClearValue[1] = 0.0;
-		rtd.ClearValue[2] = 1.0;
-		rtd.ClearValue[3] = 1.0;
-		context->BeginRenderingPass(1, &rtd, 0);
-		context->EndCurrentPass();
-		context->BeginMemoryManagementPass();
-		Graphics::ResourceInitDesc urdesc;
-		urdesc.Data = frame->GetData();
-		urdesc.DataPitch = frame->GetScanLineLength();
-		context->UpdateResourceData(tex3d, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(100, 10, 0), Graphics::VolumeIndex(96, 96, 1), urdesc);
-		context->EndCurrentPass();
-		auto hstat = context->Begin2DRenderingPass(tex3d);
-		auto font = context->Get2DRenderingDevice()->LoadFont(L"Arial", 128, 400, false, false, false);
-		auto text = context->Get2DRenderingDevice()->CreateTextRenderingInfo(font, L"TEXT", 1, 1, UI::Color(255, 255, 255));
-		context->Get2DRenderingDevice()->RenderText(text, Box(0, 0, 256, 128), false);
-		text->Release();
-		font->Release();
-		hstat = context->EndCurrentPass();
-		hstat = context->BeginMemoryManagementPass();
-		Graphics::ResourceDataDesc ddesc;
-		ddesc.Data = frame->GetData();
-		ddesc.DataPitch = frame->GetScanLineLength();
-		context->QueryResourceData(ddesc, tex3d, Graphics::SubresourceIndex(0, 0), Graphics::VolumeIndex(0, 0), Graphics::VolumeIndex(256, 128, 1));
-		hstat = context->EndCurrentPass();
-		Codec::Image image;
-		image.Frames.Append(frame);
-		UI::Windows::SetApplicationIcon(&image);
-	}
 
 	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();
 	status->SetIconColorUsage(UI::Windows::StatusBarIconColorUsage::Monochromic);

@@ -959,10 +959,7 @@ namespace Engine
 				int mr = max(max(fr, ar), ur);
 				if (!mr) LowLevelSetTimer(0, 0); else {
 					if (mr == 1) LowLevelSetTimer(0, 500);
-					else if (mr == 2) {
-						if ([_window isKeyWindow]) LowLevelSetTimer(0, 16);
-						else LowLevelSetTimer(0, 100);
-					}
+					else if (mr == 2) LowLevelSetTimer(0, 16);
 				}
 			}
 			virtual void FocusWindowChanged(void) override { [__GetEngineViewFromWindow(_window) require_contents_update]; AnimationStateChanged(); }
