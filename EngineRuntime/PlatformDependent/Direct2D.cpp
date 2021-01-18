@@ -266,7 +266,6 @@ namespace Engine
 			ID2D1PathGeometry * Geometry;
 			ID2D1SolidColorBrush * TextBrush;
 			ID2D1SolidColorBrush * HighlightBrush;
-			ID2D1RenderTarget * RenderTarget;
 			D2DRenderDevice * Device;
 			uint16 NormalSpaceGlyph;
 			uint16 AlternativeSpaceGlyph;
@@ -294,7 +293,7 @@ namespace Engine
 			virtual void SetHighlightColor(const Color & color) noexcept override
 			{
 				if (HighlightBrush) { HighlightBrush->Release(); HighlightBrush = 0; }
-				RenderTarget->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &HighlightBrush);
+				Device->GetRenderTarget()->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &HighlightBrush);
 			}
 			virtual void HighlightText(int Start, int End) noexcept override { hls = Start; hle = End; }
 			virtual int TestPosition(int point) noexcept override
@@ -795,7 +794,6 @@ namespace Engine
 				Info->halign = horizontal_align;
 				Info->valign = vertical_align;
 				Info->Font = static_cast<DWFont *>(font);
-				Info->RenderTarget = Target;
 				Info->Device = this;
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
@@ -829,7 +827,6 @@ namespace Engine
 				Info->halign = horizontal_align;
 				Info->valign = vertical_align;
 				Info->Font = static_cast<DWFont *>(font);
-				Info->RenderTarget = Target;
 				Info->Device = this;
 				Info->HighlightBrush = 0;
 				Info->TextBrush = 0;
