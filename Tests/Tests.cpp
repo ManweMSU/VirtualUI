@@ -78,8 +78,8 @@ public:
 		layer = device->CreateWindowLayer(window, Graphics::CreateWindowLayerDesc(size.x, size.y));
 		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
 		SafePointer<Graphics::IShaderLibrary> sl = device->LoadShaderLibrary(slrs_stream);
-		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"vertex");
-		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"pixel");
+		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"VertexFunction");
+		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"PixelFunction");
 		slrs_stream.SetReference(0);
 		sl.SetReference(0);
 		// Creating buffers

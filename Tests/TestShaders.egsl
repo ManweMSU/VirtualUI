@@ -1,0 +1,37 @@
+struct Vertex { float3 position, normal, color; }
+struct World
+{
+	float4x4 proj;
+	float3 light;
+	float light_power, ambient_power;
+}
+struct Data
+{
+	float4 color;
+	float3 normal;
+	float3 source;
+}
+
+vertex VertexFunction(
+	in array<Vertex> verticies : buffer[0],
+	in World world : constant[0],
+	in uint id : vertex,
+	out Data data,
+	out float4 position : position
+) {
+	Vertex input = verticies[id];
+	position = mul(world.proj, float4(input.position, 1.0));
+	data.color = float4(input.color, 1.0);
+	data.normal = input.normal;
+	data.source = input.position;
+}
+pixel PixelFunction(
+	in World world : constant[0],
+	in texture tex : texture[0],
+	in sampler sam : sampler[0],
+	in Data input,
+	out float4 color : color[0]
+) {
+	float power = saturate(-dot(world.light, input.normal)) * world.light_power + world.ambient_power;
+	color = input.color * float4(power, power, power, power);
+}

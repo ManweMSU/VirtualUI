@@ -178,6 +178,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="test.euip" />
+    <None Include="TestShaders.egsl" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="TestShaders.hlsl">

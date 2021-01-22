@@ -53,6 +53,9 @@
     <None Include="test.euip">
       <Filter>Файлы ресурсов</Filter>
     </None>
+    <None Include="TestShaders.egsl">
+      <Filter>Файлы исходного кода</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="test.eui" />
