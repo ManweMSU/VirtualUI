@@ -1,6 +1,10 @@
 #include "KeyCodes.h"
 
+#include "../Miscellaneous/Dictionary.h"
+
 #import <AppKit/AppKit.h>
+
+extern Engine::Dictionary::PlainDictionary<Engine::KeyCodes::Key, bool> __engine_keyboard_status;
 
 namespace Engine
 {
@@ -12,6 +16,8 @@ namespace Engine
             if (key_code == KeyCodes::LeftControl || key_code == KeyCodes::RightControl || key_code == KeyCodes::Control) return [NSEvent modifierFlags] & NSEventModifierFlagControl;
             if (key_code == KeyCodes::LeftAlternative || key_code == KeyCodes::RightAlternative || key_code == KeyCodes::Alternative) return [NSEvent modifierFlags] & NSEventModifierFlagOption;
             if (key_code == KeyCodes::LeftSystem || key_code == KeyCodes::RightSystem || key_code == KeyCodes::System) return [NSEvent modifierFlags] & NSEventModifierFlagCommand;
+            Engine::KeyCodes::Key key = static_cast<Engine::KeyCodes::Key>(key_code);
+            if (__engine_keyboard_status.ElementByKey(key)) return true;
             return false;
         }
 		bool IsKeyToggled(uint key_code)

@@ -21,6 +21,8 @@
 
 using namespace Engine::UI;
 
+Engine::Dictionary::PlainDictionary<Engine::KeyCodes::Key, bool> __engine_keyboard_status(0x100);
+
 static void RenderStationContent(Engine::UI::WindowStation * station);
 static Engine::MetalGraphics::MetalPresentationInterface * GetStationPresentationInterface(Engine::UI::WindowStation * station);
 static NSWindow * GetStationWindow(Engine::UI::WindowStation * station);
@@ -389,9 +391,10 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 - (void) keyDown: (NSEvent *) event
 {
 	bool dead;
-	uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
+	Engine::KeyCodes::Key key = static_cast<Engine::KeyCodes::Key>(Engine::Cocoa::EngineKeyCode([event keyCode], dead));
 	if (Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Control) || Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::Alternative) ||
 		Engine::Keyboard::IsKeyPressed(Engine::KeyCodes::System)) dead = true;
+	if (!__engine_keyboard_status.ElementByKey(key)) __engine_keyboard_status.Append(key, true);
 	if (key && station) {
 		if (!station->KeyDown(key)) {
 			if (!dead) {
@@ -413,7 +416,8 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 - (void) keyUp: (NSEvent *) event
 {
 	bool dead;
-	uint32 key = Engine::Cocoa::EngineKeyCode([event keyCode], dead);
+	Engine::KeyCodes::Key key = static_cast<Engine::KeyCodes::Key>(Engine::Cocoa::EngineKeyCode([event keyCode], dead));
+	__engine_keyboard_status.RemoveByKey(key);
 	if (key && station) {
 		station->KeyUp(key);
 		[self require_contents_update];
@@ -1689,6 +1693,7 @@ static NSWindow * GetStationWindow(Engine::UI::WindowStation * station)
 }
 - (void) windowDidResignKey: (NSNotification *) notification
 {
+	__engine_keyboard_status.Clear();
 	if (!station) return;
 	station->FocusChanged(false);
 	station->CaptureChanged(false);

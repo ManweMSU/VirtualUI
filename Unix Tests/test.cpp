@@ -90,9 +90,9 @@ public:
 		console << string(sl.Inner()) << L"\n";
 		SafePointer< Array<string> > snames = sl->GetShaderNames();
 		for (auto & name : *snames) console << name << L"\n";
-		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"vertex_shader");
+		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"VertexFunction");
 		console << string(vs.Inner()) << L"\n";
-		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"pixel_shader");
+		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"PixelFunction");
 		console << string(ps.Inner()) << L"\n";
 		slrs_stream.SetReference(0);
 		sl.SetReference(0);
@@ -271,6 +271,7 @@ public:
 		} else if (event == Windows::FrameEvent::Draw) {
 			console.SetTextColor(14);
 			console.WriteLine(L"Draw");
+			if (Keyboard::IsKeyPressed(KeyCodes::A)) console.WriteLine(L"'A' IS PRESSED");
 			SafePointer<Graphics::ITexture> rt = layer->QuerySurface();
 			auto context = device->GetDeviceContext();
 			auto angle = (GetTimerValue() % 20000) * 2.0 * ENGINE_PI / 20000.0;
