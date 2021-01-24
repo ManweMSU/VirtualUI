@@ -1210,24 +1210,32 @@ namespace Engine
 				if (desc.Type == TextureType::Type1D || desc.Type == TextureType::TypeArray1D) {
 					for (uint j = 0; j < texture->size; j++) for (uint i = 0; i < mips; i++) {
 						uint subres = i + j * mips;
-						[texture->texture replaceRegion: MTLRegionMake1D(0, texture->width) mipmapLevel: i slice: j
+						uint mw = texture->width, k = i;
+						while (k) { mw >>= 1; k--; }
+						[texture->texture replaceRegion: MTLRegionMake1D(0, mw) mipmapLevel: i slice: j
 							withBytes: init[subres].Data bytesPerRow: 0 bytesPerImage: 0];
 					}
 				} else if (desc.Type == TextureType::Type2D || desc.Type == TextureType::TypeArray2D) {
 					for (uint j = 0; j < texture->size; j++) for (uint i = 0; i < mips; i++) {
 						uint subres = i + j * mips;
-						[texture->texture replaceRegion: MTLRegionMake2D(0, 0, texture->width, texture->height) mipmapLevel: i slice: j
+						uint mw = texture->width, mh = texture->height, k = i;
+						while (k) { mw >>= 1; mh >>= 1; k--; }
+						[texture->texture replaceRegion: MTLRegionMake2D(0, 0, mw, mh) mipmapLevel: i slice: j
 							withBytes: init[subres].Data bytesPerRow: init[subres].DataPitch bytesPerImage: 0];
 					}
 				} else if (desc.Type == TextureType::TypeCube || desc.Type == TextureType::TypeArrayCube) {
 					for (uint j = 0; j < texture->size * 6; j++) for (uint i = 0; i < mips; i++) {
 						uint subres = i + j * mips;
-						[texture->texture replaceRegion: MTLRegionMake2D(0, 0, texture->width, texture->height) mipmapLevel: i slice: j
+						uint mw = texture->width, mh = texture->height, k = i;
+						while (k) { mw >>= 1; mh >>= 1; k--; }
+						[texture->texture replaceRegion: MTLRegionMake2D(0, 0, mw, mh) mipmapLevel: i slice: j
 							withBytes: init[subres].Data bytesPerRow: init[subres].DataPitch bytesPerImage: 0];
 					}
 				} else if (desc.Type == TextureType::Type3D) {
 					for (uint i = 0; i < mips; i++) {
-						[texture->texture replaceRegion: MTLRegionMake3D(0, 0, 0, texture->width, texture->height, texture->depth)
+						uint mw = texture->width, mh = texture->height, md = texture->depth, k = i;
+						while (k) { mw >>= 1; mh >>= 1; md >>= 1; k--; }
+						[texture->texture replaceRegion: MTLRegionMake3D(0, 0, 0, mw, mh, md)
 							mipmapLevel: i slice: 0 withBytes: init[i].Data bytesPerRow: init[i].DataPitch bytesPerImage: init[i].DataSlicePitch];
 					}
 				}
