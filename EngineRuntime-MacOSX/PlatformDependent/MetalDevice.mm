@@ -710,8 +710,11 @@ namespace Engine
 				auto size = UI::Point(blur_box.Right - blur_box.Left, blur_box.Bottom - blur_box.Top);
 				[encoder endEncoding];
 				id<MTLTexture> blur_region;
+				uint lod = 1; float sigma = info->sigma;
+				while (sigma > 4.0f) { sigma /= 2.0f; lod++; }
 				@autoreleasepool {
 					auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pixel_format width: size.x height: size.y mipmapped: NO];
+					tex_desc.mipmapLevelCount = lod;
 					[tex_desc setUsage: MTLTextureUsageShaderRead];
 					blur_region = [device newTextureWithDescriptor: tex_desc];
 				}
@@ -719,6 +722,7 @@ namespace Engine
 				id<MTLBlitCommandEncoder> blit_encoder = [command_buffer blitCommandEncoder];
 				[blit_encoder copyFromTexture: render_target sourceSlice: 0 sourceLevel: 0 sourceOrigin: MTLOriginMake(blur_box.Left, blur_box.Top, 0)
 					sourceSize: MTLSizeMake(size.x, size.y, 1) toTexture: blur_region destinationSlice: 0 destinationLevel: 0 destinationOrigin: MTLOriginMake(0, 0, 0)];
+				[blit_encoder generateMipmapsForTexture: blur_region];
 				[blit_encoder endEncoding];
 				auto prev_desc = desc.LastElement();
 				[[[prev_desc colorAttachments] objectAtIndexedSubscript: 0] setLoadAction: MTLLoadActionLoad];
