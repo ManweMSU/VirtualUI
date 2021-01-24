@@ -188,7 +188,8 @@ namespace Engine
 			void Button::LeftButtonDown(Point at)
 			{
 				SetFocus();
-				if (_state == 1 || (_state & 0x10)) {
+				if (_state == 1 || _state == 0 || (_state & 0x10)) {
+					SetCapture();
 					_state = 2;
 				}
 			}
@@ -207,7 +208,6 @@ namespace Engine
 					_state = 1;
 					SetCapture();
 				} else if (_state == 1) {
-					SetCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
 						ReleaseCapture();
@@ -331,7 +331,8 @@ namespace Engine
 			void CheckBox::LeftButtonDown(Point at)
 			{
 				SetFocus();
-				if (_state == 1 || (_state & 0x10)) {
+				if (_state == 1 || _state == 0 || (_state & 0x10)) {
+					SetCapture();
 					_state = 2;
 				}
 			}
@@ -351,7 +352,6 @@ namespace Engine
 					_state = 1;
 					SetCapture();
 				} else if (_state == 1) {
-					SetCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
 						ReleaseCapture();
@@ -476,7 +476,8 @@ namespace Engine
 			void RadioButton::LeftButtonDown(Point at)
 			{
 				SetFocus();
-				if (_state == 1 || (_state & 0x10)) {
+				if (_state == 1 || _state == 0 || (_state & 0x10)) {
+					SetCapture();
 					_state = 2;
 				}
 			}
@@ -498,7 +499,6 @@ namespace Engine
 					_state = 1;
 					SetCapture();
 				} else if (_state == 1) {
-					SetCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
 						ReleaseCapture();
@@ -730,8 +730,9 @@ namespace Engine
 			}
 			void ToolButtonPart::LeftButtonDown(Point at)
 			{
-				if (_state == 1) {
+				if (_state == 1 || _state == 0) {
 					_state = 2;
+					SetCapture();
 					static_cast<ToolButton *>(GetParent())->_state = 0xF2;
 				}
 			}
@@ -768,7 +769,6 @@ namespace Engine
 					static_cast<ToolButton *>(GetParent())->_state = 0xF1;
 					SetCapture();
 				} else if (_state == 1) {
-					SetCapture();
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
 						static_cast<ToolButton *>(GetParent())->_state = 0;

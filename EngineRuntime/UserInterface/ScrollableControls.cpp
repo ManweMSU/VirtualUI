@@ -248,11 +248,12 @@ namespace Engine
 				Box down = Box(my.Left, my.Bottom - my.Right + my.Left, my.Right, my.Bottom);
 				Box scroller = GetScrollerBox(my);
 				if (_state == 0 || _state == 1) {
-					SetCapture();
-					_state = 1;
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
+						_state = 0;
 						ReleaseCapture();
 					} else {
+						_state = 1;
+						SetCapture();
 						if (up.IsInside(at)) _part = 1;
 						else if (down.IsInside(at)) _part = 2;
 						else if (scroller.IsInside(at)) _part = 3;
@@ -598,11 +599,12 @@ namespace Engine
 				Box right = Box(my.Right - my.Bottom + my.Top, my.Top, my.Right, my.Bottom);
 				Box scroller = GetScrollerBox(my);
 				if (_state == 0 || _state == 1) {
-					SetCapture();
-					_state = 1;
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
+						_state = 0;
 						ReleaseCapture();
 					} else {
+						_state = 1;
+						SetCapture();
 						if (left.IsInside(at)) _part = 1;
 						else if (right.IsInside(at)) _part = 2;
 						else if (scroller.IsInside(at)) _part = 3;

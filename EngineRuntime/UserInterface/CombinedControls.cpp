@@ -241,7 +241,7 @@ namespace Engine
 			void ComboBox::LeftButtonDown(Point at)
 			{
 				SetFocus();
-				if ((_state == 1 || _state & 0x10) && !_list) {
+				if ((_state == 1 || _state == 0 || _state & 0x10) && !_list) {
 					_state = 2;
 					run_drop_down();
 				}
@@ -852,7 +852,7 @@ namespace Engine
 				Box text = Box(TextPosition, my);
 				Box button = Box(ButtonPosition, my);
 				if (_state == 0) {
-					if (button.IsInside(at)) {
+					if (button.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
 						_state = 3;
 						SetCapture();
 					}
