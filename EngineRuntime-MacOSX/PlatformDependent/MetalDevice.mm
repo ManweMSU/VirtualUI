@@ -710,13 +710,18 @@ namespace Engine
 				auto size = UI::Point(blur_box.Right - blur_box.Left, blur_box.Bottom - blur_box.Top);
 				[encoder endEncoding];
 				id<MTLTexture> blur_region;
-				uint lod = 1; float sigma = info->sigma;
-				while (sigma > 4.0f) { sigma /= 2.0f; lod++; }
+				id<MTLTexture> blur_region_mip;
+				uint lod = 1;
+				float sigma = info->sigma;
+				UI::Point mip_size = size;
+				while (sigma > 4.0f) { sigma /= 2.0f; lod++; mip_size.x /= 2; mip_size.y /= 2; }
 				@autoreleasepool {
 					auto tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: pixel_format width: size.x height: size.y mipmapped: NO];
 					tex_desc.mipmapLevelCount = lod;
 					[tex_desc setUsage: MTLTextureUsageShaderRead];
 					blur_region = [device newTextureWithDescriptor: tex_desc];
+					blur_region_mip = [blur_region newTextureViewWithPixelFormat: pixel_format textureType: MTLTextureType2D
+						levels: NSMakeRange(lod - 1, 1) slices: NSMakeRange(0, 1)];
 				}
 				id<MTLTexture> render_target = [[[base_descriptor colorAttachments] objectAtIndexedSubscript: 0] texture];
 				id<MTLBlitCommandEncoder> blit_encoder = [command_buffer blitCommandEncoder];
@@ -740,14 +745,15 @@ namespace Engine
 				[encoder setScissorRect: scissor];
 				LayerEndInfo rinfo;
 				rinfo.render_at = blur_box;
-				rinfo.size = size;
-				rinfo.opacity = info->sigma;
+				rinfo.size = mip_size;
+				rinfo.opacity = sigma;
 				[encoder setRenderPipelineState: blur_state];
-				[encoder setFragmentTexture: blur_region atIndex: 0];
+				[encoder setFragmentTexture: blur_region_mip atIndex: 0];
 				[encoder setVertexBytes: &rinfo length: sizeof(rinfo) atIndex: 2];
 				[encoder setVertexBuffer: layer_vertex offset: 0 atIndex: 1];
 				[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: 6];
 				[blur_region release];
+				[blur_region_mip release];
 			}
 			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept override
 			{

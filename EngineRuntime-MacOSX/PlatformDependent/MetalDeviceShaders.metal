@@ -135,10 +135,8 @@ vertex metal_device_main_output MetalDeviceBlurVertexShader(
 }
 fragment float4 MetalDeviceBlurPixelShader(metal_device_main_output data [[stage_in]], texture2d<float> tex [[texture(0)]])
 {
-	int2 center = int2(data.tex_coord.x, data.tex_coord.y);
+	constexpr sampler sam(mag_filter::linear, min_filter::linear);
 	uint2 size = uint2(data.color.r, data.color.g);
-	uint lod = 0;
-	while (data.color.a > 4.0f) { data.color.a /= 2.0f; center /= 2; size /= 2; lod++; }
 	int radius = ceil(data.color.a * 3.0);
 	float aa = data.color.a * data.color.a;
 	float norm = 1.0f / (aa * 6.2831853071795864f);
@@ -146,9 +144,9 @@ fragment float4 MetalDeviceBlurPixelShader(metal_device_main_output data [[stage
 	float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f);
 	float4 div = 0.0f;
 	for (int y = -radius; y <= radius; y++) for (int x = -radius; x <= radius; x++) {
-		uint2 pos = uint2(center.x + x, center.y + y);
+		float2 pos = float2((data.tex_coord.x + x) / data.color.r, (data.tex_coord.y + y) / data.color.g);
 		if (pos.x >= size.x || pos.y >= size.y) continue;
-		float4 color = tex.read(pos, lod);
+		float4 color = tex.sample(sam, pos);
 		float weight = norm * exp(denom * (x * x + y * y));
 		result += color * weight;
 		div += weight;
