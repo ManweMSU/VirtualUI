@@ -38,8 +38,8 @@ namespace Engine
 			if (cmd.Length() != 0) cmd += L' ';
 			cmd += L'\"';
 			for (int i = 0; i < arg.Length(); i++) {
-				if (arg[i] == L'\"' || arg[i] == L'\'') {
-					cmd += arg[i];
+				if (arg[i] == L'\"') {
+					cmd += L'\\';
 					cmd += arg[i];
 				} else cmd += arg[i];
 			}
