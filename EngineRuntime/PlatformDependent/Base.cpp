@@ -156,7 +156,7 @@ namespace Engine
 	bool IsPlatformAvailable(Platform platform)
 	{
 		WindowsWow64FunctionsInit();
-		if (GetSystemPlatform() == ApplicationPlatform) return true;
+		if (GetSystemPlatform() == platform) return true;
 		BOOL result;
 		USHORT machine;
 		if (platform == Platform::X86) machine = IMAGE_FILE_MACHINE_I386;
