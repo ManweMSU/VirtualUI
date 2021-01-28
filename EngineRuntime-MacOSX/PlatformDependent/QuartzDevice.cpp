@@ -315,6 +315,7 @@ namespace Engine
 		}
 		UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(UI::ITexture * texture, const UI::Box & take_area, bool fill_pattern) noexcept
 		{
+			if (!texture) return 0;
 			auto tex = static_cast<QuartzTexture *>(texture);
 			SafePointer<QuartzTextureRenderingInfo> info = new QuartzTextureRenderingInfo;
 			info->fill = fill_pattern;
@@ -334,6 +335,7 @@ namespace Engine
 		UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept { return 0; }
 		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
 		{
+			if (!font) return 0;
 			string copy = text.NormalizedForm();
 			Array<uint32> chars(copy.Length());
 			chars.SetLength(copy.Length());
@@ -342,10 +344,12 @@ namespace Engine
 		}
 		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
 		{
+			if (!font) return 0;
 			return CreateTextRenderingInfo(font, string(text.GetBuffer(), text.Length(), Encoding::UTF32), horizontal_align, vertical_align, color);
 		}
 		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfoRaw(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
 		{
+			if (!font) return 0;
 			SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
 			if (!text.Length()) {
 				info->run_length = 0;
@@ -545,7 +549,7 @@ namespace Engine
 		void QuartzRenderingDevice::RenderText(UI::ITextRenderingInfo * Info, const UI::Box & At, bool Clip) noexcept
 		{
 			auto info = reinterpret_cast<CoreTextRenderingInfo *>(Info);
-			if (!info->GlyphAdvances.Length() || !Info) return;
+			if (!Info || !info->GlyphAdvances.Length()) return;
 			CGRect at = QuartzMakeRect(At, _width, _height, _scale);
 			if (Clip) {
 				CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));

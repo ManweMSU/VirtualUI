@@ -450,6 +450,7 @@ namespace Engine
 			}
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept override
 			{
+				if (!texture) return 0;
 				SafePointer<MetalTexture> device_texture;
 				Box area = take_area;
 				if (area.Left < 0) area.Left = 0;
@@ -546,6 +547,7 @@ namespace Engine
 			}
 			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override
 			{
+				if (!texture) return 0;
 				SafePointer<MetalTextureRenderingInfo> info = new (std::nothrow) MetalTextureRenderingInfo;
 				if (!info) return 0;
 				info->wrapped.SetRetain(texture);
@@ -557,6 +559,7 @@ namespace Engine
 			}
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
 			{
+				if (!font) return 0;
 				SafePointer<ITextRenderingInfo> core_info = LoaderDevice->CreateTextRenderingInfo(font, text, 0, 0, color);
 				SafePointer<MetalTextRenderingInfo> info = new MetalTextRenderingInfo;
 				info->core_text_info = core_info;
@@ -567,6 +570,7 @@ namespace Engine
 			}
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override
 			{
+				if (!font) return 0;
 				SafePointer<ITextRenderingInfo> core_info = LoaderDevice->CreateTextRenderingInfo(font, text, 0, 0, color);
 				SafePointer<MetalTextRenderingInfo> info = new MetalTextRenderingInfo;
 				info->core_text_info = core_info;

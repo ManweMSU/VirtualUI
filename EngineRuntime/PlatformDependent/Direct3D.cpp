@@ -383,7 +383,7 @@ namespace Engine
 			ID3D11DepthStencilState * depth_stencil_state;
 			ID2D1RenderTarget * device_2d_render_target;
 			ID2D1DeviceContext * device_2d_device_context;
-			Direct2D::D2DRenderDevice * device_2d;
+			Direct2D::D2DRenderingDevice * device_2d;
 			int pass_mode;
 			bool pass_state;
 			uint32 stencil_ref;
@@ -453,7 +453,7 @@ namespace Engine
 					if (d2d1_device) {
 						if (d2d1_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &device_2d_device_context) != S_OK) { d2d1_device->Release(); return false; }
 						d2d1_device->Release();
-						try { device_2d = new Direct2D::D2DRenderDevice(device_2d_device_context); }
+						try { device_2d = new Direct2D::D2DRenderingDevice(device_2d_device_context); }
 						catch (...) { device_2d_device_context->Release(); device_2d_device_context = 0; return false; }
 						device_2d->SetParentWrappedDevice(wrapper);
 						IDXGISurface * surface;
@@ -485,7 +485,7 @@ namespace Engine
 						props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 						if (Direct2D::D2DFactory->CreateDxgiSurfaceRenderTarget(surface, &props, &device_2d_render_target) != S_OK) { surface->Release(); return false; }
 						surface->Release();
-						try { device_2d = new Direct2D::D2DRenderDevice(device_2d_render_target); }
+						try { device_2d = new Direct2D::D2DRenderingDevice(device_2d_render_target); }
 						catch (...) { device_2d_render_target->Release(); device_2d_render_target = 0; return false; }
 						device_2d->SetParentWrappedDevice(wrapper);
 						target = device_2d_render_target;

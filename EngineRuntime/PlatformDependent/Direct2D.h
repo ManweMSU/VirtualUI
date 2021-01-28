@@ -33,7 +33,7 @@ namespace Engine
 			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout);
 		}
 
-		class D2DRenderDevice : public Drawing::ITextureRenderingDevice
+		class D2DRenderingDevice : public Drawing::ITextureRenderingDevice
 		{
 			struct tex_pair { ITexture * base; ITexture * spec; };
 			ID2D1DeviceContext * ExtendedTarget;
@@ -52,14 +52,15 @@ namespace Engine
 			int BitmapTargetState;
 			int BitmapTargetResX, BitmapTargetResY;
 		public:
-			D2DRenderDevice(ID2D1DeviceContext * target);
-			D2DRenderDevice(ID2D1RenderTarget * target);
-			~D2DRenderDevice(void) override;
+			D2DRenderingDevice(ID2D1DeviceContext * target);
+			D2DRenderingDevice(ID2D1RenderTarget * target);
+			~D2DRenderingDevice(void) override;
 
 			ID2D1RenderTarget * GetRenderTarget(void) const noexcept;
 			void UpdateRenderTarget(ID2D1RenderTarget * target) noexcept;
 			void SetParentWrappedDevice(Graphics::IDevice * device) noexcept;
 			virtual void TextureWasDestroyed(ITexture * texture) noexcept override;
+			virtual string ToString(void) const override;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept override;

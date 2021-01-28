@@ -24,7 +24,7 @@ namespace Engine
 		class WICTexture;
 		class D2DTexture;
 		class DWFont;
-		class D2DRenderDevice;
+		class D2DRenderingDevice;
 
 		ID2D1Factory1 * D2DFactory1 = 0;
 		ID2D1Factory * D2DFactory = 0;
@@ -266,7 +266,7 @@ namespace Engine
 			ID2D1PathGeometry * Geometry;
 			ID2D1SolidColorBrush * TextBrush;
 			ID2D1SolidColorBrush * HighlightBrush;
-			D2DRenderDevice * Device;
+			D2DRenderingDevice * Device;
 			uint16 NormalSpaceGlyph;
 			uint16 AlternativeSpaceGlyph;
 			int BaselineOffset;
@@ -448,7 +448,7 @@ namespace Engine
 				WICTexture * source = static_cast<WICTexture *>(device_independent);
 				w = source->w; h = source->h;
 				SafePointer<ID2D1Bitmap> texture;
-				auto device = static_cast<D2DRenderDevice *>(factory_device);
+				auto device = static_cast<D2DRenderingDevice *>(factory_device);
 				auto render_target = device->GetRenderTarget();
 				if (render_target->CreateBitmapFromWicBitmap(source->bitmap, texture.InnerRef()) != S_OK) throw Exception();
 				texture->AddRef();
@@ -575,17 +575,17 @@ namespace Engine
 			}
 		}
 
-		D2DRenderDevice::D2DRenderDevice(ID2D1DeviceContext * target) :
+		D2DRenderingDevice::D2DRenderingDevice(ID2D1DeviceContext * target) :
 			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
 			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
 			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0), ParentWrappedDevice(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
-		D2DRenderDevice::D2DRenderDevice(ID2D1RenderTarget * target) :
+		D2DRenderingDevice::D2DRenderingDevice(ID2D1RenderTarget * target) :
 			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
 			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
 			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0), ParentWrappedDevice(0)
 		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
-		D2DRenderDevice::~D2DRenderDevice(void)
+		D2DRenderingDevice::~D2DRenderingDevice(void)
 		{
 			if (Target) Target->Release();
 			for (int i = 0; i < TextureCache.Length(); i++) {
@@ -593,14 +593,14 @@ namespace Engine
 				TextureCache[i].spec->DeviceWasDestroyed(this);
 			}
 		}
-		ID2D1RenderTarget * D2DRenderDevice::GetRenderTarget(void) const noexcept { return Target; }
-		void D2DRenderDevice::UpdateRenderTarget(ID2D1RenderTarget * target) noexcept
+		ID2D1RenderTarget * D2DRenderingDevice::GetRenderTarget(void) const noexcept { return Target; }
+		void D2DRenderingDevice::UpdateRenderTarget(ID2D1RenderTarget * target) noexcept
 		{
 			if (Target) { Target->Release(); Target = 0; }
 			if (target) { Target = target; Target->AddRef(); }
 		}
-		void D2DRenderDevice::SetParentWrappedDevice(Graphics::IDevice * device) noexcept { ParentWrappedDevice = device; }
-		void D2DRenderDevice::TextureWasDestroyed(ITexture * texture) noexcept
+		void D2DRenderingDevice::SetParentWrappedDevice(Graphics::IDevice * device) noexcept { ParentWrappedDevice = device; }
+		void D2DRenderingDevice::TextureWasDestroyed(ITexture * texture) noexcept
 		{
 			for (int i = 0; i < TextureCache.Length(); i++) {
 				if (TextureCache[i].base == texture || TextureCache[i].spec == texture) {
@@ -609,7 +609,8 @@ namespace Engine
 				}
 			}
 		}
-		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept
+		string D2DRenderingDevice::ToString(void) const { return L"Engine.Direct2D.D2DRenderingDevice"; }
+		IBarRenderingInfo * D2DRenderingDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept
 		{
 			try {
 				if (gradient.Length() > 1) {
@@ -643,7 +644,7 @@ namespace Engine
 				}
 			} catch (...) { return 0; }
 		}
-		IBarRenderingInfo * D2DRenderDevice::CreateBarRenderingInfo(Color color) noexcept
+		IBarRenderingInfo * D2DRenderingDevice::CreateBarRenderingInfo(Color color) noexcept
 		{
 			try {
 				auto CachedInfo = BrushCache.ElementByKey(color);
@@ -660,7 +661,7 @@ namespace Engine
 				return Info;
 			} catch (...) { return 0; }
 		}
-		IBlurEffectRenderingInfo * D2DRenderDevice::CreateBlurEffectRenderingInfo(double power) noexcept
+		IBlurEffectRenderingInfo * D2DRenderingDevice::CreateBlurEffectRenderingInfo(double power) noexcept
 		{
 			try {
 				auto CachedInfo = BlurCache.ElementByKey(power);
@@ -680,7 +681,7 @@ namespace Engine
 				return Info;
 			} catch (...) { return 0; }
 		}
-		IInversionEffectRenderingInfo * D2DRenderDevice::CreateInversionEffectRenderingInfo(void) noexcept
+		IInversionEffectRenderingInfo * D2DRenderingDevice::CreateInversionEffectRenderingInfo(void) noexcept
 		{
 			if (!InversionInfo.Inner()) {
 				auto Info = new (std::nothrow) InversionEffectRenderingInfo;
@@ -703,8 +704,9 @@ namespace Engine
 			InversionInfo->Retain();
 			return InversionInfo;
 		}
-		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept
+		ITextureRenderingInfo * D2DRenderingDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept
 		{
+			if (!texture) return 0;
 			try {
 				SafePointer<D2DTexture> device_texture;
 				if (texture->IsDeviceSpecific()) {
@@ -748,7 +750,7 @@ namespace Engine
 				return Info;
 			} catch (...) { return 0; }
 		}
-		ITextureRenderingInfo * D2DRenderDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
+		ITextureRenderingInfo * D2DRenderingDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
 		{
 			if (!texture) return 0;
 			if (texture->GetParentDevice() != ParentWrappedDevice) return 0;
@@ -784,8 +786,9 @@ namespace Engine
 			info->Fill = false;
 			return info;
 		}
-		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept
+		ITextRenderingInfo * D2DRenderingDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept
 		{
+			if (!font) return 0;
 			TextRenderingInfo * Info = 0;
 			try {
 				Info = new TextRenderingInfo;
@@ -817,8 +820,9 @@ namespace Engine
 			}
 			return Info;
 		}
-		ITextRenderingInfo * D2DRenderDevice::CreateTextRenderingInfo(IFont * font, const Array<uint32>& text, int horizontal_align, int vertical_align, const Color & color) noexcept
+		ITextRenderingInfo * D2DRenderingDevice::CreateTextRenderingInfo(IFont * font, const Array<uint32>& text, int horizontal_align, int vertical_align, const Color & color) noexcept
 		{
+			if (!font) return 0;
 			TextRenderingInfo * Info = 0; 
 			try {
 				Info = new TextRenderingInfo;
@@ -848,11 +852,11 @@ namespace Engine
 			}
 			return Info;
 		}
-		ITexture * D2DRenderDevice::LoadTexture(Streaming::Stream * Source) { return StandaloneDevice::LoadTexture(Source); }
-		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Image * Source) { return StandaloneDevice::LoadTexture(Source); }
-		ITexture * D2DRenderDevice::LoadTexture(Engine::Codec::Frame * Source) { return StandaloneDevice::LoadTexture(Source); }
-		IFont * D2DRenderDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
-		Graphics::ITexture * D2DRenderDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
+		ITexture * D2DRenderingDevice::LoadTexture(Streaming::Stream * Source) { return StandaloneDevice::LoadTexture(Source); }
+		ITexture * D2DRenderingDevice::LoadTexture(Engine::Codec::Image * Source) { return StandaloneDevice::LoadTexture(Source); }
+		ITexture * D2DRenderingDevice::LoadTexture(Engine::Codec::Frame * Source) { return StandaloneDevice::LoadTexture(Source); }
+		IFont * D2DRenderingDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) { return StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
+		Graphics::ITexture * D2DRenderingDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
 		{
 			if (!ParentWrappedDevice) return 0;
 			if (width <= 0 || height <= 0) throw InvalidArgumentException();
@@ -868,7 +872,7 @@ namespace Engine
 			desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
 			return ParentWrappedDevice->CreateTexture(desc);
 		}
-		void D2DRenderDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
+		void D2DRenderingDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
 		{
 			if (!Info) return;
 			auto info = reinterpret_cast<BarRenderingInfo *>(Info);
@@ -896,7 +900,7 @@ namespace Engine
 				}
 			}
 		}
-		void D2DRenderDevice::RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept
+		void D2DRenderingDevice::RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept
 		{
 			if (!Info) return;
 			auto info = static_cast<TextureRenderingInfo *>(Info);
@@ -908,7 +912,7 @@ namespace Engine
 				Target->DrawBitmap(info->Texture->bitmap, To, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, From);
 			}
 		}
-		void D2DRenderDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept
+		void D2DRenderingDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept
 		{
 			if (!Info) return;
 			auto info = static_cast<TextRenderingInfo *>(Info);
@@ -951,7 +955,7 @@ namespace Engine
 			Target->SetTransform(Transform);
 			if (Clip) PopClip();
 		}
-		void D2DRenderDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept
+		void D2DRenderingDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept
 		{
 			if (Layers.Length() || !Info) return;
 			auto info = static_cast<BlurEffectRenderingInfo *>(Info);
@@ -969,7 +973,7 @@ namespace Engine
 				}
 			}
 		}
-		void D2DRenderDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept
+		void D2DRenderingDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept
 		{
 			if (Layers.Length() || !Info) return;
 			auto info = static_cast<InversionEffectRenderingInfo *>(Info);
@@ -995,19 +999,19 @@ namespace Engine
 				}
 			}
 		}
-		void D2DRenderDevice::PushClip(const Box & Rect) noexcept
+		void D2DRenderingDevice::PushClip(const Box & Rect) noexcept
 		{
 			try {
 				Clipping << Rect;
 				Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
 			} catch (...) {}
 		}
-		void D2DRenderDevice::PopClip(void) noexcept
+		void D2DRenderingDevice::PopClip(void) noexcept
 		{
 			Clipping.RemoveLast();
 			Target->PopAxisAlignedClip();
 		}
-		void D2DRenderDevice::BeginLayer(const Box & Rect, double Opacity) noexcept
+		void D2DRenderingDevice::BeginLayer(const Box & Rect, double Opacity) noexcept
 		{
 			try {
 				ID2D1Layer * Layer;
@@ -1024,18 +1028,18 @@ namespace Engine
 				Target->PushLayer(&lp, Layer);
 			} catch (...) {}
 		}
-		void D2DRenderDevice::EndLayer(void) noexcept
+		void D2DRenderingDevice::EndLayer(void) noexcept
 		{
 			Target->PopLayer();
 			Layers.LastElement()->Release();
 			Layers.RemoveLast();
 		}
-		void D2DRenderDevice::SetTimerValue(uint32 time) noexcept { AnimationTimer = time; }
-		uint32 D2DRenderDevice::GetCaretBlinkHalfTime(void) noexcept { return HalfBlinkPeriod; }
-		bool D2DRenderDevice::CaretShouldBeVisible(void) noexcept { return (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod; }
-		void D2DRenderDevice::ClearCache(void) noexcept { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
-		Drawing::ICanvasRenderingDevice * D2DRenderDevice::QueryCanvasDevice(void) noexcept { return this; }
-		void D2DRenderDevice::DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept
+		void D2DRenderingDevice::SetTimerValue(uint32 time) noexcept { AnimationTimer = time; }
+		uint32 D2DRenderingDevice::GetCaretBlinkHalfTime(void) noexcept { return HalfBlinkPeriod; }
+		bool D2DRenderingDevice::CaretShouldBeVisible(void) noexcept { return (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod; }
+		void D2DRenderingDevice::ClearCache(void) noexcept { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
+		Drawing::ICanvasRenderingDevice * D2DRenderingDevice::QueryCanvasDevice(void) noexcept { return this; }
+		void D2DRenderingDevice::DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept
 		{
 			SafePointer<ID2D1PathGeometry> geometry;
 			SafePointer<ID2D1SolidColorBrush> brush;
@@ -1051,7 +1055,7 @@ namespace Engine
 			if (Target->CreateSolidColorBrush(D2D1::ColorF(float(color.x), float(color.y), float(color.z), float(color.w)), brush.InnerRef()) != S_OK) return;
 			Target->DrawGeometry(geometry, brush, float(width));
 		}
-		void D2DRenderDevice::FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept
+		void D2DRenderingDevice::FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept
 		{
 			SafePointer<ID2D1PathGeometry> geometry;
 			SafePointer<ID2D1SolidColorBrush> brush;
@@ -1067,8 +1071,8 @@ namespace Engine
 			if (Target->CreateSolidColorBrush(D2D1::ColorF(float(color.x), float(color.y), float(color.z), float(color.w)), brush.InnerRef()) != S_OK) return;
 			Target->FillGeometry(geometry, brush);
 		}
-		Drawing::ITextureRenderingDevice * D2DRenderDevice::CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept { return CreateD2DCompatibleTextureRenderingDevice(width, height, color); }
-		Drawing::ITextureRenderingDevice * D2DRenderDevice::CreateD2DCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept
+		Drawing::ITextureRenderingDevice * D2DRenderingDevice::CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept { return CreateD2DCompatibleTextureRenderingDevice(width, height, color); }
+		Drawing::ITextureRenderingDevice * D2DRenderingDevice::CreateD2DCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept
 		{
 			SafePointer<IWICBitmap> Bitmap;
 			Array<UI::Color> Pixels(width);
@@ -1093,7 +1097,7 @@ namespace Engine
 			props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 			props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 			if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
-			SafePointer<D2DRenderDevice> Device = new D2DRenderDevice(RenderTarget);
+			SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
 			Device->BitmapTarget.SetReference(Bitmap);
 			Device->BitmapTarget->AddRef();
 			Device->BitmapTargetResX = width;
@@ -1101,21 +1105,21 @@ namespace Engine
 			Device->Retain();
 			return Device;
 		}
-		void D2DRenderDevice::BeginDraw(void) noexcept
+		void D2DRenderingDevice::BeginDraw(void) noexcept
 		{
 			if (BitmapTarget && BitmapTargetState == 0) {
 				Target->BeginDraw();
 				BitmapTargetState = 1;
 			}
 		}
-		void D2DRenderDevice::EndDraw(void) noexcept
+		void D2DRenderingDevice::EndDraw(void) noexcept
 		{
 			if (BitmapTarget && BitmapTargetState == 1) {
 				Target->EndDraw();
 				BitmapTargetState = 0;
 			}
 		}
-		UI::ITexture * D2DRenderDevice::GetRenderTargetAsTexture(void) noexcept
+		UI::ITexture * D2DRenderingDevice::GetRenderTargetAsTexture(void) noexcept
 		{
 			if (!BitmapTarget || BitmapTargetState) return 0;
 			SafePointer<WICTexture> result = new (std::nothrow) WICTexture;
@@ -1127,7 +1131,7 @@ namespace Engine
 			BitmapTarget->AddRef();
 			return result;
 		}
-		Engine::Codec::Frame * D2DRenderDevice::GetRenderTargetAsFrame(void) noexcept
+		Engine::Codec::Frame * D2DRenderingDevice::GetRenderTargetAsFrame(void) noexcept
 		{
 			if (!BitmapTarget || BitmapTargetState) return 0;
 			SafePointer<Engine::Codec::Frame> result = new Engine::Codec::Frame(BitmapTargetResX, BitmapTargetResY, BitmapTargetResX * 4, PixelFormat::B8G8R8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);

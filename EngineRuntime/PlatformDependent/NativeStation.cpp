@@ -104,7 +104,7 @@ namespace Engine
 		Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color)
 		{
 			Direct2D::InitializeFactory();
-			return Direct2D::D2DRenderDevice::CreateD2DCompatibleTextureRenderingDevice(width, height, color);
+			return Direct2D::D2DRenderingDevice::CreateD2DCompatibleTextureRenderingDevice(width, height, color);
 		}
 		Graphics::IDeviceFactory * CreateDeviceFactory(void) { return Direct3D::CreateDeviceFactoryD3D11(); }
 		Graphics::IDevice * GetCommonDevice(void) { Direct3D::CreateDevices(); return Direct3D::WrappedDevice; }
@@ -118,7 +118,7 @@ namespace Engine
 			SafePointer<ID2D1DeviceContext> DeviceContext;
 			SafePointer<ID2D1HwndRenderTarget> RenderTarget;
 			SafePointer<ID2D1RenderTarget> SwapChainRenderTarget;
-			SafePointer<Direct2D::D2DRenderDevice> RenderingDevice;
+			SafePointer<Direct2D::D2DRenderingDevice> RenderingDevice;
 			int MinWidth = 0, MinHeight = 0;
 			Array<NativeStation *> _slaves;
 			NativeStation * _parent = 0;
@@ -155,7 +155,7 @@ namespace Engine
 				WndRenderTargetProps.pixelSize.height = max(Rect.bottom, 1);
 				WndRenderTargetProps.presentOptions = D2D1_PRESENT_OPTIONS_IMMEDIATELY;
 				if (Direct2D::D2DFactory->CreateHwndRenderTarget(&RenderTargetProps, &WndRenderTargetProps, RenderTarget.InnerRef()) != S_OK) return false;
-				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(RenderTarget));
+				RenderingDevice.SetReference(new Direct2D::D2DRenderingDevice(RenderTarget));
 				SetRenderingDevice(RenderingDevice);
 				return true;
 			}
@@ -163,7 +163,7 @@ namespace Engine
 			{
 				if (!Direct3D::CreateSwapChainForWindow(_window, SimpleSwapChain.InnerRef())) return false;
 				if (!Direct3D::CreateSwapChainDevice(SimpleSwapChain, SwapChainRenderTarget.InnerRef())) { SimpleSwapChain.SetReference(0); return false; }
-				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(SwapChainRenderTarget));
+				RenderingDevice.SetReference(new Direct2D::D2DRenderingDevice(SwapChainRenderTarget));
 				RenderingDevice->SetParentWrappedDevice(Direct3D::WrappedDevice);
 				SetRenderingDevice(RenderingDevice);
 				return true;
@@ -172,7 +172,7 @@ namespace Engine
 			{
 				if (!Direct3D::CreateD2DDeviceContextForWindow(_window, DeviceContext.InnerRef(), SwapChain.InnerRef())) return false;
 				if (!DeviceContext) return false;
-				RenderingDevice.SetReference(new Direct2D::D2DRenderDevice(DeviceContext));
+				RenderingDevice.SetReference(new Direct2D::D2DRenderingDevice(DeviceContext));
 				RenderingDevice->SetParentWrappedDevice(Direct3D::WrappedDevice);
 				SetRenderingDevice(RenderingDevice);
 				return true;
@@ -544,7 +544,7 @@ namespace Engine
 			RenderTargetProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 			RenderTargetProps.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 			if (Direct2D::D2DFactory->CreateDCRenderTarget(&RenderTargetProps, RenderTarget.InnerRef()) != S_OK) throw Exception();
-			SafePointer<Direct2D::D2DRenderDevice> LocalRenderingDevice = new Direct2D::D2DRenderDevice(RenderTarget);
+			SafePointer<Direct2D::D2DRenderingDevice> LocalRenderingDevice = new Direct2D::D2DRenderingDevice(RenderTarget);
 			LocalRenderingDevice->SetTimerValue(0);
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].WakeUp(LocalRenderingDevice);
 			HMENU Menu = CreatePopupMenu();
@@ -684,7 +684,7 @@ namespace Engine
 				if (dis->CtlType == ODT_MENU) {
 					auto item = reinterpret_cast<Menus::MenuElement *>(dis->itemData);
 					auto box = Box(0, 0, dis->rcItem.right - dis->rcItem.left, dis->rcItem.bottom - dis->rcItem.top);
-					auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderDevice *>(item->GetRenderingDevice())->GetRenderTarget());
+					auto target = static_cast<ID2D1DCRenderTarget *>(static_cast<Direct2D::D2DRenderingDevice *>(item->GetRenderingDevice())->GetRenderTarget());
 					target->BindDC(dis->hDC, &dis->rcItem);
 					target->BeginDraw();
 					if (dis->itemState & ODS_SELECTED) {
