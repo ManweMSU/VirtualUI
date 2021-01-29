@@ -340,5 +340,26 @@ namespace Engine
 			virtual void GetArgument(const string & name, ITexture ** value) override;
 			virtual void GetArgument(const string & name, IFont ** value) override;
 		};
+	
+		template <class W> W * CreateWindow(Window * Parent, Template::ControlTemplate * Template)
+		{
+			return Parent->GetStation()->CreateWindow<W>(Parent, Template);
+		}
+		template <class W> W * CreateWindow(Window * Parent)
+		{
+			return Parent->GetStation()->CreateWindow<W>(Parent);
+		}
+		template <class W, class A> W * CreateWindow(Window * Parent, A a)
+		{
+			return Parent->GetStation()->CreateWindow<W, A>(Parent, a);
+		}
+		template <class W, class A1, class A2> W * CreateWindow(Window * Parent, A1 a1, A2 a2)
+		{
+			return Parent->GetStation()->CreateWindow<W, A1, A2>(Parent, a1, a2);
+		}
+		template <class W, class A1, class A2, class A3> W * CreateWindow(Window * Parent, A1 a1, A2 a2, A3 a3)
+		{
+			return Parent->GetStation()->CreateWindow<W, A1, A2, A3>(Parent, a1, a2, a3);
+		}
 	}
 }
