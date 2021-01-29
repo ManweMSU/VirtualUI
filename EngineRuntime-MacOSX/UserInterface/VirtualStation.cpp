@@ -42,7 +42,7 @@ namespace Engine
 			{
 				auto p = host->InnerToOuter(at);
 				p = host_station->CalculateGlobalPoint(host, p);
-				return host_station->NativeHitTest(p);
+				return host_station->HitTest(p) == host;
 			}
 			Point VirtualStation::VirtualWindowStation::GetCursorPos(void)
 			{
