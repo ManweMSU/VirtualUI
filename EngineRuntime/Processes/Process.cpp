@@ -52,10 +52,12 @@ namespace Engine
 		STARTUPINFOW si;
 		ZeroMemory(&si, sizeof(si));
 		si.cb = sizeof(si);
-		si.dwFlags = STARTF_USESTDHANDLES;
-		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-		si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (GetStdHandle(STD_ERROR_HANDLE) || GetStdHandle(STD_INPUT_HANDLE) || GetStdHandle(STD_OUTPUT_HANDLE)) {
+			si.dwFlags = STARTF_USESTDHANDLES;
+			si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+			si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+			si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+		}
 		DynamicString cmd;
 		WinapiProcess::AppendCommandLine(cmd, IO::ExpandPath(image));
 		if (command_line) {
@@ -72,10 +74,12 @@ namespace Engine
 		STARTUPINFOW si;
 		ZeroMemory(&si, sizeof(si));
 		si.cb = sizeof(si);
-		si.dwFlags = STARTF_USESTDHANDLES;
-		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-		si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (GetStdHandle(STD_ERROR_HANDLE) || GetStdHandle(STD_INPUT_HANDLE) || GetStdHandle(STD_OUTPUT_HANDLE)) {
+			si.dwFlags = STARTF_USESTDHANDLES;
+			si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+			si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+			si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+		}
 		DynamicString cmd;
 		WinapiProcess::AppendCommandLine(cmd, command_image);
 		if (command_line) {
