@@ -250,6 +250,7 @@ namespace Engine
 			virtual IBuffer * CreateBuffer(const BufferDesc & desc, const ResourceInitDesc & init) noexcept = 0;
 			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept = 0;
 			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept = 0;
+			virtual ITexture * CreateRenderTargetView(ITexture * texture, uint32 mip_level, uint32 array_offset_or_depth) noexcept = 0;
 			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept = 0;
 		};
 		class IDeviceChild : public Object

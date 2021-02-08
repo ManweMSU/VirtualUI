@@ -134,8 +134,10 @@ namespace Engine
 			TextureType type;
 			PixelFormat format;
 			uint32 usage, width, height, depth, size;
+			uint32 rtv_mip, rtv_slice, rtv_depth;
 
-			MTL_Texture(IDevice * _wrapper) : wrapper(_wrapper), texture(0), format(PixelFormat::Invalid), usage(0), width(0), height(0), depth(0), size(0) {}
+			MTL_Texture(IDevice * _wrapper) : wrapper(_wrapper), texture(0), format(PixelFormat::Invalid),
+				usage(0), width(0), height(0), depth(0), size(0), rtv_mip(0), rtv_slice(0), rtv_depth(0) {}
 			virtual ~MTL_Texture(void) override { [texture release]; }
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual ResourceType GetResourceType(void) noexcept override { return ResourceType::Texture; }
@@ -279,6 +281,10 @@ namespace Engine
 					MTLRenderPassColorAttachmentDescriptor * ca = [[MTLRenderPassColorAttachmentDescriptor alloc] init];
 					[ca autorelease];
 					ca.texture = GetInnerMetalTexture(rtv[i].Texture);
+					auto mtl_texture = static_cast<MTL_Texture *>(rtv[i].Texture);
+					ca.level = mtl_texture->rtv_mip;
+					ca.slice = mtl_texture->rtv_slice;
+					ca.depthPlane = mtl_texture->rtv_depth;
 					if (rtv[i].LoadAction == TextureLoadAction::Clear) {
 						ca.loadAction = MTLLoadActionClear;
 						MTLClearColor clr;
@@ -1241,6 +1247,31 @@ namespace Engine
 				}
 				texture->Retain();
 				return texture;
+			}
+			virtual ITexture * CreateRenderTargetView(ITexture * texture, uint32 mip_level, uint32 array_offset_or_depth) noexcept override
+			{
+				if (!texture || texture->GetParentDevice() != this || !(texture->GetResourceUsage() & ResourceUsageRenderTarget)) return 0;
+				SafePointer<MTL_Texture> result = new (std::nothrow) MTL_Texture(this);
+				if (!result) return 0;
+				auto source = static_cast<MTL_Texture *>(texture);
+				result->texture = source->texture;
+				[result->texture retain];
+				result->type = source->type;
+				result->format = source->format;
+				result->width = source->width;
+				result->height = source->height;
+				result->depth = source->depth;
+				result->size = source->size;
+				result->usage = ResourceUsageRenderTarget;
+				result->rtv_mip = mip_level;
+				if (result->type == TextureType::TypeArray1D || result->type == TextureType::TypeArray2D ||
+					result->type == TextureType::TypeCube || result->type == TextureType::TypeArrayCube) {
+					result->rtv_slice = array_offset_or_depth;
+				} else if (result->type == TextureType::Type3D) {
+					result->rtv_depth = array_offset_or_depth;
+				}
+				result->Retain();
+				return result;
 			}
 			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept override
 			{

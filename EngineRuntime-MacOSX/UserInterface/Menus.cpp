@@ -216,7 +216,8 @@ namespace Engine
 					bool Final = false;
 
 					MenuHolder(Window * parent, WindowStation * station) : ParentWindow(parent, station) {}
-					~MenuHolder(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].Shutdown(); }
+					~MenuHolder(void) override { ShutdownMenu(); }
+					void ShutdownMenu(void) { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].Shutdown(); }
 
 					virtual void Render(const Box & at) override
 					{
@@ -234,7 +235,7 @@ namespace Engine
 							child.Render(rect);
 						}
 					}
-					virtual void LostExclusiveMode(void) override { if (!Final) { GetStation()->SetFocus(Focus); Window * owner = Owner; Destroy(); owner->PopupMenuCancelled(); } }
+					virtual void LostExclusiveMode(void) override { if (!Final) { Final = true; GetStation()->SetFocus(Focus); Window * owner = Owner; Destroy(); owner->PopupMenuCancelled(); } }
 					virtual void LeftButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void RightButtonDown(Point at) override { GetStation()->SetExclusiveWindow(0); }
 					virtual void ResetCache(void) override { for (int i = 0; i < Source->Children.Length(); i++) Source->Children[i].WakeUp(GetStation()->GetRenderingDevice()); Window::ResetCache(); }
@@ -282,6 +283,7 @@ namespace Engine
 			}
 			void MenuItem::Render(const Box & at, bool highlighted)
 			{
+				if (!_device) return;
 				Shape ** _view;
 				Template::Shape * View;
 				if (Disabled) {
@@ -370,6 +372,7 @@ namespace Engine
 			int MenuSeparator::GetWidth(void) const { return 0; }
 			void MenuSeparator::Render(const Box & at, bool highlighted)
 			{
+				if (!_device) return;
 				if (!_view) {
 					if (View) {
 						auto provider = ZeroArgumentProvider();
