@@ -25,6 +25,7 @@
 #include "PlatformDependent/KeyCodes.h"
 #include "PlatformDependent/Notifications.h"
 #include "PlatformSpecific/MacTouchBar.h"
+#include "PlatformSpecific/UnixFileAccess.h"
 #include "PlatformSpecific/WindowsRegistry.h"
 #include "PlatformSpecific/WindowsShortcut.h"
 #include "PlatformSpecific/WindowsTaskbar.h"

@@ -338,6 +338,13 @@ int Main(void)
 	for (int i = 0; i < vols->Length(); i++) {
 		Console << L"Volume \"" + vols->ElementAt(i).Label + L"\" at path " + vols->ElementAt(i).Path + IO::NewLineChar;
 	}
+	{
+		SafePointer<Streaming::FileStream> self = new Streaming::FileStream(IO::GetExecutablePath(), Streaming::AccessRead, Streaming::OpenExisting);
+		Console << IO::Unix::GetFileUserAccessRights(self->Handle()) << IO::ConsoleControl::LineFeed();
+		Console << IO::Unix::GetFileGroupAccessRights(self->Handle()) << IO::ConsoleControl::LineFeed();
+		Console << IO::Unix::GetFileOtherAccessRights(self->Handle()) << IO::ConsoleControl::LineFeed();
+		IO::Unix::SetFileAccessRights(self->Handle(), IO::Unix::AccessRightReadOnly, IO::Unix::AccessRightReadOnly, IO::Unix::AccessRightReadOnly);
+	}
 
 	UI::Zoom = Windows::GetScreenScale();
 
