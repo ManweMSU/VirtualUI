@@ -1820,6 +1820,57 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
+			virtual ITexture * CreateRenderTargetView(ITexture * texture, uint32 mip_level, uint32 array_offset_or_depth) noexcept override
+			{
+				if (!texture || texture->GetParentDevice() != this || !(texture->GetResourceUsage() & ResourceUsageRenderTarget)) return 0;
+				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(texture->GetTextureType(), this);
+				if (!result) return 0;
+				auto source = static_cast<D3D11_Texture *>(texture);
+				result->tex_1d = source->tex_1d;
+				result->tex_2d = source->tex_2d;
+				result->tex_3d = source->tex_3d;
+				if (result->tex_1d) result->tex_1d->AddRef();
+				if (result->tex_2d) result->tex_2d->AddRef();
+				if (result->tex_3d) result->tex_3d->AddRef();
+				result->pool = source->pool;
+				result->format = source->format;
+				result->usage_flags = ResourceUsageRenderTarget;
+				result->width = source->width; result->height = source->height;
+				result->depth = source->depth; result->size = source->size;
+				D3D11_RENDER_TARGET_VIEW_DESC rtvd;
+				rtvd.Format = MakeDxgiFormat(texture->GetPixelFormat());
+				ID3D11Resource * source_resource = 0;
+				if (texture->GetTextureType() == TextureType::Type1D) {
+					rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE1D;
+					rtvd.Texture1D.MipSlice = mip_level;
+					source_resource = result->tex_1d;
+				} else if (texture->GetTextureType() == TextureType::TypeArray1D) {
+					rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE1DARRAY;
+					rtvd.Texture1DArray.MipSlice = mip_level;
+					rtvd.Texture1DArray.FirstArraySlice = array_offset_or_depth;
+					rtvd.Texture1DArray.ArraySize = 1;
+					source_resource = result->tex_1d;
+				} else if (texture->GetTextureType() == TextureType::Type2D) {
+					rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+					rtvd.Texture2D.MipSlice = mip_level;
+					source_resource = result->tex_2d;
+				} else if (texture->GetTextureType() == TextureType::TypeArray2D || texture->GetTextureType() == TextureType::TypeCube || texture->GetTextureType() == TextureType::TypeArrayCube) {
+					rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+					rtvd.Texture2DArray.MipSlice = mip_level;
+					rtvd.Texture2DArray.FirstArraySlice = array_offset_or_depth;
+					rtvd.Texture2DArray.ArraySize = 1;
+					source_resource = result->tex_2d;
+				} else if (texture->GetTextureType() == TextureType::Type3D) {
+					rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+					rtvd.Texture3D.MipSlice = mip_level;
+					rtvd.Texture3D.FirstWSlice = array_offset_or_depth;
+					rtvd.Texture3D.WSize = 1;
+					source_resource = result->tex_3d;
+				} else return 0;
+				if (device->CreateRenderTargetView(source_resource, &rtvd, &result->rt_view) != S_OK) return 0;
+				result->Retain();
+				return result;
+			}
 			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept override
 			{
 				if (!window->GetStation()->IsNativeStationWrapper()) return 0;
