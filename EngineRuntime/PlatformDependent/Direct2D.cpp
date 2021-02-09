@@ -95,30 +95,43 @@ namespace Engine
 						Frame->Initialize(Properties);
 						Frame->SetSize(image->Frames[i].GetWidth(), image->Frames[i].GetHeight());
 						Frame->SetPixelFormat(&PixelFormat);
-						FrameFormat Format;
+						Codec::PixelFormat SourceFormat;
+						Codec::AlphaMode SourceAlpha = Codec::AlphaMode::Normal;
 						bool Deny = false;
 						if (PixelFormat == GUID_WICPixelFormat32bppBGRA) {
-							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::B8G8R8A8;
 						} else if (PixelFormat == GUID_WICPixelFormat32bppPBGRA) {
-							Format = FrameFormat(PixelFormat::B8G8R8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::B8G8R8A8;
+							SourceAlpha = Codec::AlphaMode::Premultiplied;
 						} else if (PixelFormat == GUID_WICPixelFormat32bppRGBA) {
-							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::R8G8B8A8;
 						} else if (PixelFormat == GUID_WICPixelFormat32bppPRGBA) {
-							Format = FrameFormat(PixelFormat::R8G8B8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::R8G8B8A8;
+							SourceAlpha = Codec::AlphaMode::Premultiplied;
 						} else if (PixelFormat == GUID_WICPixelFormat32bppBGR) {
-							Format = FrameFormat(PixelFormat::B8G8R8U8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::B8G8R8X8;
 						} else if (PixelFormat == GUID_WICPixelFormat32bppRGB) {
-							Format = FrameFormat(PixelFormat::R8G8B8U8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::R8G8B8X8;
 						} else if (PixelFormat == GUID_WICPixelFormat24bppBGR) {
-							Format = FrameFormat(PixelFormat::B8G8R8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::B8G8R8;
 						} else if (PixelFormat == GUID_WICPixelFormat24bppRGB) {
-							Format = FrameFormat(PixelFormat::R8G8B8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::R8G8B8;
+						} else if (PixelFormat == GUID_WICPixelFormat16bppBGR555) {
+							SourceFormat = PixelFormat::B5G5R5X1;
+						} else if (PixelFormat == GUID_WICPixelFormat16bppBGRA5551) {
+							SourceFormat = PixelFormat::B5G5R5A1;
+						} else if (PixelFormat == GUID_WICPixelFormat16bppBGR565) {
+							SourceFormat = PixelFormat::B5G6R5;
+						} else if (PixelFormat == GUID_WICPixelFormat8bppGray) {
+							SourceFormat = PixelFormat::R8;
+						} else if (PixelFormat == GUID_WICPixelFormat8bppAlpha) {
+							SourceFormat = PixelFormat::A8;
 						} else if (PixelFormat == GUID_WICPixelFormat8bppIndexed) {
-							Format = FrameFormat(PixelFormat::P8, AlphaMode::Normal, ScanOrigin::TopDown);
+							SourceFormat = PixelFormat::P8;
 						} else Deny = true;
 						if (!Deny) {
-							SafePointer<Engine::Codec::Frame> Conv = image->Frames[i].ConvertFormat(Format);
-							if (IsPalettePixel(Format.Format)) {
+							SafePointer<Engine::Codec::Frame> Conv = image->Frames[i].ConvertFormat(SourceFormat, SourceAlpha, ScanOrigin::TopDown);
+							if (IsPalettePixel(SourceFormat)) {
 								SafePointer<IWICPalette> Palette;
 								WICFactory->CreatePalette(Palette.InnerRef());
 								Palette->InitializeCustom(const_cast<WICColor *>(Conv->GetPalette()), Conv->GetPaletteVolume());
@@ -498,7 +511,7 @@ namespace Engine
 			{
 				SafePointer<IWICBitmap> Bitmap;
 				if (WICFactory->CreateBitmap(Source->GetWidth(), Source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) throw Exception();
-				SafePointer<Frame> conv = Source->ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, ScanOrigin::TopDown));
+				SafePointer<Frame> conv = Source->ConvertFormat(PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, ScanOrigin::TopDown);
 				IWICBitmapLock * Lock;
 				Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock);
 				UINT len;

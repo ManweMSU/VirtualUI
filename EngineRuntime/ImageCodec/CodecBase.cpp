@@ -6,10 +6,6 @@ namespace Engine
 {
 	namespace Codec
 	{
-		FrameFormat::FrameFormat(void) {}
-		FrameFormat::FrameFormat(PixelFormat format, AlphaMode alpha, ScanOrigin origin) :
-			Format(format), Alpha(alpha), Origin(origin) {}
-
 		bool IsPalettePixel(PixelFormat format)
 		{
 			return (format == PixelFormat::P8 || format == PixelFormat::P4 || format == PixelFormat::P2 || format == PixelFormat::P1);
@@ -23,12 +19,23 @@ namespace Engine
 		uint32 GetBitsPerPixel(PixelFormat format)
 		{
 			if (format == PixelFormat::B8G8R8A8) return 32;
-			else if (format == PixelFormat::B8G8R8U8) return 32;
+			else if (format == PixelFormat::B8G8R8X8) return 32;
 			else if (format == PixelFormat::R8G8B8A8) return 32;
-			else if (format == PixelFormat::R8G8B8U8) return 32;
+			else if (format == PixelFormat::R8G8B8X8) return 32;
 			else if (format == PixelFormat::B8G8R8) return 24;
 			else if (format == PixelFormat::R8G8B8) return 24;
+			else if (format == PixelFormat::B5G5R5A1) return 16;
+			else if (format == PixelFormat::B5G5R5X1) return 16;
+			else if (format == PixelFormat::B5G6R5) return 16;
+			else if (format == PixelFormat::R5G5B5A1) return 16;
+			else if (format == PixelFormat::R5G5B5X1) return 16;
+			else if (format == PixelFormat::R5G6B5) return 16;
+			else if (format == PixelFormat::B4G4R4A4) return 16;
+			else if (format == PixelFormat::B4G4R4X4) return 16;
+			else if (format == PixelFormat::R4G4B4A4) return 16;
+			else if (format == PixelFormat::R4G4B4X4) return 16;
 			else if (format == PixelFormat::A8) return 8;
+			else if (format == PixelFormat::R8) return 8;
 			else if (format == PixelFormat::P8) return 8;
 			else if (format == PixelFormat::P4) return 4;
 			else if (format == PixelFormat::P2) return 2;
@@ -41,8 +48,14 @@ namespace Engine
 			if (source_format == PixelFormat::A8) return 255;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x00FF0000) >> 16;
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x000000FF);
-			else if (source_format == PixelFormat::B8G8R8U8) ev = (source & 0x00FF0000) >> 16;
-			else if (source_format == PixelFormat::R8G8B8U8) ev = (source & 0x000000FF);
+			else if (source_format == PixelFormat::B8G8R8X8) ev = (source & 0x00FF0000) >> 16;
+			else if (source_format == PixelFormat::R8G8B8X8) ev = (source & 0x000000FF);
+			else if (source_format == PixelFormat::B5G5R5A1 || source_format == PixelFormat::B5G5R5X1) ev = ((source & 0x7C00) >> 10) * 255 / 31;
+			else if (source_format == PixelFormat::B5G6R5) ev = ((source & 0xF800) >> 11) * 255 / 31;
+			else if (source_format == PixelFormat::R5G5B5A1 || source_format == PixelFormat::R5G5B5X1 || source_format == PixelFormat::R5G6B5) ev = (source & 0x001F) * 255 / 31;
+			else if (source_format == PixelFormat::B4G4R4A4 || source_format == PixelFormat::B4G4R4X4) ev = ((source & 0x0F00) >> 8) * 255 / 15;
+			else if (source_format == PixelFormat::R4G4B4A4 || source_format == PixelFormat::R4G4B4X4) ev = (source & 0x000F) * 255 / 15;
+			else if (source_format == PixelFormat::R8) ev = source & 0xFF;
 			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
@@ -55,8 +68,14 @@ namespace Engine
 			if (source_format == PixelFormat::A8) return 255;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x0000FF00) >> 8;
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x0000FF00) >> 8;
-			else if (source_format == PixelFormat::B8G8R8U8) ev = (source & 0x0000FF00) >> 8;
-			else if (source_format == PixelFormat::R8G8B8U8) ev = (source & 0x0000FF00) >> 8;
+			else if (source_format == PixelFormat::B8G8R8X8) ev = (source & 0x0000FF00) >> 8;
+			else if (source_format == PixelFormat::R8G8B8X8) ev = (source & 0x0000FF00) >> 8;
+			else if (source_format == PixelFormat::B5G5R5A1 || source_format == PixelFormat::B5G5R5X1) ev = ((source & 0x03E0) >> 5) * 255 / 31;
+			else if (source_format == PixelFormat::R5G5B5A1 || source_format == PixelFormat::R5G5B5X1) ev = ((source & 0x03E0) >> 5) * 255 / 31;
+			else if (source_format == PixelFormat::R5G6B5 || source_format == PixelFormat::B5G6R5) ev = ((source & 0x07E0) >> 5) * 255 / 63;
+			else if (source_format == PixelFormat::B4G4R4A4 || source_format == PixelFormat::B4G4R4X4) ev = ((source & 0x00F0) >> 4) * 255 / 15;
+			else if (source_format == PixelFormat::R4G4B4A4 || source_format == PixelFormat::R4G4B4X4) ev = ((source & 0x00F0) >> 4) * 255 / 15;
+			else if (source_format == PixelFormat::R8) ev = source & 0xFF;
 			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
@@ -69,8 +88,14 @@ namespace Engine
 			if (source_format == PixelFormat::A8) return 255;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x000000FF);
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x00FF0000) >> 16;
-			else if (source_format == PixelFormat::B8G8R8U8) ev = (source & 0x000000FF);
-			else if (source_format == PixelFormat::R8G8B8U8) ev = (source & 0x00FF0000) >> 16;
+			else if (source_format == PixelFormat::B8G8R8X8) ev = (source & 0x000000FF);
+			else if (source_format == PixelFormat::R8G8B8X8) ev = (source & 0x00FF0000) >> 16;
+			else if (source_format == PixelFormat::R5G5B5A1 || source_format == PixelFormat::R5G5B5X1) ev = ((source & 0x7C00) >> 10) * 255 / 31;
+			else if (source_format == PixelFormat::R5G6B5) ev = ((source & 0xF800) >> 11) * 255 / 31;
+			else if (source_format == PixelFormat::B5G5R5A1 || source_format == PixelFormat::B5G5R5X1 || source_format == PixelFormat::B5G6R5) ev = (source & 0x001F) * 255 / 31;
+			else if (source_format == PixelFormat::R4G4B4A4 || source_format == PixelFormat::R4G4B4X4) ev = ((source & 0x0F00) >> 8) * 255 / 15;
+			else if (source_format == PixelFormat::B4G4R4A4 || source_format == PixelFormat::B4G4R4X4) ev = (source & 0x000F) * 255 / 15;
+			else if (source_format == PixelFormat::R8) ev = source & 0xFF;
 			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
@@ -82,9 +107,15 @@ namespace Engine
 			uint32 ev = 0;
 			if (source_format == PixelFormat::B8G8R8A8) ev = (source & 0xFF000000) >> 24;
 			else if (source_format == PixelFormat::R8G8B8A8) ev = (source & 0xFF000000) >> 24;
-			else if (source_format == PixelFormat::B8G8R8U8 || source_format == PixelFormat::B8G8R8) ev = 0xFF;
-			else if (source_format == PixelFormat::R8G8B8U8 || source_format == PixelFormat::R8G8B8) ev = 0xFF;
+			else if (source_format == PixelFormat::B8G8R8X8 || source_format == PixelFormat::B8G8R8) ev = 0xFF;
+			else if (source_format == PixelFormat::R8G8B8X8 || source_format == PixelFormat::R8G8B8) ev = 0xFF;
+			else if (source_format == PixelFormat::R5G5B5A1 || source_format == PixelFormat::B5G5R5A1) ev = ((source & 0x8000) >> 15) * 255;
+			else if (source_format == PixelFormat::R4G4B4A4 || source_format == PixelFormat::B4G4R4A4) ev = ((source & 0xF000) >> 12) * 255 / 15;
+			else if (source_format == PixelFormat::R5G5B5X1 || source_format == PixelFormat::B5G5R5X1) ev = 0xFF;
+			else if (source_format == PixelFormat::R4G4B4X4 || source_format == PixelFormat::B4G4R4X4) ev = 0xFF;
+			else if (source_format == PixelFormat::R5G6B5 || source_format == PixelFormat::B5G6R5) ev = 0xFF;
 			else if (source_format == PixelFormat::A8) ev = (source & 0xFF);
+			else if (source_format == PixelFormat::R8) ev = 0xFF;
 			return ev;
 		}
 		uint32 MakePixel(uint32 r, uint32 g, uint32 b, uint32 a, PixelFormat format, AlphaMode alpha)
@@ -98,12 +129,34 @@ namespace Engine
 				return b | (g << 8) | (r << 16) | (a << 24);
 			} else if (format == PixelFormat::R8G8B8A8) {
 				return r | (g << 8) | (b << 16) | (a << 24);
-			} else if (format == PixelFormat::B8G8R8U8 || format == PixelFormat::B8G8R8) {
+			} else if (format == PixelFormat::B8G8R8X8 || format == PixelFormat::B8G8R8) {
 				return b | (g << 8) | (r << 16);
-			} else if (format == PixelFormat::R8G8B8U8 || format == PixelFormat::R8G8B8) {
+			} else if (format == PixelFormat::R8G8B8X8 || format == PixelFormat::R8G8B8) {
 				return r | (g << 8) | (b << 16);
+			} else if (format == PixelFormat::B5G5R5A1) {
+				return (b * 31 / 255) | ((g * 31 / 255) << 5) | ((r * 31 / 255) << 10) | ((a / 255) << 15);
+			} else if (format == PixelFormat::B5G5R5X1) {
+				return (b * 31 / 255) | ((g * 31 / 255) << 5) | ((r * 31 / 255) << 10);
+			} else if (format == PixelFormat::B5G6R5) {
+				return (b * 31 / 255) | ((g * 63 / 255) << 5) | ((r * 31 / 255) << 11);
+			} else if (format == PixelFormat::R5G5B5A1) {
+				return (r * 31 / 255) | ((g * 31 / 255) << 5) | ((b * 31 / 255) << 10) | ((a / 255) << 15);
+			} else if (format == PixelFormat::R5G5B5X1) {
+				return (r * 31 / 255) | ((g * 31 / 255) << 5) | ((b * 31 / 255) << 10);
+			} else if (format == PixelFormat::R5G6B5) {
+				return (r * 31 / 255) | ((g * 63 / 255) << 5) | ((b * 31 / 255) << 11);
+			} else if (format == PixelFormat::B4G4R4A4) {
+				return (b * 15 / 255) | ((g * 15 / 255) << 4) | ((r * 15 / 255) << 8) | ((a * 15 / 255) << 12);
+			} else if (format == PixelFormat::B4G4R4X4) {
+				return (b * 15 / 255) | ((g * 15 / 255) << 4) | ((r * 15 / 255) << 8);
+			} else if (format == PixelFormat::R4G4B4A4) {
+				return (r * 15 / 255) | ((g * 15 / 255) << 4) | ((b * 15 / 255) << 8) | ((a * 15 / 255) << 12);
+			} else if (format == PixelFormat::R4G4B4X4) {
+				return (r * 15 / 255) | ((g * 15 / 255) << 4) | ((b * 15 / 255) << 8);
 			} else if (format == PixelFormat::A8) {
 				return a;
+			} else if (format == PixelFormat::R8) {
+				return r;
 			} else return 0;
 		}
 		uint32 ConvertPixel(uint32 source, PixelFormat source_format, AlphaMode source_alpha, PixelFormat format, AlphaMode alpha)
@@ -116,6 +169,33 @@ namespace Engine
 				format, alpha);
 		}
 
+		Frame::Frame(const Frame & src)
+		{
+			Width = src.Width; Height = src.Height; ScanLineLength = src.ScanLineLength;
+			Format = src.Format; Alpha = src.Alpha; Origin = src.Origin;
+			Palette = src.Palette;
+			auto size = ScanLineLength * Height;
+			RawData = reinterpret_cast<uint8 *>(malloc(size));
+			if (!RawData) throw OutOfMemoryException();
+			MemoryCopy(RawData, src.RawData, size);
+			Usage = src.Usage; HotPointX = src.HotPointX; HotPointY = src.HotPointY;
+			Duration = src.Duration; DpiUsage = src.DpiUsage;
+		}
+		Frame::Frame(const Frame * src) : Frame(*src) {}
+		Frame::Frame(int32 width, int32 height, PixelFormat format) :
+			Frame(width, height, -1, format, AlphaMode::Normal, ScanOrigin::TopDown) {}
+		Frame::Frame(int32 width, int32 height, PixelFormat format, AlphaMode alpha) :
+			Frame(width, height, -1, format, alpha, ScanOrigin::TopDown) {}
+		Frame::Frame(int32 width, int32 height, PixelFormat format, ScanOrigin origin) :
+			Frame(width, height, -1, format, AlphaMode::Normal, origin) {}
+		Frame::Frame(int32 width, int32 height, PixelFormat format, AlphaMode alpha, ScanOrigin origin) :
+			Frame(width, height, -1, format, alpha, origin) {}
+		Frame::Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format) :
+			Frame(width, height, scan_line_length, format, AlphaMode::Normal, ScanOrigin::TopDown) {}
+		Frame::Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha) :
+			Frame(width, height, scan_line_length, format, alpha, ScanOrigin::TopDown) {}
+		Frame::Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, ScanOrigin origin) :
+			Frame(width, height, scan_line_length, format, AlphaMode::Normal, origin) {}
 		Frame::Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha, ScanOrigin origin) :
 			Width(width), Height(height), ScanLineLength(scan_line_length), Format(format), Alpha(alpha), Origin(origin), Palette(0x10)
 		{
@@ -156,7 +236,10 @@ namespace Engine
 				return *reinterpret_cast<const uint32 *>(RawData + ScanLineLength * y + 4 * x);
 			} else if (bpp == 24) {
 				int base = ScanLineLength * y + 3 * x;
-				return RawData[base] | (uint32(RawData[base + 1]) << 8) || (uint32(RawData[base + 2]) << 16);
+				return RawData[base] | (uint32(RawData[base + 1]) << 8) | (uint32(RawData[base + 2]) << 16);
+			} else if (bpp == 16) {
+				int base = ScanLineLength * y + 2 * x;
+				return RawData[base] | (uint32(RawData[base + 1]) << 8);
 			} else if (bpp <= 8) {
 				uint64 base = uint64(ScanLineLength) * 8 * y + uint64(bpp) * x;
 				int byte = int(base / 8);
@@ -180,6 +263,10 @@ namespace Engine
 				RawData[base] = v & 0xFF;
 				RawData[base + 1] = (v & 0xFF00) >> 8;
 				RawData[base + 2] = (v & 0xFF0000) >> 16;
+			} else if (bpp == 16) {
+				int base = ScanLineLength * y + 2 * x;
+				RawData[base] = v & 0xFF;
+				RawData[base + 1] = (v & 0xFF00) >> 8;
 			} else if (bpp <= 8) {
 				uint64 base = uint64(ScanLineLength) * 8 * y + uint64(bpp) * x;
 				int byte = int(base / 8);
@@ -220,22 +307,54 @@ namespace Engine
 			}
 			return min_index;
 		}
-		Frame * Frame::ConvertFormat(const FrameFormat & new_format) const
+		uint32 Frame::ReadPixel(int x, int y, PixelFormat format, AlphaMode alpha) const
 		{
-			SafePointer<Frame> New = new Frame(Width, Height, -1, new_format.Format, new_format.Alpha, new_format.Origin);
-			if (!IsPalettePixel(new_format.Format) && !IsPalettePixel(Format)) {
-				if (new_format.Format == Format && new_format.Alpha == Alpha) {
+			auto val = GetPixel(x, y);
+			PixelFormat lf = Format; AlphaMode la = Alpha;
+			if (IsPalettePixel(Format)) { val = Palette[val]; lf = PixelFormat::B8G8R8A8; la = AlphaMode::Normal; }
+			return ConvertPixel(val, lf, la, format, alpha);
+		}
+		void Frame::WritePixel(int x, int y, uint32 v, PixelFormat format, AlphaMode alpha)
+		{
+			PixelFormat lf = Format; AlphaMode la = Alpha;
+			auto is_palette = IsPalettePixel(Format);
+			if (is_palette) { lf = PixelFormat::B8G8R8A8; la = AlphaMode::Normal; }
+			auto val = ConvertPixel(v, format, alpha, lf, la);
+			if (is_palette) val = GetBestPaletteIndex(val);
+			SetPixel(x, y, val);
+		}
+		uint32 Frame::ReadPalette(int index, PixelFormat format, AlphaMode alpha) const
+		{
+			if (index < 0 || index >= Palette.Length()) throw InvalidArgumentException();
+			return ConvertPixel(Palette[index], PixelFormat::B8G8R8A8, AlphaMode::Normal, format, alpha);
+		}
+		void Frame::WritePalette(int index, uint32 v, PixelFormat format, AlphaMode alpha)
+		{
+			if (index < 0 || index >= Palette.Length()) throw InvalidArgumentException();
+			Palette[index] = ConvertPixel(v, format, alpha, PixelFormat::B8G8R8A8, AlphaMode::Normal);
+		}
+		Frame * Frame::ConvertFormat(PixelFormat format, int scan_line) const { return ConvertFormat(format, Alpha, Origin, scan_line); }
+		Frame * Frame::ConvertFormat(AlphaMode alpha, int scan_line) const { return ConvertFormat(Format, alpha, Origin, scan_line); }
+		Frame * Frame::ConvertFormat(ScanOrigin origin, int scan_line) const { return ConvertFormat(Format, Alpha, origin, scan_line); }
+		Frame * Frame::ConvertFormat(PixelFormat format, AlphaMode alpha, int scan_line) const { return ConvertFormat(format, alpha, Origin, scan_line); }
+		Frame * Frame::ConvertFormat(PixelFormat format, ScanOrigin origin, int scan_line) const { return ConvertFormat(format, Alpha, origin, scan_line); }
+		Frame * Frame::ConvertFormat(AlphaMode alpha, ScanOrigin origin, int scan_line) const { return ConvertFormat(Format, alpha, origin, scan_line); }
+		Frame * Frame::ConvertFormat(PixelFormat format, AlphaMode alpha, ScanOrigin origin, int scan_line) const
+		{
+			SafePointer<Frame> New = new Frame(Width, Height, scan_line, format, alpha, origin);
+			if (!IsPalettePixel(format) && !IsPalettePixel(Format)) {
+				if (format == Format && alpha == Alpha) {
 					for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
 						New->SetPixel(x, y, GetPixel(x, y));
 					}
 				} else {
 					for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
-						New->SetPixel(x, y, ConvertPixel(GetPixel(x, y), Format, Alpha, new_format.Format, new_format.Alpha));
+						New->SetPixel(x, y, ConvertPixel(GetPixel(x, y), Format, Alpha, format, alpha));
 					}
 				}
-			} else if (!IsPalettePixel(new_format.Format)){
+			} else if (!IsPalettePixel(format)){
 				for (int y = 0; y < Height; y++) for (int x = 0; x < Width; x++) {
-					New->SetPixel(x, y, ConvertPixel(Palette[GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal, new_format.Format, new_format.Alpha));
+					New->SetPixel(x, y, ConvertPixel(Palette[GetPixel(x, y)], PixelFormat::B8G8R8A8, AlphaMode::Normal, format, alpha));
 				}
 			} else {
 				bool plt = IsPalettePixel(Format);

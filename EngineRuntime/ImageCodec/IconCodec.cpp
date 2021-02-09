@@ -218,7 +218,7 @@ namespace Engine
 							frame.Seek(0, Begin);
 							frame.CopyTo(stream);
 						} else {
-							SafePointer<Frame> Conv = image->Frames[i].ConvertFormat(FrameFormat(PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::BottomUp));
+							SafePointer<Frame> Conv = image->Frames[i].ConvertFormat(PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::BottomUp);
 							Array<uint8> Mask(0x100);
 							uint32 mask_scanline = ((Conv->GetWidth() + 31) / 32) * 4;
 							for (uint s = 0; s < mask_scanline * Conv->GetHeight(); s++) Mask << uint8(0);

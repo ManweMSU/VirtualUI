@@ -182,7 +182,7 @@ namespace Engine
 				if (value->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8 && value->GetAlphaMode() == Codec::AlphaMode::Normal && value->GetScanOrigin() == Codec::ScanOrigin::BottomUp) {
 					frame.SetRetain(value);
 				} else {
-					frame = value->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp));
+					frame = value->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp);
 				}
 				BITMAPINFOHEADER hdr;
 				hdr.biSize = sizeof(hdr);

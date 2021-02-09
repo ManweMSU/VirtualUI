@@ -58,19 +58,16 @@ namespace Engine
 		string GetEncodedImageFormat(Streaming::Stream * stream);
 
 		enum class FrameUsage { ColorMap, NormalMap, LightMap };
-		enum class PixelFormat { B8G8R8A8, R8G8B8A8, B8G8R8U8, R8G8B8U8, B8G8R8, R8G8B8, A8, P8, P4, P2, P1 };
-		enum class AlphaMode { Normal, Premultiplied };
+		enum class AlphaMode { Normal = 0, Straight = 0, Premultiplied = 1 };
 		enum class ScanOrigin { TopDown, BottomUp };
-
-		struct FrameFormat
-		{
-			PixelFormat Format;
-			AlphaMode Alpha;
-			ScanOrigin Origin;
-
-			FrameFormat(void);
-			FrameFormat(PixelFormat format, AlphaMode alpha, ScanOrigin origin);
+		enum class PixelFormat {
+			B8G8R8A8, R8G8B8A8, B8G8R8X8, R8G8B8X8,
+			B8G8R8, R8G8B8,
+			B5G5R5A1, B5G5R5X1, B5G6R5, R5G5B5A1, R5G5B5X1, R5G6B5,
+			B4G4R4A4, B4G4R4X4, R4G4B4A4, R4G4B4X4,
+			A8, R8, P8, P4, P2, P1
 		};
+
 		bool IsPalettePixel(PixelFormat format);
 		uint32 GetPaletteVolume(PixelFormat format);
 		uint32 GetBitsPerPixel(PixelFormat format);
@@ -98,6 +95,15 @@ namespace Engine
 			int32 Duration = 0;
 			double DpiUsage = 1.0;
 
+			Frame(const Frame & src);
+			Frame(const Frame * src);
+			Frame(int32 width, int32 height, PixelFormat format);
+			Frame(int32 width, int32 height, PixelFormat format, AlphaMode alpha);
+			Frame(int32 width, int32 height, PixelFormat format, ScanOrigin origin);
+			Frame(int32 width, int32 height, PixelFormat format, AlphaMode alpha, ScanOrigin origin);
+			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format);
+			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha);
+			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, ScanOrigin origin);
 			Frame(int32 width, int32 height, int32 scan_line_length, PixelFormat format, AlphaMode alpha, ScanOrigin origin);
 			~Frame(void) override;
 
@@ -107,17 +113,30 @@ namespace Engine
 			PixelFormat GetPixelFormat(void) const;
 			AlphaMode GetAlphaMode(void) const;
 			ScanOrigin GetScanOrigin(void) const;
-			const uint32 * GetPalette(void) const;
-			uint32 * GetPalette(void);
-			int GetPaletteVolume(void) const;
-			void SetPaletteVolume(int volume);
+
 			uint32 GetPixel(int x, int y) const;
 			void SetPixel(int x, int y, uint32 v);
 			uint8 * GetData(void);
 			const uint8 * GetData(void) const;
+
+			const uint32 * GetPalette(void) const;
+			uint32 * GetPalette(void);
+			int GetPaletteVolume(void) const;
+			void SetPaletteVolume(int volume);
 			uint32 GetBestPaletteIndex(uint32 color) const;
 
-			Frame * ConvertFormat(const FrameFormat & new_format) const;
+			uint32 ReadPixel(int x, int y, PixelFormat format = PixelFormat::R8G8B8A8, AlphaMode alpha = AlphaMode::Normal) const;
+			void WritePixel(int x, int y, uint32 v, PixelFormat format = PixelFormat::R8G8B8A8, AlphaMode alpha = AlphaMode::Normal);
+			uint32 ReadPalette(int index, PixelFormat format = PixelFormat::R8G8B8A8, AlphaMode alpha = AlphaMode::Normal) const;
+			void WritePalette(int index, uint32 v, PixelFormat format = PixelFormat::R8G8B8A8, AlphaMode alpha = AlphaMode::Normal);
+
+			Frame * ConvertFormat(PixelFormat format, int scan_line = -1) const;
+			Frame * ConvertFormat(AlphaMode alpha, int scan_line = -1) const;
+			Frame * ConvertFormat(ScanOrigin origin, int scan_line = -1) const;
+			Frame * ConvertFormat(PixelFormat format, AlphaMode alpha, int scan_line = -1) const;
+			Frame * ConvertFormat(PixelFormat format, ScanOrigin origin, int scan_line = -1) const;
+			Frame * ConvertFormat(AlphaMode alpha, ScanOrigin origin, int scan_line = -1) const;
+			Frame * ConvertFormat(PixelFormat format, AlphaMode alpha, ScanOrigin origin, int scan_line = -1) const;
 		};
 		class Image : public Object
 		{

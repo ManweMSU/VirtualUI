@@ -85,7 +85,7 @@ namespace Engine
 					if (frame) {
 						SafePointer<Codec::Frame> use_frame;
 						if (_icon_usage == StatusBarIconColorUsage::Monochromic) {
-							use_frame = frame->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp));
+							use_frame = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::BottomUp);
 							uint32 color = _is_light_theme() ? 0x00000000 : 0x00FFFFFF;
 							for (int y = 0; y < use_frame->GetHeight(); y++) for (int x = 0; x < use_frame->GetWidth(); x++) {
 								uint32 pixel = use_frame->GetPixel(x, y);
