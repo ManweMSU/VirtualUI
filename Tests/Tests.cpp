@@ -266,6 +266,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+	auto s = string(1.0 / 3.0, L':', 5);
+
 	CoInitializeEx(0, COINIT::COINIT_APARTMENTTHREADED);
 	SetProcessDPIAware();
 

@@ -61,7 +61,7 @@ namespace Engine
 			result.Type = TextureType::Type1D;
 			result.Format = format;
 			result.Width = width;
-			result.Height = result.DepthOrArraySize = 0;
+			result.Height = result.Depth = 0;
 			result.MipmapCount = mips;
 			result.Usage = usage;
 			result.MemoryPool = pool;
@@ -74,7 +74,7 @@ namespace Engine
 			result.Format = format;
 			result.Width = width;
 			result.Height = height;
-			result.DepthOrArraySize = 0;
+			result.Depth = 0;
 			result.MipmapCount = mips;
 			result.Usage = usage;
 			result.MemoryPool = pool;
@@ -87,7 +87,7 @@ namespace Engine
 			result.Format = format;
 			result.Width = width;
 			result.Height = height;
-			result.DepthOrArraySize = depth;
+			result.Depth = depth;
 			result.MipmapCount = mips;
 			result.Usage = usage;
 			result.MemoryPool = pool;
@@ -347,7 +347,7 @@ namespace Engine
 			desc.Format = format;
 			desc.Width = converted->GetWidth();
 			desc.Height = converted->GetHeight();
-			desc.DepthOrArraySize = 0;
+			desc.Depth = 0;
 			desc.MipmapCount = mip_levels;
 			desc.Usage = usage;
 			desc.MemoryPool = pool;
@@ -417,7 +417,7 @@ namespace Engine
 			desc.Format = format;
 			desc.Width = image->Frames[0].GetWidth();
 			desc.Height = image->Frames[0].GetHeight();
-			desc.DepthOrArraySize = 0;
+			desc.Depth = 0;
 			desc.MipmapCount = mip_levels;
 			desc.Usage = usage;
 			desc.MemoryPool = pool;

@@ -1307,7 +1307,7 @@ namespace Engine
 					D3D11_TEXTURE1D_DESC td;
 					td.Width = desc.Width;
 					td.MipLevels = desc.MipmapCount;
-					td.ArraySize = (desc.Type == TextureType::TypeArray1D) ? desc.DepthOrArraySize : 1;
+					td.ArraySize = (desc.Type == TextureType::TypeArray1D) ? desc.ArraySize : 1;
 					td.Format = dxgi_format;
 					td.Usage = D3D11_USAGE_DEFAULT;
 					td.BindFlags = 0;
@@ -1364,7 +1364,7 @@ namespace Engine
 					td.Width = desc.Width;
 					td.Height = desc.Height;
 					td.MipLevels = desc.MipmapCount;
-					td.ArraySize = (desc.Type == TextureType::TypeArray2D) ? desc.DepthOrArraySize : 1;
+					td.ArraySize = (desc.Type == TextureType::TypeArray2D) ? desc.ArraySize : 1;
 					td.Format = dxgi_format;
 					td.SampleDesc.Count = 1;
 					td.SampleDesc.Quality = 0;
@@ -1425,7 +1425,7 @@ namespace Engine
 					td.Width = desc.Width;
 					td.Height = desc.Height;
 					td.MipLevels = desc.MipmapCount;
-					td.ArraySize = (desc.Type == TextureType::TypeArrayCube) ? (desc.DepthOrArraySize * 6) : 6;
+					td.ArraySize = (desc.Type == TextureType::TypeArrayCube) ? (desc.ArraySize * 6) : 6;
 					td.Format = dxgi_format;
 					td.SampleDesc.Count = 1;
 					td.SampleDesc.Quality = 0;
@@ -1484,7 +1484,7 @@ namespace Engine
 					D3D11_TEXTURE3D_DESC td;
 					td.Width = desc.Width;
 					td.Height = desc.Height;
-					td.Depth = desc.DepthOrArraySize;
+					td.Depth = desc.Depth;
 					td.MipLevels = desc.MipmapCount;
 					td.Format = dxgi_format;
 					td.Usage = D3D11_USAGE_DEFAULT;
@@ -1528,7 +1528,7 @@ namespace Engine
 					}
 					result->width = desc.Width;
 					result->height = desc.Height;
-					result->depth = desc.DepthOrArraySize;
+					result->depth = desc.Depth;
 					result->size = 1;
 					if (create_staging) {
 						td.Usage = D3D11_USAGE_STAGING;
@@ -1566,7 +1566,7 @@ namespace Engine
 					td.Width = desc.Width;
 					td.MipLevels = desc.MipmapCount;
 					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, 1, 1);
-					td.ArraySize = (desc.Type == TextureType::TypeArray1D) ? desc.DepthOrArraySize : 1;
+					td.ArraySize = (desc.Type == TextureType::TypeArray1D) ? desc.ArraySize : 1;
 					td.Format = dxgi_format;
 					if (desc.MemoryPool == ResourceMemoryPool::Default) td.Usage = D3D11_USAGE_DEFAULT;
 					else if (desc.MemoryPool == ResourceMemoryPool::Immutable) td.Usage = D3D11_USAGE_IMMUTABLE;
@@ -1628,7 +1628,7 @@ namespace Engine
 					td.Height = desc.Height;
 					td.MipLevels = desc.MipmapCount;
 					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, 1);
-					td.ArraySize = (desc.Type == TextureType::TypeArray2D) ? desc.DepthOrArraySize : 1;
+					td.ArraySize = (desc.Type == TextureType::TypeArray2D) ? desc.ArraySize : 1;
 					td.Format = dxgi_format;
 					td.SampleDesc.Count = 1;
 					td.SampleDesc.Quality = 0;
@@ -1694,7 +1694,7 @@ namespace Engine
 					td.Height = desc.Height;
 					td.MipLevels = desc.MipmapCount;
 					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, 1);
-					td.ArraySize = (desc.Type == TextureType::TypeArrayCube) ? (desc.DepthOrArraySize * 6) : 6;
+					td.ArraySize = (desc.Type == TextureType::TypeArrayCube) ? (desc.ArraySize * 6) : 6;
 					td.Format = dxgi_format;
 					td.SampleDesc.Count = 1;
 					td.SampleDesc.Quality = 0;
@@ -1757,9 +1757,9 @@ namespace Engine
 					D3D11_TEXTURE3D_DESC td;
 					td.Width = desc.Width;
 					td.Height = desc.Height;
-					td.Depth = desc.DepthOrArraySize;
+					td.Depth = desc.Depth;
 					td.MipLevels = desc.MipmapCount;
-					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, desc.DepthOrArraySize);
+					if (!td.MipLevels) td.MipLevels = _calculate_mip_levels(desc.Width, desc.Height, desc.Depth);
 					td.Format = dxgi_format;
 					if (desc.MemoryPool == ResourceMemoryPool::Default) td.Usage = D3D11_USAGE_DEFAULT;
 					else if (desc.MemoryPool == ResourceMemoryPool::Immutable) td.Usage = D3D11_USAGE_IMMUTABLE;
@@ -1806,7 +1806,7 @@ namespace Engine
 					}
 					result->width = desc.Width;
 					result->height = desc.Height;
-					result->depth = desc.DepthOrArraySize;
+					result->depth = desc.Depth;
 					result->size = 1;
 					if (create_staging) {
 						td.Usage = D3D11_USAGE_STAGING;
@@ -2042,7 +2042,6 @@ namespace Engine
 					else if (format == PixelFormat::R8G8_sint) return DXGI_FORMAT_R8G8_SINT;
 					else if (format == PixelFormat::B5G6R5_unorm) return DXGI_FORMAT_B5G6R5_UNORM;
 					else if (format == PixelFormat::B5G5R5A1_unorm) return DXGI_FORMAT_B5G5R5A1_UNORM;
-					else if (format == PixelFormat::B4G4R4A4_unorm) return DXGI_FORMAT_B4G4R4A4_UNORM;
 					else return DXGI_FORMAT_UNKNOWN;
 				} else if (bpp == 32) {
 					if (format == PixelFormat::R32_uint) return DXGI_FORMAT_R32_UINT;

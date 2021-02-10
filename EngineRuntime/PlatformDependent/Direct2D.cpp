@@ -879,7 +879,7 @@ namespace Engine
 			desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
 			desc.Width = width;
 			desc.Height = height;
-			desc.DepthOrArraySize = 1;
+			desc.Depth = 1;
 			desc.MipmapCount = 1;
 			desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
 			desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
