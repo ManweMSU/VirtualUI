@@ -1070,35 +1070,35 @@ namespace Engine
 				if (desc.Type == TextureType::Type1D) {
 					descriptor.textureType = MTLTextureType1D;
 				} else if (desc.Type == TextureType::TypeArray1D) {
-					descriptor.arrayLength = desc.DepthOrArraySize;
+					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType1DArray;
-					texture->size = desc.DepthOrArraySize;
+					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type2D) {
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureType2D;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArray2D) {
 					descriptor.height = desc.Height;
-					descriptor.arrayLength = desc.DepthOrArraySize;
+					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType2DArray;
 					texture->height = desc.Height;
-					texture->size = desc.DepthOrArraySize;
+					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::TypeCube) {
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureTypeCube;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArrayCube) {
 					descriptor.height = desc.Height;
-					descriptor.arrayLength = desc.DepthOrArraySize;
+					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureTypeCubeArray;
 					texture->height = desc.Height;
-					texture->size = desc.DepthOrArraySize;
+					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type3D) {
 					descriptor.height = desc.Height;
-					descriptor.depth = desc.DepthOrArraySize;
+					descriptor.depth = desc.Depth;
 					descriptor.textureType = MTLTextureType3D;
 					texture->height = desc.Height;
-					texture->depth = desc.DepthOrArraySize;
+					texture->depth = desc.Depth;
 				} else { [descriptor release]; return 0; }
 				uint32 mips = desc.MipmapCount;
 				if (!mips) {
@@ -1157,35 +1157,35 @@ namespace Engine
 				if (desc.Type == TextureType::Type1D) {
 					descriptor.textureType = MTLTextureType1D;
 				} else if (desc.Type == TextureType::TypeArray1D) {
-					descriptor.arrayLength = desc.DepthOrArraySize;
+					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType1DArray;
-					texture->size = desc.DepthOrArraySize;
+					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type2D) {
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureType2D;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArray2D) {
 					descriptor.height = desc.Height;
-					descriptor.arrayLength = desc.DepthOrArraySize;
+					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType2DArray;
 					texture->height = desc.Height;
-					texture->size = desc.DepthOrArraySize;
+					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::TypeCube) {
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureTypeCube;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArrayCube) {
 					descriptor.height = desc.Height;
-					descriptor.arrayLength = desc.DepthOrArraySize;
+					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureTypeCubeArray;
 					texture->height = desc.Height;
-					texture->size = desc.DepthOrArraySize;
+					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type3D) {
 					descriptor.height = desc.Height;
-					descriptor.depth = desc.DepthOrArraySize;
+					descriptor.depth = desc.Depth;
 					descriptor.textureType = MTLTextureType3D;
 					texture->height = desc.Height;
-					texture->depth = desc.DepthOrArraySize;
+					texture->depth = desc.Depth;
 				} else { [descriptor release]; return 0; }
 				uint32 mips = desc.MipmapCount;
 				if (!mips) {
@@ -1381,7 +1381,6 @@ namespace Engine
 					else if (format == PixelFormat::R8G8_sint) return MTLPixelFormatRG8Sint;
 					else if (format == PixelFormat::B5G6R5_unorm) return MTLPixelFormatB5G6R5Unorm;
 					else if (format == PixelFormat::B5G5R5A1_unorm) return MTLPixelFormatBGR5A1Unorm;
-					else if (format == PixelFormat::B4G4R4A4_unorm) return MTLPixelFormatABGR4Unorm;
 					else return MTLPixelFormatInvalid;
 				} else if (bpp == 32) {
 					if (format == PixelFormat::R32_uint) return MTLPixelFormatR32Uint;

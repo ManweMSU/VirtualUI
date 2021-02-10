@@ -33,7 +33,6 @@ namespace Engine
 			R8G8_unorm = 0x82200001, R8G8_snorm = 0x82200002, R8G8_uint = 0x82200003, R8G8_sint = 0x82200004,
 			B5G6R5_unorm = 0x82300001,
 			B5G5R5A1_unorm = 0x82400001,
-			B4G4R4A4_unorm = 0x82400002,
 
 			// 32 bpp
 			R32_uint = 0x83100001, R32_sint = 0x83100002, R32_float = 0x83100003,
@@ -177,7 +176,7 @@ namespace Engine
 			PixelFormat Format;
 			uint32 Width;
 			uint32 Height;
-			uint32 DepthOrArraySize;
+			union { uint32 Depth; uint32 ArraySize; };
 			uint32 MipmapCount;
 			uint32 Usage;
 			ResourceMemoryPool MemoryPool;

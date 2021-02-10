@@ -885,8 +885,8 @@ namespace Engine
 			virtual ICursor * LoadCursor(Codec::Image * Source) override { return LoadCursor(Source->GetFrameBestDpiFit(UI::Zoom)); }
 			virtual ICursor * LoadCursor(Codec::Frame * Source) override
 			{
-				SafePointer<Codec::Frame> conv = Source->ConvertFormat(Engine::Codec::FrameFormat(
-					Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::TopDown));
+				SafePointer<Codec::Frame> conv = Source->ConvertFormat(
+					Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::TopDown);
 				CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
 				uint len = conv->GetScanLineLength() * conv->GetHeight();
 				void * data = malloc(len);

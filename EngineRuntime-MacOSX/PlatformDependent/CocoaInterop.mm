@@ -27,7 +27,7 @@ namespace Engine
             if (frame->GetScanOrigin() == Codec::ScanOrigin::TopDown && frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
                 src.SetRetain(frame);
             } else {
-                src = frame->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, frame->GetAlphaMode(), Codec::ScanOrigin::TopDown));
+                src = frame->ConvertFormat(Codec::PixelFormat::R8G8B8A8, frame->GetAlphaMode(), Codec::ScanOrigin::TopDown);
             }
             int data_len = src->GetScanLineLength() * src->GetHeight();
             uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));

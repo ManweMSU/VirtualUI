@@ -474,7 +474,7 @@ namespace Engine
 			if (Source->GetScanOrigin() == Codec::ScanOrigin::TopDown && Source->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
 				source.SetRetain(Source);
 			} else {
-				source = Source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::R8G8B8A8, Source->GetAlphaMode(), Codec::ScanOrigin::TopDown));
+				source = Source->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Source->GetAlphaMode(), Codec::ScanOrigin::TopDown);
 			}
 			int data_len = source->GetScanLineLength() * source->GetHeight();
 			uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));

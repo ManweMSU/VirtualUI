@@ -81,7 +81,7 @@ namespace Engine
 				SafePointer<Codec::Frame> conv;
 				if (source->GetAlphaMode() != Codec::AlphaMode::Normal || source->GetScanOrigin() != Codec::ScanOrigin::TopDown ||
 					(source->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8 && source->GetPixelFormat() != Codec::PixelFormat::R8G8B8A8)) {
-					conv = source->ConvertFormat(Codec::FrameFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown));
+					conv = source->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 				} else conv.SetRetain(source);
 				if (conv->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) pf = MTLPixelFormatRGBA8Unorm;
 				else if (conv->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) pf = MTLPixelFormatBGRA8Unorm;
@@ -592,7 +592,7 @@ namespace Engine
 				desc.Format = format;
 				desc.Width = width;
 				desc.Height = height;
-				desc.DepthOrArraySize = 0;
+				desc.Depth = 0;
 				desc.MipmapCount = 1;
 				desc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget;
 				desc.MemoryPool = Graphics::ResourceMemoryPool::Default;

@@ -48,8 +48,8 @@ namespace Engine
 				}
 				ObjectArray<Engine::Codec::Frame> conv(0x10);
 				for (int i = 0; i < max_frame; i++) {
-					SafePointer<Engine::Codec::Frame> frame = image->Frames[i].ConvertFormat(Engine::Codec::FrameFormat(
-						Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::TopDown));
+					SafePointer<Engine::Codec::Frame> frame = image->Frames[i].ConvertFormat(
+						Engine::Codec::PixelFormat::R8G8B8A8, Engine::Codec::AlphaMode::Normal, Engine::Codec::ScanOrigin::TopDown);
 					conv.Append(frame);
 				}
 				for (int i = 0; i < max_frame; i++) {

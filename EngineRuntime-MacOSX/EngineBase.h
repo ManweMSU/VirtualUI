@@ -86,8 +86,8 @@ namespace Engine
 		ImmutableString(uint32 value, const ImmutableString & digits, int minimal_length = 0);
 		ImmutableString(uint64 value, const ImmutableString & digits, int minimal_length = 0);
 		ImmutableString(const void * Sequence, int Length, Encoding SequenceEncoding);
-		ImmutableString(float src, widechar separator = L'.');
-		ImmutableString(double src, widechar separator = L'.');
+		ImmutableString(float src, widechar separator = L'.', int digits = 7);
+		ImmutableString(double src, widechar separator = L'.', int digits = 16);
 		ImmutableString(bool src);
 		ImmutableString(widechar src);
 		ImmutableString(widechar src, int repeats);

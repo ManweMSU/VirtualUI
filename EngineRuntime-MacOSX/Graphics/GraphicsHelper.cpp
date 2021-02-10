@@ -61,7 +61,7 @@ namespace Engine
 			result.Type = TextureType::Type1D;
 			result.Format = format;
 			result.Width = width;
-			result.Height = result.DepthOrArraySize = 0;
+			result.Height = result.Depth = 0;
 			result.MipmapCount = mips;
 			result.Usage = usage;
 			result.MemoryPool = pool;
@@ -74,7 +74,7 @@ namespace Engine
 			result.Format = format;
 			result.Width = width;
 			result.Height = height;
-			result.DepthOrArraySize = 0;
+			result.Depth = 0;
 			result.MipmapCount = mips;
 			result.Usage = usage;
 			result.MemoryPool = pool;
@@ -87,7 +87,7 @@ namespace Engine
 			result.Format = format;
 			result.Width = width;
 			result.Height = height;
-			result.DepthOrArraySize = depth;
+			result.Depth = depth;
 			result.MipmapCount = mips;
 			result.Usage = usage;
 			result.MemoryPool = pool;
@@ -301,12 +301,23 @@ namespace Engine
 			Codec::PixelFormat codec_format;
 			if (format == PixelFormat::Invalid) {
 				if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) format = PixelFormat::B8G8R8A8_unorm;
-				else if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8U8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8X8) format = PixelFormat::B8G8R8A8_unorm;
 				else if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8) format = PixelFormat::B8G8R8A8_unorm;
 				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) format = PixelFormat::R8G8B8A8_unorm;
-				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8U8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8X8) format = PixelFormat::R8G8B8A8_unorm;
 				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8G8B8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B5G5R5A1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B5G5R5X1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R5G5B5A1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R5G5B5X1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B5G6R5) format = PixelFormat::B5G6R5_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R5G6B5) format = PixelFormat::B5G6R5_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B4G4R4A4) format = PixelFormat::B8G8R8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::B4G4R4X4) format = PixelFormat::B8G8R8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R4G4B4A4) format = PixelFormat::R8G8B8A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R4G4B4X4) format = PixelFormat::R8G8B8A8_unorm;
 				else if (frame->GetPixelFormat() == Codec::PixelFormat::A8) format = PixelFormat::A8_unorm;
+				else if (frame->GetPixelFormat() == Codec::PixelFormat::R8) format = PixelFormat::R8_unorm;
 				else format = PixelFormat::B8G8R8A8_unorm;
 			}
 			if (format == PixelFormat::B8G8R8A8_unorm) codec_format = Codec::PixelFormat::B8G8R8A8;
@@ -314,14 +325,20 @@ namespace Engine
 			else if (format == PixelFormat::R8G8B8A8_snorm) codec_format = Codec::PixelFormat::R8G8B8A8;
 			else if (format == PixelFormat::R8G8B8A8_uint) codec_format = Codec::PixelFormat::R8G8B8A8;
 			else if (format == PixelFormat::R8G8B8A8_sint) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::B5G5R5A1_unorm) codec_format = Codec::PixelFormat::B5G5R5A1;
+			else if (format == PixelFormat::B5G6R5_unorm) codec_format = Codec::PixelFormat::B5G6R5;
 			else if (format == PixelFormat::A8_unorm) codec_format = Codec::PixelFormat::A8;
+			else if (format == PixelFormat::R8_unorm) codec_format = Codec::PixelFormat::R8;
+			else if (format == PixelFormat::R8_snorm) codec_format = Codec::PixelFormat::R8;
+			else if (format == PixelFormat::R8_uint) codec_format = Codec::PixelFormat::R8;
+			else if (format == PixelFormat::R8_sint) codec_format = Codec::PixelFormat::R8;
 			else throw InvalidArgumentException();
 			SafePointer<Codec::Frame> converted;
 			bool convert = false;
 			if (frame->GetPixelFormat() != codec_format) convert = true;
 			if (frame->GetAlphaMode() != Codec::AlphaMode::Normal) convert = true;
 			if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
-			if (convert) converted = frame->ConvertFormat(Codec::FrameFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown));
+			if (convert) converted = frame->ConvertFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 			else converted.SetRetain(frame);
 			Array<ResourceInitDesc> init(0x10);
 			ObjectArray<Codec::Frame> mips(0x10);
@@ -330,7 +347,7 @@ namespace Engine
 			desc.Format = format;
 			desc.Width = converted->GetWidth();
 			desc.Height = converted->GetHeight();
-			desc.DepthOrArraySize = 0;
+			desc.Depth = 0;
 			desc.MipmapCount = mip_levels;
 			desc.Usage = usage;
 			desc.MemoryPool = pool;
@@ -361,12 +378,23 @@ namespace Engine
 			Codec::PixelFormat codec_format;
 			if (format == PixelFormat::Invalid) {
 				if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8A8) format = PixelFormat::B8G8R8A8_unorm;
-				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8U8) format = PixelFormat::B8G8R8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8X8) format = PixelFormat::B8G8R8A8_unorm;
 				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B8G8R8) format = PixelFormat::B8G8R8A8_unorm;
 				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) format = PixelFormat::R8G8B8A8_unorm;
-				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8U8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8X8) format = PixelFormat::R8G8B8A8_unorm;
 				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8G8B8) format = PixelFormat::R8G8B8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B5G5R5A1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B5G5R5X1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R5G5B5A1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R5G5B5X1) format = PixelFormat::B5G5R5A1_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B5G6R5) format = PixelFormat::B5G6R5_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R5G6B5) format = PixelFormat::B5G6R5_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B4G4R4A4) format = PixelFormat::B8G8R8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::B4G4R4X4) format = PixelFormat::B8G8R8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R4G4B4A4) format = PixelFormat::R8G8B8A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R4G4B4X4) format = PixelFormat::R8G8B8A8_unorm;
 				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::A8) format = PixelFormat::A8_unorm;
+				else if (image->Frames[0].GetPixelFormat() == Codec::PixelFormat::R8) format = PixelFormat::R8_unorm;
 				else format = PixelFormat::B8G8R8A8_unorm;
 			}
 			if (format == PixelFormat::B8G8R8A8_unorm) codec_format = Codec::PixelFormat::B8G8R8A8;
@@ -374,7 +402,13 @@ namespace Engine
 			else if (format == PixelFormat::R8G8B8A8_snorm) codec_format = Codec::PixelFormat::R8G8B8A8;
 			else if (format == PixelFormat::R8G8B8A8_uint) codec_format = Codec::PixelFormat::R8G8B8A8;
 			else if (format == PixelFormat::R8G8B8A8_sint) codec_format = Codec::PixelFormat::R8G8B8A8;
+			else if (format == PixelFormat::B5G5R5A1_unorm) codec_format = Codec::PixelFormat::B5G5R5A1;
+			else if (format == PixelFormat::B5G6R5_unorm) codec_format = Codec::PixelFormat::B5G6R5;
 			else if (format == PixelFormat::A8_unorm) codec_format = Codec::PixelFormat::A8;
+			else if (format == PixelFormat::R8_unorm) codec_format = Codec::PixelFormat::R8;
+			else if (format == PixelFormat::R8_snorm) codec_format = Codec::PixelFormat::R8;
+			else if (format == PixelFormat::R8_uint) codec_format = Codec::PixelFormat::R8;
+			else if (format == PixelFormat::R8_sint) codec_format = Codec::PixelFormat::R8;
 			else throw InvalidArgumentException();
 			Array<ResourceInitDesc> init(0x10);
 			ObjectArray<Codec::Frame> mips(0x10);
@@ -383,7 +417,7 @@ namespace Engine
 			desc.Format = format;
 			desc.Width = image->Frames[0].GetWidth();
 			desc.Height = image->Frames[0].GetHeight();
-			desc.DepthOrArraySize = 0;
+			desc.Depth = 0;
 			desc.MipmapCount = mip_levels;
 			desc.Usage = usage;
 			desc.MemoryPool = pool;
@@ -394,7 +428,7 @@ namespace Engine
 				if (frame->GetPixelFormat() != codec_format) convert = true;
 				if (frame->GetAlphaMode() != Codec::AlphaMode::Normal) convert = true;
 				if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
-				if (convert) converted = frame->ConvertFormat(Codec::FrameFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown));
+				if (convert) converted = frame->ConvertFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
 				else converted.SetRetain(frame);
 				uint current_mip = 0;
 				do {
@@ -411,30 +445,34 @@ namespace Engine
 		}
 		Codec::Frame * CreateMipLevel(Codec::Frame * source)
 		{
+			SafePointer<Codec::Frame> source_corrected;
+			if (GetBitsPerPixel(source->GetPixelFormat()) <= 16) source_corrected = source->ConvertFormat(Codec::PixelFormat::B8G8R8A8);
+			else source_corrected.SetRetain(source);
 			int width = source->GetWidth();
 			int height = source->GetHeight();
 			int mw = max(width / 2, 1);
 			int mh = max(height / 2, 1);
 			if (width == 1 && height == 1) return 0;
-			SafePointer<Codec::Frame> mip = new Codec::Frame(mw, mh, -1, source->GetPixelFormat(), source->GetAlphaMode(), source->GetScanOrigin());
+			SafePointer<Codec::Frame> mip = new Codec::Frame(mw, mh, -1, source_corrected->GetPixelFormat(), source_corrected->GetAlphaMode(), source_corrected->GetScanOrigin());
 			for (int y = 0; y < mh; y++) for (int x = 0; x < mw; x++) {
-				Math::Color sum = Math::Color(UI::Color(source->GetPixel(x << 1, y << 1)));
+				Math::Color sum = Math::Color(UI::Color(source_corrected->GetPixel(x << 1, y << 1)));
 				int c = 1;
 				if (width > 1) {
-					sum += Math::Color(UI::Color(source->GetPixel((x << 1) + 1, y << 1)));
+					sum += Math::Color(UI::Color(source_corrected->GetPixel((x << 1) + 1, y << 1)));
 					c++;
 					if (height > 1) {
-						sum += Math::Color(UI::Color(source->GetPixel(x << 1, (y << 1) + 1)));
-						sum += Math::Color(UI::Color(source->GetPixel((x << 1) + 1, (y << 1) + 1)));
+						sum += Math::Color(UI::Color(source_corrected->GetPixel(x << 1, (y << 1) + 1)));
+						sum += Math::Color(UI::Color(source_corrected->GetPixel((x << 1) + 1, (y << 1) + 1)));
 						c += 2;
 					}
 				} else {
-					sum += Math::Color(UI::Color(source->GetPixel(x << 1, (y << 1) + 1)));
+					sum += Math::Color(UI::Color(source_corrected->GetPixel(x << 1, (y << 1) + 1)));
 					c++;
 				}
 				auto pixel = UI::Color(sum / double(c));
 				mip->SetPixel(x, y, pixel);
 			}
+			if (mip->GetPixelFormat() != source->GetPixelFormat()) mip = mip->ConvertFormat(source->GetPixelFormat());
 			mip->Retain();
 			return mip;
 		}

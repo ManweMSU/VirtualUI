@@ -305,7 +305,7 @@ namespace Engine
 			text[len] = 0;
 		} else text = 0;
 	}
-	ImmutableString::ImmutableString(float src, widechar separator) : ImmutableString()
+	ImmutableString::ImmutableString(float src, widechar separator, int digits) : ImmutableString()
 	{
 		uint32 & value = reinterpret_cast<uint32&>(src);
 		bool negative = (value & 0x80000000) != 0;
@@ -320,7 +320,7 @@ namespace Engine
 					power = SymbolicMath::DivideByTwo(power);
 					if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
 				}
-				base = SymbolicMath::Round(base, 7, separator);
+				base = SymbolicMath::Round(base, digits, separator);
 				*this = (negative) ? (L"-" + base) : base;
 			}
 		} else if (exp == 0xFF) {
@@ -334,11 +334,11 @@ namespace Engine
 				power = SymbolicMath::DivideByTwo(power);
 				if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
 			}
-			base = SymbolicMath::Round(base, 7, separator);
+			base = SymbolicMath::Round(base, digits, separator);
 			*this = (negative) ? (L"-" + base) : base;
 		}
 	}
-	ImmutableString::ImmutableString(double src, widechar separator) : ImmutableString()
+	ImmutableString::ImmutableString(double src, widechar separator, int digits) : ImmutableString()
 	{
 		uint64 & value = reinterpret_cast<uint64&>(src);
 		bool negative = (value & 0x8000000000000000) != 0;
@@ -353,7 +353,7 @@ namespace Engine
 					power = SymbolicMath::DivideByTwo(power);
 					if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
 				}
-				base = SymbolicMath::Round(base, 16, separator);
+				base = SymbolicMath::Round(base, digits, separator);
 				*this = (negative) ? (L"-" + base) : base;
 			}
 		} else if (exp == 0x7FF) {
@@ -367,7 +367,7 @@ namespace Engine
 				power = SymbolicMath::DivideByTwo(power);
 				if ((value >> i) & 1) base = SymbolicMath::Summ(base, power);
 			}
-			base = SymbolicMath::Round(base, 16, separator);
+			base = SymbolicMath::Round(base, digits, separator);
 			*this = (negative) ? (L"-" + base) : base;
 		}
 	}
