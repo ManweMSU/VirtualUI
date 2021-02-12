@@ -37,16 +37,30 @@ namespace Engine
 			else if (format == PixelFormat::R4G4B4A4) return 16;
 			else if (format == PixelFormat::R4G4B4X4) return 16;
 			else if (format == PixelFormat::R8A8) return 16;
-			else if (format == PixelFormat::R4A4) return 8;
-			else if (format == PixelFormat::R2G3B2A1) return 8;
 			else if (format == PixelFormat::B2G3R2A1) return 8;
+			else if (format == PixelFormat::B2G3R2X1) return 8;
+			else if (format == PixelFormat::B2G3R3) return 8;
+			else if (format == PixelFormat::R2G3B2A1) return 8;
+			else if (format == PixelFormat::R2G3B2X1) return 8;
+			else if (format == PixelFormat::R3G3B2) return 8;
+			else if (format == PixelFormat::B2G2R2A2) return 8;
+			else if (format == PixelFormat::B2G2R2X2) return 8;
+			else if (format == PixelFormat::R2G2B2A2) return 8;
+			else if (format == PixelFormat::R2G2B2X2) return 8;
+			else if (format == PixelFormat::R4A4) return 8;
 			else if (format == PixelFormat::A8) return 8;
 			else if (format == PixelFormat::R8) return 8;
 			else if (format == PixelFormat::P8) return 8;
+			else if (format == PixelFormat::R2A2) return 4;
 			else if (format == PixelFormat::A4) return 4;
 			else if (format == PixelFormat::R4) return 4;
 			else if (format == PixelFormat::P4) return 4;
+			else if (format == PixelFormat::R1A1) return 2;
+			else if (format == PixelFormat::A2) return 2;
+			else if (format == PixelFormat::R2) return 2;
 			else if (format == PixelFormat::P2) return 2;
+			else if (format == PixelFormat::A1) return 1;
+			else if (format == PixelFormat::R1) return 1;
 			else if (format == PixelFormat::P1) return 1;
 			else return 0;
 		}
@@ -54,6 +68,7 @@ namespace Engine
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::A8 || source_format == PixelFormat::A4) return 255;
+			else if (source_format == PixelFormat::A2 || source_format == PixelFormat::A1) return 255;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x00FF0000) >> 16;
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x000000FF);
 			else if (source_format == PixelFormat::B8G8R8X8) ev = (source & 0x00FF0000) >> 16;
@@ -65,8 +80,14 @@ namespace Engine
 			else if (source_format == PixelFormat::R4G4B4A4 || source_format == PixelFormat::R4G4B4X4) ev = (source & 0x000F) * 255 / 15;
 			else if (source_format == PixelFormat::R8 || source_format == PixelFormat::R8A8) ev = source & 0xFF;
 			else if (source_format == PixelFormat::R4 || source_format == PixelFormat::R4A4) ev = (source & 0x0F) * 255 / 15;
-			else if (source_format == PixelFormat::B2G3R2A1) ev = ((source & 0x60) >> 5) * 255 / 3;
-			else if (source_format == PixelFormat::R2G3B2A1) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::R2 || source_format == PixelFormat::R2A2) ev = (source & 0x3) * 255 / 3;
+			else if (source_format == PixelFormat::R1 || source_format == PixelFormat::R1A1) ev = (source & 0x1) * 255;
+			else if (source_format == PixelFormat::B2G3R2A1 || source_format == PixelFormat::B2G3R2X1) ev = ((source & 0x60) >> 5) * 255 / 3;
+			else if (source_format == PixelFormat::R2G3B2A1 || source_format == PixelFormat::R2G3B2X1) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::R2G2B2A2 || source_format == PixelFormat::R2G2B2X2) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::B2G2R2A2 || source_format == PixelFormat::B2G2R2X2) ev = ((source & 0x30) >> 4) * 255 / 3;
+			else if (source_format == PixelFormat::B2G3R3) ev = ((source & 0xE0) >> 5) * 255 / 7;
+			else if (source_format == PixelFormat::R3G3B2) ev = (source & 0x07) * 255 / 7;
 			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
@@ -77,6 +98,7 @@ namespace Engine
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::A8 || source_format == PixelFormat::A4) return 255;
+			else if (source_format == PixelFormat::A2 || source_format == PixelFormat::A1) return 255;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x0000FF00) >> 8;
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x0000FF00) >> 8;
 			else if (source_format == PixelFormat::B8G8R8X8) ev = (source & 0x0000FF00) >> 8;
@@ -88,7 +110,14 @@ namespace Engine
 			else if (source_format == PixelFormat::R4G4B4A4 || source_format == PixelFormat::R4G4B4X4) ev = ((source & 0x00F0) >> 4) * 255 / 15;
 			else if (source_format == PixelFormat::R8 || source_format == PixelFormat::R8A8) ev = source & 0xFF;
 			else if (source_format == PixelFormat::R4 || source_format == PixelFormat::R4A4) ev = (source & 0x0F) * 255 / 15;
+			else if (source_format == PixelFormat::R2 || source_format == PixelFormat::R2A2) ev = (source & 0x3) * 255 / 3;
+			else if (source_format == PixelFormat::R1 || source_format == PixelFormat::R1A1) ev = (source & 0x1) * 255;
 			else if (source_format == PixelFormat::B2G3R2A1 || source_format == PixelFormat::R2G3B2A1) ev = ((source & 0x1C) >> 2) * 255 / 7;
+			else if (source_format == PixelFormat::B2G3R2X1 || source_format == PixelFormat::R2G3B2X1) ev = ((source & 0x1C) >> 2) * 255 / 7;
+			else if (source_format == PixelFormat::B2G3R3) ev = ((source & 0x1C) >> 2) * 255 / 7;
+			else if (source_format == PixelFormat::R3G3B2) ev = ((source & 0x38) >> 3) * 255 / 7;
+			else if (source_format == PixelFormat::B2G2R2A2 || source_format == PixelFormat::B2G2R2X2) ev = ((source & 0x0C) >> 2) * 255 / 3;
+			else if (source_format == PixelFormat::R2G2B2A2 || source_format == PixelFormat::R2G2B2X2) ev = ((source & 0x0C) >> 2) * 255 / 3;
 			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
@@ -99,6 +128,7 @@ namespace Engine
 		{
 			uint32 ev = 0;
 			if (source_format == PixelFormat::A8 || source_format == PixelFormat::A4) return 255;
+			else if (source_format == PixelFormat::A2 || source_format == PixelFormat::A1) return 255;
 			if (source_format == PixelFormat::B8G8R8A8 || source_format == PixelFormat::B8G8R8) ev = (source & 0x000000FF);
 			else if (source_format == PixelFormat::R8G8B8A8 || source_format == PixelFormat::R8G8B8) ev = (source & 0x00FF0000) >> 16;
 			else if (source_format == PixelFormat::B8G8R8X8) ev = (source & 0x000000FF);
@@ -110,8 +140,14 @@ namespace Engine
 			else if (source_format == PixelFormat::B4G4R4A4 || source_format == PixelFormat::B4G4R4X4) ev = (source & 0x000F) * 255 / 15;
 			else if (source_format == PixelFormat::R8 || source_format == PixelFormat::R8A8) ev = source & 0xFF;
 			else if (source_format == PixelFormat::R4 || source_format == PixelFormat::R4A4) ev = (source & 0x0F) * 255 / 15;
-			else if (source_format == PixelFormat::R2G3B2A1) ev = ((source & 0x60) >> 5) * 255 / 3;
-			else if (source_format == PixelFormat::B2G3R2A1) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::R2 || source_format == PixelFormat::R2A2) ev = (source & 0x3) * 255 / 3;
+			else if (source_format == PixelFormat::R1 || source_format == PixelFormat::R1A1) ev = (source & 0x1) * 255;
+			else if (source_format == PixelFormat::R2G3B2A1 || source_format == PixelFormat::R2G3B2X1) ev = ((source & 0x60) >> 5) * 255 / 3;
+			else if (source_format == PixelFormat::B2G3R2A1 || source_format == PixelFormat::B2G3R2X1) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::B2G2R2A2 || source_format == PixelFormat::B2G2R2X2) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::B2G3R3) ev = (source & 0x03) * 255 / 3;
+			else if (source_format == PixelFormat::R2G2B2A2 || source_format == PixelFormat::R2G2B2X2) ev = ((source & 0x30) >> 4) * 255 / 3;
+			else if (source_format == PixelFormat::R3G3B2) ev = ((source & 0xC0) >> 6) * 255 / 3;
 			if (source_alpha == AlphaMode::Premultiplied) {
 				uint32 ac = GetAlphaChannel(source, source_format, source_alpha);
 				if (ac) { ev *= 255; ev /= ac; }
@@ -130,13 +166,23 @@ namespace Engine
 			else if (source_format == PixelFormat::R5G5B5X1 || source_format == PixelFormat::B5G5R5X1) ev = 0xFF;
 			else if (source_format == PixelFormat::R4G4B4X4 || source_format == PixelFormat::B4G4R4X4) ev = 0xFF;
 			else if (source_format == PixelFormat::R5G6B5 || source_format == PixelFormat::B5G6R5) ev = 0xFF;
+			else if (source_format == PixelFormat::B2G3R2A1 || source_format == PixelFormat::R2G3B2A1) ev = ((source & 0x80) >> 7) * 255;
+			else if (source_format == PixelFormat::B2G3R2X1 || source_format == PixelFormat::R2G3B2X1) ev = 0xFF;
+			else if (source_format == PixelFormat::B2G3R3 || source_format == PixelFormat::R3G3B2) ev = 0xFF;
+			else if (source_format == PixelFormat::B2G2R2A2 || source_format == PixelFormat::R2G2B2A2) ev = ((source & 0xC0) >> 6) * 255 / 3;
+			else if (source_format == PixelFormat::B2G2R2X2 || source_format == PixelFormat::R2G2B2X2) ev = 0xFF;
 			else if (source_format == PixelFormat::A8) ev = (source & 0xFF);
 			else if (source_format == PixelFormat::R8) ev = 0xFF;
 			else if (source_format == PixelFormat::R8A8) ev = (source & 0xFF00) >> 8;
 			else if (source_format == PixelFormat::A4) ev = (source & 0x0F) * 255 / 15;
 			else if (source_format == PixelFormat::R4) ev = 0xFF;
 			else if (source_format == PixelFormat::R4A4) ev = ((source & 0xF0) >> 4) * 255 / 15;
-			else if (source_format == PixelFormat::B2G3R2A1 || source_format == PixelFormat::R2G3B2A1) ev = ((source & 0x80) >> 7) * 255;
+			else if (source_format == PixelFormat::A2) ev = (source & 0x3) * 255 / 3;
+			else if (source_format == PixelFormat::R2) ev = 0xFF;
+			else if (source_format == PixelFormat::R2A2) ev = ((source & 0xC) >> 2) * 255 / 3;
+			else if (source_format == PixelFormat::A1) ev = (source & 0x1) * 255;
+			else if (source_format == PixelFormat::R1) ev = 0xFF;
+			else if (source_format == PixelFormat::R1A1) ev = ((source & 0x2) >> 1) * 255;
 			return ev;
 		}
 		uint32 MakePixel(uint32 r, uint32 g, uint32 b, uint32 a, PixelFormat format, AlphaMode alpha)
@@ -178,10 +224,30 @@ namespace Engine
 				return ((r + g + b + 1) / 3) | (a << 8);
 			} else if (format == PixelFormat::R4A4) {
 				return ((r + g + b + 25) * 5 / 255) | (((a + 8) * 15 / 255) << 4);
+			} else if (format == PixelFormat::R2A2) {
+				return ((r + g + b + 128) * 3 / 765) | (((a + 42) * 3 / 255) << 2);
+			} else if (format == PixelFormat::R1A1) {
+				return ((r + g + b + 383) / 765) | (((a + 128) / 255) << 1);
 			} else if (format == PixelFormat::B2G3R2A1) {
 				return ((b + 42) * 3 / 255) | (((g + 18) * 7 / 255) << 2) | (((r + 42) * 3 / 255) << 5) | (((a + 128) / 255) << 7);
+			} else if (format == PixelFormat::B2G3R2X1) {
+				return ((b + 42) * 3 / 255) | (((g + 18) * 7 / 255) << 2) | (((r + 42) * 3 / 255) << 5);
+			} else if (format == PixelFormat::B2G3R3) {
+				return ((b + 42) * 3 / 255) | (((g + 18) * 7 / 255) << 2) | (((r + 18) * 7 / 255) << 5);
 			} else if (format == PixelFormat::R2G3B2A1) {
 				return ((r + 42) * 3 / 255) | (((g + 18) * 7 / 255) << 2) | (((b + 42) * 3 / 255) << 5) | (((a + 128) / 255) << 7);
+			} else if (format == PixelFormat::R2G3B2X1) {
+				return ((r + 42) * 3 / 255) | (((g + 18) * 7 / 255) << 2) | (((b + 42) * 3 / 255) << 5);
+			} else if (format == PixelFormat::R3G3B2) {
+				return ((r + 18) * 7 / 255) | (((g + 18) * 7 / 255) << 3) | (((b + 42) * 3 / 255) << 6);
+			} else if (format == PixelFormat::B2G2R2A2) {
+				return ((b + 42) * 3 / 255) | (((g + 42) * 3 / 255) << 2) | (((r + 42) * 3 / 255) << 4) | (((a + 42) * 3 / 255) << 6);
+			} else if (format == PixelFormat::B2G2R2X2) {
+				return ((b + 42) * 3 / 255) | (((g + 42) * 3 / 255) << 2) | (((r + 42) * 3 / 255) << 4);
+			} else if (format == PixelFormat::R2G2B2A2) {
+				return ((r + 42) * 3 / 255) | (((g + 42) * 3 / 255) << 2) | (((b + 42) * 3 / 255) << 4) | (((a + 42) * 3 / 255) << 6);
+			} else if (format == PixelFormat::R2G2B2X2) {
+				return ((r + 42) * 3 / 255) | (((g + 42) * 3 / 255) << 2) | (((b + 42) * 3 / 255) << 4);
 			} else if (format == PixelFormat::A8) {
 				return a;
 			} else if (format == PixelFormat::R8) {
@@ -190,6 +256,14 @@ namespace Engine
 				return (a + 8) * 15 / 255;
 			} else if (format == PixelFormat::R4) {
 				return (r + g + b + 25) * 5 / 255;
+			} else if (format == PixelFormat::A2) {
+				return ((a + 42) * 3 / 255);
+			} else if (format == PixelFormat::R2) {
+				return ((r + g + b + 128) * 3 / 765);
+			} else if (format == PixelFormat::A1) {
+				return ((a + 128) / 255);
+			} else if (format == PixelFormat::R1) {
+				return ((r + g + b + 383) / 765);
 			} else return 0;
 		}
 		uint32 ConvertPixel(uint32 source, PixelFormat source_format, AlphaMode source_alpha, PixelFormat format, AlphaMode alpha)

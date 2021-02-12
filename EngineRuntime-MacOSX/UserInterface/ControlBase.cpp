@@ -395,7 +395,7 @@ namespace Engine
 			CaptureWindow.SetRetain(window);
 			if (Old) Old->CaptureChanged(false);
 			if (CaptureWindow) CaptureWindow->CaptureChanged(true);
-			MouseMove(GetCursorPos());
+			else MouseMove(GetCursorPos());
 		}
 		Window * WindowStation::GetCapture(void) { return CaptureWindow; }
 		void WindowStation::ReleaseCapture(void) { SetCapture(0); }
@@ -404,7 +404,7 @@ namespace Engine
 			Window * Old = ExclusiveWindow;
 			ExclusiveWindow.SetRetain(window);
 			if (Old) Old->LostExclusiveMode();
-			MouseMove(GetCursorPos());
+			if (!ExclusiveWindow) MouseMove(GetCursorPos());
 		}
 		Window * WindowStation::GetExclusiveWindow(void) { return ExclusiveWindow; }
 		void WindowStation::FocusChanged(bool got_focus)

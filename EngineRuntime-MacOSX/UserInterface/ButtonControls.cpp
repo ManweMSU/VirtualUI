@@ -205,8 +205,10 @@ namespace Engine
 			void Button::MouseMove(Point at)
 			{
 				if (_state == 0) {
-					_state = 1;
-					SetCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						_state = 1;
+						SetCapture();
+					}
 				} else if (_state == 1) {
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
@@ -349,8 +351,10 @@ namespace Engine
 			void CheckBox::MouseMove(Point at)
 			{
 				if (_state == 0) {
-					_state = 1;
-					SetCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						_state = 1;
+						SetCapture();
+					}
 				} else if (_state == 1) {
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
@@ -496,8 +500,10 @@ namespace Engine
 			void RadioButton::MouseMove(Point at)
 			{
 				if (_state == 0) {
-					_state = 1;
-					SetCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						_state = 1;
+						SetCapture();
+					}
 				} else if (_state == 1) {
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
@@ -599,8 +605,10 @@ namespace Engine
 			void ToolButton::MouseMove(Point at)
 			{
 				if (_state == 0) {
-					SetCapture();
-					_state = 1;
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						_state = 1;
+						SetCapture();
+					}
 				} else if (_state == 1) {
 					if (GetStation()->EnabledHitTest(GetStation()->GetCursorPos()) != this) {
 						ReleaseCapture();
@@ -765,9 +773,11 @@ namespace Engine
 			void ToolButtonPart::MouseMove(Point at)
 			{
 				if (_state == 0) {
-					_state = 1;
-					static_cast<ToolButton *>(GetParent())->_state = 0xF1;
-					SetCapture();
+					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+						_state = 1;
+						static_cast<ToolButton *>(GetParent())->_state = 0xF1;
+						SetCapture();
+					}
 				} else if (_state == 1) {
 					if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) {
 						_state = 0;
