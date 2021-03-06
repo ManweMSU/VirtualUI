@@ -43,16 +43,15 @@ namespace Engine
 				}
 				bool _is_light_theme(void)
 				{
-					NSAppearanceName name = [[NSAppearance currentAppearance] name];
+					NSAppearanceName name = [[[_item button] effectiveAppearance] name];
 					if ([name compare: NSAppearanceNameDarkAqua] == NSOrderedSame) return false;
 					else if ([name compare: NSAppearanceNameVibrantDark] == NSOrderedSame) return false;
 					else if ([name compare: NSAppearanceNameAccessibilityHighContrastDarkAqua] == NSOrderedSame) return false;
 					else if ([name compare: NSAppearanceNameAccessibilityHighContrastVibrantDark] == NSOrderedSame) return false;
 					else return true;
 				}
-				void _update_icon(void)
+				void _recreate_icon(void)
 				{
-					if (_image) [_image release];
 					double scale = [[NSScreen mainScreen] backingScaleFactor];
 					int size = int([_bar thickness] * scale);
 					Codec::Frame * frame = _icon ? _icon->GetFrameBestSizeFit(size, size) : 0;
@@ -69,6 +68,12 @@ namespace Engine
 						_image = Cocoa::CocoaImage(use_frame, scale);
 					} else _image = 0;
 					if (_present) _update_item();
+				}
+				void _update_icon(void)
+				{
+					if (_image) [_image release];
+					_image = 0;
+					if (_present) _recreate_icon();
 				}
 			public:
 				MacStatusBarIcon(void)
@@ -113,9 +118,10 @@ namespace Engine
 				virtual void PresentIcon(bool present) override
 				{
 					if (present == _present) return;
-					if (!_image) throw InvalidArgumentException();
+					if (!_icon) throw InvalidArgumentException();
 					if (present) {
 						_item = [_bar statusItemWithLength: NSSquareStatusItemLength];
+						if (!_image) _recreate_icon();
 						[[_item button] setImage: _image];
 						[_item setMenu: _cocoa_menu];
 						[[_item button] setTarget: _event_responder];
