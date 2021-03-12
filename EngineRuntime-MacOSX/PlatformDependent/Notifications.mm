@@ -94,6 +94,7 @@ namespace Engine
 					if (_present) PresentIcon(false);
 					if (_cocoa_menu) NativeWindows::DestroyCocoaMenu(_menu, _cocoa_menu);
 					[_image release];
+					[_item release];
 				}
 				virtual void SetCallback(IWindowEventCallback * callback) override { _callback = callback; }
 				virtual IWindowEventCallback * GetCallback(void) override { return _callback; }
@@ -117,18 +118,22 @@ namespace Engine
 				virtual Menus::Menu * GetMenu(void) override { return _menu; }
 				virtual void PresentIcon(bool present) override
 				{
-					if (present == _present) return;
-					if (!_icon) throw InvalidArgumentException();
-					if (present) {
-						_item = [_bar statusItemWithLength: NSSquareStatusItemLength];
-						if (!_image) _recreate_icon();
-						[[_item button] setImage: _image];
-						[_item setMenu: _cocoa_menu];
-						[[_item button] setTarget: _event_responder];
-						[[_item button] setAction: @selector(status_bar_icon_event_handle:)];
-					} else {
-						[_bar removeStatusItem: _item];
-						_item = 0;
+					@autoreleasepool {
+						if (present == _present) return;
+						if (!_icon) throw InvalidArgumentException();
+						if (present) {
+							_item = [_bar statusItemWithLength: NSSquareStatusItemLength];
+							[_item retain];
+							if (!_image) _recreate_icon();
+							[[_item button] setImage: _image];
+							[_item setMenu: _cocoa_menu];
+							[[_item button] setTarget: _event_responder];
+							[[_item button] setAction: @selector(status_bar_icon_event_handle:)];
+						} else {
+							[_bar removeStatusItem: _item];
+							[_item release];
+							_item = 0;
+						}
 					}
 				}
 				virtual bool IsVisible(void) override { return _present; }
