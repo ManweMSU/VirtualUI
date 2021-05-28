@@ -2,6 +2,9 @@
 
 #include "StringConvert.h"
 
+#include <stdlib.h>
+#include <math.h>
+
 namespace Engine
 {
 	typedef unsigned int uint;
