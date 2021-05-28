@@ -133,7 +133,7 @@ namespace Engine
 			if (platform == Platform::ARM) return true;
 			else return false;
 		} else if (system == Platform::ARM64) {
-			if (platform == Platform::X64 || platform == Platform::ARM64) return true;
+			if (platform == Platform::ARM64) return true;
 			else return false;
 		} else return false;
 	}
