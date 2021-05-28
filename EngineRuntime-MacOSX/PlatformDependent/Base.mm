@@ -144,6 +144,7 @@ namespace Engine
 		uint64 length = sizeof(proc_type);
 		if (sysctlbyname("hw.cputype", &proc_type, reinterpret_cast<size_t *>(&length), 0, 0) == -1) return Platform::Unknown;
 		if (sysctlbyname("hw.cpu64bit_capable", &proc_is64, reinterpret_cast<size_t *>(&length), 0, 0) == -1) return Platform::Unknown;
+		proc_type &= 0xFF;
 		if (proc_type == CPU_TYPE_X86) {
 			if (proc_is64) return Platform::X64;
 			else return Platform::X86;
