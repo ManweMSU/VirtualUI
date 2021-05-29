@@ -242,12 +242,6 @@ namespace Engine
 			};
 		}
 
-		class IResourceLoader : public Object
-		{
-		public:
-			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
-			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
-		};
 		class IResourceResolver : public Object
 		{
 		public:

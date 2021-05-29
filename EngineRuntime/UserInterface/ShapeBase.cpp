@@ -1,6 +1,7 @@
 #include "ShapeBase.h"
 #include "Templates.h"
 #include "../Math/Color.h"
+#include "../PlatformDependent/NativeStation.h"
 
 namespace Engine
 {
@@ -40,6 +41,7 @@ namespace Engine
 		bool operator!=(const Color & a, const Color & b) noexcept { return a.Value != b.Value; }
 		bool operator==(const GradientPoint & a, const GradientPoint & b) noexcept { return a.Color == b.Color && a.Position == b.Position; }
 		bool operator!=(const GradientPoint & a, const GradientPoint & b) noexcept { return a.Color != b.Color || a.Position != b.Position; }
+		IObjectFactory * CreateObjectFactory(void) { return NativeWindows::CreateObjectFactory(); }
 		Rectangle::Rectangle(void) noexcept {}
 		Rectangle::Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) noexcept : Left(left), Top(top), Right(right), Bottom(bottom) {}
 		Rectangle & Rectangle::operator+=(const Rectangle & a) noexcept { Left += a.Left; Top += a.Top; Right += a.Right; Bottom += a.Bottom; return *this; }
@@ -122,7 +124,6 @@ namespace Engine
 		void BarShape::ClearCache(void) noexcept { Info.SetReference(0); }
 		Shape * BarShape::Clone(void) const { return new BarShape(Position, Gradient, GradientAngle); }
 		string BarShape::ToString(void) const { return L"BarShape"; }
-		Drawing::ICanvasRenderingDevice * IRenderingDevice::QueryCanvasDevice(void) noexcept { return 0; }
 		IRenderingDevice::~IRenderingDevice(void) {}
 		IBarRenderingInfo::~IBarRenderingInfo(void) {}
 		IBlurEffectRenderingInfo::~IBlurEffectRenderingInfo(void) {}

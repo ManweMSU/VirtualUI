@@ -801,8 +801,8 @@ namespace Engine
 				pos++;
 			}
 			auto byte = data->ElementAt(i);
-			str[pos] = HexadecimalBase[(byte & 0xF0) >> 4];
-			str[pos + 1] = HexadecimalBase[byte & 0x0F];
+			str[pos] = char(HexadecimalBase[(byte & 0xF0) >> 4]);
+			str[pos + 1] = char(HexadecimalBase[byte & 0x0F]);
 			pos += 2;
 		}
 		string result;

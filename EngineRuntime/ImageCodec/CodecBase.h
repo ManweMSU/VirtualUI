@@ -43,18 +43,23 @@ namespace Engine
 			
 			virtual bool IsImageCodec(void) = 0;
 			virtual bool IsFrameCodec(void) = 0;
+			virtual string GetCodecName(void) = 0;
 
 			virtual string ExamineData(Streaming::Stream * stream) = 0;
 			virtual bool CanEncode(const string & format) = 0;
 			virtual bool CanDecode(const string & format) = 0;
 		};
 
+		void InitializeDefaultCodecs(void);
+
 		ICodec * FindCoder(const string & format);
 		ICodec * FindDecoder(const string & format);
 		void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format);
 		void EncodeImage(Streaming::Stream * stream, Image * image, const string & format);
 		Frame * DecodeFrame(Streaming::Stream * stream);
+		Frame * DecodeFrame(Streaming::Stream * stream, string * format, ICodec ** decoder);
 		Image * DecodeImage(Streaming::Stream * stream);
+		Image * DecodeImage(Streaming::Stream * stream, string * format, ICodec ** decoder);
 		string GetEncodedImageFormat(Streaming::Stream * stream);
 
 		enum class FrameUsage { ColorMap, NormalMap, LightMap };

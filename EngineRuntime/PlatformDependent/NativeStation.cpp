@@ -87,27 +87,31 @@ namespace Engine
 			Codec::CreateIconCodec();
 			Storage::CreateVolumeCodec();
 		}
-		class NativeResourceLoader : public IResourceLoader
+		class NativeObjectFactory : public UI::IObjectFactory
 		{
 		public:
-			NativeResourceLoader(void) {}
-			~NativeResourceLoader(void) override {}
-
-			virtual ITexture * LoadTexture(Codec::Frame * Source) override { return Direct2D::StandaloneDevice::LoadTexture(Source); }
-			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return Direct2D::StandaloneDevice::LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
+			virtual ITexture * LoadTexture(Codec::Frame * source) noexcept override
+			{
+				return Direct2D::D2DRenderingDevice::StaticLoadTexture(source);
+			}
+			virtual UI::IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override
+			{
+				return Direct2D::D2DRenderingDevice::StaticLoadFont(face_name, height, weight, italic, underline, strikeout);
+			}
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, Color color) noexcept override
+			{
+				Direct2D::InitializeFactory();
+				return Direct2D::D2DRenderingDevice::StaticCreateTextureRenderingDevice(width, height, color);
+			}
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept override
+			{
+				Direct2D::InitializeFactory();
+				return Direct2D::D2DRenderingDevice::StaticCreateTextureRenderingDevice(frame);
+			}
 		};
-		IResourceLoader * CreateCompatibleResourceLoader(void)
-		{
-			InitializeCodecCollection();
-			return new NativeResourceLoader();
-		}
-		Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color)
-		{
-			Direct2D::InitializeFactory();
-			return Direct2D::D2DRenderingDevice::CreateD2DCompatibleTextureRenderingDevice(width, height, color);
-		}
 		Graphics::IDeviceFactory * CreateDeviceFactory(void) { return Direct3D::CreateDeviceFactoryD3D11(); }
 		Graphics::IDevice * GetCommonDevice(void) { Direct3D::CreateDevices(); return Direct3D::WrappedDevice; }
+		UI::IObjectFactory * CreateObjectFactory(void) { InitializeCodecCollection(); return new NativeObjectFactory; }
 		class NativeStation : public HandleWindowStation
 		{
 			friend LRESULT WINAPI WindowCallbackProc(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);

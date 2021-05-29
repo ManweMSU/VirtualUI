@@ -674,7 +674,7 @@ namespace Engine
 					Coordinate::Right() - Border - VerticalScrollSize, Coordinate::Bottom() - Border));
 				_vscroll->Disabled = _hscroll->Disabled = Disabled;
 				_vscroll->Line = Font ? Font->GetWidth() : 1;
-				_hscroll->Line = Font ? Font->GetHeight() : 1;
+				_hscroll->Line = Font ? Font->GetLineSpacing() : 1;
 				_deferred_update = true;
 				for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i);
 				_inversion.SetReference(0);
@@ -685,7 +685,7 @@ namespace Engine
 				_disabled.SetReference(0);
 				if (Font) {
 					_fw = Font->GetWidth();
-					_fh = Font->GetHeight();
+					_fh = Font->GetLineSpacing();
 				}
 				ParentWindow::ResetCache();
 			}

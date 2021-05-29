@@ -463,6 +463,7 @@ namespace Engine
 			}
 			virtual bool IsImageCodec(void) override { return true; }
 			virtual bool IsFrameCodec(void) override { return false; }
+			virtual string GetCodecName(void) override { return L"Engine Icon Codec"; }
 			virtual string ExamineData(Streaming::Stream * stream) override
 			{
 				uint64 size = stream->Length() - stream->Seek(0, Current);

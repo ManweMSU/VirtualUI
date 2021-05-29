@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../UserInterface/ShapeBase.h"
-#include "../UserInterface/Canvas.h"
 #include "../Miscellaneous/Dictionary.h"
 #include "../ImageCodec/CodecBase.h"
 
@@ -25,15 +24,7 @@ namespace Engine
 
 		Engine::Codec::ICodec * CreateWicCodec(void);
 
-		namespace StandaloneDevice
-		{
-			ITexture * LoadTexture(Streaming::Stream * Source);
-			ITexture * LoadTexture(Engine::Codec::Image * Source);
-			ITexture * LoadTexture(Engine::Codec::Frame * Source);
-			IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout);
-		}
-
-		class D2DRenderingDevice : public Drawing::ITextureRenderingDevice
+		class D2DRenderingDevice : public UI::ITextureRenderingDevice
 		{
 			struct tex_pair { ITexture * base; ITexture * spec; };
 			ID2D1DeviceContext * ExtendedTarget;
@@ -62,6 +53,9 @@ namespace Engine
 			virtual void TextureWasDestroyed(ITexture * texture) noexcept override;
 			virtual string ToString(void) const override;
 
+			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override;
+			virtual uint32 GetFeatureList(void) noexcept override;
+
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept override;
 			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override;
@@ -71,10 +65,6 @@ namespace Engine
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
 
-			virtual ITexture * LoadTexture(Streaming::Stream * Source) override;
-			virtual ITexture * LoadTexture(Engine::Codec::Image * Source) override;
-			virtual ITexture * LoadTexture(Engine::Codec::Frame * Source) override;
-			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override;
@@ -93,16 +83,23 @@ namespace Engine
 			virtual bool CaretShouldBeVisible(void) noexcept override;
 			virtual void ClearCache(void) noexcept override;
 
-			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override;
-			virtual void DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept override;
-			virtual void FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept override;
-			virtual Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept override;
+			virtual void DrawPolygon(const Math::Vector2 * points, int count, Color color, double width) noexcept override;
+			virtual void FillPolygon(const Math::Vector2 * points, int count, Color color) noexcept override;
+
 			virtual void BeginDraw(void) noexcept override;
 			virtual void EndDraw(void) noexcept override;
 			virtual UI::ITexture * GetRenderTargetAsTexture(void) noexcept override;
 			virtual Engine::Codec::Frame * GetRenderTargetAsFrame(void) noexcept override;
 
-			static Drawing::ITextureRenderingDevice * CreateD2DCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept;
+			virtual ITexture * LoadTexture(Codec::Frame * source) noexcept override;
+			virtual IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override;
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, Color color) noexcept override;
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept override;
+
+			static ITexture * StaticLoadTexture(Codec::Frame * source) noexcept;
+			static IFont * StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept;
+			static ITextureRenderingDevice * StaticCreateTextureRenderingDevice(int width, int height, Color color) noexcept;
+			static ITextureRenderingDevice * StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept;
 		};
 	}
 }

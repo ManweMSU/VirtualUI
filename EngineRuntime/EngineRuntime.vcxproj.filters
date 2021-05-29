@@ -247,9 +247,6 @@
     <ClInclude Include="UserInterface\BinaryLoader.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="UserInterface\Canvas.h">
-      <Filter>UserInterface</Filter>
-    </ClInclude>
     <ClInclude Include="Math\Color.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -497,9 +494,6 @@
     </ClCompile>
     <ClCompile Include="Graphics\Graphics.cpp">
       <Filter>Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="UserInterface\Canvas.cpp">
-      <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Notifications.cpp">
       <Filter>PlatformDependent</Filter>

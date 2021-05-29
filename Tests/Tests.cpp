@@ -29,6 +29,7 @@
 #include <PlatformDependent/Console.h>
 #include <Graphics/GraphicsHelper.h>
 #include <PlatformDependent/ComInterop.h>
+#include <Math/Color.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -277,9 +278,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	Console cns;
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
-	UI::Windows::InitializeCodecCollection();
+	Codec::InitializeDefaultCodecs();
 
-	SafePointer<IResourceLoader> resource_loader = Engine::NativeWindows::CreateCompatibleResourceLoader();
+	SafePointer<IResourceLoader> resource_loader = Engine::UI::CreateObjectFactory();
+
 	if (!main_window) {
 		UI::Zoom = UI::Windows::GetScreenScale();
 		auto desktop = Engine::UI::Windows::GetScreenDimensions();

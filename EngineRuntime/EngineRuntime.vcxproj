@@ -84,7 +84,6 @@
     <ClInclude Include="UserInterface\BinaryLoader.h" />
     <ClInclude Include="UserInterface\BinaryLoaderLegacy.h" />
     <ClInclude Include="UserInterface\ButtonControls.h" />
-    <ClInclude Include="UserInterface\Canvas.h" />
     <ClInclude Include="UserInterface\CombinedControls.h" />
     <ClInclude Include="UserInterface\ControlBase.h" />
     <ClInclude Include="UserInterface\ControlClasses.h" />
@@ -163,7 +162,6 @@
     <ClCompile Include="UserInterface\BinaryLoader.cpp" />
     <ClCompile Include="UserInterface\BinaryLoaderLegacy.cpp" />
     <ClCompile Include="UserInterface\ButtonControls.cpp" />
-    <ClCompile Include="UserInterface\Canvas.cpp" />
     <ClCompile Include="UserInterface\CombinedControls.cpp" />
     <ClCompile Include="UserInterface\ControlBase.cpp" />
     <ClCompile Include="UserInterface\ControlClasses.cpp" />
