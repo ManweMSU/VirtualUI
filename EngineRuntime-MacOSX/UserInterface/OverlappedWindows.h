@@ -2,7 +2,6 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
-#include "Canvas.h"
 
 namespace Engine
 {
@@ -49,9 +48,6 @@ namespace Engine
 			Controls::OverlappedWindow * CreateFramedDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station = 0, bool NoDevice = false);
 			Controls::OverlappedWindow * CreatePopupDialog(Template::ControlTemplate * Template, IWindowEventCallback * Callback, const Rectangle & Position, WindowStation * Station = 0);
 
-			void InitializeCodecCollection(void);
-			IResourceLoader * CreateNativeCompatibleResourceLoader(void);
-			Drawing::ITextureRenderingDevice * CreateNativeCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color);
 			Box GetScreenDimensions(void);
 			double GetScreenScale(void);
 			void RunMessageLoop(void);

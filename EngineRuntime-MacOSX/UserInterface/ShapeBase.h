@@ -4,13 +4,26 @@
 #include "../Streaming.h"
 #include "../ImageCodec/CodecBase.h"
 #include "../Graphics/Graphics.h"
+#include "../Math/Vector.h"
 
 namespace Engine
 {
-	namespace Drawing { class ICanvasRenderingDevice; }
 	namespace UI
 	{
 		extern double Zoom;
+
+		class IRenderingDevice;
+		class ITextureRenderingDevice;
+
+		enum RenderingDeviceFeature {
+			RenderingDeviceFeatureBlurCapable = 0x00000001,
+			RenderingDeviceFeatureInversionCapable = 0x00000002,
+			RenderingDeviceFeaturePolygonCapable = 0x00000004,
+			RenderingDeviceFeatureLayersCapable = 0x00000008,
+			RenderingDeviceFeatureHardware = 0x20000000,
+			RenderingDeviceFeatureGraphicsInteropCapable = 0x40000000,
+			RenderingDeviceFeatureTextureTarget = 0x80000000
+		};
 
 		class Coordinate
 		{
@@ -185,11 +198,28 @@ namespace Engine
 		public:
 			virtual int GetWidth(void) const noexcept = 0;
 			virtual int GetHeight(void) const noexcept = 0;
+			virtual int GetLineSpacing(void) const noexcept = 0;
+			virtual int GetBaselineOffset(void) const noexcept = 0;
 		};
-		class IRenderingDevice : public Object
+		class IResourceLoader : public Object
+		{
+		public:
+			virtual ITexture * LoadTexture(Codec::Frame * source) noexcept = 0;
+			virtual IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept = 0;
+		};
+		class IObjectFactory : public IResourceLoader
+		{
+		public:
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, Color color) noexcept = 0;
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept = 0;
+		};
+		class IRenderingDevice : public IObjectFactory
 		{
 		public:
 			virtual void TextureWasDestroyed(ITexture * texture) noexcept = 0;
+
+			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept = 0;
+			virtual uint32 GetFeatureList(void) noexcept = 0;
 
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) noexcept = 0;
 			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept = 0;
@@ -200,10 +230,6 @@ namespace Engine
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept  = 0;
 			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept = 0;
 
-			virtual ITexture * LoadTexture(Streaming::Stream * Source) = 0;
-			virtual ITexture * LoadTexture(Codec::Image * Source) = 0;
-			virtual ITexture * LoadTexture(Codec::Frame * Source) = 0;
-			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) = 0;
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) = 0;
 
 			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept = 0;
@@ -211,6 +237,9 @@ namespace Engine
 			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept = 0;
 			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept = 0;
 			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept = 0;
+
+			virtual void DrawPolygon(const Math::Vector2 * points, int count, Color color, double width) noexcept = 0;
+			virtual void FillPolygon(const Math::Vector2 * points, int count, Color color) noexcept = 0;
 
 			virtual void PushClip(const Box & Rect) noexcept = 0;
 			virtual void PopClip(void) noexcept = 0;
@@ -220,9 +249,18 @@ namespace Engine
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept = 0;
 			virtual bool CaretShouldBeVisible(void) noexcept = 0;
 			virtual void ClearCache(void) noexcept = 0;
-			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept;
 			virtual ~IRenderingDevice(void);
 		};
+		class ITextureRenderingDevice : public IRenderingDevice
+		{
+		public:
+			virtual void BeginDraw(void) noexcept = 0;
+			virtual void EndDraw(void) noexcept = 0;
+			virtual ITexture * GetRenderTargetAsTexture(void) noexcept = 0;
+			virtual Codec::Frame * GetRenderTargetAsFrame(void) noexcept = 0;
+		};
+
+		IObjectFactory * CreateObjectFactory(void);
 
 		class Shape : public Object
 		{

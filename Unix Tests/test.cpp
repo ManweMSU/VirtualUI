@@ -207,15 +207,16 @@ public:
 			UI::Color clr = static_cast<MacOSXSpecific::TouchBarColorPicker *>(tb->FindChild(555))->GetColor();
 			UI::ITexture * tex;
 			{
+				SafePointer<IObjectFactory> objfact = UI::CreateObjectFactory();
 				Array<Math::Vector2> line;
 				line << Math::Vector2(0.0, 0.0);
 				line << Math::Vector2(200.0, 100.0);
 				line << Math::Vector2(200.0, 200.0);
 				line << Math::Vector2(20.0, 200.0);
-				auto rd = UI::Windows::CreateNativeCompatibleTextureRenderingDevice(256, 256, Math::Color(1.0, 0.7, 0.7, 1.0));
+				auto rd = objfact->CreateTextureRenderingDevice(256, 256, 0xFFC0C0FF);
 				rd->BeginDraw();
-				rd->FillPolygon(line.GetBuffer(), line.Length(), Math::Color(clr));
-				rd->DrawPolygon(line.GetBuffer(), line.Length(), Math::Color(0.0, 0.0, 0.0, 0.5), 10.0);
+				rd->FillPolygon(line.GetBuffer(), line.Length(), clr);
+				rd->DrawPolygon(line.GetBuffer(), line.Length(), 0x80000000, 10.0);
 				rd->EndDraw();
 				tex = rd->GetRenderTargetAsTexture();
 				rd->Release();
@@ -277,14 +278,14 @@ public:
 			auto angle = (GetTimerValue() % 20000) * 2.0 * ENGINE_PI / 20000.0;
 			auto a2 = (GetTimerValue() % 12000) * 2.0 * ENGINE_PI / 12000.0;
 			auto a3 = (GetTimerValue() % 8000) * 2.0 * ENGINE_PI / 8000.0;
-			auto cam = (Math::Vector3f(cos(angle), sin(angle), 0.0) + Math::Vector3f(0.0f, 0.0f, sin(a2))) * 2.0f;
+			auto cam = (Math::Vector3f(Math::cos(angle), Math::sin(angle), 0.0) + Math::Vector3f(0.0f, 0.0f, Math::sin(a2))) * 2.0f;
 			auto view = Graphics::MakeLookAtTransform(cam, -cam, Math::Vector3f(0.0f, 0.0f, 1.0f));
 			auto proj = Graphics::MakePerspectiveViewTransformFoV(ENGINE_PI / 2.0f, float(rt->GetWidth()) / float(rt->GetHeight()), 0.01f, 10.0f);
 			world_struct world;
 			world.proj = proj * view;
 			world.light_power = 0.7f;
 			world.ambient_power = 0.3f;
-			world.light = Math::Vector3f(cos(a3), 0.0f, sin(a3));
+			world.light = Math::Vector3f(Math::cos(a3), 0.0f, Math::sin(a3));
 			auto rtdesc = Graphics::CreateRenderTargetView(rt, Math::Vector4f(0.2f, 0.0f, 0.4f, 1.0f));
 			auto dsdesc = Graphics::CreateDepthStencilView(depth_buffer, 1.0f);
 			if (context->BeginRenderingPass(1, &rtdesc, &dsdesc)) {
@@ -366,7 +367,7 @@ int Main(void)
 	} catch (...) { req += L"kornevgen pidor"; }
 
 	Streaming::Stream * source = Assembly::QueryResource(L"GUI");
-	SafePointer<UI::IResourceLoader> loader = Windows::CreateNativeCompatibleResourceLoader();
+	SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
 	UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
 	source->Release();
 
@@ -386,7 +387,7 @@ int Main(void)
 		stream.Seek(0, Streaming::Begin);
 		SafePointer<Codec::Image> image = Codec::DecodeImage(&stream);
 		UI::Windows::SetApplicationIcon(image);
-		SafePointer<UI::IResourceLoader> loader = UI::Windows::CreateNativeCompatibleResourceLoader();
+		SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
 		tex = loader->LoadTexture(image->Frames.FirstElement());
 	} catch (Exception & e) { Console << e.ToString() << IO::NewLineChar; return 1; }
 
@@ -399,12 +400,19 @@ int Main(void)
 	templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
 	tex->Release();
 	auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0, true);
-	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤"));
+	auto fnt = loader->LoadFont(L"Menlo", 60, 400, false, true, false);
+
+	Console.WriteLine(FormatString(L"%0, %1, %2", fnt->GetHeight(), fnt->GetLineSpacing(), fnt->GetBaselineOffset()));
+
+	w4->FindChild(212121)->As<Controls::MultiLineEdit>()->Font = fnt;
+	w4->FindChild(212121)->ResetCache();
+	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤\n║\n║\n \n║"));
 	if (w4) w4->Show(true);
 
 	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();
 	status->SetIconColorUsage(UI::Windows::StatusBarIconColorUsage::Monochromic);
 	{
+		SafePointer<IObjectFactory> objfact = UI::CreateObjectFactory();
 		SafePointer<Codec::Image> icon = new Codec::Image;
 		Array<Math::Vector2> line1;
 		line1 << Math::Vector2(6.0, 6.0);
@@ -415,7 +423,7 @@ int Main(void)
 		line2 << Math::Vector2(20.0, 6.0);
 		line2 << Math::Vector2(34.0, 34.0);
 		line2 << Math::Vector2(6.0, 34.0);
-		auto rd = UI::Windows::CreateNativeCompatibleTextureRenderingDevice(40, 40, Math::Color(0.0, 0.0, 0.0, 0.0));
+		auto rd = objfact->CreateTextureRenderingDevice(40, 40, 0x00000000);
 		rd->BeginDraw();
 		rd->FillPolygon(line1.GetBuffer(), line1.Length(), Math::Color(1.0, 0.0, 0.0, 0.5));
 		rd->FillPolygon(line2.GetBuffer(), line2.Length(), Math::Color(0.0, 0.0, 1.0, 1.0));

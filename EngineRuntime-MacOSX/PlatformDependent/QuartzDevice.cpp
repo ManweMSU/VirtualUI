@@ -1,6 +1,7 @@
 #include "QuartzDevice.h"
 
 #include "../ImageCodec/CodecBase.h"
+#include "../Math/Color.h"
 
 #include <ImageIO/ImageIO.h>
 #include <CoreText/CoreText.h>
@@ -118,6 +119,8 @@ namespace Engine
 
 			virtual int GetWidth(void) const noexcept override { return width; }
 			virtual int GetHeight(void) const noexcept override { return int(height * scale); }
+			virtual int GetLineSpacing(void) const noexcept override { return CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font); }
+			virtual int GetBaselineOffset(void) const noexcept override { return CTFontGetAscent(font); }
 			virtual string ToString(void) const override { return L"Engine.Cocoa.CoreTextFont"; }
 		};
 		
@@ -256,6 +259,13 @@ namespace Engine
 		}
 
 		void QuartzRenderingDevice::TextureWasDestroyed(UI::ITexture * texture) noexcept {}
+		void QuartzRenderingDevice::GetImplementationInfo(string & tech, uint32 & version) noexcept { tech = L"Quartz"; version = 1; }
+		uint32 QuartzRenderingDevice::GetFeatureList(void) noexcept
+		{
+			uint32 result = UI::RenderingDeviceFeatureInversionCapable | UI::RenderingDeviceFeaturePolygonCapable | UI::RenderingDeviceFeatureLayersCapable;
+			if (BitmapTarget) result |= UI::RenderingDeviceFeatureTextureTarget;
+			return result;
+		}
 		UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(const Array<UI::GradientPoint>& gradient, double angle) noexcept
 		{
 			if (!gradient.Length()) return 0;
@@ -274,8 +284,8 @@ namespace Engine
 				pos[i] = gradient[i].Position;
 			}
 			info->gradient = CGGradientCreateWithColorComponents(rgb, clr.GetBuffer(), pos.GetBuffer(), gradient.Length());
-			info->prop_w = cos(angle);
-			info->prop_h = sin(angle);
+			info->prop_w = Math::cos(angle);
+			info->prop_h = Math::sin(angle);
 			CGColorSpaceRelease(rgb);
 			info->Retain();
 			return info;
@@ -455,50 +465,6 @@ namespace Engine
 			return info;
 		}
 
-		UI::ITexture * QuartzRenderingDevice::LoadTexture(Streaming::Stream * Source)
-		{
-			SafePointer<Codec::Image> image = Codec::DecodeImage(Source);
-			return LoadTexture(image);
-		}
-		UI::ITexture * QuartzRenderingDevice::LoadTexture(Codec::Image * Source)
-		{
-			if (!Source->Frames.Length()) throw InvalidArgumentException();
-			return LoadTexture(Source->GetFrameBestDpiFit(UI::Zoom));
-		}
-		UI::ITexture * QuartzRenderingDevice::LoadTexture(Codec::Frame * Source)
-		{
-			SafePointer<QuartzTexture> result = new QuartzTexture;
-			result->w = Source->GetWidth();
-			result->h = Source->GetHeight();
-			SafePointer<Codec::Frame> source;
-			if (Source->GetScanOrigin() == Codec::ScanOrigin::TopDown && Source->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
-				source.SetRetain(Source);
-			} else {
-				source = Source->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Source->GetAlphaMode(), Codec::ScanOrigin::TopDown);
-			}
-			int data_len = source->GetScanLineLength() * source->GetHeight();
-			uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));
-			if (!data) throw OutOfMemoryException();
-			MemoryCopy(data, source->GetData(), data_len);
-			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
-			CGDataProviderRef provider = CGDataProviderCreateWithData(data, data, data_len, QuartzDataRelease);
-			CGImageRef frame = CGImageCreate(result->w, result->h, 8, 32, source->GetScanLineLength(), rgb,
-				(source->GetAlphaMode() == Codec::AlphaMode::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
-				provider, 0, false, kCGRenderingIntentDefault);
-			CGColorSpaceRelease(rgb);
-			CGDataProviderRelease(provider);
-			if (!frame) throw Exception();
-			result->bitmap = frame;
-			result->Retain();
-			return result;
-		}
-		UI::IFont * QuartzRenderingDevice::LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
-		{
-			try {
-				UI::IFont * font = new CoreTextFont(FaceName, double(Height), 1.0, Weight, IsItalic, IsUnderline, IsStrikeout);
-				return font;
-			} catch (...) { return 0; }
-		}
 		Graphics::ITexture * QuartzRenderingDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) { return 0; }
 
 		void QuartzRenderingDevice::RenderBar(UI::IBarRenderingInfo * Info, const UI::Box & At) noexcept
@@ -608,6 +574,29 @@ namespace Engine
 			}
 		}
 
+		void QuartzRenderingDevice::DrawPolygon(const Math::Vector2 * points, int count, UI::Color color, double width) noexcept
+		{
+			CGContextSetRGBStrokeColor(reinterpret_cast<CGContextRef>(_context), color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+			CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), width / double(_scale));
+			CGContextSetLineJoin(reinterpret_cast<CGContextRef>(_context), kCGLineJoinRound);
+			CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
+			if (count) {
+				CGContextMoveToPoint(reinterpret_cast<CGContextRef>(_context), points[0].x / _scale, (double(_height) - points[0].y) / _scale);
+				for (int i = 1; i < count; i++) CGContextAddLineToPoint(reinterpret_cast<CGContextRef>(_context), points[i].x / double(_scale), (double(_height) - points[i].y) / double(_scale));
+			}
+			CGContextStrokePath(reinterpret_cast<CGContextRef>(_context));
+		}
+		void QuartzRenderingDevice::FillPolygon(const Math::Vector2 * points, int count, UI::Color color) noexcept
+		{
+			CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+			CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
+			if (count) {
+				CGContextMoveToPoint(reinterpret_cast<CGContextRef>(_context), points[0].x / _scale, (double(_height) - points[0].y) / _scale);
+				for (int i = 1; i < count; i++) CGContextAddLineToPoint(reinterpret_cast<CGContextRef>(_context), points[i].x / double(_scale), (double(_height) - points[i].y) / double(_scale));
+			}
+			CGContextFillPath(reinterpret_cast<CGContextRef>(_context));
+		}
+
 		void QuartzRenderingDevice::PushClip(const UI::Box & Rect) noexcept
 		{
 			UI::Box clip = Clipping.Length() ? UI::Box::Intersect(Rect, Clipping.LastElement()) : Rect;
@@ -642,30 +631,23 @@ namespace Engine
 			InversionCache.SetReference(0);
 		}
 
-		Drawing::ICanvasRenderingDevice * QuartzRenderingDevice::QueryCanvasDevice(void) noexcept { return this; }
-		void QuartzRenderingDevice::DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept
+		UI::ITexture * QuartzRenderingDevice::LoadTexture(Codec::Frame * source) noexcept
 		{
-			CGContextSetRGBStrokeColor(reinterpret_cast<CGContextRef>(_context), color.x, color.y, color.z, color.w);
-			CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), width / double(_scale));
-			CGContextSetLineJoin(reinterpret_cast<CGContextRef>(_context), kCGLineJoinRound);
-			CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
-			if (count) {
-				CGContextMoveToPoint(reinterpret_cast<CGContextRef>(_context), points[0].x / _scale, (double(_height) - points[0].y) / _scale);
-				for (int i = 1; i < count; i++) CGContextAddLineToPoint(reinterpret_cast<CGContextRef>(_context), points[i].x / double(_scale), (double(_height) - points[i].y) / double(_scale));
-			}
-			CGContextStrokePath(reinterpret_cast<CGContextRef>(_context));
+			return StaticLoadTexture(source);
 		}
-		void QuartzRenderingDevice::FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept
+		UI::IFont * QuartzRenderingDevice::LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
 		{
-			CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), color.x, color.y, color.z, color.w);
-			CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
-			if (count) {
-				CGContextMoveToPoint(reinterpret_cast<CGContextRef>(_context), points[0].x / _scale, (double(_height) - points[0].y) / _scale);
-				for (int i = 1; i < count; i++) CGContextAddLineToPoint(reinterpret_cast<CGContextRef>(_context), points[i].x / double(_scale), (double(_height) - points[i].y) / double(_scale));
-			}
-			CGContextFillPath(reinterpret_cast<CGContextRef>(_context));
+			return StaticLoadFont(face_name, height, weight, italic, underline, strikeout);
 		}
-		Drawing::ITextureRenderingDevice * QuartzRenderingDevice::CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept { return CreateQuartzCompatibleTextureRenderingDevice(width, height, color); }
+		UI::ITextureRenderingDevice * QuartzRenderingDevice::CreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept
+		{
+			return StaticCreateTextureRenderingDevice(width, height, color);
+		}
+		UI::ITextureRenderingDevice * QuartzRenderingDevice::CreateTextureRenderingDevice(Codec::Frame * frame) noexcept
+		{
+			return StaticCreateTextureRenderingDevice(frame);
+		}
+
 		void QuartzRenderingDevice::BeginDraw(void) noexcept {}
 		void QuartzRenderingDevice::EndDraw(void) noexcept { CGContextFlush(reinterpret_cast<CGContextRef>(_context)); }
 		UI::ITexture * QuartzRenderingDevice::GetRenderTargetAsTexture(void) noexcept
@@ -681,7 +663,45 @@ namespace Engine
 			return BitmapTarget;
 		}
 		string QuartzRenderingDevice::ToString(void) const { return L"Engine.Cocoa.QuartzRenderingDevice"; }
-		Drawing::ITextureRenderingDevice * QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept
+
+		UI::ITexture * QuartzRenderingDevice::StaticLoadTexture(Codec::Frame * source) noexcept
+		{
+			SafePointer<QuartzTexture> result = new (std::nothrow) QuartzTexture;
+			if (!result) return 0;
+			result->w = source->GetWidth();
+			result->h = source->GetHeight();
+			SafePointer<Codec::Frame> converted;
+			try {
+				if (source->GetScanOrigin() == Codec::ScanOrigin::TopDown && source->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
+					converted.SetRetain(source);
+				} else {
+					converted = source->ConvertFormat(Codec::PixelFormat::R8G8B8A8, source->GetAlphaMode(), Codec::ScanOrigin::TopDown);
+				}
+			} catch (...) { return 0; }
+			int data_len = converted->GetScanLineLength() * converted->GetHeight();
+			uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));
+			if (!data) return 0;
+			MemoryCopy(data, converted->GetData(), data_len);
+			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+			CGDataProviderRef provider = CGDataProviderCreateWithData(data, data, data_len, QuartzDataRelease);
+			CGImageRef frame = CGImageCreate(result->w, result->h, 8, 32, converted->GetScanLineLength(), rgb,
+				(converted->GetAlphaMode() == Codec::AlphaMode::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
+				provider, 0, false, kCGRenderingIntentDefault);
+			CGColorSpaceRelease(rgb);
+			CGDataProviderRelease(provider);
+			if (!frame) return 0;
+			result->bitmap = frame;
+			result->Retain();
+			return result;
+		}
+		UI::IFont * QuartzRenderingDevice::StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
+		{
+			try {
+				UI::IFont * font = new CoreTextFont(face_name, double(height), 1.0, weight, italic, underline, strikeout);
+				return font;
+			} catch (...) { return 0; }
+		}
+		UI::ITextureRenderingDevice * QuartzRenderingDevice::StaticCreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept
 		{
 			SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
 			{
@@ -693,6 +713,25 @@ namespace Engine
 				UI::Color * data = reinterpret_cast<UI::Color *>(target->GetData());
 				for (int i = 0; i < width * height; i++) data[i] = pixel;
 			}
+			CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
+			if (!clr) return 0;
+			CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
+			if (!context) {
+				CGColorSpaceRelease(clr);
+				return 0;
+			}
+			CGColorSpaceRelease(clr);
+			SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
+			device->SetContext(context, width, height, 1);
+			device->BitmapTarget.SetRetain(target);
+			device->Retain();
+			return device;
+		}
+		UI::ITextureRenderingDevice * QuartzRenderingDevice::StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept
+		{
+			SafePointer<Codec::Frame> target = frame->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+			int width = frame->GetWidth();
+			int height = frame->GetHeight();
 			CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
 			if (!clr) return 0;
 			CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);

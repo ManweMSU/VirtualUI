@@ -474,7 +474,7 @@ namespace Engine
 				if (ResourceLoader) {
 					Loader.SetRetain(ResourceLoader);
 				} else {
-					Loader = Windows::CreateNativeCompatibleResourceLoader();
+					Loader = UI::CreateObjectFactory();
 				}
 				Array<DialogReference> References(0x20);
 				for (int a = 0; a < Assets.Length(); a++) {
@@ -545,7 +545,7 @@ namespace Engine
 				if (ResourceLoader) {
 					Loader.SetRetain(ResourceLoader);
 				} else {
-					Loader = Windows::CreateNativeCompatibleResourceLoader();
+					Loader = UI::CreateObjectFactory();
 				}
 				Array<DialogReference> References(0x20);
 				for (int a = 0; a < Assets.Length(); a++) {

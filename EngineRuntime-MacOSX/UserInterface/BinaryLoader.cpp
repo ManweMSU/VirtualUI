@@ -20,7 +20,7 @@ namespace Engine
 		{
 			void LoadUserInterfaceFromBinary(InterfaceTemplate & Template, Streaming::Stream * Source, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
 			{
-				Windows::InitializeCodecCollection();
+				Codec::InitializeDefaultCodecs();
 				try {
 					SafePointer<Format::InterfaceTemplateImage> image = new Format::InterfaceTemplateImage(Source, Assembly::CurrentLocale, CURRENT_SYSTEM, Zoom);
 					image->Compile(Template, ResourceLoader, ResourceResolver);
@@ -28,13 +28,13 @@ namespace Engine
 				catch (InvalidFormatException &) {
 					Source->Seek(0, Streaming::Begin);
 					SafePointer<IResourceLoader> loader;
-					if (ResourceLoader) loader.SetRetain(ResourceLoader); else loader = Windows::CreateNativeCompatibleResourceLoader();
+					if (ResourceLoader) loader.SetRetain(ResourceLoader); else loader = CreateObjectFactory();
 					LoadUserInterfaceFromBinaryLegacy(Template, Source, loader, ResourceResolver);
 				}
 			}
 			void LoadUserInterfaceWithStyleSet(InterfaceTemplate & Template, InterfaceTemplate & Styles, Streaming::Stream * Source, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
 			{
-				Windows::InitializeCodecCollection();
+				Codec::InitializeDefaultCodecs();
 				SafePointer<Format::InterfaceTemplateImage> image = new Format::InterfaceTemplateImage(Source, Assembly::CurrentLocale, CURRENT_SYSTEM, Zoom);
 				image->Compile(Template, Styles, ResourceLoader, ResourceResolver);
 			}

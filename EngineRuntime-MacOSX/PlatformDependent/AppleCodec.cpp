@@ -156,6 +156,7 @@ namespace Engine
 			}
 			virtual bool IsImageCodec(void) override { return true; }
 			virtual bool IsFrameCodec(void) override { return true; }
+			virtual string GetCodecName(void) override { return L"Apple Image IO"; }
 			virtual string ExamineData(Streaming::Stream * stream) override
 			{
 				uint64 size = stream->Length() - stream->Seek(0, Streaming::Current);

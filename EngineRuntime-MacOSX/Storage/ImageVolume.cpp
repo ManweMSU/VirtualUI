@@ -256,6 +256,7 @@ namespace Engine
 			}
 			virtual bool IsImageCodec(void) override { return true; }
 			virtual bool IsFrameCodec(void) override { return true; }
+			virtual string GetCodecName(void) override { return L"Engine Volume Codec"; }
 			virtual string ExamineData(Streaming::Stream * stream) override
 			{
 				try {

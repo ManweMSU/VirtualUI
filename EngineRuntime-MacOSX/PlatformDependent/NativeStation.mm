@@ -1193,29 +1193,26 @@ namespace Engine
 			Codec::CreateIconCodec();
 			Storage::CreateVolumeCodec();
 		}
-		class NativeResourceLoader : public Engine::UI::IResourceLoader
+		class NativeObjectFactory : public Engine::UI::IObjectFactory
 		{
-			SafePointer<IRenderingDevice> _device;
 		public:
-			NativeResourceLoader(IRenderingDevice * device) { _device.SetRetain(device); }
-			~NativeResourceLoader(void) override {}
-
-			virtual UI::ITexture * LoadTexture(Codec::Frame * Source) override { return _device->LoadTexture(Source); }
-			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override
+			virtual UI::ITexture * LoadTexture(Codec::Frame * source) noexcept override
 			{
-				return _device->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout);
+				return Cocoa::QuartzRenderingDevice::StaticLoadTexture(source);
+			}
+			virtual UI::IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override
+			{
+				return Cocoa::QuartzRenderingDevice::StaticLoadFont(face_name, height, weight, italic, underline, strikeout);
+			}
+			virtual UI::ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept override
+			{
+				return Cocoa::QuartzRenderingDevice::StaticCreateTextureRenderingDevice(width, height, color);
+			}
+			virtual UI::ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept override
+			{
+				return Cocoa::QuartzRenderingDevice::StaticCreateTextureRenderingDevice(frame);
 			}
 		};
-		UI::IResourceLoader * CreateCompatibleResourceLoader(void)
-		{
-			InitializeCodecCollection();
-			SafePointer<Cocoa::QuartzRenderingDevice> device = new Cocoa::QuartzRenderingDevice;
-			return new NativeResourceLoader(device);
-		}
-		Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color)
-		{
-			return Cocoa::QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(width, height, color);
-		}
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation, bool NoDevice)
 		{
 			InitializeWindowSystem();
@@ -1654,6 +1651,7 @@ namespace Engine
 		}
 		Graphics::IDeviceFactory * CreateDeviceFactory(void) { return MetalGraphics::CreateMetalDeviceFactory(); }
 		Graphics::IDevice * GetCommonDevice(void) { return MetalGraphics::GetMetalCommonDevice(); }
+		UI::IObjectFactory * CreateObjectFactory(void) { InitializeCodecCollection(); return new NativeObjectFactory; }
 	}
 }
 

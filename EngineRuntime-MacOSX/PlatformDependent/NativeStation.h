@@ -4,7 +4,6 @@
 #include "../UserInterface/Templates.h"
 #include "../UserInterface/OverlappedWindows.h"
 #include "../UserInterface/Menus.h"
-#include "../UserInterface/Canvas.h"
 
 namespace Engine
 {
@@ -12,10 +11,9 @@ namespace Engine
 	{
 		void InitializeWindowSystem(void);
 		void InitializeCodecCollection(void);
-		UI::IResourceLoader * CreateCompatibleResourceLoader(void);
-		Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color);
 		Graphics::IDeviceFactory * CreateDeviceFactory(void);
 		Graphics::IDevice * GetCommonDevice(void);
+		UI::IObjectFactory * CreateObjectFactory(void);
 		UI::WindowStation * CreateOverlappedWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation, bool NoDevice = false);
 		UI::WindowStation * CreatePopupWindow(UI::Template::ControlTemplate * Template, const UI::Rectangle & Position, UI::WindowStation * ParentStation);
 		void ShowWindow(UI::WindowStation * Station, bool Show);

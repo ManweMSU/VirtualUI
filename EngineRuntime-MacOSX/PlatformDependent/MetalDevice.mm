@@ -230,6 +230,13 @@ namespace Engine
 				}
 			}
 
+			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override { tech = L"Metal"; version = 1; }
+			virtual uint32 GetFeatureList(void) noexcept override
+			{
+				return RenderingDeviceFeatureBlurCapable | RenderingDeviceFeatureInversionCapable |
+					RenderingDeviceFeatureLayersCapable | RenderingDeviceFeatureHardware | RenderingDeviceFeatureGraphicsInteropCapable;
+			}
+
 			void CreateRenderingStates(void)
 			{
 				[main_state release];
@@ -579,10 +586,6 @@ namespace Engine
 				info->Retain();
 				return info;
 			}
-			virtual ITexture * LoadTexture(Streaming::Stream * Source) override { return LoaderDevice->LoadTexture(Source); }
-			virtual ITexture * LoadTexture(Codec::Image * Source) override { return LoaderDevice->LoadTexture(Source); }
-			virtual ITexture * LoadTexture(Codec::Frame * Source) override { return LoaderDevice->LoadTexture(Source); }
-			virtual IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override { return LoaderDevice->LoadFont(FaceName, Height, Weight, IsItalic, IsUnderline, IsStrikeout); }
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override
 			{
 				if (width <= 0 || height <= 0) throw InvalidArgumentException();
@@ -655,7 +658,7 @@ namespace Engine
 				if (!info->texture) {
 					info->core_text_info->GetExtent(info->width, info->height);
 					if (info->width > 0 && info->height > 0) {
-						SafePointer<Drawing::ITextureRenderingDevice> inner_device = QuartzRenderingDevice::CreateQuartzCompatibleTextureRenderingDevice(info->width, info->height, Math::Color(0.0, 0.0, 0.0, 0.0));
+						SafePointer<UI::ITextureRenderingDevice> inner_device = QuartzRenderingDevice::StaticCreateTextureRenderingDevice(info->width, info->height, 0);
 						inner_device->BeginDraw();
 						inner_device->RenderText(info->core_text_info, Box(0, 0, info->width, info->height), false);
 						inner_device->EndDraw();
@@ -772,6 +775,8 @@ namespace Engine
 				[encoder setVertexBuffer: info->verticies offset: 0 atIndex: 1];
 				[encoder drawPrimitives: MTLPrimitiveTypeTriangle vertexStart: 0 vertexCount: info->vertex_count];
 			}
+			virtual void DrawPolygon(const Math::Vector2 * points, int count, Color color, double width) noexcept override {}
+			virtual void FillPolygon(const Math::Vector2 * points, int count, Color color) noexcept override {}
 			virtual void PushClip(const Box & Rect) noexcept override
 			{
 				clipping << UI::Box::Intersect(clipping.LastElement(), Rect);
@@ -860,7 +865,22 @@ namespace Engine
 			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override { return LoaderDevice->GetCaretBlinkHalfTime(); }
 			virtual bool CaretShouldBeVisible(void) noexcept override { return LoaderDevice->CaretShouldBeVisible(); }
 			virtual void ClearCache(void) noexcept override { brush_cache.Clear(); inversion.SetReference(0); }
-			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override { return 0; }
+			virtual ITexture * LoadTexture(Codec::Frame * source) noexcept override
+			{
+				return LoaderDevice->LoadTexture(source);
+			}
+			virtual IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override
+			{
+				return LoaderDevice->LoadFont(face_name, height, weight, italic, underline, strikeout);
+			}
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, Color color) noexcept override
+			{
+				return LoaderDevice->CreateTextureRenderingDevice(width, height, color);
+			}
+			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept override
+			{
+				return LoaderDevice->CreateTextureRenderingDevice(frame);
+			}
 		};
 
 		id<MTLDevice> GetInnerMetalDevice(UI::IRenderingDevice * device) { return static_cast<MetalDevice *>(device)->device; }

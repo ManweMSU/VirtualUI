@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../UserInterface/ShapeBase.h"
-#include "../UserInterface/Canvas.h"
 #include "../Miscellaneous/Dictionary.h"
 
 namespace Engine
@@ -9,7 +8,7 @@ namespace Engine
 	namespace Cocoa
 	{
 		void * GetCoreImageFromTexture(UI::ITexture * texture);
-        class QuartzRenderingDevice : public Drawing::ITextureRenderingDevice
+        class QuartzRenderingDevice : public UI::ITextureRenderingDevice
         {
             void * _context;
             int _width, _height, _scale;
@@ -30,6 +29,9 @@ namespace Engine
 
 			virtual void TextureWasDestroyed(UI::ITexture * texture) noexcept override;
 
+			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override;
+			virtual uint32 GetFeatureList(void) noexcept override;
+
 			virtual UI::IBarRenderingInfo * CreateBarRenderingInfo(const Array<UI::GradientPoint>& gradient, double angle) noexcept override;
 			virtual UI::IBarRenderingInfo * CreateBarRenderingInfo(UI::Color color) noexcept override;
 			virtual UI::IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override;
@@ -39,10 +41,6 @@ namespace Engine
 			virtual UI::ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept override;
 			virtual UI::ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept override;
 
-			virtual UI::ITexture * LoadTexture(Streaming::Stream * Source) override;
-			virtual UI::ITexture * LoadTexture(Engine::Codec::Image * Source) override;
-			virtual UI::ITexture * LoadTexture(Engine::Codec::Frame * Source) override;
-			virtual UI::IFont * LoadFont(const string & FaceName, int Height, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout) override;
 			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override;
 
 			virtual void RenderBar(UI::IBarRenderingInfo * Info, const UI::Box & At) noexcept override;
@@ -50,6 +48,9 @@ namespace Engine
 			virtual void RenderText(UI::ITextRenderingInfo * Info, const UI::Box & At, bool Clip) noexcept override;
 			virtual void ApplyBlur(UI::IBlurEffectRenderingInfo * Info, const UI::Box & At) noexcept override;
 			virtual void ApplyInversion(UI::IInversionEffectRenderingInfo * Info, const UI::Box & At, bool Blink) noexcept override;
+
+			virtual void DrawPolygon(const Math::Vector2 * points, int count, UI::Color color, double width) noexcept override;
+			virtual void FillPolygon(const Math::Vector2 * points, int count, UI::Color color) noexcept override;
 
 			virtual void PushClip(const UI::Box & Rect) noexcept override;
 			virtual void PopClip(void) noexcept override;
@@ -61,10 +62,11 @@ namespace Engine
 			virtual bool CaretShouldBeVisible(void) noexcept override;
 			virtual void ClearCache(void) noexcept override;
 
-			virtual Drawing::ICanvasRenderingDevice * QueryCanvasDevice(void) noexcept override;
-			virtual void DrawPolygon(const Math::Vector2 * points, int count, const Math::Color & color, double width) noexcept override;
-			virtual void FillPolygon(const Math::Vector2 * points, int count, const Math::Color & color) noexcept override;
-			virtual Drawing::ITextureRenderingDevice * CreateCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept override;
+			virtual UI::ITexture * LoadTexture(Codec::Frame * source) noexcept override;
+			virtual UI::IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override;
+			virtual UI::ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept override;
+			virtual UI::ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept override;
+
 			virtual void BeginDraw(void) noexcept override;
 			virtual void EndDraw(void) noexcept override;
 			virtual UI::ITexture * GetRenderTargetAsTexture(void) noexcept override;
@@ -72,7 +74,10 @@ namespace Engine
 
 			virtual string ToString(void) const override;
 
-			static Drawing::ITextureRenderingDevice * CreateQuartzCompatibleTextureRenderingDevice(int width, int height, const Math::Color & color) noexcept;
+			static UI::ITexture * StaticLoadTexture(Codec::Frame * source) noexcept;
+			static UI::IFont * StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept;
+			static UI::ITextureRenderingDevice * StaticCreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept;
+			static UI::ITextureRenderingDevice * StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept;
         };
     }
 }

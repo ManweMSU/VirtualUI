@@ -9,6 +9,7 @@
 #include "../PlatformDependent/NativeStationBackdoors.h"
 #include "../PlatformDependent/QuartzDevice.h"
 #include "../UserInterface/ControlClasses.h"
+#include "../Math/Color.h"
 
 @interface EngineRuntimeTouchBarDelegate : NSObject<NSTouchBarDelegate>
 {

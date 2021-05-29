@@ -1,6 +1,7 @@
 #include "CodecBase.h"
 
 #include "../Math/Color.h"
+#include "../PlatformDependent/NativeStation.h"
 
 #include <math.h>
 
@@ -598,6 +599,7 @@ namespace Engine
 
 		ObjectArray<ICodec> Codecs(0x10);
 
+		void InitializeDefaultCodecs(void) { NativeWindows::InitializeCodecCollection(); }
 		ICodec * FindCoder(const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].CanEncode(format)) return Codecs.ElementAt(i);
@@ -630,19 +632,27 @@ namespace Engine
 			}
 			throw InvalidFormatException();
 		}
-		Frame * DecodeFrame(Streaming::Stream * stream)
+		Frame * DecodeFrame(Streaming::Stream * stream) { return DecodeFrame(stream, 0, 0); }
+		Frame * DecodeFrame(Streaming::Stream * stream, string * format, ICodec ** decoder)
 		{
-			for (int i = 0; i < Codecs.Length(); i++) {
-				if (Codecs[i].IsFrameCodec() && Codecs[i].ExamineData(stream).Length()) {
+			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].IsFrameCodec()) {
+				auto fmt = Codecs[i].ExamineData(stream);
+				if (fmt.Length()) {
+					if (format) *format = fmt;
+					if (decoder) *decoder = Codecs.ElementAt(i);
 					return Codecs[i].DecodeFrame(stream);
 				}
 			}
 			return 0;
 		}
-		Image * DecodeImage(Streaming::Stream * stream)
+		Image * DecodeImage(Streaming::Stream * stream) { return DecodeImage(stream, 0, 0); }
+		Image * DecodeImage(Streaming::Stream * stream, string * format, ICodec ** decoder)
 		{
-			for (int i = 0; i < Codecs.Length(); i++) {
-				if (Codecs[i].IsImageCodec() && Codecs[i].ExamineData(stream).Length()) {
+			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].IsImageCodec()) {
+				auto fmt = Codecs[i].ExamineData(stream);
+				if (fmt.Length()) {
+					if (format) *format = fmt;
+					if (decoder) *decoder = Codecs.ElementAt(i);
 					return Codecs[i].DecodeImage(stream);
 				}
 			}
