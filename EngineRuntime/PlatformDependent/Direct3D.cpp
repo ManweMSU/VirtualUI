@@ -554,7 +554,7 @@ namespace Engine
 			virtual void Flush(void) noexcept override { context->Flush(); }
 			virtual void SetRenderingPipelineState(IPipelineState * state) noexcept override
 			{
-				if (pass_mode != 1) { pass_state = false; return; }
+				if (pass_mode != 1 || !state) { pass_state = false; return; }
 				auto object = static_cast<D3D11_PipelineState *>(state);
 				if (depth_stencil_state) { depth_stencil_state->Release(); depth_stencil_state = 0; }
 				depth_stencil_state = object->dss;
@@ -581,21 +581,31 @@ namespace Engine
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				if (resource->GetResourceType() == ResourceType::Texture) {
-					auto object = static_cast<D3D11_Texture *>(resource);
-					if (!object->view) { pass_state = false; return; }
-					context->VSSetShaderResources(at, 1, &object->view);
-				} else if (resource->GetResourceType() == ResourceType::Buffer) {
-					auto object = static_cast<D3D11_Buffer *>(resource);
-					if (!object->view) { pass_state = false; return; }
-					context->VSSetShaderResources(at, 1, &object->view);
-				} else { pass_state = false; return; }
+				if (resource) {
+					if (resource->GetResourceType() == ResourceType::Texture) {
+						auto object = static_cast<D3D11_Texture *>(resource);
+						if (!object->view) { pass_state = false; return; }
+						context->VSSetShaderResources(at, 1, &object->view);
+					} else if (resource->GetResourceType() == ResourceType::Buffer) {
+						auto object = static_cast<D3D11_Buffer *>(resource);
+						if (!object->view) { pass_state = false; return; }
+						context->VSSetShaderResources(at, 1, &object->view);
+					} else { pass_state = false; return; }
+				} else {
+					ID3D11ShaderResourceView * view = 0;
+					context->VSSetShaderResources(at, 1, &view);
+				}
 			}
 			virtual void SetVertexShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				auto object = static_cast<D3D11_Buffer *>(buffer);
-				context->VSSetConstantBuffers(at, 1, &object->buffer);
+				if (buffer) {
+					auto object = static_cast<D3D11_Buffer *>(buffer);
+					context->VSSetConstantBuffers(at, 1, &object->buffer);
+				} else {
+					ID3D11Buffer * buffer = 0;
+					context->VSSetConstantBuffers(at, 1, &buffer);
+				}
 			}
 			virtual void SetVertexShaderConstant(uint32 at, const void * data, int length) noexcept override
 			{
@@ -608,47 +618,67 @@ namespace Engine
 						free(aligned_data);
 					} else pass_state = false;
 				} else {
-					if (pass_mode != 1) { pass_state = false; return; }
-					D3D11_BUFFER_DESC desc;
-					desc.ByteWidth = length;
-					desc.Usage = D3D11_USAGE_IMMUTABLE;
-					desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-					desc.CPUAccessFlags = 0;
-					desc.MiscFlags = 0;
-					desc.StructureByteStride = 0;
-					D3D11_SUBRESOURCE_DATA init;
-					init.pSysMem = data;
-					init.SysMemPitch = 0;
-					init.SysMemSlicePitch = 0;
-					ID3D11Buffer * buffer;
-					if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
-					context->VSSetConstantBuffers(at, 1, &buffer);
-					buffer->Release();
+					if (pass_mode != 1 || length > 4096) { pass_state = false; return; }
+					if (length) {
+						D3D11_BUFFER_DESC desc;
+						desc.ByteWidth = length;
+						desc.Usage = D3D11_USAGE_IMMUTABLE;
+						desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+						desc.CPUAccessFlags = 0;
+						desc.MiscFlags = 0;
+						desc.StructureByteStride = 0;
+						D3D11_SUBRESOURCE_DATA init;
+						init.pSysMem = data;
+						init.SysMemPitch = 0;
+						init.SysMemSlicePitch = 0;
+						ID3D11Buffer * buffer;
+						if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
+						context->VSSetConstantBuffers(at, 1, &buffer);
+						buffer->Release();
+					} else {
+						ID3D11Buffer * buffer = 0;
+						context->VSSetConstantBuffers(at, 1, &buffer);
+					}
 				}
 			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				context->VSSetSamplers(at, 1, &static_cast<D3D11_SamplerState *>(sampler)->state);
+				if (sampler) {
+					context->VSSetSamplers(at, 1, &static_cast<D3D11_SamplerState *>(sampler)->state);
+				} else {
+					ID3D11SamplerState * state = 0;
+					context->VSSetSamplers(at, 1, &state);
+				}
 			}
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				if (resource->GetResourceType() == ResourceType::Texture) {
-					auto object = static_cast<D3D11_Texture *>(resource);
-					if (!object->view) { pass_state = false; return; }
-					context->PSSetShaderResources(at, 1, &object->view);
-				} else if (resource->GetResourceType() == ResourceType::Buffer) {
-					auto object = static_cast<D3D11_Buffer *>(resource);
-					if (!object->view) { pass_state = false; return; }
-					context->PSSetShaderResources(at, 1, &object->view);
-				} else { pass_state = false; return; }
+				if (resource) {
+					if (resource->GetResourceType() == ResourceType::Texture) {
+						auto object = static_cast<D3D11_Texture *>(resource);
+						if (!object->view) { pass_state = false; return; }
+						context->PSSetShaderResources(at, 1, &object->view);
+					} else if (resource->GetResourceType() == ResourceType::Buffer) {
+						auto object = static_cast<D3D11_Buffer *>(resource);
+						if (!object->view) { pass_state = false; return; }
+						context->PSSetShaderResources(at, 1, &object->view);
+					} else { pass_state = false; return; }
+				} else {
+					ID3D11ShaderResourceView * view = 0;
+					context->PSSetShaderResources(at, 1, &view);
+				}
 			}
 			virtual void SetPixelShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				auto object = static_cast<D3D11_Buffer *>(buffer);
-				context->PSSetConstantBuffers(at, 1, &object->buffer);
+				if (buffer) {
+					auto object = static_cast<D3D11_Buffer *>(buffer);
+					context->PSSetConstantBuffers(at, 1, &object->buffer);
+				} else {
+					ID3D11Buffer * buffer = 0;
+					context->PSSetConstantBuffers(at, 1, &buffer);
+				}
 			}
 			virtual void SetPixelShaderConstant(uint32 at, const void * data, int length) noexcept override
 			{
@@ -661,37 +691,49 @@ namespace Engine
 						free(aligned_data);
 					} else pass_state = false;
 				} else {
-					if (pass_mode != 1) { pass_state = false; return; }
-					D3D11_BUFFER_DESC desc;
-					desc.ByteWidth = length;
-					desc.Usage = D3D11_USAGE_IMMUTABLE;
-					desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-					desc.CPUAccessFlags = 0;
-					desc.MiscFlags = 0;
-					desc.StructureByteStride = 0;
-					D3D11_SUBRESOURCE_DATA init;
-					init.pSysMem = data;
-					init.SysMemPitch = 0;
-					init.SysMemSlicePitch = 0;
-					ID3D11Buffer * buffer;
-					if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
-					context->PSSetConstantBuffers(at, 1, &buffer);
-					buffer->Release();
+					if (pass_mode != 1 || length > 4096) { pass_state = false; return; }
+					if (length) {
+						D3D11_BUFFER_DESC desc;
+						desc.ByteWidth = length;
+						desc.Usage = D3D11_USAGE_IMMUTABLE;
+						desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+						desc.CPUAccessFlags = 0;
+						desc.MiscFlags = 0;
+						desc.StructureByteStride = 0;
+						D3D11_SUBRESOURCE_DATA init;
+						init.pSysMem = data;
+						init.SysMemPitch = 0;
+						init.SysMemSlicePitch = 0;
+						ID3D11Buffer * buffer;
+						if (device->CreateBuffer(&desc, &init, &buffer) != S_OK) { pass_state = false; return; }
+						context->PSSetConstantBuffers(at, 1, &buffer);
+						buffer->Release();
+					} else {
+						ID3D11Buffer * buffer = 0;
+						context->PSSetConstantBuffers(at, 1, &buffer);
+					}
 				}
 			}
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				context->PSSetSamplers(at, 1, &static_cast<D3D11_SamplerState *>(sampler)->state);
+				if (sampler) {
+					context->PSSetSamplers(at, 1, &static_cast<D3D11_SamplerState *>(sampler)->state);
+				} else {
+					ID3D11SamplerState * state = 0;
+					context->PSSetSamplers(at, 1, &state);
+				}
 			}
 			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept override
 			{
 				if (pass_mode != 1) { pass_state = false; return; }
-				DXGI_FORMAT fmt;
-				if (format == IndexBufferFormat::UInt16) fmt = DXGI_FORMAT_R16_UINT;
-				else if (format == IndexBufferFormat::UInt32) fmt = DXGI_FORMAT_R32_UINT;
-				else { pass_state = false; return; }
-				context->IASetIndexBuffer(static_cast<D3D11_Buffer *>(index)->buffer, fmt, 0);
+				if (index) {
+					DXGI_FORMAT fmt;
+					if (format == IndexBufferFormat::UInt16) fmt = DXGI_FORMAT_R16_UINT;
+					else if (format == IndexBufferFormat::UInt32) fmt = DXGI_FORMAT_R32_UINT;
+					else { pass_state = false; return; }
+					context->IASetIndexBuffer(static_cast<D3D11_Buffer *>(index)->buffer, fmt, 0);
+				} else context->IASetIndexBuffer(0, DXGI_FORMAT_R16_UINT, 0);
 			}
 			virtual void SetStencilReferenceValue(uint8 ref) noexcept override
 			{
@@ -722,18 +764,19 @@ namespace Engine
 			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
 			{
+				if (!texture) { pass_state = false; return; }
 				auto object = static_cast<D3D11_Texture *>(texture)->view;
 				if (!object || pass_mode != 3) { pass_state = false; return; }
 				context->GenerateMips(object);
 			}
 			virtual void CopyResourceData(IDeviceResource * dest, IDeviceResource * src) noexcept override
 			{
-				if (pass_mode != 3) { pass_state = false; return; }
+				if (pass_mode != 3 || !dest || !src) { pass_state = false; return; }
 				context->CopyResource(QueryInnerObject(dest), QueryInnerObject(src));
 			}
 			virtual void CopySubresourceData(IDeviceResource * dest, SubresourceIndex dest_subres, VolumeIndex dest_origin, IDeviceResource * src, SubresourceIndex src_subres, VolumeIndex src_origin, VolumeIndex size) noexcept override
 			{
-				if (pass_mode != 3) { pass_state = false; return; }
+				if (pass_mode != 3 || !dest || !src) { pass_state = false; return; }
 				if (!size.x || !size.y || !size.z) return;
 				UINT dest_sr, src_sr;
 				if (dest->GetResourceType() == ResourceType::Texture) {
@@ -753,7 +796,7 @@ namespace Engine
 			}
 			virtual void UpdateResourceData(IDeviceResource * dest, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size, const ResourceInitDesc & src) noexcept override
 			{
-				if (pass_mode != 3) { pass_state = false; return; }
+				if (pass_mode != 3 || !dest) { pass_state = false; return; }
 				if (!size.x || !size.y || !size.z) return;
 				UINT dest_sr;
 				bool use_mapping = false;
@@ -808,7 +851,7 @@ namespace Engine
 			}
 			virtual void QueryResourceData(const ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept override
 			{
-				if (pass_mode != 3) { pass_state = false; return; }
+				if (pass_mode != 3 || !src) { pass_state = false; return; }
 				if (!size.x || !size.y || !size.z) return;
 				ID3D11Resource * op = 0, * st = 0;
 				UINT src_sr;

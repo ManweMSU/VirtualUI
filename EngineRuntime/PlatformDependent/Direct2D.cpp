@@ -1062,32 +1062,35 @@ namespace Engine
 		}
 		ITexture * D2DRenderingDevice::StaticLoadTexture(Codec::Frame * source) noexcept
 		{
-			SafePointer<IWICBitmap> Bitmap;
-			if (WICFactory->CreateBitmap(source->GetWidth(), source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) return 0;
-			SafePointer<Frame> conv = source->ConvertFormat(PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, ScanOrigin::TopDown);
-			IWICBitmapLock * Lock;
-			if (Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock) != S_OK) return 0;
-			UINT len;
-			uint8 * data;
-			if (Lock->GetDataPointer(&len, &data) != S_OK) { Lock->Release(); return 0; }
-			MemoryCopy(data, conv->GetData(), intptr(conv->GetScanLineLength()) * intptr(conv->GetHeight()));
-			Lock->Release();
-			WICTexture * Texture = new (std::nothrow) WICTexture;
-			if (!Texture) { return 0; }
 			try {
-				Bitmap->AddRef();
-				Texture->bitmap = Bitmap;
-				Texture->w = source->GetWidth();
-				Texture->h = source->GetHeight();
-			} catch (...) {
-				if (Texture) Texture->Release();
-				return 0;
-			}
-			return Texture;
+				SafePointer<IWICBitmap> Bitmap;
+				if (WICFactory->CreateBitmap(source->GetWidth(), source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) return 0;
+				SafePointer<Frame> conv = source->ConvertFormat(PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, ScanOrigin::TopDown);
+				IWICBitmapLock * Lock;
+				if (Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock) != S_OK) return 0;
+				UINT len;
+				uint8 * data;
+				if (Lock->GetDataPointer(&len, &data) != S_OK) { Lock->Release(); return 0; }
+				MemoryCopy(data, conv->GetData(), intptr(conv->GetScanLineLength()) * intptr(conv->GetHeight()));
+				Lock->Release();
+				WICTexture * Texture = new (std::nothrow) WICTexture;
+				if (!Texture) { return 0; }
+				try {
+					Bitmap->AddRef();
+					Texture->bitmap = Bitmap;
+					Texture->w = source->GetWidth();
+					Texture->h = source->GetHeight();
+				} catch (...) {
+					if (Texture) Texture->Release();
+					return 0;
+				}
+				return Texture;
+			} catch (...) { return 0; }
 		}
 		IFont * D2DRenderingDevice::StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
 		{
-			DWFont * Font = new DWFont;
+			DWFont * Font = new (std::nothrow) DWFont;
+			if (!Font) return 0;
 			Font->AlternativeFace = 0;
 			Font->FontFace = 0;
 			Font->FontName = face_name;
@@ -1141,60 +1144,64 @@ namespace Engine
 		}
 		ITextureRenderingDevice * D2DRenderingDevice::StaticCreateTextureRenderingDevice(int width, int height, Color color) noexcept
 		{
-			SafePointer<IWICBitmap> Bitmap;
-			Array<UI::Color> Pixels(width);
-			Pixels.SetLength(width * height);
-			{
-				Math::Color prem = color;
-				prem.x *= prem.w;
-				prem.y *= prem.w;
-				prem.z *= prem.w;
-				swap(prem.x, prem.z);
-				UI::Color pixel = prem;
-				for (int i = 0; i < Pixels.Length(); i++) Pixels[i] = pixel;
-			}
-			if (WICFactory->CreateBitmapFromMemory(width, height, GUID_WICPixelFormat32bppPBGRA, 4 * width, 4 * width * height, reinterpret_cast<LPBYTE>(Pixels.GetBuffer()), Bitmap.InnerRef()) != S_OK) return 0;
-			SafePointer<ID2D1RenderTarget> RenderTarget;
-			D2D1_RENDER_TARGET_PROPERTIES props;
-			props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-			props.dpiX = 0.0f;
-			props.dpiY = 0.0f;
-			props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-			props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-			if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
-			SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
-			Device->BitmapTarget.SetReference(Bitmap);
-			Device->BitmapTarget->AddRef();
-			Device->BitmapTargetResX = width;
-			Device->BitmapTargetResY = height;
-			Device->Retain();
-			return Device;
+			try {
+				SafePointer<IWICBitmap> Bitmap;
+				Array<UI::Color> Pixels(width);
+				Pixels.SetLength(width * height);
+				{
+					Math::Color prem = color;
+					prem.x *= prem.w;
+					prem.y *= prem.w;
+					prem.z *= prem.w;
+					swap(prem.x, prem.z);
+					UI::Color pixel = prem;
+					for (int i = 0; i < Pixels.Length(); i++) Pixels[i] = pixel;
+				}
+				if (WICFactory->CreateBitmapFromMemory(width, height, GUID_WICPixelFormat32bppPBGRA, 4 * width, 4 * width * height, reinterpret_cast<LPBYTE>(Pixels.GetBuffer()), Bitmap.InnerRef()) != S_OK) return 0;
+				SafePointer<ID2D1RenderTarget> RenderTarget;
+				D2D1_RENDER_TARGET_PROPERTIES props;
+				props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+				props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+				props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+				props.dpiX = 0.0f;
+				props.dpiY = 0.0f;
+				props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+				props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+				if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
+				SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
+				Device->BitmapTarget.SetReference(Bitmap);
+				Device->BitmapTarget->AddRef();
+				Device->BitmapTargetResX = width;
+				Device->BitmapTargetResY = height;
+				Device->Retain();
+				return Device;
+			} catch (...) { return 0; }
 		}
 		ITextureRenderingDevice * D2DRenderingDevice::StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept
 		{
-			SafePointer<IWICBitmap> Bitmap;
-			SafePointer<Codec::Frame> converted = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-			if (WICFactory->CreateBitmapFromMemory(frame->GetWidth(), frame->GetHeight(), GUID_WICPixelFormat32bppPBGRA, converted->GetScanLineLength(),
-				converted->GetScanLineLength() * converted->GetHeight(), reinterpret_cast<LPBYTE>(converted->GetData()), Bitmap.InnerRef()) != S_OK) return 0;
-			SafePointer<ID2D1RenderTarget> RenderTarget;
-			D2D1_RENDER_TARGET_PROPERTIES props;
-			props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-			props.dpiX = 0.0f;
-			props.dpiY = 0.0f;
-			props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-			props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-			if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
-			SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
-			Device->BitmapTarget.SetReference(Bitmap);
-			Device->BitmapTarget->AddRef();
-			Device->BitmapTargetResX = converted->GetWidth();
-			Device->BitmapTargetResY = converted->GetHeight();
-			Device->Retain();
-			return Device;
+			try {
+				SafePointer<IWICBitmap> Bitmap;
+				SafePointer<Codec::Frame> converted = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+				if (WICFactory->CreateBitmapFromMemory(frame->GetWidth(), frame->GetHeight(), GUID_WICPixelFormat32bppPBGRA, converted->GetScanLineLength(),
+					converted->GetScanLineLength() * converted->GetHeight(), reinterpret_cast<LPBYTE>(converted->GetData()), Bitmap.InnerRef()) != S_OK) return 0;
+				SafePointer<ID2D1RenderTarget> RenderTarget;
+				D2D1_RENDER_TARGET_PROPERTIES props;
+				props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+				props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+				props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+				props.dpiX = 0.0f;
+				props.dpiY = 0.0f;
+				props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+				props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+				if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
+				SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
+				Device->BitmapTarget.SetReference(Bitmap);
+				Device->BitmapTarget->AddRef();
+				Device->BitmapTargetResX = converted->GetWidth();
+				Device->BitmapTargetResY = converted->GetHeight();
+				Device->Retain();
+				return Device;
+			} catch (...) { return 0; }
 		}
 
 		void TextRenderingInfo::FillAdvances(void)
