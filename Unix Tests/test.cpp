@@ -84,6 +84,17 @@ public:
 		desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
 		layer = device->CreateWindowLayer(window, desc);
 		console << string(layer.Inner()) << L"\n";
+		// Testing texture wrong creation
+		Graphics::TextureDesc tdesc;
+		tdesc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+		tdesc.Type = Graphics::TextureType::Type2D;
+		tdesc.Width = 0x8000;
+		tdesc.Height = 0x8000;
+		tdesc.MemoryPool = Graphics::ResourceMemoryPool::Default;
+		tdesc.MipmapCount = 1;
+		tdesc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget;
+		SafePointer<Graphics::ITexture> test_tex = device->CreateTexture(tdesc);
+		console << string(test_tex.Inner()) << L"\n";
 		// Loading shaders
 		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
 		SafePointer<Graphics::IShaderLibrary> sl = device->LoadShaderLibrary(slrs_stream);
@@ -351,20 +362,20 @@ int Main(void)
 
 	DynamicString req;
 	req += Assembly::GetCurrentUserLocale() + IO::NewLineChar;
-	try {
-		SafePointer<Network::HttpSession> session = Network::OpenHttpSession(L"pidor");
-		if (!session) throw Exception();
-		SafePointer<Network::HttpConnection> connection = session->Connect(L"yandex.ru");
-		if (!connection) throw Exception();
-		SafePointer<Network::HttpRequest> request = connection->CreateRequest(L"/favicon.ico");
-		if (!request) throw Exception();
-		request->Send();
-		req += string(request->GetStatus()) + string(IO::NewLineChar);
-		SafePointer< Array<string> > hdrs = request->GetHeaders();
-		for (int i = 0; i < hdrs->Length(); i++) {
-			req += hdrs->ElementAt(i) + L": " + request->GetHeader(hdrs->ElementAt(i)) + IO::NewLineChar;
-		}
-	} catch (...) { req += L"kornevgen pidor"; }
+	// try {
+	// 	SafePointer<Network::HttpSession> session = Network::OpenHttpSession(L"pidor");
+	// 	if (!session) throw Exception();
+	// 	SafePointer<Network::HttpConnection> connection = session->Connect(L"yandex.ru");
+	// 	if (!connection) throw Exception();
+	// 	SafePointer<Network::HttpRequest> request = connection->CreateRequest(L"/favicon.ico");
+	// 	if (!request) throw Exception();
+	// 	request->Send();
+	// 	req += string(request->GetStatus()) + string(IO::NewLineChar);
+	// 	SafePointer< Array<string> > hdrs = request->GetHeaders();
+	// 	for (int i = 0; i < hdrs->Length(); i++) {
+	// 		req += hdrs->ElementAt(i) + L": " + request->GetHeader(hdrs->ElementAt(i)) + IO::NewLineChar;
+	// 	}
+	// } catch (...) { req += L"kornevgen pidor"; }
 
 	Streaming::Stream * source = Assembly::QueryResource(L"GUI");
 	SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
@@ -372,41 +383,44 @@ int Main(void)
 	source->Release();
 
 	UI::ITexture * tex = 0;
-	try {
-		string host = L"i.pinimg.com";
-		string url = L"/originals/80/7a/a2/807aa2cb5485f9e3bbb353b124428d93.jpg";
-		SafePointer<HttpSession> session = OpenHttpSession();
-		if (!session) return 1;
-		SafePointer<HttpConnection> connection = session->SecureConnect(host);
-		if (!connection) return 1;
-		SafePointer<HttpRequest> request = connection->CreateRequest(url);
-		if (!connection) return 1;
-		request->Send();
-		Streaming::MemoryStream stream(0x10000);
-		request->GetResponceStream()->CopyToUntilEof(&stream);
-		stream.Seek(0, Streaming::Begin);
-		SafePointer<Codec::Image> image = Codec::DecodeImage(&stream);
-		UI::Windows::SetApplicationIcon(image);
-		SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
-		tex = loader->LoadTexture(image->Frames.FirstElement());
-	} catch (Exception & e) { Console << e.ToString() << IO::NewLineChar; return 1; }
+	// try {
+	// 	string host = L"i.pinimg.com";
+	// 	string url = L"/originals/80/7a/a2/807aa2cb5485f9e3bbb353b124428d93.jpg";
+	// 	SafePointer<HttpSession> session = OpenHttpSession();
+	// 	if (!session) return 1;
+	// 	SafePointer<HttpConnection> connection = session->SecureConnect(host);
+	// 	if (!connection) return 1;
+	// 	SafePointer<HttpRequest> request = connection->CreateRequest(url);
+	// 	if (!connection) return 1;
+	// 	request->Send();
+	// 	Streaming::MemoryStream stream(0x10000);
+	// 	request->GetResponceStream()->CopyToUntilEof(&stream);
+	// 	stream.Seek(0, Streaming::Begin);
+	// 	SafePointer<Codec::Image> image = Codec::DecodeImage(&stream);
+	// 	UI::Windows::SetApplicationIcon(image);
+	// 	SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
+	// 	tex = loader->LoadTexture(image->Frames.FirstElement());
+	// } catch (Exception & e) { Console << e.ToString() << IO::NewLineChar; return 1; }
 
 	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
 
 	auto Callback2 = new _cb2;
 	auto templ = interface.Dialog[L"Test3"];
 	templ->Properties->GetProperty(L"Background").Get< SafePointer<UI::Template::Shape> >().SetReference(0);
-	templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
 	templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
-	tex->Release();
+	if (tex) {
+		templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
+		tex->Release();
+	}
 	auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0, true);
 	auto fnt = loader->LoadFont(L"Menlo", 60, 400, false, true, false);
 
 	Console.WriteLine(FormatString(L"%0, %1, %2", fnt->GetHeight(), fnt->GetLineSpacing(), fnt->GetBaselineOffset()));
-
+	DynamicString long_str;
+	for (int i = 0; i <= 500; i++) long_str << L"Ыы";
 	w4->FindChild(212121)->As<Controls::MultiLineEdit>()->Font = fnt;
 	w4->FindChild(212121)->ResetCache();
-	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤\n║\n║\n \n║"));
+	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤\n║\n║\n \n║") + long_str.ToString());
 	if (w4) w4->Show(true);
 
 	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();

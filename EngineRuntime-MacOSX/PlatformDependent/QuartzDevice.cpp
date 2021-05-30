@@ -703,48 +703,52 @@ namespace Engine
 		}
 		UI::ITextureRenderingDevice * QuartzRenderingDevice::StaticCreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept
 		{
-			SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-			{
-				Math::Color prem = color;
-				prem.x *= prem.w;
-				prem.y *= prem.w;
-				prem.z *= prem.w;
-				UI::Color pixel = prem;
-				UI::Color * data = reinterpret_cast<UI::Color *>(target->GetData());
-				for (int i = 0; i < width * height; i++) data[i] = pixel;
-			}
-			CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
-			if (!clr) return 0;
-			CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
-			if (!context) {
+			try {
+				SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+				{
+					Math::Color prem = color;
+					prem.x *= prem.w;
+					prem.y *= prem.w;
+					prem.z *= prem.w;
+					UI::Color pixel = prem;
+					UI::Color * data = reinterpret_cast<UI::Color *>(target->GetData());
+					for (int i = 0; i < width * height; i++) data[i] = pixel;
+				}
+				CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
+				if (!clr) return 0;
+				CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
+				if (!context) {
+					CGColorSpaceRelease(clr);
+					return 0;
+				}
 				CGColorSpaceRelease(clr);
-				return 0;
-			}
-			CGColorSpaceRelease(clr);
-			SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
-			device->SetContext(context, width, height, 1);
-			device->BitmapTarget.SetRetain(target);
-			device->Retain();
-			return device;
+				SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
+				device->SetContext(context, width, height, 1);
+				device->BitmapTarget.SetRetain(target);
+				device->Retain();
+				return device;
+			} catch (...) { return 0; }
 		}
 		UI::ITextureRenderingDevice * QuartzRenderingDevice::StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept
 		{
-			SafePointer<Codec::Frame> target = frame->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-			int width = frame->GetWidth();
-			int height = frame->GetHeight();
-			CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
-			if (!clr) return 0;
-			CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
-			if (!context) {
+			try {
+				SafePointer<Codec::Frame> target = frame->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+				int width = frame->GetWidth();
+				int height = frame->GetHeight();
+				CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
+				if (!clr) return 0;
+				CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
+				if (!context) {
+					CGColorSpaceRelease(clr);
+					return 0;
+				}
 				CGColorSpaceRelease(clr);
-				return 0;
-			}
-			CGColorSpaceRelease(clr);
-			SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
-			device->SetContext(context, width, height, 1);
-			device->BitmapTarget.SetRetain(target);
-			device->Retain();
-			return device;
+				SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
+				device->SetContext(context, width, height, 1);
+				device->BitmapTarget.SetRetain(target);
+				device->Retain();
+				return device;
+			} catch (...) { return 0; }
 		}
 		void * GetCoreImageFromTexture(UI::ITexture * texture) { return static_cast<QuartzTexture *>(texture)->bitmap; }
 	}

@@ -131,9 +131,12 @@ namespace Engine
 			int width, height;
 			int horz_align, vert_align;
 			int highlight_left, highlight_right;
+			int render_ofs_x, render_ofs_y;
+			int real_width, real_height;
+			bool dynamic_ofs;
 			UI::Color highlight_color;
 
-			MetalTextRenderingInfo(void) { texture = 0; width = height = highlight_left = highlight_right = -1; highlight_color = 0; }
+			MetalTextRenderingInfo(void) { texture = 0; width = height = highlight_left = highlight_right = -1; highlight_color = 0; render_ofs_x = render_ofs_y = 0; dynamic_ofs = false; }
 			~MetalTextRenderingInfo(void) override { [texture release]; }
 
 			void UpdateTexture(void) { if (texture) [texture release]; texture = 0; width = height = -1; }
@@ -495,7 +498,7 @@ namespace Engine
 						MTLPixelFormat pixel_format = [device_texture->frame pixelFormat];
 						texture_cut->w = area.Right - area.Left;
 						texture_cut->h = area.Bottom - area.Top;
-						if (texture_cut->w < 1 || texture_cut->h < 1) return 0;
+						if (texture_cut->w < 1 || texture_cut->h < 1 || texture_cut->w > 16384 || texture_cut->h > 16384) return 0;
 						void * data_buffer = malloc(4 * texture_cut->w * texture_cut->h);
 						if (!data_buffer) return 0;
 						[device_texture->frame getBytes: data_buffer bytesPerRow: 4 * texture_cut->w fromRegion: MTLRegionMake2D(area.Left, area.Top, texture_cut->w, texture_cut->h) mipmapLevel: 0];
@@ -655,48 +658,63 @@ namespace Engine
 				if (At.Right <= At.Left || At.Bottom <= At.Top) return;
 				if (!Info) return;
 				auto info = reinterpret_cast<MetalTextRenderingInfo *>(Info);
+				int new_render_ofs_x = max(-At.Left, 0);
+				int new_render_ofs_y = max(-At.Top, 0);
 				if (!info->texture) {
-					info->core_text_info->GetExtent(info->width, info->height);
+					info->render_ofs_x = new_render_ofs_y = -1;
+					info->core_text_info->GetExtent(info->real_width, info->real_height);
+					info->width = info->real_width;
+					info->height = info->real_height;
+					if (info->width > 16384) { info->width = 16384; info->dynamic_ofs = true; }
+					if (info->height > 16384) { info->height = 16384; info->dynamic_ofs = true; }
 					if (info->width > 0 && info->height > 0) {
-						SafePointer<UI::ITextureRenderingDevice> inner_device = QuartzRenderingDevice::StaticCreateTextureRenderingDevice(info->width, info->height, 0);
-						inner_device->BeginDraw();
-						inner_device->RenderText(info->core_text_info, Box(0, 0, info->width, info->height), false);
-						inner_device->EndDraw();
-						SafePointer<Codec::Frame> backbuffer = inner_device->GetRenderTargetAsFrame();
 						@autoreleasepool {
-							info->texture = [device newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm width: info->width height: info->height mipmapped: NO]];
-							[info->texture replaceRegion: MTLRegionMake2D(0, 0, info->width, info->height) mipmapLevel: 0 withBytes: backbuffer->GetData() bytesPerRow: backbuffer->GetScanLineLength()];
+							info->texture = [device newTextureWithDescriptor: [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm
+								width: info->width height: info->height mipmapped: NO]];
 						}
 					}
+				}
+				if (!info->dynamic_ofs) { new_render_ofs_x = new_render_ofs_y = 0; }
+				if (info->texture && (info->render_ofs_x != new_render_ofs_x || info->render_ofs_y != new_render_ofs_y)) {
+					info->render_ofs_x = new_render_ofs_x;
+					info->render_ofs_y = new_render_ofs_y;
+					SafePointer<UI::ITextureRenderingDevice> inner_device = QuartzRenderingDevice::StaticCreateTextureRenderingDevice(info->width, info->height, 0);
+					inner_device->BeginDraw();
+					inner_device->RenderText(info->core_text_info, Box(-new_render_ofs_x, -new_render_ofs_y, info->width - new_render_ofs_x, info->height - new_render_ofs_y), false);
+					inner_device->EndDraw();
+					SafePointer<Codec::Frame> backbuffer = inner_device->GetRenderTargetAsFrame();
+					[info->texture replaceRegion: MTLRegionMake2D(0, 0, info->width, info->height) mipmapLevel: 0 withBytes: backbuffer->GetData() bytesPerRow: backbuffer->GetScanLineLength()];
 				}
 				if (info->texture) {
 					if (Clip) PushClip(At);
 					LayerEndInfo rinfo;
 					if (info->horz_align == 0) {
-						rinfo.render_at.Left = At.Left;
-						rinfo.render_at.Right = At.Left + info->width;
+						rinfo.render_at.Left = At.Left + new_render_ofs_x;
+						rinfo.render_at.Right = At.Left + new_render_ofs_x + info->width;
 					} else if (info->horz_align == 1) {
-						rinfo.render_at.Left = (At.Left + At.Right - info->width) / 2;
+						rinfo.render_at.Left = (At.Left + At.Right - info->real_width) / 2 + new_render_ofs_x;
 						rinfo.render_at.Right = rinfo.render_at.Left + info->width;
 					} else {
-						rinfo.render_at.Right = At.Right;
-						rinfo.render_at.Left = At.Right - info->width;
+						rinfo.render_at.Right = At.Right + new_render_ofs_x;
+						rinfo.render_at.Left = At.Right - info->real_width;
+						rinfo.render_at.Right = rinfo.render_at.Left + info->width;
 					}
 					if (info->vert_align == 0) {
-						rinfo.render_at.Top = At.Top;
-						rinfo.render_at.Bottom = At.Top + info->height;
+						rinfo.render_at.Top = At.Top + new_render_ofs_y;
+						rinfo.render_at.Bottom = At.Top + new_render_ofs_y + info->height;
 					} else if (info->vert_align == 1) {
-						rinfo.render_at.Top = (At.Top + At.Bottom - info->height) / 2;
+						rinfo.render_at.Top = (At.Top + At.Bottom - info->real_height) / 2 + new_render_ofs_y;
 						rinfo.render_at.Bottom = rinfo.render_at.Top + info->height;
 					} else {
-						rinfo.render_at.Bottom = At.Bottom;
-						rinfo.render_at.Top = At.Bottom - info->height;
+						rinfo.render_at.Bottom = At.Bottom + new_render_ofs_y;
+						rinfo.render_at.Top = At.Bottom - info->real_height;
+						rinfo.render_at.Bottom = rinfo.render_at.Top + info->height;
 					}
 					rinfo.size = UI::Point(info->width, info->height);
 					rinfo.opacity = 1.0f;
 					if (info->highlight_right > info->highlight_left) {
 						if (!info->highlight_info) info->highlight_info.SetReference(CreateBarRenderingInfo(info->highlight_color));
-						UI::Box highlight(rinfo.render_at.Left + info->highlight_left, At.Top, rinfo.render_at.Left + info->highlight_right, At.Bottom);
+						UI::Box highlight(rinfo.render_at.Left - new_render_ofs_x + info->highlight_left, At.Top, rinfo.render_at.Left - new_render_ofs_x + info->highlight_right, At.Bottom);
 						RenderBar(info->highlight_info, highlight);
 					}
 					[encoder setRenderPipelineState: layer_state];

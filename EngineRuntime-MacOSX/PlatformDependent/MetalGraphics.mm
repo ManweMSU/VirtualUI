@@ -269,6 +269,11 @@ namespace Engine
 				autorelease_pool = [[NSAutoreleasePool alloc] init];
 				if (!current_command) {
 					current_command = [queue commandBuffer];
+					if (!current_command) {
+						[autorelease_pool release];
+						autorelease_pool = 0;
+						return false;
+					}
 					[current_command retain];
 				}
 				MTLRenderPassDescriptor * desc = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -345,11 +350,23 @@ namespace Engine
 				if (rt->GetPixelFormat() != PixelFormat::B8G8R8A8_unorm) return false;
 				if (rt->GetMipmapCount() != 1) return false;
 				autorelease_pool = [[NSAutoreleasePool alloc] init];
+				if (!autorelease_pool) return false;
 				if (!current_command) {
 					current_command = [queue commandBuffer];
+					if (!current_command) {
+						[autorelease_pool release];
+						autorelease_pool = 0;
+						return false;
+					}
 					[current_command retain];
 				}
-				Cocoa::PureMetalRenderingDeviceBeginDraw(device_2d, current_command, GetInnerMetalTexture(rt), rt->GetWidth(), rt->GetHeight());
+				try {
+					Cocoa::PureMetalRenderingDeviceBeginDraw(device_2d, current_command, GetInnerMetalTexture(rt), rt->GetWidth(), rt->GetHeight());
+				} catch (...) {
+					[autorelease_pool release];
+					autorelease_pool = 0;
+					return false;
+				}
 				state = 2;
 				error_state = true;
 				return true;
@@ -358,8 +375,14 @@ namespace Engine
 			{
 				if (state) return false;
 				autorelease_pool = [[NSAutoreleasePool alloc] init];
+				if (!autorelease_pool) return false;
 				if (!current_command) {
 					current_command = [queue commandBuffer];
+					if (!current_command) {
+						[autorelease_pool release];
+						autorelease_pool = 0;
+						return false;
+					}
 					[current_command retain];
 				}
 				state = 3;
@@ -394,7 +417,7 @@ namespace Engine
 			}
 			virtual void SetRenderingPipelineState(IPipelineState * _state) noexcept override
 			{
-				if (state != 1) { error_state = false; return; }
+				if (state != 1 || !_state) { error_state = false; return; }
 				auto wr = static_cast<MTL_PipelineState *>(_state);
 				[render_command_encoder setRenderPipelineState: wr->state];
 				[render_command_encoder setTriangleFillMode: wr->fill_mode];
@@ -420,57 +443,95 @@ namespace Engine
 			virtual void SetVertexShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				if (resource->GetResourceType() == ResourceType::Buffer) {
-					[render_command_encoder setVertexBuffer: static_cast<MTL_Buffer *>(resource)->buffer offset: 0 atIndex: at];
-				} else if (resource->GetResourceType() == ResourceType::Texture) {
-					[render_command_encoder setVertexTexture: static_cast<MTL_Texture *>(resource)->texture atIndex: at];
+				if (resource) {
+					if (resource->GetResourceType() == ResourceType::Buffer) {
+						[render_command_encoder setVertexBuffer: static_cast<MTL_Buffer *>(resource)->buffer offset: 0 atIndex: at];
+					} else if (resource->GetResourceType() == ResourceType::Texture) {
+						[render_command_encoder setVertexTexture: static_cast<MTL_Texture *>(resource)->texture atIndex: at];
+					}
+				} else {
+					[render_command_encoder setVertexBuffer: 0 offset: 0 atIndex: at];
+					[render_command_encoder setVertexTexture: 0 atIndex: at];
 				}
 			}
 			virtual void SetVertexShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				[render_command_encoder setVertexBuffer: static_cast<MTL_Buffer *>(buffer)->buffer offset: 0 atIndex: at];
+				if (buffer) {
+					[render_command_encoder setVertexBuffer: static_cast<MTL_Buffer *>(buffer)->buffer offset: 0 atIndex: at];
+				} else {
+					[render_command_encoder setVertexBuffer: 0 offset: 0 atIndex: at];
+				}
 			}
 			virtual void SetVertexShaderConstant(uint32 at, const void * data, int length) noexcept override
 			{
-				if (state != 1) { error_state = false; return; }
-				[render_command_encoder setVertexBytes: data length: length atIndex: at];
+				if (state != 1 || length > 4096) { error_state = false; return; }
+				if (length) {
+					[render_command_encoder setVertexBytes: data length: length atIndex: at];
+				} else {
+					[render_command_encoder setVertexBuffer: 0 offset: 0 atIndex: at];
+				}
 			}
 			virtual void SetVertexShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				[render_command_encoder setVertexSamplerState: static_cast<MTL_SamplerState *>(sampler)->state atIndex: at];
+				if (sampler) {
+					[render_command_encoder setVertexSamplerState: static_cast<MTL_SamplerState *>(sampler)->state atIndex: at];
+				} else {
+					[render_command_encoder setVertexSamplerState: 0 atIndex: at];
+				}
 			}
 			virtual void SetPixelShaderResource(uint32 at, IDeviceResource * resource) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				if (resource->GetResourceType() == ResourceType::Buffer) {
-					[render_command_encoder setFragmentBuffer: static_cast<MTL_Buffer *>(resource)->buffer offset: 0 atIndex: at];
-				} else if (resource->GetResourceType() == ResourceType::Texture) {
-					[render_command_encoder setFragmentTexture: static_cast<MTL_Texture *>(resource)->texture atIndex: at];
+				if (resource) {
+					if (resource->GetResourceType() == ResourceType::Buffer) {
+						[render_command_encoder setFragmentBuffer: static_cast<MTL_Buffer *>(resource)->buffer offset: 0 atIndex: at];
+					} else if (resource->GetResourceType() == ResourceType::Texture) {
+						[render_command_encoder setFragmentTexture: static_cast<MTL_Texture *>(resource)->texture atIndex: at];
+					}
+				} else {
+					[render_command_encoder setFragmentBuffer: 0 offset: 0 atIndex: at];
+					[render_command_encoder setFragmentTexture: 0 atIndex: at];
 				}
 			}
 			virtual void SetPixelShaderConstant(uint32 at, IBuffer * buffer) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				[render_command_encoder setFragmentBuffer: static_cast<MTL_Buffer *>(buffer)->buffer offset: 0 atIndex: at];
+				if (buffer) {
+					[render_command_encoder setFragmentBuffer: static_cast<MTL_Buffer *>(buffer)->buffer offset: 0 atIndex: at];
+				} else {
+					[render_command_encoder setFragmentBuffer: 0 offset: 0 atIndex: at];
+				}
 			}
 			virtual void SetPixelShaderConstant(uint32 at, const void * data, int length) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				[render_command_encoder setFragmentBytes: data length: length atIndex: at];
+				if (length) {
+					[render_command_encoder setFragmentBytes: data length: length atIndex: at];
+				} else {
+					[render_command_encoder setFragmentBuffer: 0 offset: 0 atIndex: at];
+				}
 			}
 			virtual void SetPixelShaderSamplerState(uint32 at, ISamplerState * sampler) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				[render_command_encoder setFragmentSamplerState: static_cast<MTL_SamplerState *>(sampler)->state atIndex: at];
+				if (sampler) {
+					[render_command_encoder setFragmentSamplerState: static_cast<MTL_SamplerState *>(sampler)->state atIndex: at];
+				} else {
+					[render_command_encoder setFragmentSamplerState: 0 atIndex: at];
+				}
 			}
 			virtual void SetIndexBuffer(IBuffer * index, IndexBufferFormat format) noexcept override
 			{
 				if (state != 1) { error_state = false; return; }
-				index_buffer.SetRetain(static_cast<MTL_Buffer *>(index));
-				if (format == IndexBufferFormat::UInt16) index_buffer_format = MTLIndexTypeUInt16;
-				else if (format == IndexBufferFormat::UInt32) index_buffer_format = MTLIndexTypeUInt32;
+				if (index) {
+					index_buffer.SetRetain(static_cast<MTL_Buffer *>(index));
+					if (format == IndexBufferFormat::UInt16) index_buffer_format = MTLIndexTypeUInt16;
+					else if (format == IndexBufferFormat::UInt32) index_buffer_format = MTLIndexTypeUInt32;
+				} else {
+					index_buffer.SetReference(0);
+				}
 			}
 			virtual void SetStencilReferenceValue(uint8 ref) noexcept override
 			{
@@ -503,13 +564,13 @@ namespace Engine
 			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
 			{
-				if (state != 3) { error_state = false; return; }
+				if (state != 3 || !texture) { error_state = false; return; }
 				if (!blit_command_encoder) blit_command_encoder = [current_command blitCommandEncoder];
 				[blit_command_encoder generateMipmapsForTexture: GetInnerMetalTexture(texture)];
 			}
 			virtual void CopyResourceData(IDeviceResource * dest, IDeviceResource * src) noexcept override
 			{
-				if (state != 3) { error_state = false; return; }
+				if (state != 3 || !dest || !src) { error_state = false; return; }
 				if (!blit_command_encoder) blit_command_encoder = [current_command blitCommandEncoder];
 				if (dest->GetResourceType() == ResourceType::Buffer && src->GetResourceType() == ResourceType::Buffer) {
 					auto src_rsrc = static_cast<MTL_Buffer *>(src);
@@ -524,7 +585,7 @@ namespace Engine
 			}
 			virtual void CopySubresourceData(IDeviceResource * dest, SubresourceIndex dest_subres, VolumeIndex dest_origin, IDeviceResource * src, SubresourceIndex src_subres, VolumeIndex src_origin, VolumeIndex size) noexcept override
 			{
-				if (state != 3) { error_state = false; return; }
+				if (state != 3 || !dest || !src) { error_state = false; return; }
 				if (!blit_command_encoder) blit_command_encoder = [current_command blitCommandEncoder];
 				if (dest->GetResourceType() == ResourceType::Buffer && src->GetResourceType() == ResourceType::Buffer) {
 					auto src_rsrc = static_cast<MTL_Buffer *>(src);
@@ -543,7 +604,7 @@ namespace Engine
 			}
 			virtual void UpdateResourceData(IDeviceResource * dest, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size, const ResourceInitDesc & src) noexcept override
 			{
-				if (state != 3) { error_state = false; return; }
+				if (state != 3 || !dest) { error_state = false; return; }
 				if (!(dest->GetResourceUsage() & ResourceUsageCPUWrite)) { error_state = false; return; }
 				if (!blit_command_encoder) blit_command_encoder = [current_command blitCommandEncoder];
 				id<MTLResource> rsrc = 0;
@@ -585,7 +646,7 @@ namespace Engine
 			}
 			virtual void QueryResourceData(const ResourceDataDesc & dest, IDeviceResource * src, SubresourceIndex subres, VolumeIndex origin, VolumeIndex size) noexcept override
 			{
-				if (state != 3) { error_state = false; return; }
+				if (state != 3 || !src) { error_state = false; return; }
 				if (!(src->GetResourceUsage() & ResourceUsageCPURead)) { error_state = false; return; }
 				if (!blit_command_encoder) blit_command_encoder = [current_command blitCommandEncoder];
 				id<MTLResource> rsrc = 0;
@@ -659,8 +720,8 @@ namespace Engine
 					presentation->SetPixelFormat(MTLPixelFormatBGRA8Unorm);
 					format = PixelFormat::B8G8R8A8_unorm;
 				}
-				width = desc.Width;
-				height = desc.Height;
+				width = max(desc.Width, 1U);
+				height = max(desc.Height, 1U);
 				usage = ResourceUsageRenderTarget;
 				if (desc.Usage & ResourceUsageShaderRead) usage |= ResourceUsageShaderRead;
 			}
@@ -714,6 +775,7 @@ namespace Engine
 			}
 			virtual bool ResizeSurface(uint32 _width, uint32 _height) noexcept override
 			{
+				if (_width > 16384 || _height > 16384) return false;
 				width = max(_width, 1U);
 				height = max(_height, 1U);
 				presentation->SetLayerSize(UI::Point(width, height));
@@ -818,9 +880,11 @@ namespace Engine
 		public:
 			id<MTLDevice> device;
 			id<MTLCommandQueue> queue;
+			bool is_valid;
 
 			MTL_Device(id<MTLDevice> _device) : device(_device)
 			{
+				is_valid = true;
 				[device retain];
 				queue = [device newCommandQueue];
 				context = new MTL_DeviceContext(this, device, queue);
@@ -832,7 +896,7 @@ namespace Engine
 			}
 			virtual string GetDeviceName(void) noexcept override { return Cocoa::EngineString([device name]); }
 			virtual uint64 GetDeviceIdentifier(void) noexcept override { return [device registryID]; }
-			virtual bool DeviceIsValid(void) noexcept override { return true; }
+			virtual bool DeviceIsValid(void) noexcept override { return is_valid; }
 			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override
 			{
 				tech = L"Metal";
@@ -1067,33 +1131,43 @@ namespace Engine
 				texture->format = desc.Format;
 				texture->width = desc.Width;
 				texture->height = texture->depth = texture->size = 1;
+				if (desc.Width < 1 || desc.Width > 16384) return 0;
 				if (desc.Type == TextureType::Type1D) {
 					descriptor.textureType = MTLTextureType1D;
 				} else if (desc.Type == TextureType::TypeArray1D) {
+					if (desc.ArraySize < 1 || desc.ArraySize > 2048) return 0;
 					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType1DArray;
 					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type2D) {
+					if (desc.Height < 1 || desc.Height > 16384) return 0;
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureType2D;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArray2D) {
+					if (desc.Height < 1 || desc.Height > 16384) return 0;
+					if (desc.ArraySize < 1 || desc.ArraySize > 2048) return 0;
 					descriptor.height = desc.Height;
 					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType2DArray;
 					texture->height = desc.Height;
 					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::TypeCube) {
+					if (desc.Width != desc.Height) return 0;
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureTypeCube;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArrayCube) {
+					if (desc.Width != desc.Height) return 0;
+					if (desc.ArraySize < 1 || desc.ArraySize > 2048) return 0;
 					descriptor.height = desc.Height;
 					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureTypeCubeArray;
 					texture->height = desc.Height;
 					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type3D) {
+					if (desc.Height < 1 || desc.Height > 16384) return 0;
+					if (desc.Depth < 1 || desc.Depth > 2048) return 0;
 					descriptor.height = desc.Height;
 					descriptor.depth = desc.Depth;
 					descriptor.textureType = MTLTextureType3D;
@@ -1154,33 +1228,43 @@ namespace Engine
 				texture->format = desc.Format;
 				texture->width = desc.Width;
 				texture->height = texture->depth = texture->size = 1;
+				if (desc.Width < 1 || desc.Width > 16384) return 0;
 				if (desc.Type == TextureType::Type1D) {
 					descriptor.textureType = MTLTextureType1D;
 				} else if (desc.Type == TextureType::TypeArray1D) {
+					if (desc.ArraySize < 1 || desc.ArraySize > 2048) return 0;
 					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType1DArray;
 					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type2D) {
+					if (desc.Height < 1 || desc.Height > 16384) return 0;
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureType2D;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArray2D) {
+					if (desc.Height < 1 || desc.Height > 16384) return 0;
+					if (desc.ArraySize < 1 || desc.ArraySize > 2048) return 0;
 					descriptor.height = desc.Height;
 					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureType2DArray;
 					texture->height = desc.Height;
 					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::TypeCube) {
+					if (desc.Width != desc.Height) return 0;
 					descriptor.height = desc.Height;
 					descriptor.textureType = MTLTextureTypeCube;
 					texture->height = desc.Height;
 				} else if (desc.Type == TextureType::TypeArrayCube) {
+					if (desc.Width != desc.Height) return 0;
+					if (desc.ArraySize < 1 || desc.ArraySize > 2048) return 0;
 					descriptor.height = desc.Height;
 					descriptor.arrayLength = desc.ArraySize;
 					descriptor.textureType = MTLTextureTypeCubeArray;
 					texture->height = desc.Height;
 					texture->size = desc.ArraySize;
 				} else if (desc.Type == TextureType::Type3D) {
+					if (desc.Height < 1 || desc.Height > 16384) return 0;
+					if (desc.Depth < 1 || desc.Depth > 2048) return 0;
 					descriptor.height = desc.Height;
 					descriptor.depth = desc.Depth;
 					descriptor.textureType = MTLTextureType3D;
@@ -1277,6 +1361,7 @@ namespace Engine
 			{
 				try {
 					if (!window->GetStation()->IsNativeStationWrapper()) return 0;
+					if (desc.Width > 16384 || desc.Height > 16384) return 0;
 					SafePointer<MTL_WindowLayer> layer = new MTL_WindowLayer(this, context, desc, window->GetStation());
 					layer->Retain();
 					return layer;
