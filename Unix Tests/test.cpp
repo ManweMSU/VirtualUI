@@ -344,6 +344,22 @@ public:
 
 int Main(void)
 {
+	{
+		SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
+		Math::ColorHSV clr(0.0, 1.0, 1.0);
+		while (true) {
+			canvas->BeginDraw();
+			canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
+			canvas->EndDraw();
+			auto key = canvas->ReadKey();
+			if (key == KeyCodes::Escape) break;
+			else if (key == KeyCodes::Right) {
+				clr.h += 1.0;
+				clr.ClampChannels();
+			}
+		}
+	}
+	
 	IO::Console Console;
 
 	SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();

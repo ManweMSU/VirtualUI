@@ -79,7 +79,15 @@ namespace Engine
 			[_metal_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
 			metal_view = _metal_view;
 		}
-		MetalPresentationInterface::~MetalPresentationInterface(void) { if (metal_view) { reinterpret_cast<EngineMetalView *>(metal_view)->presentation_interface = 0; [metal_view release]; } }
+		MetalPresentationInterface::~MetalPresentationInterface(void)
+		{
+			if (metal_view) {
+				reinterpret_cast<EngineMetalView *>(metal_view)->presentation_interface = 0;
+				reinterpret_cast<EngineMetalView *>(metal_view)->callback_ref = 0;
+				reinterpret_cast<EngineMetalView *>(metal_view)->station_ref = 0;
+				[metal_view release];
+			}
+		}
 		id<MTLDevice> MetalPresentationInterface::GetLayerDevice(void) { if (metal_view) return [reinterpret_cast<EngineMetalView *>(metal_view)->layer device]; else return 0; }
 		void MetalPresentationInterface::SetLayerDevice(id<MTLDevice> device) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setDevice: device]; }
 		MTLPixelFormat MetalPresentationInterface::GetPixelFormat(void) { if (metal_view) return [reinterpret_cast<EngineMetalView *>(metal_view)->layer pixelFormat]; else return MTLPixelFormatInvalid; }
