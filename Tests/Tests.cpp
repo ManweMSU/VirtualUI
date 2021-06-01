@@ -30,6 +30,7 @@
 #include <Graphics/GraphicsHelper.h>
 #include <PlatformDependent/ComInterop.h>
 #include <Math/Color.h>
+#include <Graphics/Drawing.h>
 
 #include "stdafx.h"
 #include "Tests.h"
@@ -279,6 +280,22 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	Codec::InitializeDefaultCodecs();
+
+	{
+		SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
+		Math::ColorHSV clr(0.0, 1.0, 1.0);
+		while (true) {
+			canvas->BeginDraw();
+			canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
+			canvas->EndDraw();
+			auto key = canvas->ReadKey();
+			if (key == KeyCodes::Escape) break;
+			else if (key == KeyCodes::Right) {
+				clr.h += 1.0;
+				clr.ClampChannels();
+			}
+		}
+	}
 
 	SafePointer<IResourceLoader> resource_loader = Engine::UI::CreateObjectFactory();
 

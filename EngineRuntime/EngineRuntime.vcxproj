@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="EngineBase.h" />
     <ClInclude Include="EngineRuntime.h" />
+    <ClInclude Include="Graphics\Drawing.h" />
     <ClInclude Include="Graphics\Graphics.h" />
     <ClInclude Include="Graphics\GraphicsHelper.h" />
     <ClInclude Include="ImageCodec\CodecBase.h" />
@@ -102,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp" />
+    <ClCompile Include="Graphics\Drawing.cpp" />
     <ClCompile Include="Graphics\Graphics.cpp" />
     <ClCompile Include="Graphics\GraphicsHelper.cpp" />
     <ClCompile Include="ImageCodec\CodecBase.cpp" />

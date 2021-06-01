@@ -68,7 +68,7 @@ namespace Engine
 			_size_all.SetReference(new HandleWindowStationHelper::WindowsCursor(LoadCursorW(0, IDC_SIZEALL)));
 		}
 		HandleWindowStation::~HandleWindowStation(void) {}
-		void HandleWindowStation::SetFocus(Window * window) { if (::SetFocus(_window)) WindowStation::SetFocus(window); }
+		void HandleWindowStation::SetFocus(Window * window) { ::SetFocus(_window); if (::GetFocus() == _window) WindowStation::SetFocus(window); }
 		Window * HandleWindowStation::GetFocus(void) { if (::GetFocus() == _window) return WindowStation::GetFocus(); else return 0; }
 		void HandleWindowStation::SetCapture(Window * window) { if (window) ::SetCapture(_window); else if (!WindowStation::GetExclusiveWindow()) ::ReleaseCapture(); WindowStation::SetCapture(window); }
 		Window * HandleWindowStation::GetCapture(void) { if (::GetCapture() == _window) return WindowStation::GetCapture(); else return 0; }
