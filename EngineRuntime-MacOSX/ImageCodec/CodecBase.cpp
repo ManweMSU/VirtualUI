@@ -600,7 +600,7 @@ namespace Engine
 		ObjectArray<ICodec> Codecs(0x10);
 
 		void InitializeDefaultCodecs(void) { NativeWindows::InitializeCodecCollection(); }
-		ICodec * FindCoder(const string & format)
+		ICodec * FindEncoder(const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].CanEncode(format)) return Codecs.ElementAt(i);
 			return 0;

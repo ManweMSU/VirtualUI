@@ -27,6 +27,18 @@ namespace Engine
 {
 	namespace Codec
 	{
+		constexpr const widechar * ImageFormatDIB = L"BMP";
+		constexpr const widechar * ImageFormatPNG= L"PNG";
+		constexpr const widechar * ImageFormatJPEG = L"JPG";
+		constexpr const widechar * ImageFormatGIF = L"GIF";
+		constexpr const widechar * ImageFormatTIFF = L"TIF";
+		constexpr const widechar * ImageFormatDDS = L"DDS";
+		constexpr const widechar * ImageFormatHEIF = L"HEIF";
+		constexpr const widechar * ImageFormatWindowsIcon = L"ICO";
+		constexpr const widechar * ImageFormatWindowsCursor = L"CUR";
+		constexpr const widechar * ImageFormatAppleIcon = L"ICNS";
+		constexpr const widechar * ImageFormatEngine = L"EIWV";
+
 		class Frame;
 		class Image;
 
@@ -52,7 +64,7 @@ namespace Engine
 
 		void InitializeDefaultCodecs(void);
 
-		ICodec * FindCoder(const string & format);
+		ICodec * FindEncoder(const string & format);
 		ICodec * FindDecoder(const string & format);
 		void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format);
 		void EncodeImage(Streaming::Stream * stream, Image * image, const string & format);
