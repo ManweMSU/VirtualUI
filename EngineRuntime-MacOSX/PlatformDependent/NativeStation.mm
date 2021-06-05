@@ -63,7 +63,7 @@ static void ViewToScreen(int ox, int oy, NSView * view, double & sx, double & sy
 	Engine::UI::Window * target;
 	int operation;
 	int identifier;
-	Engine::Tasks::ThreadJob * job;
+	Engine::IDispatchTask * task;
 }
 - (void) queue_event: (NSView *) view;
 @end
@@ -478,8 +478,8 @@ void __SetEngineWindowEffectBackgroundMaterial(Engine::UI::Window * window, long
 		if (!station) return;
 		if (event->target) event->target->RaiseEvent(event->identifier, Engine::UI::Window::Event::Deferred, 0);
 	} else if (event->operation == 2) {
-		event->job->DoJob(0);
-		event->job->Release();
+		event->task->DoTask(event->target->GetStation());
+		event->task->Release();
 	}
 }
 - (BOOL) acceptsFirstResponder { return YES; }
@@ -1007,12 +1007,13 @@ namespace Engine
 				event->identifier = ID;
 				[event performSelectorOnMainThread: @selector(queue_event:) withObject: __GetEngineViewFromWindow(_window) waitUntilDone: NO];
 			}
-			virtual void PostJob(Tasks::ThreadJob * job) override
+			virtual void AppendTask(IDispatchTask * task) override
 			{
 				EngineRuntimeEvent * event = [[EngineRuntimeEvent alloc] init];
 				event->operation = 2;
-				event->job = job;
-				job->Retain();
+				event->task = task;
+				event->target = GetDesktop();
+				task->Retain();
 				[event performSelectorOnMainThread: @selector(queue_event:) withObject: __GetEngineViewFromWindow(_window) waitUntilDone: NO];
 			}
 			virtual handle GetOSHandle(void) override { return _window; }

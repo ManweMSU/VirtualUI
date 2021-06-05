@@ -49,8 +49,8 @@ namespace Engine
 		Array<uint8> * Compress(Array<uint8> * data, MethodChain & chain, CompressionQuality quality);
 		Array<uint8> * Decompress(Array<uint8> * data, MethodChain chain);
 
-		bool ChainCompress(Streaming::Stream * dest, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, Tasks::ThreadPool * pool = 0, uint32 block_size = 0x100000);
-		bool ChainDecompress(Streaming::Stream * dest, Streaming::Stream * source, Tasks::ThreadPool * pool = 0);
+		bool ChainCompress(Streaming::Stream * dest, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, ThreadPool * pool = 0, uint32 block_size = 0x100000);
+		bool ChainDecompress(Streaming::Stream * dest, Streaming::Stream * source, ThreadPool * pool = 0);
 
 		class DecompressionStream : public Streaming::Stream
 		{

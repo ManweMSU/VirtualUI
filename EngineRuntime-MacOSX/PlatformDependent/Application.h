@@ -61,10 +61,10 @@ namespace Engine
 			virtual UI::Controls::OverlappedWindow * CreateWindow(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, const UI::Rectangle & Position) = 0;
 			virtual UI::Controls::OverlappedWindow * CreateWindow(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, const UI::Rectangle & Position, UI::Window * Parent) = 0;
 			virtual UI::Controls::OverlappedWindow * CreateModalWindow(UI::Template::ControlTemplate * Template, UI::Windows::IWindowEventCallback * Callback, const UI::Rectangle & Position, UI::Window * Parent) = 0;
-			virtual void SystemOpenFileDialog(OpenFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) = 0;
-			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) = 0;
-			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) = 0;
-			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, Tasks::ThreadJob * OnExit) = 0;
+			virtual void SystemOpenFileDialog(OpenFileInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) = 0;
+			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) = 0;
+			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) = 0;
+			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, IDispatchTask * OnExit) = 0;
 			virtual void SetCallback(IApplicationCallback * callback) = 0;
 			virtual IApplicationCallback * GetCallback(void) = 0;
 			virtual void RunApplication(void) = 0;

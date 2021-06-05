@@ -170,7 +170,7 @@ namespace Engine
 					return 0;
 				}
 			}
-			virtual void SystemOpenFileDialog(OpenFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
+			virtual void SystemOpenFileDialog(OpenFileInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				NSOpenPanel * panel = [NSOpenPanel openPanel];
@@ -265,9 +265,9 @@ namespace Engine
 					[delegate release];
 					if (OnExit) {
 						if (Parent) {
-							Parent->GetStation()->PostJob(OnExit);
+							Parent->GetStation()->AppendTask(OnExit);
 						} else {
-							OnExit->DoJob(0);
+							OnExit->DoTask(0);
 						}
 						OnExit->Release();
 					}
@@ -278,7 +278,7 @@ namespace Engine
 					handler([panel runModal]);
 				}
 			}
-			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
+			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				NSSavePanel * panel = [NSSavePanel savePanel];
@@ -339,9 +339,9 @@ namespace Engine
 					[delegate release];
 					if (OnExit) {
 						if (Parent) {
-							Parent->GetStation()->PostJob(OnExit);
+							Parent->GetStation()->AppendTask(OnExit);
 						} else {
-							OnExit->DoJob(0);
+							OnExit->DoTask(0);
 						}
 						OnExit->Release();
 					}
@@ -352,7 +352,7 @@ namespace Engine
 					handler([panel runModal]);
 				}
 			}
-			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
+			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				NSOpenPanel * panel = [NSOpenPanel openPanel];
@@ -375,9 +375,9 @@ namespace Engine
 					[panel orderOut: nil];
 					if (OnExit) {
 						if (Parent) {
-							Parent->GetStation()->PostJob(OnExit);
+							Parent->GetStation()->AppendTask(OnExit);
 						} else {
-							OnExit->DoJob(0);
+							OnExit->DoTask(0);
 						}
 						OnExit->Release();
 					}
@@ -388,7 +388,7 @@ namespace Engine
 					handler([panel runModal]);
 				}
 			}
-			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, Tasks::ThreadJob * OnExit) override
+			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				NSAlert * alert = [[NSAlert alloc] init];
@@ -450,9 +450,9 @@ namespace Engine
 					[alert release];
 					if (OnExit) {
 						if (Parent) {
-							Parent->GetStation()->PostJob(OnExit);
+							Parent->GetStation()->AppendTask(OnExit);
 						} else {
-							OnExit->DoJob(0);
+							OnExit->DoTask(0);
 						}
 						OnExit->Release();
 					}

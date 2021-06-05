@@ -577,9 +577,12 @@ namespace Engine
 		void WindowStation::RequireRedraw(void) {}
 		void WindowStation::DeferredDestroy(Window * window) {}
 		void WindowStation::DeferredRaiseEvent(Window * window, int ID) {}
-		void WindowStation::PostJob(Tasks::ThreadJob * job) {}
 		handle WindowStation::GetOSHandle(void) { return 0; }
 		WindowStation::VisualStyles & WindowStation::GetVisualStyles(void) { return Styles; }
+		void WindowStation::SubmitTask(IDispatchTask * task) { AppendTask(task); }
+		void WindowStation::BeginSubmit(void) {}
+		void WindowStation::AppendTask(IDispatchTask * task) {}
+		void WindowStation::EndSubmit(void) {}
 
 		ParentWindow::ParentWindow(Window * parent, WindowStation * station) : Window(parent, station) {}
 		Window * ParentWindow::FindChild(int ID)

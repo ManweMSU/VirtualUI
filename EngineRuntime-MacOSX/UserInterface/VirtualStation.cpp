@@ -71,7 +71,7 @@ namespace Engine
 			void VirtualStation::VirtualWindowStation::RequireRedraw(void) { host_station->RequireRedraw(); }
 			void VirtualStation::VirtualWindowStation::DeferredDestroy(Window * window) { host_station->DeferredDestroy(window); }
 			void VirtualStation::VirtualWindowStation::DeferredRaiseEvent(Window * window, int ID) { host_station->DeferredRaiseEvent(window, ID); }
-			void VirtualStation::VirtualWindowStation::PostJob(Tasks::ThreadJob * job) { host_station->PostJob(job); }
+			void VirtualStation::VirtualWindowStation::AppendTask(IDispatchTask * task) { host_station->AppendTask(task); }
 
 			VirtualStation::VirtualStation(Window * Parent, WindowStation * Station) : _width(1), _height(1), _station(0),
 				_enabled(true), _visible(true), _autosize(false), _render(false), _id(0), _rect(Rectangle::Invalid()), Window(Parent, Station)

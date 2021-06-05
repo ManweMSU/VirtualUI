@@ -51,8 +51,8 @@ namespace Engine
 			virtual void SetFileAttribute(ArchiveFile file, const string & key, const string & value) = 0;
 			virtual void SetFileData(ArchiveFile file, const void * data, int length) = 0;
 			virtual void SetFileData(ArchiveFile file, Streaming::Stream * source) = 0;
-			virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, Tasks::ThreadPool * pool = 0) = 0;
-			virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, Tasks::ThreadPool * pool, uint32 block_size) = 0;
+			virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, ThreadPool * pool = 0) = 0;
+			virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, ThreadPool * pool, uint32 block_size) = 0;
 			virtual void SetFileCompressionFlag(ArchiveFile file, bool flag) = 0;
 			virtual void Finalize(void) = 0;
 		};

@@ -146,7 +146,7 @@ namespace Engine
 			source->Retain();
 			return source;
 		}
-		class ChainCompressJob : public Tasks::ThreadJob
+		class ChainCompressTask : public IDispatchTask
 		{
 		public:
 			ObjectArray<Semaphore> * access_sem;
@@ -159,7 +159,7 @@ namespace Engine
 			uint32 block_size;
 			Streaming::Stream * source;
 			Streaming::Stream * dest;
-			virtual void DoJob(Tasks::ThreadPool * pool) override
+			virtual void DoTask(IDispatchQueue * pool) override
 			{
 				access_sem->ElementAt(index)->Wait();
 				while ((*length) && (*success)) {
@@ -190,7 +190,7 @@ namespace Engine
 				access_sem->ElementAt((index + 1) % count)->Open();
 			}
 		};
-		class ChainDecompressJob : public Tasks::ThreadJob
+		class ChainDecompressTask : public IDispatchTask
 		{
 		public:
 			ObjectArray<Semaphore> * access_sem;
@@ -200,7 +200,7 @@ namespace Engine
 			bool * success;
 			Streaming::Stream * source;
 			Streaming::Stream * dest;
-			virtual void DoJob(Tasks::ThreadPool * pool) override
+			virtual void DoTask(IDispatchQueue * pool) override
 			{
 				access_sem->ElementAt(index)->Wait();
 				while ((*block_count) && (*success)) {
@@ -230,7 +230,7 @@ namespace Engine
 				access_sem->ElementAt((index + 1) % count)->Open();
 			}
 		};
-		bool ChainCompress(Streaming::Stream * dest, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, Tasks::ThreadPool * pool, uint32 block_size)
+		bool ChainCompress(Streaming::Stream * dest, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, ThreadPool * pool, uint32 block_size)
 		{
 			if (!block_size) return false;
 			uint64 length = source->Length();
@@ -249,18 +249,18 @@ namespace Engine
 				bool success = true;
 				pool->BeginSubmit();
 				for (int i = 0; i < thread_count; i++) {
-					SafePointer<ChainCompressJob> job = new ChainCompressJob;
-					job->access_sem = &access_sem;
-					job->index = i;
-					job->length = &length;
-					job->count = thread_count;
-					job->success = &success;
-					job->chain = chain;
-					job->quality = quality;
-					job->block_size = block_size;
-					job->source = source;
-					job->dest = dest;
-					pool->AppendJob(job);
+					SafePointer<ChainCompressTask> task = new ChainCompressTask;
+					task->access_sem = &access_sem;
+					task->index = i;
+					task->length = &length;
+					task->count = thread_count;
+					task->success = &success;
+					task->chain = chain;
+					task->quality = quality;
+					task->block_size = block_size;
+					task->source = source;
+					task->dest = dest;
+					pool->AppendTask(task);
 				}
 				pool->EndSubmit();
 				pool->Wait();
@@ -284,7 +284,7 @@ namespace Engine
 			}
 			return true;
 		}
-		bool ChainDecompress(Streaming::Stream * dest, Streaming::Stream * source, Tasks::ThreadPool * pool)
+		bool ChainDecompress(Streaming::Stream * dest, Streaming::Stream * source, ThreadPool * pool)
 		{
 			uint32 block_count;
 			source->Read(&block_count, 4);
@@ -299,15 +299,15 @@ namespace Engine
 				bool success = true;
 				pool->BeginSubmit();
 				for (int i = 0; i < thread_count; i++) {
-					SafePointer<ChainDecompressJob> job = new ChainDecompressJob;
-					job->access_sem = &access_sem;
-					job->index = i;
-					job->block_count = &block_count;
-					job->count = thread_count;
-					job->success = &success;
-					job->source = source;
-					job->dest = dest;
-					pool->AppendJob(job);
+					SafePointer<ChainDecompressTask> task = new ChainDecompressTask;
+					task->access_sem = &access_sem;
+					task->index = i;
+					task->block_count = &block_count;
+					task->count = thread_count;
+					task->success = &success;
+					task->source = source;
+					task->dest = dest;
+					pool->AppendTask(task);
 				}
 				pool->EndSubmit();
 				pool->Wait();
