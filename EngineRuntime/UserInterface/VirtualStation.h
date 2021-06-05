@@ -43,7 +43,7 @@ namespace Engine
 					virtual void RequireRedraw(void) override;
 					virtual void DeferredDestroy(Window * window) override;
 					virtual void DeferredRaiseEvent(Window * window, int ID) override;
-					virtual void PostJob(Tasks::ThreadJob * job) override;
+					virtual void AppendTask(IDispatchTask * task) override;
 				};
 				
 				VirtualWindowStation * _station;

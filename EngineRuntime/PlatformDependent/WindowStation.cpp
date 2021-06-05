@@ -7,7 +7,7 @@
 
 #define ERTM_DESTROYWINDOW	(WM_USER + 0x001)
 #define ERTM_RAISEEVENT		(WM_USER + 0x002)
-#define ERTM_EXECUTEJOB		(WM_USER + 0x003)
+#define ERTM_EXECUTETASK	(WM_USER + 0x003)
 
 namespace Engine
 {
@@ -193,7 +193,7 @@ namespace Engine
 		}
 		void HandleWindowStation::DeferredDestroy(Window * window) { PostMessageW(_window, ERTM_DESTROYWINDOW, reinterpret_cast<WPARAM>(window), 0); }
 		void HandleWindowStation::DeferredRaiseEvent(Window * window, int ID) { PostMessageW(_window, ERTM_RAISEEVENT, reinterpret_cast<WPARAM>(window), eint(ID)); }
-		void HandleWindowStation::PostJob(Tasks::ThreadJob * job) { job->Retain(); PostMessageW(_window, ERTM_EXECUTEJOB, 0, reinterpret_cast<eint>(job)); }
+		void HandleWindowStation::AppendTask(IDispatchTask * task) { task->Retain(); PostMessageW(_window, ERTM_EXECUTETASK, 0, reinterpret_cast<eint>(task)); }
 		handle HandleWindowStation::GetOSHandle(void) { return _window; }
 		HWND HandleWindowStation::Handle(void) { return _window; }
 		bool & HandleWindowStation::ClearBackgroundFlag(void) { return _clear_background; }
@@ -304,10 +304,10 @@ namespace Engine
 					window->RaiseEvent(int(LParam), Window::Event::Deferred, 0);
 					window->RequireRedraw();
 				}
-			} else if (Msg == ERTM_EXECUTEJOB) {
-				Tasks::ThreadJob * job = reinterpret_cast<Tasks::ThreadJob *>(LParam);
-				job->DoJob(0);
-				job->Release();
+			} else if (Msg == ERTM_EXECUTETASK) {
+				IDispatchTask * task = reinterpret_cast<IDispatchTask *>(LParam);
+				task->DoTask(this);
+				task->Release();
 			}
 			return DefWindowProcW(_window, Msg, WParam, LParam);
 		}

@@ -128,7 +128,7 @@ namespace Engine
 		class ICursor : public Object {};
 		typedef Animation::AnimationState<Window, Rectangle> WindowAnimationState;
 		enum class SystemCursor { Null = 0, Arrow = 1, Beam = 2, Link = 3, SizeLeftRight = 4, SizeUpDown = 5, SizeLeftUpRightDown = 6, SizeLeftDownRightUp = 7, SizeAll = 8 };
-		class WindowStation : public Object
+		class WindowStation : public IDispatchQueue
 		{
 		public:
 			class IDesktopWindowFactory
@@ -283,11 +283,15 @@ namespace Engine
 			virtual void RequireRedraw(void);
 			virtual void DeferredDestroy(Window * window);
 			virtual void DeferredRaiseEvent(Window * window, int ID);
-			virtual void PostJob(Tasks::ThreadJob * job);
 			virtual handle GetOSHandle(void);
 
 			VisualStyles & GetVisualStyles(void);
-		};
+
+			virtual void SubmitTask(IDispatchTask * task) override;
+			virtual void BeginSubmit(void) override;
+			virtual void AppendTask(IDispatchTask * task) override;
+			virtual void EndSubmit(void) override;
+};
 		class ParentWindow : public Window
 		{
 		public:

@@ -414,7 +414,7 @@ namespace Engine
 					headers[file - 1].Offset = pos_begin - base_offset;
 					headers[file - 1].SetMask |= 1;
 				}
-				virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, Tasks::ThreadPool * pool = 0) override
+				virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, ThreadPool * pool = 0) override
 				{
 					if (file <= 0 || file > GetFileCount()) throw InvalidArgumentException();
 					if (headers[file - 1].SetMask & 1) throw InvalidStateException();
@@ -427,7 +427,7 @@ namespace Engine
 					mark_compressed(file);
 					headers[file - 1].SetMask |= 1;
 				}
-				virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, Tasks::ThreadPool * pool, uint32 block_size) override
+				virtual void SetFileData(ArchiveFile file, Streaming::Stream * source, MethodChain chain, CompressionQuality quality, ThreadPool * pool, uint32 block_size) override
 				{
 					if (file <= 0 || file > GetFileCount()) throw InvalidArgumentException();
 					if (headers[file - 1].SetMask & 1) throw InvalidStateException();

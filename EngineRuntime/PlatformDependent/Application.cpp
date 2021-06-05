@@ -53,21 +53,21 @@ namespace Engine
 				OpenFileInfo * Info;
 				HWND Owner;
 				UI::WindowStation * Context;
-				Tasks::ThreadJob * Job;
+				IDispatchTask * Task;
 			};
 			struct SaveFileStruct
 			{
 				SaveFileInfo * Info;
 				HWND Owner;
 				UI::WindowStation * Context;
-				Tasks::ThreadJob * Job;
+				IDispatchTask * Task;
 			};
 			struct ChooseDirectoryStruct
 			{
 				ChooseDirectoryInfo * Info;
 				HWND Owner;
 				UI::WindowStation * Context;
-				Tasks::ThreadJob * Job;
+				IDispatchTask * Task;
 			};
 			struct MessageBoxStruct
 			{
@@ -78,7 +78,7 @@ namespace Engine
 				MessageBoxStyle Style;
 				HWND Owner;
 				UI::WindowStation * Context;
-				Tasks::ThreadJob * Job;
+				IDispatchTask * Task;
 			};
 			static int OpenFileProc(void * argument)
 			{
@@ -163,10 +163,10 @@ namespace Engine
 				} else {
 					data->Info->Files.Clear();
 				}
-				if (data->Job) {
-					if (data->Context) data->Context->PostJob(data->Job);
-					else data->Job->DoJob(0);
-					data->Job->Release();
+				if (data->Task) {
+					if (data->Context) data->Context->AppendTask(data->Task);
+					else data->Task->DoTask(0);
+					data->Task->Release();
 				}
 				delete data;
 				return 0;
@@ -226,10 +226,10 @@ namespace Engine
 				} else {
 					data->Info->File = L"";
 				}
-				if (data->Job) {
-					if (data->Context) data->Context->PostJob(data->Job);
-					else data->Job->DoJob(0);
-					data->Job->Release();
+				if (data->Task) {
+					if (data->Context) data->Context->AppendTask(data->Task);
+					else data->Task->DoTask(0);
+					data->Task->Release();
 				}
 				delete data;
 				return 0;
@@ -255,10 +255,10 @@ namespace Engine
 						}
 					}
 				}
-				if (data->Job) {
-					if (data->Context) data->Context->PostJob(data->Job);
-					else data->Job->DoJob(0);
-					data->Job->Release();
+				if (data->Task) {
+					if (data->Context) data->Context->AppendTask(data->Task);
+					else data->Task->DoTask(0);
+					data->Task->Release();
 				}
 				delete data;
 				return 0;
@@ -282,10 +282,10 @@ namespace Engine
 					else if (result == IDCANCEL) *data->Result = MessageBoxResult::Cancel;
 					else if (result == IDOK) *data->Result = MessageBoxResult::Ok;
 				}
-				if (data->Job) {
-					if (data->Context) data->Context->PostJob(data->Job);
-					else data->Job->DoJob(0);
-					data->Job->Release();
+				if (data->Task) {
+					if (data->Context) data->Context->AppendTask(data->Task);
+					else data->Task->DoTask(0);
+					data->Task->Release();
 				}
 				delete data;
 				return 0;
@@ -336,13 +336,13 @@ namespace Engine
 					return 0;
 				}
 			}
-			virtual void SystemOpenFileDialog(OpenFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
+			virtual void SystemOpenFileDialog(OpenFileInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				OpenFileStruct * data = new OpenFileStruct;
 				data->Info = Info;
 				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
-				data->Job = OnExit;
+				data->Task = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(OpenFileProc, data);
@@ -352,13 +352,13 @@ namespace Engine
 					END_GLOBAL_MODAL_SESSION
 				}
 			}
-			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
+			virtual void SystemSaveFileDialog(SaveFileInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				SaveFileStruct * data = new SaveFileStruct;
 				data->Info = Info;
 				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
-				data->Job = OnExit;
+				data->Task = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(SaveFileProc, data);
@@ -368,13 +368,13 @@ namespace Engine
 					END_GLOBAL_MODAL_SESSION
 				}
 			}
-			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, Tasks::ThreadJob * OnExit) override
+			virtual void SystemChooseDirectoryDialog(ChooseDirectoryInfo * Info, UI::Window * Parent, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				ChooseDirectoryStruct * data = new ChooseDirectoryStruct;
 				data->Info = Info;
 				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
-				data->Job = OnExit;
+				data->Task = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(ChooseDirectoryProc, data);
@@ -384,7 +384,7 @@ namespace Engine
 					END_GLOBAL_MODAL_SESSION
 				}
 			}
-			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, Tasks::ThreadJob * OnExit) override
+			virtual void SystemMessageBox(MessageBoxResult * Result, const string & Text, const string & Title, UI::Window * Parent, MessageBoxButtonSet Buttons, MessageBoxStyle Style, IDispatchTask * OnExit) override
 			{
 				if (OnExit) OnExit->Retain();
 				MessageBoxStruct * data = new MessageBoxStruct;
@@ -394,7 +394,7 @@ namespace Engine
 				data->Buttons = Buttons;
 				data->Style = Style;
 				data->Owner = Parent ? reinterpret_cast<HWND>(Parent->GetStation()->GetOSHandle()) : 0;
-				data->Job = OnExit;
+				data->Task = OnExit;
 				data->Context = Parent ? Parent->GetStation() : 0;
 				if (Parent) {
 					SafePointer<Thread> isolated = CreateThread(MessageBoxProc, data, 0x40000);
