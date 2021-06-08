@@ -1,4 +1,4 @@
-#include "Process.h"
+#include "../Interfaces/Process.h"
 
 #include "../Miscellaneous/DynamicString.h"
 #include "../PlatformDependent/FileApi.h"

@@ -1,9 +1,9 @@
-#include "Application.h"
+#include "../Interfaces/Application.h"
 
 #include "WindowStation.h"
 #include "NativeStation.h"
 #include "../Miscellaneous/DynamicString.h"
-#include "Assembly.h"
+#include "../Interfaces/Assembly.h"
 
 #include <ObjIdl.h>
 #include <ShlObj.h>

@@ -1,6 +1,6 @@
 #include "EditControls.h"
 
-#include "../PlatformDependent/Clipboard.h"
+#include "../Interfaces/Clipboard.h"
 #include "../PlatformDependent/KeyCodes.h"
 #include "../Miscellaneous/DynamicString.h"
 

@@ -20,9 +20,6 @@
     <Filter Include="ImageCodec">
       <UniqueIdentifier>{a7d11f69-e741-41e1-8736-7f7b9bc51687}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Processes">
-      <UniqueIdentifier>{875d00d9-f3fd-43dc-a781-3f237cb9de17}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Network">
       <UniqueIdentifier>{2204c14a-ecd8-4669-a627-ba0341a93a4c}</UniqueIdentifier>
     </Filter>
@@ -38,13 +35,13 @@
     <Filter Include="Graphics">
       <UniqueIdentifier>{2e027b94-63ae-403c-9519-778c5398fcde}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Interfaces">
+      <UniqueIdentifier>{2c5f05a9-66cd-4683-82af-3df691a9128a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
       <Filter>EngineBase</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent\Base.h">
-      <Filter>PlatformDependent</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\Direct2D.h">
       <Filter>PlatformDependent</Filter>
@@ -88,9 +85,6 @@
     <ClInclude Include="UserInterface\ButtonControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\StringConvert.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\GroupControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -115,9 +109,6 @@
     <ClInclude Include="UserInterface\ScrollableControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\Clipboard.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\EditControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -133,23 +124,11 @@
     <ClInclude Include="UserInterface\Animation.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="Processes\Process.h">
-      <Filter>Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="Processes\Threading.h">
-      <Filter>Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="Processes\Shell.h">
-      <Filter>Processes</Filter>
-    </ClInclude>
     <ClInclude Include="PlatformDependent\Direct3D.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\NativeStation.h">
       <Filter>PlatformDependent</Filter>
-    </ClInclude>
-    <ClInclude Include="Network\Socket.h">
-      <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="Network\Punycode.h">
       <Filter>Network</Filter>
@@ -190,9 +169,6 @@
     <ClInclude Include="Network\HTTP.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\Assembly.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\ListControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -201,9 +177,6 @@
     </ClInclude>
     <ClInclude Include="UserInterface\CombinedControls.h">
       <Filter>UserInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent\Application.h">
-      <Filter>PlatformDependent</Filter>
     </ClInclude>
     <ClInclude Include="Math\MathBase.h">
       <Filter>Math</Filter>
@@ -259,17 +232,11 @@
     <ClInclude Include="UserInterface\Menus.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="Processes\DynamicLibrary.h">
-      <Filter>Processes</Filter>
-    </ClInclude>
     <ClInclude Include="Graphics\Graphics.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\Notifications.h">
       <Filter>PlatformDependent</Filter>
-    </ClInclude>
-    <ClInclude Include="Network\SecureSocket.h">
-      <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\Cryptography.h">
       <Filter>PlatformDependent</Filter>
@@ -282,6 +249,39 @@
     </ClInclude>
     <ClInclude Include="Graphics\Drawing.h">
       <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Socket.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\SecureSocket.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Shell.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Threading.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\DynamicLibrary.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Process.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\Encoding.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Application.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Assembly.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Base.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Clipboard.h">
+      <Filter>Interfaces</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -323,9 +323,6 @@
     </ClCompile>
     <ClCompile Include="UserInterface\ButtonControls.cpp">
       <Filter>UserInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformDependent\StringConvert.cpp">
-      <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\GroupControls.cpp">
       <Filter>UserInterface</Filter>
@@ -369,23 +366,11 @@
     <ClCompile Include="ImageCodec\IconCodec.cpp">
       <Filter>ImageCodec</Filter>
     </ClCompile>
-    <ClCompile Include="Processes\Process.cpp">
-      <Filter>Processes</Filter>
-    </ClCompile>
-    <ClCompile Include="Processes\Threading.cpp">
-      <Filter>Processes</Filter>
-    </ClCompile>
-    <ClCompile Include="Processes\Shell.cpp">
-      <Filter>Processes</Filter>
-    </ClCompile>
     <ClCompile Include="PlatformDependent\Direct3D.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\NativeStation.cpp">
       <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="Network\Socket.cpp">
-      <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="Network\Punycode.cpp">
       <Filter>Network</Filter>
@@ -492,17 +477,11 @@
     <ClCompile Include="UserInterface\Menus.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
-    <ClCompile Include="Processes\DynamicLibrary.cpp">
-      <Filter>Processes</Filter>
-    </ClCompile>
     <ClCompile Include="Graphics\Graphics.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Notifications.cpp">
       <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="Network\SecureSocket.cpp">
-      <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Cryptography.cpp">
       <Filter>PlatformDependent</Filter>
@@ -515,6 +494,27 @@
     </ClCompile>
     <ClCompile Include="Graphics\Drawing.cpp">
       <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SecureSocket.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Socket.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\DynamicLibrary.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Process.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Shell.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Threading.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\Encoding.cpp">
+      <Filter>Miscellaneous</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

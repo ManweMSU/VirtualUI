@@ -1,6 +1,6 @@
-#include "StringConvert.h"
+#include "Encoding.h"
 
-#include "Base.h"
+#include "../Interfaces/Base.h"
 
 namespace Engine
 {

@@ -21,7 +21,7 @@
 #include <PlatformDependent/KeyCodes.h>
 #include <PlatformDependent/NativeStation.h>
 #include <Storage/Archive.h>
-#include <PlatformDependent/Assembly.h>
+#include <Interfaces/Assembly.h>
 #include <Storage/StringTable.h>
 #include <PlatformSpecific/WindowsTaskbar.h>
 #include <PlatformSpecific/WindowsEffects.h>

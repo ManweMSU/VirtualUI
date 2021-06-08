@@ -1,4 +1,4 @@
-#include "Clipboard.h"
+#include "../Interfaces/Clipboard.h"
 
 #include <Windows.h>
 

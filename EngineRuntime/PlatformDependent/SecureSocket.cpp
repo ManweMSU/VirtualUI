@@ -1,4 +1,4 @@
-#include "SecureSocket.h"
+#include "../Interfaces/SecureSocket.h"
 
 using namespace Engine::Streaming;
 

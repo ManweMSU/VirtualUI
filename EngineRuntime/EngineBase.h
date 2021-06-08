@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlatformDependent/Base.h"
+#include "Interfaces/Base.h"
 
 #include <new>
 
