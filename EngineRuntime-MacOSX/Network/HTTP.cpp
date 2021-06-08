@@ -1,6 +1,6 @@
 #include "HTTP.h"
 
-#include "SecureSocket.h"
+#include "../Interfaces/SecureSocket.h"
 #include "../Miscellaneous/DynamicString.h"
 
 namespace Engine

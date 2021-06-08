@@ -1,6 +1,6 @@
-#include "SecureSocket.h"
+#include "../Interfaces/SecureSocket.h"
 
-#include "../Processes/Threading.h"
+#include "../Interfaces/Threading.h"
 
 #include <Network/Network.h>
 

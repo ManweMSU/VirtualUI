@@ -11,11 +11,11 @@
 #include "KeyCodes.h"
 #include "AppleCodec.h"
 #include "NativeStationBackdoors.h"
-#include "Application.h"
+#include "../Interfaces/Application.h"
 #include "ApplicationBackdoors.h"
 #include "../ImageCodec/IconCodec.h"
 #include "../Storage/ImageVolume.h"
-#include "Assembly.h"
+#include "../Interfaces/Assembly.h"
 #include "../PlatformSpecific/MacWindowEffects.h"
 #include "../PlatformSpecific/MacTouchBar.h"
 

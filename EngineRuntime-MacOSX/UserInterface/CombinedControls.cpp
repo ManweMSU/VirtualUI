@@ -1,7 +1,7 @@
 #include "CombinedControls.h"
 
 #include "../PlatformDependent/KeyCodes.h"
-#include "../PlatformDependent/Clipboard.h"
+#include "../Interfaces/Clipboard.h"
 #include "OverlappedWindows.h"
 
 namespace Engine

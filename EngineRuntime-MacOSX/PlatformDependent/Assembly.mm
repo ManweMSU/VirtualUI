@@ -1,4 +1,4 @@
-#include "Assembly.h"
+#include "../Interfaces/Assembly.h"
 
 #include "CocoaInterop.h"
 

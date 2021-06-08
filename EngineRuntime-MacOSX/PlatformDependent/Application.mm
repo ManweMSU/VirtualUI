@@ -1,10 +1,10 @@
-#include "Application.h"
+#include "../Interfaces/Application.h"
 
 #include "../Miscellaneous/DynamicString.h"
 #include "NativeStation.h"
 #include "NativeStationBackdoors.h"
 #include "CocoaInterop.h"
-#include "Assembly.h"
+#include "../Interfaces/Assembly.h"
 
 @interface EngineRuntimeOpenSaveDelegate : NSObject<NSOpenSavePanelDelegate>
 {

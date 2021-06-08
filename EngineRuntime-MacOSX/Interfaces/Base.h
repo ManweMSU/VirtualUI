@@ -1,6 +1,6 @@
 #pragma once
 
-#include "StringConvert.h"
+#include "../Miscellaneous/Encoding.h"
 
 #include <stdlib.h>
 #include <math.h>

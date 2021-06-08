@@ -3,7 +3,7 @@
 #include "InterfaceFormat.h"
 #include "BinaryLoaderLegacy.h"
 #include "OverlappedWindows.h"
-#include "../PlatformDependent/Assembly.h"
+#include "../Interfaces/Assembly.h"
 
 #ifdef ENGINE_WINDOWS
 #define CURRENT_SYSTEM	L"Windows"

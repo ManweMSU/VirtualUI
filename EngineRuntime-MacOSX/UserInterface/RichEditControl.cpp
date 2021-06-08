@@ -1,7 +1,7 @@
 #include "RichEditControl.h"
 
 #include "../PlatformDependent/KeyCodes.h"
-#include "../PlatformDependent/Clipboard.h"
+#include "../Interfaces/Clipboard.h"
 #include "../Storage/JSON.h"
 #include "../Miscellaneous/DynamicString.h"
 

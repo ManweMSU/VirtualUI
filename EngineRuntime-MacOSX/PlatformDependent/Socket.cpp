@@ -1,6 +1,6 @@
-#include "Socket.h"
+#include "../Interfaces/Socket.h"
 
-#include "Punycode.h"
+#include "../Network/Punycode.h"
 #include "../Miscellaneous/DynamicString.h"
 
 #include <unistd.h>

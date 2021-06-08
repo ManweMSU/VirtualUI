@@ -2,8 +2,18 @@
 
 #include "../EngineBase.h"
 
+#ifdef ENGINE_WINDOWS
+
+#define ENGINE_EXPORT_API extern "C" __declspec(dllexport)
+#define ENGINE_LIBRARY_EXTENSION L"dll"
+
+#endif
+#ifdef ENGINE_MACOSX
+
 #define ENGINE_EXPORT_API extern "C" __attribute__((visibility("default")))
 #define ENGINE_LIBRARY_EXTENSION L"dylib"
+
+#endif
 
 namespace Engine
 {

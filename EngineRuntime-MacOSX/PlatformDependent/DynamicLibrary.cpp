@@ -1,4 +1,4 @@
-#include "DynamicLibrary.h"
+#include "../Interfaces/DynamicLibrary.h"
 
 #include "../PlatformDependent/FileApi.h"
 
