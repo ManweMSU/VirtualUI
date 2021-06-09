@@ -1,6 +1,6 @@
 #include "CombinedControls.h"
 
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 #include "../Interfaces/Clipboard.h"
 #include "OverlappedWindows.h"
 

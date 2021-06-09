@@ -1,6 +1,6 @@
 #include "../Interfaces/Shell.h"
 
-#include "../PlatformDependent/FileApi.h"
+#include "../Interfaces/SystemIO.h"
 #include "../Miscellaneous/DynamicString.h"
 
 #include <Windows.h>

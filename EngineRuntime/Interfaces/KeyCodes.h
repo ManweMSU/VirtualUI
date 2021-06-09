@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Interfaces/Base.h"
+#include "Base.h"
 
 namespace Engine
 {

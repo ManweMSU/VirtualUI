@@ -1,7 +1,7 @@
 #include "../Interfaces/Application.h"
 
 #include "WindowStation.h"
-#include "NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 #include "../Miscellaneous/DynamicString.h"
 #include "../Interfaces/Assembly.h"
 
@@ -157,7 +157,7 @@ namespace Engine
 						if (extract.Length() == 1) {
 							data->Info->Files << extract.FirstElement();
 						} else if (extract.Length() > 1) {
-							for (int i = 1; i < extract.Length(); i++) data->Info->Files << extract.FirstElement() + string(IO::PathChar) + extract[i];
+							for (int i = 1; i < extract.Length(); i++) data->Info->Files << extract.FirstElement() + string(IO::PathDirectorySeparator) + extract[i];
 						}
 					} else data->Info->Files << result;
 				} else {

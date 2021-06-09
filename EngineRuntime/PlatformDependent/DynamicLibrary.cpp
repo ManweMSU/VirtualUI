@@ -1,7 +1,5 @@
 #include "../Interfaces/DynamicLibrary.h"
 
-#include "../PlatformDependent/FileApi.h"
-
 #include <Windows.h>
 
 #undef LoadLibrary

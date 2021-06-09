@@ -1,6 +1,6 @@
 #include "ScrollableControls.h"
 
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 
 namespace Engine
 {

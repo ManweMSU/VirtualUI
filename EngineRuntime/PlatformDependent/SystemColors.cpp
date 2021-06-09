@@ -1,4 +1,4 @@
-#include "SystemColors.h"
+#include "../Interfaces/SystemColors.h"
 
 #include <Windows.h>
 #include <dwmapi.h>

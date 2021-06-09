@@ -1,31 +1,11 @@
 ﻿// Tests.cpp: определяет точку входа для приложения.
 //
 
-#include <Miscellaneous/DynamicString.h>
-#include <UserInterface/ShapeBase.h>
-#include <UserInterface/Templates.h>
-#include <UserInterface/ControlBase.h>
-#include <Streaming.h>
-#include <UserInterface/ControlClasses.h>
-#include <UserInterface/BinaryLoader.h>
-#include <UserInterface/StaticControls.h>
-#include <UserInterface/ButtonControls.h>
-#include <UserInterface/GroupControls.h>
-#include <UserInterface/Menus.h>
-#include <UserInterface/OverlappedWindows.h>
-#include <UserInterface/EditControls.h>
-#include <UserInterface/ListControls.h>
-#include <UserInterface/CombinedControls.h>
-#include <UserInterface/RichEditControl.h>
-#include <UserInterface/VirtualStation.h>
-#include <PlatformDependent/KeyCodes.h>
-#include <PlatformDependent/NativeStation.h>
-#include <Storage/Archive.h>
-#include <Interfaces/Assembly.h>
-#include <Storage/StringTable.h>
+#include <EngineRuntime.h>
+#include <Interfaces/NativeStation.h>
 #include <PlatformSpecific/WindowsTaskbar.h>
 #include <PlatformSpecific/WindowsEffects.h>
-#include <PlatformDependent/SystemColors.h>
+#include <Interfaces/SystemColors.h>
 #include <PlatformDependent/Console.h>
 #include <Graphics/GraphicsHelper.h>
 #include <PlatformDependent/ComInterop.h>
@@ -437,12 +417,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				virtual void OnInitialized(UI::Window * window) override
 				{
 					IO::Console cns;
-					cns << L"Callback: Initialized, window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
+					cns << L"Callback: Initialized, window = " << string(static_cast<handle>(window)) << IO::LineFeedSequence;
 				}
 				virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
 				{
 					IO::Console cns;
-					cns << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::NewLineChar;
+					cns << L"Callback: Event with ID = " << ID << L", window = " << string(static_cast<handle>(window)) << L", sender = " << string(static_cast<handle>(sender)) << IO::LineFeedSequence;
 					if (!window) return;
 					if (event == Window::Event::Command || event == Window::Event::MenuCommand) {
 						if (ID == 876) {
@@ -480,7 +460,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 					else if (event == Windows::FrameEvent::Maximize) cns << L"Maximize";
 					else if (event == Windows::FrameEvent::Help) cns << L"Help";
 					else if (event == Windows::FrameEvent::PopupMenuCancelled) cns << L"Popup menu cancelled";
-					cns << L", window = " << string(static_cast<handle>(window)) << IO::NewLineChar;
+					cns << L", window = " << string(static_cast<handle>(window)) << IO::LineFeedSequence;
 				}
 			};
 			auto Callback = new _cb;
@@ -994,7 +974,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 			w6->Show(true);
 			w4->Show(true);
 
-			cns << L"Done!" << IO::NewLineChar;
+			cns << L"Done!" << IO::LineFeedSequence;
 		}
 	}
 

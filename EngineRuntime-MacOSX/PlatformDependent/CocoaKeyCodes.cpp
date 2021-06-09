@@ -1,6 +1,6 @@
 #include "CocoaKeyCodes.h"
 
-#include "KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 
 namespace Engine
 {

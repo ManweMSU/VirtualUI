@@ -1,7 +1,7 @@
 #include "ShapeBase.h"
 #include "Templates.h"
 #include "../Math/Color.h"
-#include "../PlatformDependent/NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 
 namespace Engine
 {

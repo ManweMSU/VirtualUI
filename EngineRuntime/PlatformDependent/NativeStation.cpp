@@ -1,4 +1,4 @@
-#include "NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 
 #include "Direct2D.h"
 #include "Direct3D.h"
@@ -532,7 +532,6 @@ namespace Engine
 		{
 			return ::IsZoomed(reinterpret_cast<NativeStation *>(Station)->GetHandle());
 		}
-		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at) { return RunMenuPopup(menu, owner->GetStation()->GetOSHandle(), at, false); }
 		int RunMenuPopup(UI::Menus::Menu * menu, handle os_window, UI::Point at, bool global_coord)
 		{
 			POINT p = { at.x, at.y };
@@ -558,6 +557,7 @@ namespace Engine
 			for (int i = 0; i < menu->Children.Length(); i++) menu->Children[i].Shutdown();
 			return result;
 		}
+		int RunMenuPopup(UI::Menus::Menu * menu, UI::Window * owner, UI::Point at) { return RunMenuPopup(menu, owner->GetStation()->GetOSHandle(), at, false); }
 		UI::Box GetScreenDimensions(void)
 		{
 			RECT Rect;

@@ -1,6 +1,6 @@
 #include "Graphics.h"
 
-#include "../PlatformDependent/NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 
 namespace Engine
 {

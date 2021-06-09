@@ -1,4 +1,4 @@
-#include "KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 
 #include "../Miscellaneous/Dictionary.h"
 

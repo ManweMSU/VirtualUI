@@ -30,11 +30,17 @@
     <ClInclude Include="Interfaces\Assembly.h" />
     <ClInclude Include="Interfaces\Base.h" />
     <ClInclude Include="Interfaces\Clipboard.h" />
+    <ClInclude Include="Interfaces\Cryptography.h" />
     <ClInclude Include="Interfaces\DynamicLibrary.h" />
+    <ClInclude Include="Interfaces\KeyCodes.h" />
+    <ClInclude Include="Interfaces\NativeStation.h" />
+    <ClInclude Include="Interfaces\Notifications.h" />
     <ClInclude Include="Interfaces\Process.h" />
     <ClInclude Include="Interfaces\SecureSocket.h" />
     <ClInclude Include="Interfaces\Shell.h" />
     <ClInclude Include="Interfaces\Socket.h" />
+    <ClInclude Include="Interfaces\SystemColors.h" />
+    <ClInclude Include="Interfaces\SystemIO.h" />
     <ClInclude Include="Interfaces\Threading.h" />
     <ClInclude Include="Math\Color.h" />
     <ClInclude Include="Math\Complex.h" />
@@ -44,6 +50,7 @@
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Encoding.h" />
+    <ClInclude Include="Miscellaneous\FileServices.h" />
     <ClInclude Include="Miscellaneous\Reflection.h" />
     <ClInclude Include="Miscellaneous\ThreadPool.h" />
     <ClInclude Include="Miscellaneous\Time.h" />
@@ -52,14 +59,8 @@
     <ClInclude Include="Network\Punycode.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
     <ClInclude Include="PlatformDependent\Console.h" />
-    <ClInclude Include="PlatformDependent\Cryptography.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\Direct3D.h" />
-    <ClInclude Include="PlatformDependent\FileApi.h" />
-    <ClInclude Include="PlatformDependent\KeyCodes.h" />
-    <ClInclude Include="PlatformDependent\NativeStation.h" />
-    <ClInclude Include="PlatformDependent\Notifications.h" />
-    <ClInclude Include="PlatformDependent\SystemColors.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
     <ClInclude Include="PlatformSpecific\WindowsEffects.h" />
     <ClInclude Include="PlatformSpecific\WindowsRegistry.h" />
@@ -115,6 +116,7 @@
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Encoding.cpp" />
+    <ClCompile Include="Miscellaneous\FileServices.cpp" />
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="Miscellaneous\ThreadPool.cpp" />
     <ClCompile Include="Miscellaneous\Time.cpp" />
@@ -130,7 +132,6 @@
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\Direct3D.cpp" />
     <ClCompile Include="PlatformDependent\DynamicLibrary.cpp" />
-    <ClCompile Include="PlatformDependent\FileApi.cpp" />
     <ClCompile Include="PlatformDependent\KeyCodes.cpp" />
     <ClCompile Include="PlatformDependent\NativeStation.cpp" />
     <ClCompile Include="PlatformDependent\Notifications.cpp" />
@@ -139,6 +140,7 @@
     <ClCompile Include="PlatformDependent\Shell.cpp" />
     <ClCompile Include="PlatformDependent\Socket.cpp" />
     <ClCompile Include="PlatformDependent\SystemColors.cpp" />
+    <ClCompile Include="PlatformDependent\SystemIO.cpp" />
     <ClCompile Include="PlatformDependent\Threading.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsEffects.cpp" />

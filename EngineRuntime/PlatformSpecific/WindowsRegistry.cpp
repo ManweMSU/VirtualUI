@@ -30,7 +30,7 @@ namespace Engine
 			{
 				if (!Name.Length()) return 0;
 				if (Name.FindFirst(L'\\') != -1 || Name.FindFirst(L'/') != -1) {
-					auto split = IO::NormalizePath(Name).Split(L'\\');
+					auto split = IO::Path::NormalizePath(Name).Split(L'\\');
 					SafePointer<RegistryKey> Current;
 					Current.SetRetain(this);
 					for (int i = 0; i < split.Length(); i++) {

@@ -1,4 +1,4 @@
-#include "SystemColors.h"
+#include "../Interfaces/SystemColors.h"
 
 @import Foundation;
 @import AppKit;

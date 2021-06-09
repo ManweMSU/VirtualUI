@@ -1,7 +1,7 @@
-#include "Notifications.h"
+#include "../Interfaces/Notifications.h"
 
 #include "WindowStation.h"
-#include "NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 #include "../PlatformSpecific/WindowsRegistry.h"
 
 #include <ShObjIdl.h>
@@ -13,6 +13,7 @@ namespace Engine
 {
 	namespace NativeWindows {
 		LRESULT WINAPI HandleEngineMenuMessages(HWND Wnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+		int RunMenuPopup(UI::Menus::Menu * menu, handle os_window, UI::Point at, bool global_coord);
 	}
 	namespace UI
 	{

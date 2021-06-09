@@ -495,8 +495,8 @@ namespace Engine
 				return int(float(SpaceMetrics.advanceWidth) * float(Height) / float(FontMetrics.designUnitsPerEm));
 			}
 			virtual int GetHeight(void) const noexcept override { return ActualHeight; }
-			virtual int GetLineSpacing(void) const noexcept override { return UnitsToDIP(FontMetrics.ascent + FontMetrics.descent + FontMetrics.lineGap); }
-			virtual int GetBaselineOffset(void) const noexcept override { return UnitsToDIP(FontMetrics.ascent); }
+			virtual int GetLineSpacing(void) const noexcept override { return int(UnitsToDIP(FontMetrics.ascent + FontMetrics.descent + FontMetrics.lineGap)); }
+			virtual int GetBaselineOffset(void) const noexcept override { return int(UnitsToDIP(FontMetrics.ascent)); }
 			virtual string ToString(void) const override { return L"Engine.Direct2D.DWFont"; }
 		};
 

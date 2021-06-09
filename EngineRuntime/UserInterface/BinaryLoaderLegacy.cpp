@@ -1,6 +1,6 @@
 #include "BinaryLoaderLegacy.h"
 
-#include "../PlatformDependent/SystemColors.h"
+#include "../Interfaces/SystemColors.h"
 
 using namespace Engine::Streaming;
 

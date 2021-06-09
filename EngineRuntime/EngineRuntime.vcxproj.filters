@@ -38,15 +38,15 @@
     <Filter Include="Interfaces">
       <UniqueIdentifier>{2c5f05a9-66cd-4683-82af-3df691a9128a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Deprecated">
+      <UniqueIdentifier>{59691833-d39b-460c-9671-0e68a970df49}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
       <Filter>EngineBase</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\Direct2D.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent\FileApi.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
     <ClInclude Include="Streaming.h">
@@ -88,9 +88,6 @@
     <ClInclude Include="UserInterface\GroupControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\KeyCodes.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\OverlappedWindows.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -125,9 +122,6 @@
       <Filter>UserInterface</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\Direct3D.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent\NativeStation.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
     <ClInclude Include="Network\Punycode.h">
@@ -190,9 +184,6 @@
     <ClInclude Include="Math\Matrix.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\SystemColors.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="PlatformSpecific\WindowsTaskbar.h">
       <Filter>PlatformSpecific</Filter>
     </ClInclude>
@@ -223,9 +214,6 @@
     <ClInclude Include="Math\Color.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\Console.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\RichEditControl.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
@@ -234,12 +222,6 @@
     </ClInclude>
     <ClInclude Include="Graphics\Graphics.h">
       <Filter>Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent\Notifications.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformDependent\Cryptography.h">
-      <Filter>PlatformDependent</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\GraphicsHelper.h">
       <Filter>Graphics</Filter>
@@ -283,15 +265,36 @@
     <ClInclude Include="Interfaces\Clipboard.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
+    <ClInclude Include="Interfaces\SystemColors.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\KeyCodes.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Cryptography.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\Console.h">
+      <Filter>Deprecated</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\SystemIO.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\FileServices.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Notifications.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\NativeStation.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Direct2D.cpp">
-      <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformDependent\FileApi.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\ComInterop.cpp">
@@ -468,9 +471,6 @@
     <ClCompile Include="Math\Color.cpp">
       <Filter>Math</Filter>
     </ClCompile>
-    <ClCompile Include="PlatformDependent\Console.cpp">
-      <Filter>PlatformDependent</Filter>
-    </ClCompile>
     <ClCompile Include="UserInterface\RichEditControl.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
@@ -514,6 +514,15 @@
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="Miscellaneous\Encoding.cpp">
+      <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Console.cpp">
+      <Filter>Deprecated</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemIO.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\FileServices.cpp">
       <Filter>Miscellaneous</Filter>
     </ClCompile>
   </ItemGroup>

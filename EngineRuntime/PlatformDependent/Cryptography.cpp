@@ -1,8 +1,8 @@
-#include "Cryptography.h"
+#include "../Interfaces/Cryptography.h"
 
+#include <ntstatus.h>
 #include <Windows.h>
 #include <bcrypt.h>
-#include <ntstatus.h>
 
 #pragma comment(lib, "Bcrypt.lib")
 

@@ -39,7 +39,7 @@ namespace Engine
 						int length = (int(data->ElementAt(3)) << 8) | int(data->ElementAt(4));
 						data->SetLength(5 + length);
 						sock->Read(data->GetBuffer() + 5, length);
-					} catch (IO::FileReadEndOfFileException & e) { data->Clear(); }
+					} catch (IO::FileReadEndOfFileException &) { data->Clear(); }
 					data->Retain();
 					return data;
 				} catch (...) { return 0; }
@@ -75,7 +75,7 @@ namespace Engine
 							return true;
 						} else return false;
 					} else {
-						for (int i = 0; i < recv_desc.cBuffers; i++) if (recv_desc.pBuffers[i].BufferType == SECBUFFER_DATA) {
+						for (uint i = 0; i < recv_desc.cBuffers; i++) if (recv_desc.pBuffers[i].BufferType == SECBUFFER_DATA) {
 							read_buffer.SetLength(recv_desc.pBuffers[i].cbBuffer);
 							MemoryCopy(read_buffer.GetBuffer(), recv_desc.pBuffers[i].pvBuffer, recv_desc.pBuffers[i].cbBuffer);
 							read_pos = 0;
@@ -176,7 +176,7 @@ namespace Engine
 						if (!read_buffer.Length()) throw IO::FileReadEndOfFileException(data_read);
 						if (!ReceiveReadBufferEncrypted()) throw IO::FileAccessException();
 					}
-					int read_now = min(length, read_buffer.Length() - read_pos);
+					int read_now = min(length, uint(read_buffer.Length()) - uint(read_pos));
 					if (!read_now) throw IO::FileReadEndOfFileException(data_read);
 					MemoryCopy(bytes + data_read, read_buffer.GetBuffer() + read_pos, read_now);
 					read_pos += read_now;
@@ -193,7 +193,7 @@ namespace Engine
 					int move_at = write_buffer.Length();
 					write_buffer.SetLength(move_at + move_size);
 					MemoryCopy(write_buffer.GetBuffer() + move_at, bytes, move_size);
-					if (write_buffer.Length() >= data_sizes.cbMaximumMessage) {
+					if (uint(write_buffer.Length()) >= data_sizes.cbMaximumMessage) {
 						if (!SubmitWriteBufferEncrypted()) throw IO::FileAccessException();
 					}
 					bytes += move_size;

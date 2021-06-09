@@ -1,4 +1,4 @@
-#include "FileApi.h"
+#include "../Interfaces/SystemIO.h"
 #include "../Miscellaneous/DynamicString.h"
 #include "../Syntax/Regular.h"
 
@@ -16,13 +16,6 @@ namespace Engine
 {
 	namespace IO
 	{
-		FileAccessException::FileAccessException(uint ec) : code(ec) {}
-		FileAccessException::FileAccessException(void) : code(Error::Unknown) {}
-		string FileAccessException::ToString(void) const { return L"FileAccessException (" + string(code, HexadecimalBase, 8) + L")"; }
-		FileReadEndOfFileException::FileReadEndOfFileException(uint32 data_read) : DataRead(data_read) {}
-		string FileReadEndOfFileException::ToString(void) const { return L"FileReadEndOfFileException: Data read amount = " + string(DataRead); }
-		string DirectoryAlreadyExistsException::ToString(void) const { return L"DirectoryAlreadyExistsException"; }
-		string FileFormatException::ToString(void) const { return L"FileFormatException"; }
 		uint WinErrorToEngineError(DWORD code)
 		{
 			if (code == ERROR_SUCCESS) return Error::Success;
@@ -59,15 +52,9 @@ namespace Engine
 			else if (code == ERROR_DIRECTORY) return Error::BadPathName;
 			return Error::Unknown;
 		}
-		string NormalizePath(const string & path)
-		{
-			if (PathChar == L'\\') return path.Replace(L'/', L'\\');
-			else if (PathChar == L'/') return path.Replace(L'\\', L'/');
-			return L"";
-		}
 		string ExpandPath(const string & path)
 		{
-			string Path = NormalizePath(path);
+			string Path = Path::NormalizePath(path);
 			DynamicString exp(0x100);
 			exp.ReserveLength(0x1000);
 			do {
@@ -97,32 +84,7 @@ namespace Engine
 			else if (mode == Streaming::FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
 			else if (mode == Streaming::FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
 			DWORD Flags = FILE_ATTRIBUTE_NORMAL;
-			handle file = CreateFileW(NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
-			if (file == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
-			return file;
-		}
-		handle CreateFileTemporary(const string & path, Streaming::FileAccess access, Streaming::FileCreationMode mode, bool delete_on_close)
-		{
-			if (delete_on_close && mode != Streaming::CreateNew) throw InvalidArgumentException();
-			DWORD Access = 0;
-			DWORD Share = 0;
-			if (access == Streaming::FileAccess::AccessRead) {
-				Access = GENERIC_READ;
-				Share = FILE_SHARE_READ;
-			} else if (access == Streaming::FileAccess::AccessWrite) {
-				Access = GENERIC_WRITE;
-			} else if (access == Streaming::FileAccess::AccessReadWrite) {
-				Access = GENERIC_READ | GENERIC_WRITE;
-			}
-			DWORD Creation = 0;
-			if (mode == Streaming::FileCreationMode::CreateAlways) Creation = CREATE_ALWAYS;
-			else if (mode == Streaming::FileCreationMode::CreateNew) Creation = CREATE_NEW;
-			else if (mode == Streaming::FileCreationMode::OpenAlways) Creation = OPEN_ALWAYS;
-			else if (mode == Streaming::FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
-			else if (mode == Streaming::FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
-			DWORD Flags = FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY;
-			if (delete_on_close) Flags |= FILE_FLAG_DELETE_ON_CLOSE;
-			handle file = CreateFileW(NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
+			handle file = CreateFileW(Path::NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
 			if (file == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return file;
 		}
@@ -157,7 +119,7 @@ namespace Engine
 			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &result, 0, FALSE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return result;
 		}
-		void CloseFile(handle file) { if (!CloseHandle(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
+		void CloseHandle(handle file) { if (!::CloseHandle(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		void Flush(handle file) { if (!FlushFileBuffers(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		uint64 GetFileSize(handle file)
 		{
@@ -165,10 +127,10 @@ namespace Engine
 			if (!GetFileSizeEx(file, &v)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return uint64(v.QuadPart);
 		}
-		void MoveFile(const string & from, const string & to) { if (!MoveFileW(NormalizePath(from), NormalizePath(to))) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
+		void MoveFile(const string & from, const string & to) { if (!MoveFileW(Path::NormalizePath(from), Path::NormalizePath(to))) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		bool FileExists(const string & path)
 		{
-			handle file = CreateFileW(NormalizePath(path), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			handle file = CreateFileW(Path::NormalizePath(path), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 			if (file == INVALID_HANDLE_VALUE) return false;
 			CloseHandle(file);
 			return true;
@@ -206,7 +168,7 @@ namespace Engine
 		}
 		void RemoveFile(const string & path)
 		{
-			if (!DeleteFileW(NormalizePath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (!DeleteFileW(Path::NormalizePath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		void SetCurrentDirectory(const string & path)
 		{
@@ -226,18 +188,18 @@ namespace Engine
 		}
 		void CreateDirectory(const string & path)
 		{
-			if (!CreateDirectoryW(NormalizePath(path), 0)) {
+			if (!CreateDirectoryW(Path::NormalizePath(path), 0)) {
 				if (GetLastError() == ERROR_ALREADY_EXISTS) throw DirectoryAlreadyExistsException();
 				throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			}
 		}
 		void RemoveDirectory(const string & path)
 		{
-			if (!RemoveDirectoryW(NormalizePath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (!RemoveDirectoryW(Path::NormalizePath(path))) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		void CreateSymbolicLink(const string & at, const string & to)
 		{
-			if (!CreateSymbolicLinkW(NormalizePath(at), NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (!CreateSymbolicLinkW(Path::NormalizePath(at), Path::NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 		}
 		string GetExecutablePath(void)
 		{
@@ -252,47 +214,6 @@ namespace Engine
 			} while (true);
 			return path;
 		}
-		namespace Path
-		{
-			string GetExtension(const string & path)
-			{
-				int s = path.Length() - 1;
-				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
-				for (int i = s; i >= 0; i--) {
-					if (path[i] == L'.') {
-						if (i != 0 && path[i - 1] != L'\\' && path[i - 1] != L'/') return path.Fragment(i + 1, s - i);
-					}
-					if (path[i] == L'/' || path[i] == L'\\') return L"";
-				}
-				return L"";
-			}
-			string GetFileName(const string & path)
-			{
-				int s = path.Length() - 1;
-				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
-				for (int i = s; i >= 0; i--) {
-					if (path[i] == L'\\' || path[i] == L'/') return path.Fragment(i + 1, s - i);
-				}
-				return path.Fragment(0, s + 1);
-			}
-			string GetDirectory(const string & path)
-			{
-				int s = path.Length() - 1;
-				while (s >= 0 && (path[s] == L'\\' || path[s] == L'/')) s--;
-				for (int i = s; i >= 0; i--) {
-					if (path[i] == L'\\' || path[i] == L'/') return path.Fragment(0, i);
-				}
-				return L"";
-			}
-			string GetFileNameWithoutExtension(const string & path)
-			{
-				string name = GetFileName(path);
-				for (int i = name.Length() - 1; i > 0; i--) {
-					if (name[i] == L'.') return name.Fragment(0, i);
-				}
-				return name;
-			}
-		}
 		namespace Search
 		{
 			namespace SearchHelper
@@ -302,7 +223,7 @@ namespace Engine
 					if (recursive) {
 						SafePointer< Array<string> > subs = GetDirectories(path + L"\\*");
 						for (int i = 0; i < subs->Length(); i++) {
-							FillFiles(to, path + L"\\" + subs->ElementAt(i), filter, prefix + subs->ElementAt(i) + string(PathChar), recursive);
+							FillFiles(to, path + L"\\" + subs->ElementAt(i), filter, prefix + subs->ElementAt(i) + string(PathDirectorySeparator), recursive);
 						}
 					}
 					WIN32_FIND_DATAW Find;
@@ -319,7 +240,7 @@ namespace Engine
 					}
 				}
 			}
-			Array<string>* GetFiles(const string & path, bool recursive)
+			Array<string> * GetFiles(const string & path, bool recursive)
 			{
 				SafePointer< Array<string> > result = new Array<string>(0x10);
 				auto epath = ExpandPath(path);
@@ -327,7 +248,7 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
-			Array<string>* GetDirectories(const string & path)
+			Array<string> * GetDirectories(const string & path)
 			{
 				SafePointer< Array<string> > result = new Array<string>(0x10);
 				auto epath = ExpandPath(path);
@@ -348,7 +269,7 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
-			Array<Volume>* GetVolumes(void)
+			Array<Volume> * GetVolumes(void)
 			{
 				SafePointer< Array<Volume> > result = new Array<Volume>(0x10);
 				auto drives = GetLogicalDrives();

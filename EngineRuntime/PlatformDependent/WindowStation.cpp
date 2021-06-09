@@ -1,6 +1,6 @@
 #include "WindowStation.h"
 
-#include "KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 #include "../ImageCodec/CodecBase.h"
 
 #undef ZeroMemory

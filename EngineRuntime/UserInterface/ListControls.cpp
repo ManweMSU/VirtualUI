@@ -1,6 +1,6 @@
 #include "ListControls.h"
 
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 #include "OverlappedWindows.h"
 
 namespace Engine
