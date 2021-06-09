@@ -30,6 +30,7 @@
     <ClInclude Include="Interfaces\Assembly.h" />
     <ClInclude Include="Interfaces\Base.h" />
     <ClInclude Include="Interfaces\Clipboard.h" />
+    <ClInclude Include="Interfaces\Console.h" />
     <ClInclude Include="Interfaces\Cryptography.h" />
     <ClInclude Include="Interfaces\DynamicLibrary.h" />
     <ClInclude Include="Interfaces\KeyCodes.h" />
@@ -47,6 +48,7 @@
     <ClInclude Include="Math\MathBase.h" />
     <ClInclude Include="Math\Matrix.h" />
     <ClInclude Include="Math\Vector.h" />
+    <ClInclude Include="Miscellaneous\ConsoleServices.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Encoding.h" />
@@ -58,7 +60,6 @@
     <ClInclude Include="Network\HTTP.h" />
     <ClInclude Include="Network\Punycode.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
-    <ClInclude Include="PlatformDependent\Console.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\Direct3D.h" />
     <ClInclude Include="PlatformDependent\WindowStation.h" />
@@ -114,6 +115,7 @@
     <ClCompile Include="Math\MathBase.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />
     <ClCompile Include="Math\Vector.cpp" />
+    <ClCompile Include="Miscellaneous\ConsoleServices.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Encoding.cpp" />
     <ClCompile Include="Miscellaneous\FileServices.cpp" />

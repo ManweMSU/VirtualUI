@@ -38,9 +38,6 @@
     <Filter Include="Interfaces">
       <UniqueIdentifier>{2c5f05a9-66cd-4683-82af-3df691a9128a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Deprecated">
-      <UniqueIdentifier>{59691833-d39b-460c-9671-0e68a970df49}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -274,9 +271,6 @@
     <ClInclude Include="Interfaces\Cryptography.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\Console.h">
-      <Filter>Deprecated</Filter>
-    </ClInclude>
     <ClInclude Include="Interfaces\SystemIO.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -288,6 +282,12 @@
     </ClInclude>
     <ClInclude Include="Interfaces\NativeStation.h">
       <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\Console.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\ConsoleServices.h">
+      <Filter>Miscellaneous</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -516,13 +516,16 @@
     <ClCompile Include="Miscellaneous\Encoding.cpp">
       <Filter>Miscellaneous</Filter>
     </ClCompile>
-    <ClCompile Include="PlatformDependent\Console.cpp">
-      <Filter>Deprecated</Filter>
-    </ClCompile>
     <ClCompile Include="PlatformDependent\SystemIO.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="Miscellaneous\FileServices.cpp">
+      <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\Console.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\ConsoleServices.cpp">
       <Filter>Miscellaneous</Filter>
     </ClCompile>
   </ItemGroup>

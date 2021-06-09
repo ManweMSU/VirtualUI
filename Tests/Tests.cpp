@@ -6,7 +6,7 @@
 #include <PlatformSpecific/WindowsTaskbar.h>
 #include <PlatformSpecific/WindowsEffects.h>
 #include <Interfaces/SystemColors.h>
-#include <PlatformDependent/Console.h>
+#include <Interfaces/Console.h>
 #include <Graphics/GraphicsHelper.h>
 #include <PlatformDependent/ComInterop.h>
 #include <Math/Color.h>
@@ -256,7 +256,22 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		SetConsoleTitleW(L"ui tests");
 	}
 
-	Console cns;
+	IO::Console cns;
+	//cns.SetInputMode(IO::ConsoleInputMode::Raw);
+	//cns.AlternateScreenBuffer(true);
+	while (true) {
+		IO::ConsoleEventDesc desc;
+		cns.ReadEvent(desc);
+		if (desc.Event == IO::ConsoleEvent::KeyInput) {
+			cns.WriteLine(FormatString(L"Key code = %0, flags = %1", desc.KeyCode, desc.KeyFlags));
+		} else if (desc.Event == IO::ConsoleEvent::CharacterInput) {
+			cns.WriteLine(FormatString(L"Key char = %0", desc.CharacterCode));
+		} else if (desc.Event == IO::ConsoleEvent::ConsoleResized) {
+			cns.WriteLine(FormatString(L"Resized : (%0, %1)", desc.Width, desc.Height));
+		}
+	}
+	//cns.AlternateScreenBuffer(false);
+	//cns.SetInputMode(IO::ConsoleInputMode::Echo);
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	Codec::InitializeDefaultCodecs();
