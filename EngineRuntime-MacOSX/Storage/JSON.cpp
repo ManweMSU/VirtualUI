@@ -109,7 +109,7 @@ namespace Engine
 				JsonPropertyWriter pw;
 				pw.pref = &inner_pref;
 				obj.EnumerateProperties(pw);
-				pw.ps << IO::NewLineChar;
+				pw.ps << IO::LineFeedSequence;
 				writer->Write(pw.ps);
 				writer->Write(pref + L"}");
 				obj.WasSerialized();
@@ -118,11 +118,11 @@ namespace Engine
 			{
 				obj.WillBeSerialized();
 				string inner_pref = pref + L"    ";
-				writer << L"{" << IO::NewLineChar;
+				writer << L"{" << IO::LineFeedSequence;
 				JsonPropertyWriter pw;
 				pw.pref = &inner_pref;
 				obj.EnumerateProperties(pw);
-				pw.ps << IO::NewLineChar;
+				pw.ps << IO::LineFeedSequence;
 				writer << pw.ps;
 				writer << pref << L"}";
 				obj.WasSerialized();
@@ -132,7 +132,7 @@ namespace Engine
 				if (first) {
 					first = false;
 				} else {
-					ps << L"," << IO::NewLineChar;
+					ps << L"," << IO::LineFeedSequence;
 				}
 				ps << *pref;
 				ps << L"\"" << name << L"\": ";
@@ -141,88 +141,88 @@ namespace Engine
 					if (pi.Type == PropertyType::Array) {
 						if (pi.InnerType == PropertyType::UInt8) {
 							auto & v = pi.Get< Array<uint8> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int8) {
 							auto & v = pi.Get< Array<int8> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::UInt16) {
 							auto & v = pi.Get< Array<uint16> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int16) {
 							auto & v = pi.Get< Array<int16> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::UInt32) {
 							auto & v = pi.Get< Array<uint32> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int32) {
 							auto & v = pi.Get< Array<int32> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::UInt64) {
 							auto & v = pi.Get< Array<uint64> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int64) {
 							auto & v = pi.Get< Array<int64> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Float) {
 							auto & v = pi.Get< Array<float> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Double) {
 							auto & v = pi.Get< Array<double> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Complex) {
 							auto & v = pi.Get< Array<Math::complex> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Boolean) {
 							auto & v = pi.Get< Array<bool> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::String) {
 							auto & v = pi.Get< Array<string> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Color) {
 							auto & v = pi.Get< Array<UI::Color> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Time) {
 							auto & v = pi.Get< Array<Time> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Rectangle) {
 							auto & v = pi.Get< Array<UI::Rectangle> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Structure) {
 							auto & v = pi.Get< ReflectedArray >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; auto & obj = v.ElementAt(i); JsonWriteStructure(ps, *pref + L"    ", obj); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; auto & obj = v.ElementAt(i); JsonWriteStructure(ps, *pref + L"    ", obj); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else {
 							ps << L"null";
@@ -230,88 +230,88 @@ namespace Engine
 					} else if (pi.Type == PropertyType::SafeArray) {
 						if (pi.InnerType == PropertyType::UInt8) {
 							auto & v = pi.Get< SafeArray<uint8> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int8) {
 							auto & v = pi.Get< SafeArray<int8> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::UInt16) {
 							auto & v = pi.Get< SafeArray<uint16> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int16) {
 							auto & v = pi.Get< SafeArray<int16> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::UInt32) {
 							auto & v = pi.Get< SafeArray<uint32> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int32) {
 							auto & v = pi.Get< SafeArray<int32> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::UInt64) {
 							auto & v = pi.Get< SafeArray<uint64> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Int64) {
 							auto & v = pi.Get< SafeArray<int64> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Float) {
 							auto & v = pi.Get< SafeArray<float> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Double) {
 							auto & v = pi.Get< SafeArray<double> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Complex) {
 							auto & v = pi.Get< SafeArray<Math::complex> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Boolean) {
 							auto & v = pi.Get< SafeArray<bool> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::String) {
 							auto & v = pi.Get< SafeArray<string> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Color) {
 							auto & v = pi.Get< SafeArray<UI::Color> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Time) {
 							auto & v = pi.Get< SafeArray<Time> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Rectangle) {
 							auto & v = pi.Get< SafeArray<UI::Rectangle> >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Structure) {
 							auto & v = pi.Get< ReflectedArray >();
-							ps << L"[" << IO::NewLineChar;
-							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; auto & obj = v.ElementAt(i); JsonWriteStructure(ps, *pref + L"    ", obj); if (i < v.Length() - 1) ps << L","; ps << IO::NewLineChar; }
+							ps << L"[" << IO::LineFeedSequence;
+							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; auto & obj = v.ElementAt(i); JsonWriteStructure(ps, *pref + L"    ", obj); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else {
 							ps << L"null";
@@ -321,13 +321,13 @@ namespace Engine
 						JsonWriteStructure(ps, *pref, obj);
 					} else WriteSimpleProperty(pi);
 				} else {
-					ps << L"[" << IO::NewLineChar;
+					ps << L"[" << IO::LineFeedSequence;
 					for (int i = 0; i < volume; i++) {
 						ps << *pref << L"    ";
 						auto pl = pi.VolumeElement(i);
 						WriteSimpleProperty(pl);
 						if (i < volume - 1) ps << L",";
-						ps << IO::NewLineChar;
+						ps << IO::LineFeedSequence;
 					}
 					ps << *pref << L"]";
 				}

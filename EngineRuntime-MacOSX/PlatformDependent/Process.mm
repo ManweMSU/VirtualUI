@@ -1,7 +1,7 @@
 #include "../Interfaces/Process.h"
 
 #include "../Miscellaneous/DynamicString.h"
-#include "../PlatformDependent/FileApi.h"
+#include "../Interfaces/SystemIO.h"
 #include "../PlatformDependent/CocoaInterop.h"
 #include "../Streaming.h"
 
@@ -45,7 +45,7 @@ namespace Engine
 				[str release];
 			}
 		}
-		NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::NormalizePath(image)));
+		NSString * app = Cocoa::CocoaString(IO::ExpandPath(IO::Path::NormalizePath(image)));
 		@autoreleasepool {
 			NSURL * url = [NSURL fileURLWithPath: app];
 			if (url) {
@@ -88,7 +88,7 @@ namespace Engine
 			}
 		}
 		for (int i = 0; i < search_list.Length(); i++) {
-			NSString * app = Cocoa::CocoaString(IO::NormalizePath(search_list[i]));
+			NSString * app = Cocoa::CocoaString(IO::Path::NormalizePath(search_list[i]));
 			@autoreleasepool {
 				NSURL * url = [NSURL fileURLWithPath: app];
 				if (url) {

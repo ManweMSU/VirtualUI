@@ -1,6 +1,6 @@
 #include <EngineRuntime.h>
 
-#include <PlatformDependent/SystemColors.h>
+#include <Interfaces/SystemColors.h>
 #include <PlatformSpecific/MacWindowEffects.h>
 
 ENGINE_REFLECTED_CLASS(lv_item, Engine::Reflection::Reflected)
@@ -364,7 +364,7 @@ int Main(void)
 
 	SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();
 	for (int i = 0; i < vols->Length(); i++) {
-		Console << L"Volume \"" + vols->ElementAt(i).Label + L"\" at path " + vols->ElementAt(i).Path + IO::NewLineChar;
+		Console << L"Volume \"" + vols->ElementAt(i).Label + L"\" at path " + vols->ElementAt(i).Path + IO::LineFeedSequence;
 	}
 	{
 		SafePointer<Streaming::FileStream> self = new Streaming::FileStream(IO::GetExecutablePath(), Streaming::AccessRead, Streaming::OpenExisting);
@@ -377,7 +377,7 @@ int Main(void)
 	UI::Zoom = Windows::GetScreenScale();
 
 	DynamicString req;
-	req += Assembly::GetCurrentUserLocale() + IO::NewLineChar;
+	req += Assembly::GetCurrentUserLocale() + IO::LineFeedSequence;
 	// try {
 	// 	SafePointer<Network::HttpSession> session = Network::OpenHttpSession(L"pidor");
 	// 	if (!session) throw Exception();
@@ -418,7 +418,7 @@ int Main(void)
 	// 	tex = loader->LoadTexture(image->Frames.FirstElement());
 	// } catch (Exception & e) { Console << e.ToString() << IO::NewLineChar; return 1; }
 
-	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::NewLineChar;
+	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::LineFeedSequence;
 
 	auto Callback2 = new _cb2;
 	auto templ = interface.Dialog[L"Test3"];

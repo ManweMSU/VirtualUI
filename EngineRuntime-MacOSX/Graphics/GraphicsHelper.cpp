@@ -183,8 +183,8 @@ namespace Engine
 		}
 		Math::Matrix4x4f MakeRotateTransformX(float angle)
 		{
-			auto c = Math::cos(angle);
-			auto s = Math::sin(angle);
+			auto c = float(Math::cos(angle));
+			auto s = float(Math::sin(angle));
 			Math::Matrix4x4f result;
 			result.row[0] = Math::Vector4f(1.0f, 0.0f, 0.0f, 0.0f);
 			result.row[1] = Math::Vector4f(0.0f, c, -s, 0.0f);
@@ -194,8 +194,8 @@ namespace Engine
 		}
 		Math::Matrix4x4f MakeRotateTransformY(float angle)
 		{
-			auto c = Math::cos(angle);
-			auto s = Math::sin(angle);
+			auto c = float(Math::cos(angle));
+			auto s = float(Math::sin(angle));
 			Math::Matrix4x4f result;
 			result.row[0] = Math::Vector4f(c, 0.0f, s, 0.0f);
 			result.row[1] = Math::Vector4f(0.0f, 1.0f, 0.0f, 0.0f);
@@ -205,8 +205,8 @@ namespace Engine
 		}
 		Math::Matrix4x4f MakeRotateTransformZ(float angle)
 		{
-			auto c = Math::cos(angle);
-			auto s = Math::sin(angle);
+			auto c = float(Math::cos(angle));
+			auto s = float(Math::sin(angle));
 			Math::Matrix4x4f result;
 			result.row[0] = Math::Vector4f(c, -s, 0.0f, 0.0f);
 			result.row[1] = Math::Vector4f(s, c, 0.0f, 0.0f);
@@ -216,8 +216,8 @@ namespace Engine
 		}
 		Math::Matrix4x4f MakeRotateTransform(float angle, const Math::Vector3f & axis)
 		{
-			auto c = Math::cos(angle);
-			auto s = Math::sin(angle);
+			auto c = float(Math::cos(angle));
+			auto s = float(Math::sin(angle));
 			auto z = Math::normalize(axis);
 			Math::Vector3f orth;
 			if (z.x > 0.5f) orth = Math::Vector3f(0.0f, 1.0f, 0.0f);
@@ -286,7 +286,7 @@ namespace Engine
 		Math::Matrix4x4f MakePerspectiveViewTransformFoV(float fov_angle, float aspect, float near_plane, float far_plane)
 		{
 			auto inv_depth = 1.0f / (near_plane - far_plane);
-			auto scale_y = Math::ctg(fov_angle / 2.0f);
+			auto scale_y = float(Math::ctg(fov_angle / 2.0f));
 			auto scale_x = scale_y / aspect;
 			Math::Matrix4x4f result;
 			result.row[0] = Math::Vector4f(scale_x, 0.0f, 0.0f, 0.0f);

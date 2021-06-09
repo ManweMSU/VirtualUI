@@ -71,7 +71,7 @@ namespace Engine
 		void FileStream::Flush(void) { IO::Flush(file); }
 		handle FileStream::Handle(void) const { return file; }
 		handle & FileStream::Handle(void) { return file; }
-		FileStream::~FileStream(void) { if (owned) CloseFile(file); }
+		FileStream::~FileStream(void) { if (owned) CloseHandle(file); }
 		string FileStream::ToString(void) const { return L"FileStream"; }
 
 		MemoryStream::MemoryStream(const void * source, int length) : data(0x10000), pointer(0) { data.SetLength(length); MemoryCopy(data, source, length); }
@@ -128,7 +128,7 @@ namespace Engine
 			dest->Write(data->GetBuffer(), data->Length());
 			data->Release();
 		}
-		void TextWriter::WriteLine(const string & text) const { Write(text + NewLineChar); }
+		void TextWriter::WriteLine(const string & text) const { Write(text + LineFeedSequence); }
 		void TextWriter::WriteEncodingSignature(void) const
 		{
 			if (coding == Encoding::ANSI) {}

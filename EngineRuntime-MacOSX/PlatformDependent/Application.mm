@@ -1,7 +1,7 @@
 #include "../Interfaces/Application.h"
 
 #include "../Miscellaneous/DynamicString.h"
-#include "NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 #include "NativeStationBackdoors.h"
 #include "CocoaInterop.h"
 #include "../Interfaces/Assembly.h"

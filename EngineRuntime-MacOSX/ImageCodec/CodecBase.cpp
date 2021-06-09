@@ -1,7 +1,7 @@
 #include "CodecBase.h"
 
 #include "../Math/Color.h"
-#include "../PlatformDependent/NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 
 #include <math.h>
 

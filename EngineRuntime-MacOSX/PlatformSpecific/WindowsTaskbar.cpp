@@ -1,7 +1,7 @@
 #include "WindowsTaskbar.h"
 
 #ifdef ENGINE_WINDOWS
-#include "../PlatformDependent/NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 #include "../PlatformDependent/WindowStation.h"
 
 #include <Windows.h>

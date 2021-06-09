@@ -1,4 +1,4 @@
-#include "Notifications.h"
+#include "../Interfaces/Notifications.h"
 
 #include "CocoaInterop.h"
 #include "QuartzDevice.h"

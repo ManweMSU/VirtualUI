@@ -1,7 +1,7 @@
 #include "Drawing.h"
 
 #include "../UserInterface/OverlappedWindows.h"
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 
 namespace Engine
 {
@@ -47,7 +47,7 @@ namespace Engine
 			if (!drawing) throw InvalidStateException();
 			SafePointer<UI::ITextureRenderingInfo> info = device->CreateTextureRenderingInfo(image,
 				UI::Box(0, 0, image->GetWidth(), image->GetHeight()), false);
-			device->RenderTexture(info, UI::Box(left_top.x, left_top.y, right_bottom.x, right_bottom.y));
+			device->RenderTexture(info, UI::Box(int(left_top.x), int(left_top.y), int(right_bottom.x), int(right_bottom.y)));
 		}
 		void Canvas::DrawText(const Point & at, const string & text, Font * font, const Color & color)
 		{
@@ -55,7 +55,7 @@ namespace Engine
 			SafePointer<UI::ITextRenderingInfo> info = device->CreateTextRenderingInfo(font, text, 0, 0, color);
 			int w, h;
 			info->GetExtent(w, h);
-			device->RenderText(info, UI::Box(at.x - w / 2, at.y - h / 2, at.x + w / 2, at.y + h / 2), false);
+			device->RenderText(info, UI::Box(int(at.x - w / 2.0), int(at.y - h / 2.0), int(at.x + w / 2.0), int(at.y + h / 2.0)), false);
 		}
 		void Canvas::DrawLine(const Point & from, const Point & to, const Color & color, double width)
 		{

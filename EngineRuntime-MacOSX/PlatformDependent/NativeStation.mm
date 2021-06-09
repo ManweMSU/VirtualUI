@@ -1,4 +1,4 @@
-#include "NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 
 @import Foundation;
 @import AppKit;
@@ -8,7 +8,7 @@
 #include "MetalDevice.h"
 #include "MetalGraphics.h"
 #include "CocoaKeyCodes.h"
-#include "KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 #include "AppleCodec.h"
 #include "NativeStationBackdoors.h"
 #include "../Interfaces/Application.h"

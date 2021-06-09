@@ -22,21 +22,21 @@ namespace Engine
 				if (illegal) name = L"\"" + Syntax::FormatStringToken(name) + L"\"";
 				auto type = node->GetValueType(values[i]);
 				if (type == RegistryValueType::Integer) {
-					output << prefix + name + L" = " + string(node->GetValueInteger(values[i])) + IO::NewLineChar;
+					output << prefix + name + L" = " + string(node->GetValueInteger(values[i])) + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::Float) {
-					output << prefix + name + L" = " + Syntax::FormatFloatToken(node->GetValueFloat(values[i]), spelling) + IO::NewLineChar;
+					output << prefix + name + L" = " + Syntax::FormatFloatToken(node->GetValueFloat(values[i]), spelling) + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::Boolean) {
 					string notation = node->GetValueBoolean(values[i]) ? L"true" : L"false";
-					output << prefix + name + L" = " + notation + IO::NewLineChar;
+					output << prefix + name + L" = " + notation + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::String) {
 					string notation = L"\"" + Syntax::FormatStringToken(node->GetValueString(values[i])) + L"\"";
-					output << prefix + name + L" = " + notation + IO::NewLineChar;
+					output << prefix + name + L" = " + notation + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::LongInteger) {
-					output << prefix + name + L" = long " + string(node->GetValueLongInteger(values[i])) + IO::NewLineChar;
+					output << prefix + name + L" = long " + string(node->GetValueLongInteger(values[i])) + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::LongFloat) {
-					output << prefix + name + L" = long " + Syntax::FormatDoubleToken(node->GetValueLongFloat(values[i]), spelling) + IO::NewLineChar;
+					output << prefix + name + L" = long " + Syntax::FormatDoubleToken(node->GetValueLongFloat(values[i]), spelling) + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::Color) {
-					output << prefix + name + L" = color 0x" + string(node->GetValueColor(values[i]), L"0123456789ABCDEF", 8) + IO::NewLineChar;
+					output << prefix + name + L" = color 0x" + string(node->GetValueColor(values[i]), L"0123456789ABCDEF", 8) + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::Time) {
 					auto value = node->GetValueTime(values[i]);
 					uint32 y, m, d;
@@ -45,18 +45,18 @@ namespace Engine
 						string(y) + L" " + string(m, L"0123456789", 2) + L" " + string(d, L"0123456789", 2) + L" " +
 						string(value.GetHour(), L"0123456789", 2) + L" " + string(value.GetMinute(), L"0123456789", 2) + L" " +
 						string(value.GetSecond(), L"0123456789", 2) + L" " + string(value.GetMillisecond(), L"0123456789", 4) +
-						L" }" + IO::NewLineChar;
+						L" }" + IO::LineFeedSequence;
 				} else if (type == RegistryValueType::Binary) {
 					output << prefix + name + L" = binary {";
 					Array<uint8> data;
 					data.SetLength(node->GetValueBinarySize(values[i]));
 					node->GetValueBinary(values[i], data.GetBuffer());
 					for (int i = 0; i < data.Length(); i++) {
-						if (i % 16 == 0) output << IO::NewLineChar + prefix + L"\t"; else output << L" ";
+						if (i % 16 == 0) output << IO::LineFeedSequence + prefix + L"\t"; else output << L" ";
 						output << L"0x" + string(uint32(data[i]), L"0123456789ABCDEF", 2);
 					}
-					if (data.Length()) output << IO::NewLineChar;
-					output << prefix + L"}" + IO::NewLineChar;
+					if (data.Length()) output << IO::LineFeedSequence;
+					output << prefix + L"}" + IO::LineFeedSequence;
 				}
 			}
 			auto & nodes = node->GetSubnodes();
@@ -73,9 +73,9 @@ namespace Engine
 				}
 				if (illegal) name = L"\"" + Syntax::FormatStringToken(name) + L"\"";
 				SafePointer<RegistryNode> entry = node->OpenNode(nodes[i]);
-				output << prefix + name + L" {" + IO::NewLineChar;
+				output << prefix + name + L" {" + IO::LineFeedSequence;
 				EncodeRegistryNodeToText(entry, output, prefix + L"\t", spelling);
-				output << prefix + L"}" + IO::NewLineChar;
+				output << prefix + L"}" + IO::LineFeedSequence;
 			}
 		}
 		string RegistryToText(Registry * registry)

@@ -1,7 +1,7 @@
 #include "EditControls.h"
 
 #include "../Interfaces/Clipboard.h"
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 #include "../Miscellaneous/DynamicString.h"
 
 namespace Engine
@@ -741,7 +741,7 @@ namespace Engine
 			{
 				DynamicString result;
 				for (int i = 0; i < _content.lines.Length(); i++) {
-					if (i) result += IO::NewLineChar;
+					if (i) result += IO::LineFeedSequence;
 					result += string(_content.lines[i].text.GetBuffer(), _content.lines[i].text.Length(), Encoding::UTF32);
 				}
 				return result.ToString();
@@ -1096,7 +1096,7 @@ namespace Engine
 				DynamicString result;
 				if (sp.y != ep.y) {
 					for (int i = sp.y; i <= ep.y; i++) {
-						if (i != sp.y) result += IO::NewLineChar;
+						if (i != sp.y) result += IO::LineFeedSequence;
 						if (i == sp.y) {
 							result += string(_content.lines[i].text.GetBuffer() + sp.x, _content.lines[i].text.Length() - sp.x, Encoding::UTF32);
 						} else if (i == ep.y) {

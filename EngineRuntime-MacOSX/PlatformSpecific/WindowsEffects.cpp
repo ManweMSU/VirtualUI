@@ -1,7 +1,7 @@
 #include "WindowsEffects.h"
 
 #ifdef ENGINE_WINDOWS
-#include "../PlatformDependent/NativeStation.h"
+#include "../Interfaces/NativeStation.h"
 #include "../PlatformDependent/WindowStation.h"
 #include "../PlatformDependent/Direct3D.h"
 #include "../PlatformDependent/Direct2D.h"

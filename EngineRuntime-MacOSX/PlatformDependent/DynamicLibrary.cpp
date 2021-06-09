@@ -1,6 +1,6 @@
 #include "../Interfaces/DynamicLibrary.h"
 
-#include "../PlatformDependent/FileApi.h"
+#include "../Interfaces/SystemIO.h"
 
 #include <dlfcn.h>
 

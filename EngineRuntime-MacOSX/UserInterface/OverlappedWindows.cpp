@@ -10,8 +10,8 @@
 #include "RichEditControl.h"
 #include "VirtualStation.h"
 
-#include "../PlatformDependent/NativeStation.h"
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/NativeStation.h"
+#include "../Interfaces/KeyCodes.h"
 
 using namespace Engine::UI::Windows;
 

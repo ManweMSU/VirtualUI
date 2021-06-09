@@ -1,7 +1,7 @@
 #include "GroupControls.h"
 
 #include "ButtonControls.h"
-#include "../PlatformDependent/KeyCodes.h"
+#include "../Interfaces/KeyCodes.h"
 
 namespace Engine
 {

@@ -17,7 +17,7 @@ namespace Engine
 
 			operator Vector<F, M * N> & (void) noexcept { return *reinterpret_cast<Vector<F, M * N> *>(this); }
 			operator const Vector<F, M * N> & (void) const noexcept { return *reinterpret_cast<const Vector<F, M * N> *>(this); }
-			operator string (void) const noexcept { string result; for (int i = 0; i < M; i++) result += string(row[i]) + IO::NewLineChar; return result; };
+			operator string (void) const noexcept { string result; for (int i = 0; i < M; i++) result += string(row[i]) + IO::LineFeedSequence; return result; };
 
 			Vector<F, M * N> & VectorCast(void) noexcept { return *reinterpret_cast<Vector<F, M * N> *>(this); }
 			const Vector<F, M * N> & VectorCast(void) const noexcept { return *reinterpret_cast<const Vector<F, M * N> *>(this); }

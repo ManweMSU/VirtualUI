@@ -110,7 +110,7 @@ namespace Engine
 		template <class F, int D> Vector<F, D> operator * (const Vector<F, D> & a, F b) noexcept { Vector<F, D> result; for (int i = 0; i < D; i++) result.c[i] = a.c[i] * b; return result; }
 		template <class F, int D> Vector<F, D> operator * (F b, const Vector<F, D> & a) noexcept { Vector<F, D> result; for (int i = 0; i < D; i++) result.c[i] = a.c[i] * b; return result; }
 		template <class F, int D> Vector<F, D> operator / (const Vector<F, D> & a, F b) noexcept { Vector<F, D> result; for (int i = 0; i < D; i++) result.c[i] = a.c[i] / b; return result; }
-		template <int D> ShortReal length(const Vector<ShortReal, D> & a) noexcept { ShortReal s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return sqrt(s); }
+		template <int D> ShortReal length(const Vector<ShortReal, D> & a) noexcept { ShortReal s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return ShortReal(sqrt(s)); }
 		template <int D> Real length(const Vector<Real, D> & a) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += a.c[i] * a.c[i]; return sqrt(s); }
 		template <int D> Real length(const Vector<Complex, D> & a) noexcept { Real s = 0.0; for (int i = 0; i < D; i++) s += (a.c[i] * conjugate(a.c[i])).re; return sqrt(s); }
 		template <class F, int D> Vector<F, D> normalize(const Vector<F, D> & a) noexcept { return a / F(length(a)); }
