@@ -344,23 +344,64 @@ public:
 
 int Main(void)
 {
-	{
-		SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
-		Math::ColorHSV clr(0.0, 1.0, 1.0);
-		while (true) {
-			canvas->BeginDraw();
-			canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
-			canvas->EndDraw();
-			auto key = canvas->ReadKey();
-			if (key == KeyCodes::Escape) break;
-			else if (key == KeyCodes::Right) {
-				clr.h += 1.0;
-				clr.ClampChannels();
-			}
-		}
-	}
+	// {
+	// 	SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
+	// 	Math::ColorHSV clr(0.0, 1.0, 1.0);
+	// 	while (true) {
+	// 		canvas->BeginDraw();
+	// 		canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
+	// 		canvas->EndDraw();
+	// 		auto key = canvas->ReadKey();
+	// 		if (key == KeyCodes::Escape) break;
+	// 		else if (key == KeyCodes::Right) {
+	// 			clr.h += 1.0;
+	// 			clr.ClampChannels();
+	// 		}
+	// 	}
+	// }
 	
 	IO::Console Console;
+
+	Console.SetInputMode(IO::ConsoleInputMode::Raw);
+	Console.WriteLine(L"Hello!");
+	while (true) {
+		IO::ConsoleEventDesc event;
+		Console.ReadEvent(event);
+		if (event.Event == IO::ConsoleEvent::CharacterInput) {
+			if (event.CharacterCode < 32) {
+				Console.Write(L" ");
+				Console.SetTextColor(12);
+				Console.Write(string(event.CharacterCode, HexadecimalBase, 2));
+				Console.SetTextColor(-1);
+				Console.Write(L" ");
+			} else if (event.CharacterCode == 32) break;
+			else Console.Write(string(&event.CharacterCode, 1, Encoding::UTF32));
+		} else if (event.Event == IO::ConsoleEvent::KeyInput) {
+			Console.Write(L" ");
+			Console.SetBackgroundColor(15);
+			Console.SetTextColor(0);
+			Console.Write(string(event.KeyCode, HexadecimalBase, 4));
+			Console.SetBackgroundColor(-1);
+			Console.SetTextColor(-1);
+			Console.Write(L" ");
+		} else if (event.Event == IO::ConsoleEvent::ConsoleResized) {
+			Console.Write(L" ");
+			Console.SetTextColor(10);
+			Console.Write(FormatString(L"(%0, %1)", event.Width, event.Height));
+			Console.SetTextColor(-1);
+			Console.Write(L" ");
+		} else if (event.Event == IO::ConsoleEvent::EndOfFile) {
+			Console.Write(L" ");
+			Console.SetBackgroundColor(15);
+			Console.SetTextColor(0);
+			Console.Write(L"EOF");
+			Console.SetBackgroundColor(-1);
+			Console.SetTextColor(-1);
+			Console.Write(L" ");
+		}
+	}
+	Console.SetInputMode(IO::ConsoleInputMode::Echo);
+	return 0;
 
 	SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();
 	for (int i = 0; i < vols->Length(); i++) {
