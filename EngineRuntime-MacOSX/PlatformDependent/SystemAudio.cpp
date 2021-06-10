@@ -496,7 +496,10 @@ namespace Engine
 					decoder->frames_count = wrapper->GetFramesCount();
 					decoder->Retain();
 					return decoder;
-				} catch (...) { return 0; }
+				} catch (...) {
+					try { source->Seek(0, Streaming::Begin); } catch (...) {}
+					return 0;
+				}
 			}
 			virtual IAudioEncoderStream * Encode(Streaming::Stream * dest, const string & format, const StreamDesc & desc) noexcept override
 			{
