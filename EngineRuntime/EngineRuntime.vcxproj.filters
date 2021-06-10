@@ -38,6 +38,9 @@
     <Filter Include="Interfaces">
       <UniqueIdentifier>{2c5f05a9-66cd-4683-82af-3df691a9128a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Media">
+      <UniqueIdentifier>{7d15caa2-1a7d-46f3-89e9-48a43a10bf30}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineBase.h">
@@ -289,6 +292,15 @@
     <ClInclude Include="Miscellaneous\ConsoleServices.h">
       <Filter>Miscellaneous</Filter>
     </ClInclude>
+    <ClInclude Include="Interfaces\SystemAudio.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\Audio.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\WaveCodec.h">
+      <Filter>Media</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -527,6 +539,15 @@
     </ClCompile>
     <ClCompile Include="Miscellaneous\ConsoleServices.cpp">
       <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\Audio.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\WaveCodec.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemAudio.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

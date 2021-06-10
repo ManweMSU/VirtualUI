@@ -40,6 +40,7 @@
     <ClInclude Include="Interfaces\SecureSocket.h" />
     <ClInclude Include="Interfaces\Shell.h" />
     <ClInclude Include="Interfaces\Socket.h" />
+    <ClInclude Include="Interfaces\SystemAudio.h" />
     <ClInclude Include="Interfaces\SystemColors.h" />
     <ClInclude Include="Interfaces\SystemIO.h" />
     <ClInclude Include="Interfaces\Threading.h" />
@@ -48,6 +49,8 @@
     <ClInclude Include="Math\MathBase.h" />
     <ClInclude Include="Math\Matrix.h" />
     <ClInclude Include="Math\Vector.h" />
+    <ClInclude Include="Media\Audio.h" />
+    <ClInclude Include="Media\WaveCodec.h" />
     <ClInclude Include="Miscellaneous\ConsoleServices.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
@@ -115,6 +118,8 @@
     <ClCompile Include="Math\MathBase.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />
     <ClCompile Include="Math\Vector.cpp" />
+    <ClCompile Include="Media\Audio.cpp" />
+    <ClCompile Include="Media\WaveCodec.cpp" />
     <ClCompile Include="Miscellaneous\ConsoleServices.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
     <ClCompile Include="Miscellaneous\Encoding.cpp" />
@@ -141,6 +146,7 @@
     <ClCompile Include="PlatformDependent\SecureSocket.cpp" />
     <ClCompile Include="PlatformDependent\Shell.cpp" />
     <ClCompile Include="PlatformDependent\Socket.cpp" />
+    <ClCompile Include="PlatformDependent\SystemAudio.cpp" />
     <ClCompile Include="PlatformDependent\SystemColors.cpp" />
     <ClCompile Include="PlatformDependent\SystemIO.cpp" />
     <ClCompile Include="PlatformDependent\Threading.cpp" />

@@ -107,7 +107,8 @@ namespace Engine
 					if (read) {
 						if (input.EventType == KEY_EVENT) {
 							if (input.Event.KeyEvent.bKeyDown) {
-								if (input.Event.KeyEvent.uChar.UnicodeChar) {
+								if (input.Event.KeyEvent.uChar.UnicodeChar >= 32 || input.Event.KeyEvent.uChar.UnicodeChar == 9 ||
+									input.Event.KeyEvent.uChar.UnicodeChar == 10 || input.Event.KeyEvent.uChar.UnicodeChar == 13) {
 									if ((input.Event.KeyEvent.uChar.UnicodeChar & 0xFC00) == 0xD800) {
 										object.cached_char = input.Event.KeyEvent.uChar.UnicodeChar & 0x03FF;
 										object.cached_char <<= 10;
