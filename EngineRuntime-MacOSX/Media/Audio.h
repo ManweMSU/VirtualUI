@@ -157,11 +157,11 @@ namespace Engine
 		class IAudioDeviceFactory : public Object
 		{
 		public:
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableOutputDevices(void) noexcept = 0;
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableInputDevices(void) noexcept = 0;
-			virtual IAudioOutputDevice * CreateOutputDevice(uint64 identifier) noexcept = 0;
+			virtual Dictionary::PlainDictionary<string, string> * GetAvailableOutputDevices(void) noexcept = 0;
+			virtual Dictionary::PlainDictionary<string, string> * GetAvailableInputDevices(void) noexcept = 0;
+			virtual IAudioOutputDevice * CreateOutputDevice(const string & identifier) noexcept = 0;
 			virtual IAudioOutputDevice * CreateDefaultOutputDevice(void) noexcept = 0;
-			virtual IAudioInputDevice * CreateInputDevice(uint64 identifier) noexcept = 0;
+			virtual IAudioInputDevice * CreateInputDevice(const string & identifier) noexcept = 0;
 			virtual IAudioInputDevice * CreateDefaultInputDevice(void) noexcept = 0;
 		};
 

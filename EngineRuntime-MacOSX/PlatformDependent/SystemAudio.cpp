@@ -867,35 +867,36 @@ namespace Engine
 				return devs;
 			}
 		public:
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableOutputDevices(void) noexcept override
+			virtual Dictionary::PlainDictionary<string, string> * GetAvailableOutputDevices(void) noexcept override
 			{
 				try {
 					SafePointer< Array<AudioDeviceID> > devs = _list_audio_devices();
-					SafePointer< Dictionary::PlainDictionary<uint64, string> > result = new Dictionary::PlainDictionary<uint64, string>(0x10);
+					SafePointer< Dictionary::PlainDictionary<string, string> > result = new Dictionary::PlainDictionary<string, string>(0x10);
 					for (auto & dev : *devs) if (_check_device_io(dev, kAudioDevicePropertyScopeOutput)) result->Append(dev, _get_device_name(dev));
 					result->Retain();
 					return result;
 				} catch (...) { return 0; }
 			}
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableInputDevices(void) noexcept override
+			virtual Dictionary::PlainDictionary<string, string> * GetAvailableInputDevices(void) noexcept override
 			{
 				try {
 					SafePointer< Array<AudioDeviceID> > devs = _list_audio_devices();
-					SafePointer< Dictionary::PlainDictionary<uint64, string> > result = new Dictionary::PlainDictionary<uint64, string>(0x10);
+					SafePointer< Dictionary::PlainDictionary<string, string> > result = new Dictionary::PlainDictionary<string, string>(0x10);
 					for (auto & dev : *devs) if (_check_device_io(dev, kAudioDevicePropertyScopeInput)) result->Append(dev, _get_device_name(dev));
 					result->Retain();
 					return result;
 				} catch (...) { return 0; }
 			}
-			virtual IAudioOutputDevice * CreateOutputDevice(uint64 identifier) noexcept override
+			virtual IAudioOutputDevice * CreateOutputDevice(const string & identifier) noexcept override
 			{
 				CFStringRef uid = 0;
 				try {
-					if (!_check_device_io(identifier, kAudioDevicePropertyScopeOutput)) throw Exception();
-					uid = _get_device_uid(identifier);
+					AudioDeviceID dev_id = identifier.ToUInt32();
+					if (!_check_device_io(dev_id, kAudioDevicePropertyScopeOutput)) throw Exception();
+					uid = _get_device_uid(dev_id);
 					if (!uid) throw Exception();
 					AudioStreamBasicDescription desc;
-					_get_device_stream_format(identifier, kAudioDevicePropertyScopeOutput, desc);
+					_get_device_stream_format(dev_id, kAudioDevicePropertyScopeOutput, desc);
 					IAudioOutputDevice * device = new CoreAudioOutputDevice(uid, desc);
 					CFRelease(uid);
 					return device;
@@ -909,15 +910,16 @@ namespace Engine
 					return new CoreAudioOutputDevice(0, desc);
 				} catch (...) { return 0; }
 			}
-			virtual IAudioInputDevice * CreateInputDevice(uint64 identifier) noexcept override
+			virtual IAudioInputDevice * CreateInputDevice(const string & identifier) noexcept override
 			{
 				CFStringRef uid = 0;
 				try {
-					if (!_check_device_io(identifier, kAudioDevicePropertyScopeInput)) throw Exception();
-					uid = _get_device_uid(identifier);
+					AudioDeviceID dev_id = identifier.ToUInt32();
+					if (!_check_device_io(dev_id, kAudioDevicePropertyScopeInput)) throw Exception();
+					uid = _get_device_uid(dev_id);
 					if (!uid) throw Exception();
 					AudioStreamBasicDescription desc;
-					_get_device_stream_format(identifier, kAudioDevicePropertyScopeInput, desc);
+					_get_device_stream_format(dev_id, kAudioDevicePropertyScopeInput, desc);
 					IAudioInputDevice * device = new CoreAudioInputDevice(uid, desc);
 					CFRelease(uid);
 					return device;
