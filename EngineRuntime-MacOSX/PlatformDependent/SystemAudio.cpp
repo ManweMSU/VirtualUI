@@ -417,7 +417,8 @@ namespace Engine
 			}
 			virtual bool CanDecode(const string & format) const noexcept override
 			{
-				if (format == AudioFormatMPEG3 || format == AudioFormatMPEG4AAC || format == AudioFormatAppleLossless) return true;
+				if (format == AudioFormatMPEG3 || format == AudioFormatMPEG4AAC ||
+					format == AudioFormatAppleLossless || format == AudioFormatFreeLossless) return true;
 				else return false;
 			}
 			virtual Array<string> * GetFormatsCanEncode(void) const override
@@ -434,6 +435,7 @@ namespace Engine
 				list->Append(AudioFormatMPEG3);
 				list->Append(AudioFormatMPEG4AAC);
 				list->Append(AudioFormatAppleLossless);
+				list->Append(AudioFormatFreeLossless);
 				list->Retain();
 				return list;
 			}
@@ -456,6 +458,7 @@ namespace Engine
 					else if (internal.mFormatID == kAudioFormatMPEG4AAC_LD) format_name = AudioFormatMPEG4AAC;
 					else if (internal.mFormatID == kAudioFormatMPEG4AAC_Spatial) format_name = AudioFormatMPEG4AAC;
 					else if (internal.mFormatID == kAudioFormatAppleLossless) format_name = AudioFormatAppleLossless;
+					else if (internal.mFormatID == kAudioFormatFLAC) format_name = AudioFormatFreeLossless;
 					else throw InvalidFormatException();
 					input.Format = SampleFormat::Invalid;
 					input.ChannelCount = internal.mChannelsPerFrame;

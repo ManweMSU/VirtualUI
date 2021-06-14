@@ -18,7 +18,7 @@ namespace Engine
 	class IDispatchTask : public Object
 	{
 	public:
-		virtual void DoTask(IDispatchQueue * queue) = 0;
+		virtual void DoTask(IDispatchQueue * queue) noexcept = 0;
 	};
 
 	class ThreadPool : public IDispatchQueue
@@ -54,7 +54,7 @@ namespace Engine
 	class Task : public IDispatchTask
 	{
 	public:
-		virtual void DoTask(IDispatchQueue * queue) override final;
-		virtual void DoTask(void) = 0;
+		virtual void DoTask(IDispatchQueue * queue) noexcept override final;
+		virtual void DoTask(void) noexcept = 0;
 	};
 }

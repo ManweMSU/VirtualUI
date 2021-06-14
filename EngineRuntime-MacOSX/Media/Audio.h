@@ -12,6 +12,7 @@ namespace Engine
 		constexpr const widechar * AudioFormatEngineRaw = L"ERAU";
 		constexpr const widechar * AudioFormatMPEG3 = L"MP3";
 		constexpr const widechar * AudioFormatMPEG4AAC = L"AAC";
+		constexpr const widechar * AudioFormatFreeLossless = L"FLAC";
 		constexpr const widechar * AudioFormatAppleLossless = L"ALAC";
 
 		enum class SampleFormat : uint {
@@ -46,8 +47,8 @@ namespace Engine
 		public:
 			WaveBuffer(const WaveBuffer & src);
 			WaveBuffer(const WaveBuffer * src);
-			WaveBuffer(SampleFormat format, uint num_channels, uint frames_per_second, uint size_frames);
-			WaveBuffer(const StreamDesc & desc, uint size_frames);
+			WaveBuffer(SampleFormat format, uint num_channels, uint frames_per_second, uint64 size_frames);
+			WaveBuffer(const StreamDesc & desc, uint64 size_frames);
 			virtual ~WaveBuffer(void) override;
 
 			const StreamDesc & GetFormatDescriptor(void) const;

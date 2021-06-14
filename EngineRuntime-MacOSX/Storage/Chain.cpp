@@ -159,7 +159,7 @@ namespace Engine
 			uint32 block_size;
 			Streaming::Stream * source;
 			Streaming::Stream * dest;
-			virtual void DoTask(IDispatchQueue * pool) override
+			virtual void DoTask(IDispatchQueue * pool) noexcept override
 			{
 				access_sem->ElementAt(index)->Wait();
 				while ((*length) && (*success)) {
@@ -200,7 +200,7 @@ namespace Engine
 			bool * success;
 			Streaming::Stream * source;
 			Streaming::Stream * dest;
-			virtual void DoTask(IDispatchQueue * pool) override
+			virtual void DoTask(IDispatchQueue * pool) noexcept override
 			{
 				access_sem->ElementAt(index)->Wait();
 				while ((*block_count) && (*success)) {
