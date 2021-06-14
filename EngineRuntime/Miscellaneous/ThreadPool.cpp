@@ -138,5 +138,5 @@ namespace Engine
 		} while (true);
 		return 0;
 	}
-	void Task::DoTask(IDispatchQueue * queue) { DoTask(); }
+	void Task::DoTask(IDispatchQueue * queue) noexcept { DoTask(); }
 }

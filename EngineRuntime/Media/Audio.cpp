@@ -38,31 +38,31 @@ namespace Engine
 			desc = src.desc;
 			frames_allocated = src.frames_allocated;
 			frames_used = src.frames_used;
-			intptr size = frames_allocated * StreamFrameByteSize(desc);
+			intptr size = intptr(frames_allocated) * StreamFrameByteSize(desc);
 			frame_buffer = reinterpret_cast<uint8 *>(malloc(size));
 			if (!frame_buffer) throw OutOfMemoryException();
 			MemoryCopy(frame_buffer, src.frame_buffer, size);
 		}
 		WaveBuffer::WaveBuffer(const WaveBuffer * src) : WaveBuffer(*src) {}
-		WaveBuffer::WaveBuffer(SampleFormat format, uint num_channels, uint frames_per_second, uint size_frames)
+		WaveBuffer::WaveBuffer(SampleFormat format, uint num_channels, uint frames_per_second, uint64 size_frames)
 		{
 			if (format == SampleFormat::Invalid || !num_channels || !frames_per_second || !size_frames) throw InvalidArgumentException();
 			desc.Format = format;
 			desc.ChannelCount = num_channels;
 			desc.FramesPerSecond = frames_per_second;
-			frames_allocated = size_frames;
+			frames_allocated = intptr(size_frames);
 			frames_used = 0;
-			intptr size = frames_allocated * StreamFrameByteSize(desc);
+			intptr size = intptr(frames_allocated) * StreamFrameByteSize(desc);
 			frame_buffer = reinterpret_cast<uint8 *>(malloc(size));
 			if (!frame_buffer) throw OutOfMemoryException();
 		}
-		WaveBuffer::WaveBuffer(const StreamDesc & _desc, uint size_frames)
+		WaveBuffer::WaveBuffer(const StreamDesc & _desc, uint64 size_frames)
 		{
 			if (_desc.Format == SampleFormat::Invalid || !_desc.ChannelCount || !_desc.FramesPerSecond || !size_frames) throw InvalidArgumentException();
 			desc = _desc;
 			frames_allocated = size_frames;
 			frames_used = 0;
-			intptr size = frames_allocated * StreamFrameByteSize(desc);
+			intptr size = intptr(frames_allocated) * StreamFrameByteSize(desc);
 			frame_buffer = reinterpret_cast<uint8 *>(malloc(size));
 			if (!frame_buffer) throw OutOfMemoryException();
 		}
@@ -78,7 +78,7 @@ namespace Engine
 		void WaveBuffer::ReinterpretFrames(uint frames_per_second) { if (!frames_per_second) throw InvalidArgumentException(); desc.FramesPerSecond = frames_per_second; }
 		int32 WaveBuffer::ReadSampleInteger(uint64 frame_index, uint num_channel) const
 		{
-			intptr sample_index = (frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format);
+			intptr sample_index = intptr((frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format));
 			if (desc.Format == SampleFormat::S8_snorm) {
 				uint32 result = uint32(*reinterpret_cast<uint8 *>(frame_buffer + sample_index)) << 24;
 				result |= (result & 0x7F000000) >> 7;
@@ -107,7 +107,7 @@ namespace Engine
 		}
 		double WaveBuffer::ReadSampleFloat(uint64 frame_index, uint num_channel) const
 		{
-			intptr sample_index = (frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format);
+			intptr sample_index = intptr((frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format));
 			if (desc.Format == SampleFormat::S8_snorm) {
 				int32 result = *reinterpret_cast<int8 *>(frame_buffer + sample_index);
 				return double(result) / 128.0;
@@ -129,7 +129,7 @@ namespace Engine
 		}
 		void WaveBuffer::WriteSample(uint64 frame_index, uint num_channel, int32 value)
 		{
-			intptr sample_index = (frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format);
+			intptr sample_index = intptr((frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format));
 			if (desc.Format == SampleFormat::S8_snorm) {
 				*reinterpret_cast<int8 *>(frame_buffer + sample_index) = (value >> 24) & 0xFF;
 			} else if (desc.Format == SampleFormat::S16_snorm) {
@@ -147,7 +147,7 @@ namespace Engine
 		}
 		void WaveBuffer::WriteSample(uint64 frame_index, uint num_channel, double value)
 		{
-			intptr sample_index = (frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format);
+			intptr sample_index = intptr((frame_index * desc.ChannelCount + num_channel) * SampleFormatByteSize(desc.Format));
 			if (desc.Format == SampleFormat::S8_snorm) {
 				int32 ivalue = int32(value * 2147483648.0);
 				*reinterpret_cast<int8 *>(frame_buffer + sample_index) = ivalue >> 24;

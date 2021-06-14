@@ -3,9 +3,16 @@
 #include <Windows.h>
 #include <Audioclient.h>
 #include <mmdeviceapi.h>
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mfobjects.h>
+#include <mfreadwrite.h>
 #include <functiondiscoverykeys_devpkey.h>
 
 #pragma comment(lib, "uuid.lib")
+#pragma comment(lib, "mfuuid.lib")
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfreadwrite.lib")
 
 #undef CreateSemaphore
 
@@ -15,6 +22,468 @@ namespace Engine
 {
 	namespace Audio
 	{
+		class MediaFoundationStream : public IMFByteStream
+		{
+			class _async_read_callback : public IMFAsyncCallback
+			{
+			public:
+				SafePointer<Stream> _stream;
+				ULONG _ref_cnt;
+				BYTE * _buffer_ptr;
+				ULONG _read_size;
+
+				_async_read_callback(void) : _ref_cnt(1), _buffer_ptr(0), _read_size(0) {}
+				virtual HRESULT __stdcall QueryInterface(REFIID riid, void ** ppvObject) override
+				{
+					if (riid == IID_IUnknown) {
+						*ppvObject = static_cast<IUnknown *>(this);
+						AddRef();
+						return S_OK;
+					} else if (riid == __uuidof(IMFAsyncCallback)) {
+						*ppvObject = static_cast<IMFAsyncCallback *>(this);
+						AddRef();
+						return S_OK;
+					} else return E_NOINTERFACE;
+				}
+				virtual ULONG __stdcall AddRef(void) override { return InterlockedIncrement(&_ref_cnt); }
+				virtual ULONG __stdcall Release(void) override
+				{
+					auto result = InterlockedDecrement(&_ref_cnt);
+					if (!result) delete this;
+					return result;
+				}
+				virtual HRESULT __stdcall GetParameters(DWORD * pdwFlags, DWORD * pdwQueue) override { return E_NOTIMPL; }
+				virtual HRESULT __stdcall Invoke(IMFAsyncResult * pAsyncResult) override
+				{
+					IUnknown * state = 0;
+					IMFAsyncResult * caller_result = 0;
+					auto status = pAsyncResult->GetState(&state);
+					if (status == S_OK) {
+						status = state->QueryInterface(IID_PPV_ARGS(&caller_result));
+						if (status == S_OK) {
+							try {
+								_stream->Read(_buffer_ptr, _read_size);
+								status = S_OK;
+							} catch (IO::FileReadEndOfFileException & e) {
+								_read_size = e.DataRead;
+								status = S_OK;
+							} catch (...) { status = E_FAIL; }
+						}
+					}
+					if (caller_result) {
+						caller_result->SetStatus(status);
+						MFInvokeCallback(caller_result);
+						caller_result->Release();
+					}
+					if (state) state->Release();
+					return S_OK;
+				}
+			};
+			SafePointer<Stream> _inner;
+			ULONG _ref_cnt;
+			bool _allow_write;
+		public:
+			MediaFoundationStream(Stream * inner, bool allow_write) : _ref_cnt(1), _allow_write(allow_write) { _inner.SetRetain(inner); }
+			~MediaFoundationStream(void) {}
+			virtual HRESULT __stdcall QueryInterface(REFIID riid, void ** ppvObject) override
+			{
+				if (riid == IID_IUnknown) {
+					*ppvObject = static_cast<IUnknown *>(this);
+					AddRef();
+					return S_OK;
+				} else if (riid == __uuidof(IMFByteStream)) {
+					*ppvObject = static_cast<IMFByteStream *>(this);
+					AddRef();
+					return S_OK;
+				} else return E_NOINTERFACE;
+			}
+			virtual ULONG __stdcall AddRef(void) override { return InterlockedIncrement(&_ref_cnt); }
+			virtual ULONG __stdcall Release(void) override
+			{
+				auto val_new = InterlockedDecrement(&_ref_cnt);
+				if (!val_new) delete this;
+				return val_new;
+			}
+			virtual HRESULT __stdcall GetCapabilities(DWORD * pdwCapabilities) override
+			{
+				DWORD result = MFBYTESTREAM_IS_READABLE | MFBYTESTREAM_IS_SEEKABLE;
+				if (_allow_write) result |= MFBYTESTREAM_IS_WRITABLE;
+				*pdwCapabilities = result;
+				return S_OK;
+			}
+			virtual HRESULT __stdcall GetLength(QWORD * pqwLength) override
+			{
+				try { *pqwLength = _inner->Length(); } catch (...) { return E_FAIL; }
+				return S_OK;
+			}
+			virtual HRESULT __stdcall SetLength(QWORD qwLength) override
+			{
+				try { _inner->SetLength(qwLength); } catch (...) { return E_FAIL; }
+				return S_OK;
+			}
+			virtual HRESULT __stdcall GetCurrentPosition(QWORD * pqwPosition) override
+			{
+				try { *pqwPosition = _inner->Seek(0, Current); } catch (...) { return E_FAIL; }
+				return S_OK;
+			}
+			virtual HRESULT __stdcall SetCurrentPosition(QWORD qwPosition) override
+			{
+				try { _inner->Seek(qwPosition, Begin); } catch (...) { return E_FAIL; }
+				return S_OK;
+			}
+			virtual HRESULT __stdcall IsEndOfStream(BOOL * pfEndOfStream) override
+			{
+				try { *pfEndOfStream = (_inner->Length() <= uint64(_inner->Seek(0, Current))); } catch (...) { return E_FAIL; }
+				return S_OK;
+			}
+			virtual HRESULT __stdcall Read(BYTE * pb, ULONG cb, ULONG * pcbRead) override
+			{
+				try { _inner->Read(pb, cb); *pcbRead = cb; return S_OK; }
+				catch (IO::FileReadEndOfFileException & e) { *pcbRead = e.DataRead; return S_OK; }
+				catch (...) { return E_FAIL; }
+			}
+			virtual HRESULT __stdcall BeginRead(BYTE * pb, ULONG cb, IMFAsyncCallback * pCallback, IUnknown * punkState) override
+			{
+				auto callback = new (std::nothrow) _async_read_callback;
+				if (!callback) return E_OUTOFMEMORY;
+				callback->_stream.SetRetain(_inner);
+				callback->_buffer_ptr = pb;
+				callback->_read_size = cb;
+				IMFAsyncResult * result = 0;
+				auto status = MFCreateAsyncResult(callback, pCallback, punkState, &result);
+				if (status == S_OK) {
+					status = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, callback, result);
+					result->Release();
+				}
+				callback->Release();
+				return status;
+			}
+			virtual HRESULT __stdcall EndRead(IMFAsyncResult * pResult, ULONG * pcbRead) override
+			{
+				*pcbRead = 0;
+				HRESULT status = pResult->GetStatus();
+				if (status != S_OK) return status;
+				IUnknown * object = 0;
+				status = pResult->GetObjectW(&object);
+				if (status != S_OK) return status;
+				*pcbRead = static_cast<_async_read_callback *>(object)->_read_size;
+				object->Release();
+				return status;
+			}
+			virtual HRESULT __stdcall Write(const BYTE * pb, ULONG cb, ULONG * pcbWritten) override
+			{
+				try { _inner->Write(pb, cb); } catch (...) { return E_FAIL; }
+				*pcbWritten = cb; return S_OK;
+			}
+			virtual HRESULT __stdcall BeginWrite(const BYTE * pb, ULONG cb, IMFAsyncCallback * pCallback, IUnknown * punkState) override
+			{
+				// TODO: IMPLEMENT
+				return E_NOTIMPL;
+			}
+			virtual HRESULT __stdcall EndWrite(IMFAsyncResult * pResult, ULONG * pcbWritten) override
+			{
+				// TODO: IMPLEMENT
+				return E_NOTIMPL;
+			}
+			virtual HRESULT __stdcall Seek(MFBYTESTREAM_SEEK_ORIGIN SeekOrigin, LONGLONG llSeekOffset, DWORD dwSeekFlags, QWORD * pqwCurrentPosition) override
+			{
+				if (SeekOrigin == msoBegin) {
+					try { *pqwCurrentPosition = _inner->Seek(llSeekOffset, Begin); } catch (...) { return E_FAIL; }
+				} else if (SeekOrigin == msoCurrent) {
+					try { *pqwCurrentPosition = _inner->Seek(llSeekOffset, Current); } catch (...) { return E_FAIL; }
+				}
+				return S_OK;
+			}
+			virtual HRESULT __stdcall Flush(void) override { try { _inner->Flush(); } catch (...) { return E_FAIL; } return S_OK; }
+			virtual HRESULT __stdcall Close(void) override { _inner.SetReference(0); return S_OK; }
+		};
+		class MediaFoundationDecoderStream : public IAudioDecoderStream
+		{
+			SafePointer<IAudioCodec> parent;
+			IMFSourceReader * reader;
+			StreamDesc internal, intermediate, output;
+			string format;
+			uint64 current_frame, frame_count;
+			SafePointer<WaveBuffer> read_cache;
+			uint64 read_cache_position;
+
+			friend class MediaFoundationCodec;
+			bool _internal_load_cache(void) noexcept
+			{
+				DWORD stream_index, stream_flags;
+				LONGLONG sample_time;
+				IMFSample * sample;
+				while (true) {
+					auto status = reader->ReadSample(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, &stream_index, &stream_flags, &sample_time, &sample);
+					if (status != S_OK) return false;
+					if (!sample) {
+						if (stream_flags & MF_SOURCE_READERF_ENDOFSTREAM) {
+							read_cache_position = 0;
+							read_cache.SetReference(0);
+							return true;
+						} else continue;
+					}
+					DWORD byte_length;
+					if (sample->GetTotalLength(&byte_length) != S_OK) { sample->Release(); return false; }
+					auto num_frames = byte_length / StreamFrameByteSize(intermediate);
+					IMFMediaBuffer * buffer;
+					if (sample->ConvertToContiguousBuffer(&buffer) != S_OK) { sample->Release(); return false; }
+					sample->Release();
+					try { read_cache = new WaveBuffer(intermediate, num_frames); } catch (...) { buffer->Release(); return false; }
+					read_cache_position = 0;
+					read_cache->FramesUsed() = read_cache->GetSizeInFrames();
+					PBYTE data;
+					if (buffer->Lock(&data, 0, 0) != S_OK) { buffer->Release(); read_cache.SetReference(0); return false; }
+					MemoryCopy(read_cache->GetData(), data, intptr(read_cache->GetUsedSizeInBytes()));
+					if (buffer->Unlock() != S_OK) { buffer->Release(); read_cache.SetReference(0); return false; }
+					buffer->Release();
+					return true;
+				}
+			}
+			bool _internal_read_frames(WaveBuffer * buffer) noexcept
+			{
+				buffer->FramesUsed() = 0;
+				while (buffer->FramesUsed() < buffer->GetSizeInFrames()) {
+					if (!read_cache) {
+						if (!_internal_load_cache()) return false;
+						if (!read_cache) { current_frame = frame_count; return true; }
+					}
+					uint64 cache_avail = read_cache->FramesUsed() - read_cache_position;
+					if (!cache_avail) return true;
+					uint64 frames_needed = buffer->GetSizeInFrames() - buffer->FramesUsed();
+					uint64 read_now = min(frames_needed, cache_avail);
+					auto frame_size = StreamFrameByteSize(intermediate);
+					MemoryCopy(buffer->GetData() + frame_size * buffer->FramesUsed(),
+						read_cache->GetData() + frame_size * read_cache_position, intptr(frame_size * read_now));
+					current_frame += read_now;
+					read_cache_position += read_now;
+					buffer->FramesUsed() += read_now;
+					if (read_cache_position == read_cache->FramesUsed()) read_cache.SetReference(0);
+				}
+				return true;
+			}
+		public:
+			MediaFoundationDecoderStream(IAudioCodec * codec, IMFSourceReader * source_reader, const string & source_format)
+			{
+				parent.SetRetain(codec);
+				reader = source_reader;
+				reader->AddRef();
+				internal = intermediate = output = StreamDesc(SampleFormat::Invalid, 0, 0);
+				format = source_format;
+				current_frame = frame_count = read_cache_position = 0;
+			}
+			virtual ~MediaFoundationDecoderStream(void) override { if (reader) reader->Release(); }
+			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override { return output; }
+			virtual AudioObjectType GetObjectType(void) const noexcept override { return AudioObjectType::StreamDecoder; }
+			virtual IAudioCodec * GetParentCodec(void) const override { return parent; }
+			virtual string GetInternalFormat(void) const override { return format; }
+			virtual const StreamDesc & GetNativeDescriptor(void) const noexcept override { return internal; }
+			virtual bool ReadFrames(WaveBuffer * buffer) noexcept override
+			{
+				if (!buffer) return false;
+				auto & buffer_desc = buffer->GetFormatDescriptor();
+				if (buffer_desc.Format != output.Format || buffer_desc.ChannelCount != output.ChannelCount || buffer_desc.FramesPerSecond != output.FramesPerSecond) return false;
+				try {
+					if (output.FramesPerSecond == intermediate.FramesPerSecond) {
+						if (output.ChannelCount == intermediate.ChannelCount) {
+							return _internal_read_frames(buffer);
+						} else {
+							SafePointer<WaveBuffer> chrem = new WaveBuffer(output.Format, intermediate.ChannelCount, output.FramesPerSecond, buffer->GetSizeInFrames());
+							if (!_internal_read_frames(chrem)) return false;
+							chrem->ReallocateChannels(buffer, output.ChannelCount);
+							return true;
+						}
+					} else {
+						uint64 frames_equivalent = ConvertFrameCount(buffer->GetSizeInFrames(), output.FramesPerSecond, intermediate.FramesPerSecond);
+						uint64 frames_can_read = min(frame_count - current_frame, frames_equivalent);
+						if (!frames_can_read) { buffer->FramesUsed() = 0; return true; }
+						SafePointer<WaveBuffer> frres = new WaveBuffer(output.Format, intermediate.ChannelCount, intermediate.FramesPerSecond, frames_can_read);
+						if (!_internal_read_frames(frres)) return false;
+						if (output.ChannelCount == intermediate.ChannelCount) {
+							frres->ConvertFrameRate(buffer, output.FramesPerSecond);
+							return true;
+						} else {
+							SafePointer<WaveBuffer> chrem = new WaveBuffer(output.Format, intermediate.ChannelCount, output.FramesPerSecond, buffer->GetSizeInFrames());
+							frres->ConvertFrameRate(chrem, output.FramesPerSecond);
+							chrem->ReallocateChannels(buffer, output.ChannelCount);
+							return true;
+						}
+					}
+				} catch (...) { return false; }
+			}
+			virtual uint64 GetFramesCount(void) const override { return frame_count; }
+			virtual uint64 GetCurrentFrame(void) const override { return current_frame; }
+			virtual bool SetCurrentFrame(uint64 frame_index) override
+			{
+				uint64 hns_pos = frame_index * 10000000ULL / intermediate.FramesPerSecond;
+				PROPVARIANT prop;
+				PropVariantInit(&prop);
+				prop.vt = VT_I8;
+				prop.uhVal.QuadPart = hns_pos;
+				auto status = reader->SetCurrentPosition(GUID_NULL, prop);
+				PropVariantClear(&prop);
+				if (status == S_OK) {
+					current_frame = frame_index;
+					read_cache.SetReference(0);
+					read_cache_position = 0;
+					return true;
+				} else return false;
+			}
+		};
+		class MediaFoundationCodec : public IAudioCodec
+		{
+		public:
+			MediaFoundationCodec(void) { if (MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET) != S_OK) throw Exception(); }
+			virtual ~MediaFoundationCodec(void) override { MFShutdown(); }
+			virtual bool CanEncode(const string & format) const noexcept override
+			{
+				if (format == AudioFormatMPEG3 || format == AudioFormatMPEG4AAC) return true;
+				else return false;
+			}
+			virtual bool CanDecode(const string & format) const noexcept override
+			{
+				if (format == AudioFormatMPEG3 || format == AudioFormatMPEG4AAC ||
+					format == AudioFormatFreeLossless || format == AudioFormatAppleLossless) return true;
+				else return 0;
+			}
+			virtual Array<string> * GetFormatsCanEncode(void) const override
+			{
+				SafePointer< Array<string> > result = new Array<string>(4);
+				result->Append(AudioFormatMPEG3);
+				result->Append(AudioFormatMPEG4AAC);
+				result->Retain();
+				return result;
+			}
+			virtual Array<string> * GetFormatsCanDecode(void) const override
+			{
+				SafePointer< Array<string> > result = new Array<string>(4);
+				result->Append(AudioFormatMPEG3);
+				result->Append(AudioFormatMPEG4AAC);
+				result->Append(AudioFormatFreeLossless);
+				result->Append(AudioFormatAppleLossless);
+				result->Retain();
+				return result;
+			}
+			virtual string GetCodecName(void) const override { return L"Media Foundation Codec"; }
+			virtual IAudioDecoderStream * TryDecode(Streaming::Stream * source, const StreamDesc * desired_desc) noexcept override
+			{
+				try {
+					MediaFoundationStream * wrapper = new MediaFoundationStream(source, false);
+					IMFSourceReader * reader;
+					if (MFCreateSourceReaderFromByteStream(wrapper, 0, &reader) != S_OK) {
+						wrapper->Release();
+						throw Exception();
+					}
+					wrapper->Release();
+					IMFMediaType * type;
+					if (reader->GetNativeMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &type) != S_OK) {
+						reader->Release();
+						throw Exception();
+					}
+					GUID audio_type;
+					UINT32 frames_per_second, num_channels, bits_per_sample;
+					string format;
+					if (type->GetGUID(MF_MT_SUBTYPE, &audio_type) != S_OK) {
+						type->Release();
+						reader->Release();
+						throw Exception();
+					}
+					if (type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &num_channels) != S_OK) num_channels = 0;
+					if (type->GetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, &bits_per_sample) != S_OK) bits_per_sample = 0;
+					if (type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &frames_per_second) != S_OK) frames_per_second = 0;
+					type->Release();
+					if (audio_type == MFAudioFormat_AAC) format = AudioFormatMPEG4AAC;
+					else if (audio_type == MFAudioFormat_ALAC) format = AudioFormatAppleLossless;
+					else if (audio_type == MFAudioFormat_FLAC) format = AudioFormatFreeLossless;
+					else if (audio_type == MFAudioFormat_MP3) format = AudioFormatMPEG3;
+					if (!format.Length()) {
+						reader->Release();
+						throw Exception();
+					}
+					SafePointer<MediaFoundationDecoderStream> result;
+					try {
+						result = new MediaFoundationDecoderStream(this, reader, format);
+					} catch (...) { reader->Release(); throw; }
+					reader->Release();
+					result->internal.ChannelCount = num_channels;
+					result->internal.FramesPerSecond = frames_per_second;
+					if (bits_per_sample) {
+						if (bits_per_sample == 64) result->internal.Format = SampleFormat::S64_float;
+						else if (bits_per_sample == 32) result->internal.Format = SampleFormat::S32_float;
+						else if (bits_per_sample == 24) result->internal.Format = SampleFormat::S24_snorm;
+						else if (bits_per_sample == 16) result->internal.Format = SampleFormat::S16_snorm;
+						else if (bits_per_sample == 8) result->internal.Format = SampleFormat::S8_snorm;
+					}
+					if (desired_desc) {
+						if (desired_desc->FramesPerSecond) result->output.FramesPerSecond = desired_desc->FramesPerSecond;
+						else result->output.FramesPerSecond = result->internal.FramesPerSecond;
+						if (desired_desc->ChannelCount) result->output.ChannelCount = desired_desc->ChannelCount;
+						else result->output.ChannelCount = result->internal.ChannelCount;
+						if (desired_desc->Format != SampleFormat::Invalid) result->output.Format = desired_desc->Format;
+						else if (result->internal.Format != SampleFormat::Invalid) result->output.Format = result->internal.Format;
+						else result->output.Format = SampleFormat::S16_snorm;
+					} else {
+						result->output = result->internal;
+						if (result->output.Format == SampleFormat::Invalid) result->output.Format = SampleFormat::S16_snorm;
+					}
+					result->intermediate = result->internal;
+					result->intermediate.Format = result->output.Format;
+					if (MFCreateMediaType(&type) != S_OK) throw Exception();
+					WAVEFORMATEX wave;
+					if (result->output.Format == SampleFormat::S64_float) {
+						wave.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+						wave.wBitsPerSample = 64;
+					} else if (result->output.Format == SampleFormat::S32_float) {
+						wave.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+						wave.wBitsPerSample = 32;
+					} else if (result->output.Format == SampleFormat::S32_snorm) {
+						wave.wFormatTag = WAVE_FORMAT_PCM;
+						wave.wBitsPerSample = 32;
+					} else if (result->output.Format == SampleFormat::S24_snorm) {
+						wave.wFormatTag = WAVE_FORMAT_PCM;
+						wave.wBitsPerSample = 24;
+					} else if (result->output.Format == SampleFormat::S16_snorm) {
+						wave.wFormatTag = WAVE_FORMAT_PCM;
+						wave.wBitsPerSample = 16;
+					} else if (result->output.Format == SampleFormat::S8_snorm) {
+						wave.wFormatTag = WAVE_FORMAT_PCM;
+						wave.wBitsPerSample = 8;
+					}
+					wave.nChannels = result->internal.ChannelCount;
+					wave.nSamplesPerSec = result->internal.FramesPerSecond;
+					wave.nBlockAlign = (wave.wBitsPerSample * wave.nChannels) / 8;
+					wave.nAvgBytesPerSec = wave.nBlockAlign * wave.nSamplesPerSec;
+					wave.cbSize = 0;
+					if (MFInitMediaTypeFromWaveFormatEx(type, &wave, sizeof(wave)) != S_OK) {
+						type->Release();
+						throw Exception();
+					}
+					if (result->reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, type) != S_OK) {
+						type->Release();
+						throw Exception();
+					}
+					type->Release();
+					ULONGLONG hns_length;
+					PROPVARIANT variant;
+					PropVariantInit(&variant);
+					if (result->reader->GetPresentationAttribute(MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &variant) != S_OK) {
+						PropVariantClear(&variant);
+						throw Exception();
+					}
+					hns_length = variant.uhVal.QuadPart;
+					PropVariantClear(&variant);
+					result->frame_count = (hns_length * result->internal.FramesPerSecond + result->internal.FramesPerSecond / 2) / 10000000ULL;
+					result->Retain();
+					return result;
+				} catch (...) { return 0; }
+			}
+			virtual IAudioEncoderStream * Encode(Streaming::Stream * dest, const string & format, const StreamDesc & desc) noexcept override
+			{
+				// TODO: IMPLEMENT
+				return 0;
+			}
+		};
+
 		void _select_stream_format(StreamDesc & format, WAVEFORMATEX * wave)
 		{
 			WAVEFORMATEXTENSIBLE * wave_ex = reinterpret_cast<WAVEFORMATEXTENSIBLE *>(wave);
@@ -658,10 +1127,14 @@ namespace Engine
 			}
 		};
 
+		SafePointer<IAudioCodec> _system_codec;
 		IAudioCodec * InitializeSystemCodec(void)
 		{
-			return nullptr;
-			// TODO: IMPLEMENT
+			if (!_system_codec) {
+				_system_codec = new MediaFoundationCodec;
+				RegisterCodec(_system_codec);
+			}
+			return _system_codec;
 		}
 		IAudioDeviceFactory * CreateSystemAudioDeviceFactory(void) { return new CoreAudioDeviceFactory(); }
 		void SystemBeep(void) { MessageBeep(0); }

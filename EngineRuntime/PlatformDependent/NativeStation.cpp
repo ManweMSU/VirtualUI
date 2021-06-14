@@ -71,6 +71,10 @@ namespace Engine
 					GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0));
 				Cls.hIconSm = reinterpret_cast<HICON>(LoadImageW(Cls.hInstance, MAKEINTRESOURCEW(1), IMAGE_ICON,
 					GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
+				if (!Cls.hIcon) Cls.hIcon = reinterpret_cast<HICON>(LoadImageW(0, IDI_APPLICATION, IMAGE_ICON,
+					GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0));
+				if (!Cls.hIconSm) Cls.hIconSm = reinterpret_cast<HICON>(LoadImageW(0, IDI_APPLICATION, IMAGE_ICON,
+					GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
 				Cls.lpszClassName = ENGINE_MAIN_WINDOW_CLASS;
 				RegisterClassExW(&Cls);
 				Cls.style = CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS | CS_GLOBALCLASS | CS_DROPSHADOW;
