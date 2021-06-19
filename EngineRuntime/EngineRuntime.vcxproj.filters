@@ -301,6 +301,9 @@
     <ClInclude Include="Media\WaveCodec.h">
       <Filter>Media</Filter>
     </ClInclude>
+    <ClInclude Include="Media\Metadata.h">
+      <Filter>Media</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -548,6 +551,9 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\SystemAudio.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\Metadata.cpp">
+      <Filter>Media</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

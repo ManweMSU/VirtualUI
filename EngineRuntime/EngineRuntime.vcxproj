@@ -50,6 +50,7 @@
     <ClInclude Include="Math\Matrix.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Media\Audio.h" />
+    <ClInclude Include="Media\Metadata.h" />
     <ClInclude Include="Media\WaveCodec.h" />
     <ClInclude Include="Miscellaneous\ConsoleServices.h" />
     <ClInclude Include="Miscellaneous\Dictionary.h" />
@@ -119,6 +120,7 @@
     <ClCompile Include="Math\Matrix.cpp" />
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Media\Audio.cpp" />
+    <ClCompile Include="Media\Metadata.cpp" />
     <ClCompile Include="Media\WaveCodec.cpp" />
     <ClCompile Include="Miscellaneous\ConsoleServices.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />

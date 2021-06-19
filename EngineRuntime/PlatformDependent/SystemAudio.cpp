@@ -1101,7 +1101,7 @@ namespace Engine
 			}
 			virtual bool WriteFramesAsync(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed) noexcept override
 			{
-				if (!buffer) return false;
+				if (!buffer || !execute_on_processed) return false;
 				auto & desc = buffer->GetFormatDescriptor();
 				if (desc.Format != format.Format || desc.ChannelCount != format.ChannelCount || desc.FramesPerSecond != format.FramesPerSecond) return false;
 				try { _append_dispatch(buffer, 0, execute_on_processed, write_status, 0); } catch (...) { return false; }
@@ -1109,7 +1109,7 @@ namespace Engine
 			}
 			virtual bool WriteFramesAsync(WaveBuffer * buffer, bool * write_status, Semaphore * open_on_processed) noexcept override
 			{
-				if (!buffer) return false;
+				if (!buffer || !open_on_processed) return false;
 				auto & desc = buffer->GetFormatDescriptor();
 				if (desc.Format != format.Format || desc.ChannelCount != format.ChannelCount || desc.FramesPerSecond != format.FramesPerSecond) return false;
 				try { _append_dispatch(buffer, open_on_processed, 0, write_status, 0); } catch (...) { return false; }
@@ -1364,28 +1364,28 @@ namespace Engine
 				semaphore->Wait();
 				return status;
 			}
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status) noexcept override
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status) noexcept override
 			{
 				if (!buffer) return false;
 				auto & desc = buffer->GetFormatDescriptor();
 				if (desc.Format != format.Format || desc.ChannelCount != format.ChannelCount || desc.FramesPerSecond != format.FramesPerSecond) return false;
-				try { _append_dispatch(buffer, 0, 0, write_status, 0); } catch (...) { return false; }
+				try { _append_dispatch(buffer, 0, 0, read_status, 0); } catch (...) { return false; }
 				return true;
 			}
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed) noexcept override
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status, IDispatchTask * execute_on_processed) noexcept override
 			{
-				if (!buffer) return false;
+				if (!buffer || !execute_on_processed) return false;
 				auto & desc = buffer->GetFormatDescriptor();
 				if (desc.Format != format.Format || desc.ChannelCount != format.ChannelCount || desc.FramesPerSecond != format.FramesPerSecond) return false;
-				try { _append_dispatch(buffer, 0, execute_on_processed, write_status, 0); } catch (...) { return false; }
+				try { _append_dispatch(buffer, 0, execute_on_processed, read_status, 0); } catch (...) { return false; }
 				return true;
 			}
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status, Semaphore * open_on_processed) noexcept override
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status, Semaphore * open_on_processed) noexcept override
 			{
-				if (!buffer) return false;
+				if (!buffer || !open_on_processed) return false;
 				auto & desc = buffer->GetFormatDescriptor();
 				if (desc.Format != format.Format || desc.ChannelCount != format.ChannelCount || desc.FramesPerSecond != format.FramesPerSecond) return false;
-				try { _append_dispatch(buffer, open_on_processed, 0, write_status, 0); } catch (...) { return false; }
+				try { _append_dispatch(buffer, open_on_processed, 0, read_status, 0); } catch (...) { return false; }
 				return true;
 			}
 		};

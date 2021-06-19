@@ -64,6 +64,22 @@ namespace Engine
 				} else data.Append(PlainDictionaryKeyPair<K, V>(key, value));
 				return true;
 			}
+			virtual bool Update(const K & key, const V & value)
+			{
+				if (data.Length()) {
+					auto pair = PlainDictionaryKeyPair<K, V>(key, value);
+					int element_lesser_equal = BinarySearchLE(data, pair);
+					if (element_lesser_equal < 0) data.Insert(pair, 0);
+					else if (data[element_lesser_equal] == pair) {
+						data[element_lesser_equal].value = value;
+						return false;
+					} else {
+						if (element_lesser_equal == data.Length() - 1) data.Append(pair);
+						else data.Insert(pair, element_lesser_equal + 1);
+					}
+				} else data.Append(PlainDictionaryKeyPair<K, V>(key, value));
+				return true;
+			}
 			virtual const V * ElementByKey(const K & key) const
 			{
 				if (!data.Length()) return 0;
@@ -125,6 +141,22 @@ namespace Engine
 					int element_lesser_equal = BinarySearchLE(data, pair);
 					if (element_lesser_equal < 0) data.Insert(pair, 0);
 					else if (data[element_lesser_equal] == pair) {
+						return false;
+					} else {
+						if (element_lesser_equal == data.Length() - 1) data.Append(pair);
+						else data.Insert(pair, element_lesser_equal + 1);
+					}
+				} else data.Append(DictionaryKeyPair<K, O>(key, object));
+				return true;
+			}
+			virtual bool Update(const K & key, O * object)
+			{
+				if (data.Length()) {
+					auto pair = DictionaryKeyPair<K, O>(key, object);
+					int element_lesser_equal = BinarySearchLE(data, pair);
+					if (element_lesser_equal < 0) data.Insert(pair, 0);
+					else if (data[element_lesser_equal] == pair) {
+						data[element_lesser_equal].object.SetRetain(object);
 						return false;
 					} else {
 						if (element_lesser_equal == data.Length() - 1) data.Append(pair);

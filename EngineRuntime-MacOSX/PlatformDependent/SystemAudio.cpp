@@ -578,6 +578,7 @@ namespace Engine
 			}
 			bool _internal_write_frames(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed, Semaphore * open_on_processed)
 			{
+				if (!buffer) return false;
 				auto & buffer_desc = buffer->GetFormatDescriptor();
 				if (desc.Format != buffer_desc.Format || desc.ChannelCount != buffer_desc.ChannelCount || desc.FramesPerSecond != buffer_desc.FramesPerSecond) return false;
 				AudioQueueBufferRef local;
@@ -686,8 +687,9 @@ namespace Engine
 				wrapper->Finalize(queue);
 				wrapper->Release();
 			}
-			bool _internal_read_frames(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed, Semaphore * open_on_processed)
+			bool _internal_read_frames(WaveBuffer * buffer, bool * read_status, IDispatchTask * execute_on_processed, Semaphore * open_on_processed)
 			{
+				if (!buffer) return false;
 				auto & buffer_desc = buffer->GetFormatDescriptor();
 				if (desc.Format != buffer_desc.Format || desc.ChannelCount != buffer_desc.ChannelCount || desc.FramesPerSecond != buffer_desc.FramesPerSecond) return false;
 				AudioQueueBufferRef local;
@@ -698,7 +700,7 @@ namespace Engine
 				wrapper->buffer = local;
 				local->mUserData = wrapper;
 				wrapper->store_at.SetRetain(buffer);
-				wrapper->write_status = write_status;
+				wrapper->write_status = read_status;
 				wrapper->open.SetRetain(open_on_processed);
 				wrapper->exec.SetRetain(execute_on_processed);
 				status = AudioQueueEnqueueBuffer(queue, local, 0, 0);
@@ -768,19 +770,19 @@ namespace Engine
 				semaphore->Wait();
 				return status;
 			}
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status) noexcept override
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status) noexcept override
 			{
-				return _internal_read_frames(buffer, write_status, 0, 0);
+				return _internal_read_frames(buffer, read_status, 0, 0);
 			}
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed) noexcept override
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status, IDispatchTask * execute_on_processed) noexcept override
 			{
 				if (!execute_on_processed) return false;
-				return _internal_read_frames(buffer, write_status, execute_on_processed, 0);
+				return _internal_read_frames(buffer, read_status, execute_on_processed, 0);
 			}
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status, Semaphore * open_on_processed) noexcept override
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status, Semaphore * open_on_processed) noexcept override
 			{
 				if (!open_on_processed) return false;
-				return _internal_read_frames(buffer, write_status, 0, open_on_processed);
+				return _internal_read_frames(buffer, read_status, 0, open_on_processed);
 			}
 		};
 		class CoreAudioDeviceFactory : public IAudioDeviceFactory
