@@ -11,6 +11,7 @@
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
 #include "Media/Audio.h"
+#include "Media/Metadata.h"
 #include "Miscellaneous/ConsoleServices.h"
 #include "Miscellaneous/Dictionary.h"
 #include "Miscellaneous/DynamicString.h"

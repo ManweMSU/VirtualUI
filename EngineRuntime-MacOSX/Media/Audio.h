@@ -151,9 +151,9 @@ namespace Engine
 		{
 		public:
 			virtual bool ReadFrames(WaveBuffer * buffer) noexcept = 0;
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status) noexcept = 0;
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed) noexcept = 0;
-			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * write_status, Semaphore * open_on_processed) noexcept = 0;
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status) noexcept = 0;
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status, IDispatchTask * execute_on_processed) noexcept = 0;
+			virtual bool ReadFramesAsync(WaveBuffer * buffer, bool * read_status, Semaphore * open_on_processed) noexcept = 0;
 		};
 		class IAudioDeviceFactory : public Object
 		{

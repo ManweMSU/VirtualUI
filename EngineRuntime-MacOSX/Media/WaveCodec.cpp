@@ -51,7 +51,7 @@ namespace Engine
 					stream->Seek(data_offset + frames_read * StreamFrameByteSize(input), Streaming::Begin);
 					uint64 frames_can_read = min(frames_count - frames_read, buffer->GetSizeInFrames());
 					uint64 byte_size = frames_can_read * StreamFrameByteSize(input);
-					stream->Read(buffer->GetData(), byte_size);
+					stream->Read(buffer->GetData(), uint32(byte_size));
 					frames_read += frames_can_read;
 					buffer->FramesUsed() = frames_can_read;
 					return true;
@@ -104,7 +104,7 @@ namespace Engine
 								local = local->ConvertFormat(output.Format);
 								local->ReallocateChannels(buffer, output.ChannelCount);
 							} else {
-								MemoryCopy(buffer->GetData(), local->GetData(), local->GetUsedSizeInBytes());
+								MemoryCopy(buffer->GetData(), local->GetData(), intptr(local->GetUsedSizeInBytes()));
 								buffer->FramesUsed() = local->FramesUsed();
 							}
 							return true;
@@ -145,10 +145,10 @@ namespace Engine
 					if (input_desc.Format != output_desc.Format) {
 						SafePointer<WaveBuffer> final_output = buffer->ConvertFormat(output_desc.Format);
 						buffer_size = final_output->GetUsedSizeInBytes();
-						output->Write(final_output->GetData(), buffer_size);
+						output->Write(final_output->GetData(), uint32(buffer_size));
 					} else {
 						buffer_size = buffer->GetUsedSizeInBytes();
-						output->Write(buffer->GetData(), buffer_size);
+						output->Write(buffer->GetData(), uint32(buffer_size));
 					}
 					bytes_written += buffer_size;
 				} catch (...) { return false; }
@@ -316,8 +316,8 @@ namespace Engine
 				if (state) return false;
 				if (internal_format == AudioFormatWaveform) {
 					if (bytes_written > 0xFFFFFFFF - sizeof(header)) return false;
-					header.data_length = bytes_written;
-					header.file_size = bytes_written + sizeof(header) - 8;
+					header.data_length = uint32(bytes_written);
+					header.file_size = uint32(bytes_written + sizeof(header) - 8);
 					try {
 						if (bytes_written & 1) {
 							uint8 padding = 0;
@@ -389,7 +389,7 @@ namespace Engine
 						source->Seek(4, Streaming::Begin);
 						source->Read(&main_size, 4);
 						source->Seek(12, Streaming::Begin);
-						while (source->Seek(0, Streaming::Current) <= uint64(main_size)) {
+						while (source->Seek(0, Streaming::Current) <= int64(main_size)) {
 							source->Read(chunk_name, 4);
 							source->Read(&chunk_size, 4);
 							if (MemoryCompare(chunk_name, "fmt ", 4) == 0) {
