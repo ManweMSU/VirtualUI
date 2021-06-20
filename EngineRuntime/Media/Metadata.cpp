@@ -749,7 +749,7 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
-			void MPEG4_PatchMovieAtom(DataBlock & moov, const DataBlock & udta)
+			void MPEG4_PatchMovieAtom(DataBlock & moov, const DataBlock * udta)
 			{
 				int pos = 0;
 				while (moov.Length() - pos >= 8) {
@@ -760,7 +760,7 @@ namespace Engine
 					} else pos += size;
 				}
 				moov.SetLength(pos);
-				moov.Append(udta);
+				if (udta) moov.Append(*udta);
 			}
 			void MPEG4_FindChunkOffsetAtoms(DataBlock & moov, Array<uint32> & starts, Array<uint32> & ends, int pos, int max_pos)
 			{
@@ -917,7 +917,7 @@ namespace Engine
 				if (sign[0] == 0xFF || MemoryCompare(sign, "ID3", 3) == 0) {
 					uint64 media_start, media_end;
 					ID3_MPEG3_GetMediaRange(stream, media_start, media_end);
-					SafePointer<DataBlock> block = ID3_Create(metadata);
+					SafePointer<DataBlock> block = metadata ? ID3_Create(metadata) : 0;
 					uint32 meta_size = block ? block->Length() : 0;
 					RelocateMedia(stream, media_start, media_end, meta_size);
 					if (block) {
@@ -926,7 +926,7 @@ namespace Engine
 					}
 					return true;
 				} else if (MemoryCompare(sign + 4, "ftyp", 4) == 0) {
-					SafePointer<DataBlock> udta = MPEG4_CreateMetadata(metadata);
+					SafePointer<DataBlock> udta = metadata ? MPEG4_CreateMetadata(metadata) : 0;
 					stream->Seek(0, Begin);
 					SafePointer<DataBlock> ftyp = MPEG4_ReadAtom(stream, stream->Length(), L"ftyp");
 					stream->Seek(0, Begin);
@@ -934,7 +934,7 @@ namespace Engine
 					stream->Seek(0, Begin);
 					uint64 mdat_begin, mdat_end;
 					MPEG4_LocateAtom(stream, stream->Length(), L"mdat", mdat_begin, mdat_end);
-					MPEG4_PatchMovieAtom(*moov, *udta);
+					MPEG4_PatchMovieAtom(*moov, udta);
 					udta.SetReference(0);
 					int64 header_size = moov->Length() + ftyp->Length() + 16;
 					MPEG4_RelocateChunks(*moov, header_size - int64(mdat_begin));
@@ -960,14 +960,14 @@ namespace Engine
 				if (sign[0] == 0xFF || MemoryCompare(sign, "ID3", 3) == 0) {
 					uint64 media_start, media_end;
 					ID3_MPEG3_GetMediaRange(source, media_start, media_end);
-					SafePointer<DataBlock> block = ID3_Create(metadata);
+					SafePointer<DataBlock> block = metadata ? ID3_Create(metadata) : 0;
 					if (block) dest->WriteArray(block);
 					source->Seek(media_start, Begin);
 					source->CopyTo(dest, media_end - media_start);
 					if (metadata_format) *metadata_format = MetadataFormatMPEG3ID3;
 					return true;
 				} else if (MemoryCompare(sign + 4, "ftyp", 4) == 0) {
-					SafePointer<DataBlock> udta = MPEG4_CreateMetadata(metadata);
+					SafePointer<DataBlock> udta = metadata ? MPEG4_CreateMetadata(metadata) : 0;
 					source->Seek(0, Begin);
 					SafePointer<DataBlock> ftyp = MPEG4_ReadAtom(source, source->Length(), L"ftyp");
 					source->Seek(0, Begin);
@@ -975,7 +975,7 @@ namespace Engine
 					source->Seek(0, Begin);
 					uint64 mdat_begin, mdat_end;
 					MPEG4_LocateAtom(source, source->Length(), L"mdat", mdat_begin, mdat_end);
-					MPEG4_PatchMovieAtom(*moov, *udta);
+					MPEG4_PatchMovieAtom(*moov, udta);
 					udta.SetReference(0);
 					int64 header_size = moov->Length() + ftyp->Length() + 16;
 					MPEG4_RelocateChunks(*moov, header_size - int64(mdat_begin));
