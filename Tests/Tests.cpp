@@ -258,6 +258,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	IO::Console cns;
 
+	auto aaa = Power::GetBatteryStatus();
+	auto bbb = Power::GetBatteryChargeLevel();
+
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	Codec::InitializeDefaultCodecs();
 

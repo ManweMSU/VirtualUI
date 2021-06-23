@@ -304,6 +304,9 @@
     <ClInclude Include="Media\Metadata.h">
       <Filter>Media</Filter>
     </ClInclude>
+    <ClInclude Include="Interfaces\SystemPower.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlatformDependent\Base.cpp">
@@ -554,6 +557,9 @@
     </ClCompile>
     <ClCompile Include="Media\Metadata.cpp">
       <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemPower.cpp">
+      <Filter>PlatformDependent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

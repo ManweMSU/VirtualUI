@@ -43,6 +43,7 @@
     <ClInclude Include="Interfaces\SystemAudio.h" />
     <ClInclude Include="Interfaces\SystemColors.h" />
     <ClInclude Include="Interfaces\SystemIO.h" />
+    <ClInclude Include="Interfaces\SystemPower.h" />
     <ClInclude Include="Interfaces\Threading.h" />
     <ClInclude Include="Math\Color.h" />
     <ClInclude Include="Math\Complex.h" />
@@ -151,6 +152,7 @@
     <ClCompile Include="PlatformDependent\SystemAudio.cpp" />
     <ClCompile Include="PlatformDependent\SystemColors.cpp" />
     <ClCompile Include="PlatformDependent\SystemIO.cpp" />
+    <ClCompile Include="PlatformDependent\SystemPower.cpp" />
     <ClCompile Include="PlatformDependent\Threading.cpp" />
     <ClCompile Include="PlatformDependent\WindowStation.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsEffects.cpp" />
