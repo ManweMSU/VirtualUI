@@ -957,6 +957,7 @@ namespace Engine
 				const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 				const IID IID_IAudioStreamVolume = __uuidof(IAudioStreamVolume);
 				auto device = reinterpret_cast<CoreAudioOutputDevice *>(arg);
+				SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 				if (device->client->GetBufferSize(&buffer_size) != S_OK) {
 					SetEvent(device->event);
 					return 1;
@@ -1197,6 +1198,7 @@ namespace Engine
 				const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 				const IID IID_IAudioStreamVolume = __uuidof(IAudioStreamVolume);
 				auto device = reinterpret_cast<CoreAudioInputDevice *>(arg);
+				SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 				if (device->client->GetBufferSize(&buffer_size) != S_OK) {
 					SetEvent(device->event);
 					return 1;
