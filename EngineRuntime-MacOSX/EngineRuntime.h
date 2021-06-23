@@ -31,6 +31,7 @@
 #include "Interfaces/Process.h"
 #include "Interfaces/SecureSocket.h"
 #include "Interfaces/Shell.h"
+#include "Interfaces/SystemPower.h"
 #include "Interfaces/Threading.h"
 #include "PlatformSpecific/MacTouchBar.h"
 #include "PlatformSpecific/UnixFileAccess.h"

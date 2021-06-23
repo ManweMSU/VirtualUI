@@ -380,6 +380,7 @@ namespace Engine
 					StreamDesc source_desc, out_desc;
 					uint64 data_offset, data_size, num_frames;
 					string format_code;
+					source->Seek(0, Streaming::Begin);
 					source->Read(sign, 12);
 					source->Seek(0, Streaming::Begin);
 					if (MemoryCompare(sign, "RIFF", 4) == 0 && MemoryCompare(sign + 8, "WAVE", 4) == 0) {

@@ -170,6 +170,8 @@ namespace Engine
 		void RegisterCodec(IAudioCodec * codec);
 		void UnregisterCodec(IAudioCodec * codec);
 
+		Array<string> * GetEncodeFormats(void);
+		Array<string> * GetDecodeFormats(void);
 		IAudioCodec * FindEncoder(const string & format);
 		IAudioCodec * FindDecoder(const string & format);
 		IAudioDecoderStream * DecodeAudio(Streaming::Stream * stream, const StreamDesc * desired_desc = 0);
