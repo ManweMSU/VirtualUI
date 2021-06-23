@@ -884,6 +884,58 @@ namespace Engine
 			bool * status;
 			_dispatch_task * next;
 		};
+		class _device_status_notification : public IMMNotificationClient
+		{
+			IMMDeviceEnumerator * _enumerator;
+			string _dev_id;
+			HANDLE _event_open;
+			ULONG _ref_cnt;
+		public:
+			_device_status_notification(IMMDeviceEnumerator * enumerator, IMMDevice * device, HANDLE event_open) : _event_open(event_open)
+			{
+				LPWSTR dev_uid;
+				if (device->GetId(&dev_uid) != S_OK) throw Exception();
+				try { _dev_id = string(dev_uid); } catch (...) { CoTaskMemFree(dev_uid); throw; }
+				CoTaskMemFree(dev_uid);
+				if (enumerator->RegisterEndpointNotificationCallback(this) != S_OK) throw Exception();
+				_enumerator = enumerator;
+				_enumerator->AddRef();
+				_ref_cnt = 1;
+			}
+			~_device_status_notification(void) { _enumerator->UnregisterEndpointNotificationCallback(this); _enumerator->Release(); }
+			virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void ** ppvObject) override
+			{
+				if (riid == __uuidof(IMMNotificationClient)) {
+					*ppvObject = static_cast<IMMNotificationClient *>(this);
+					AddRef();
+					return S_OK;
+				} else if (riid == IID_IUnknown) {
+					*ppvObject = static_cast<IUnknown *>(this);
+					AddRef();
+					return S_OK;
+				} else return E_NOINTERFACE;
+			}
+			virtual ULONG STDMETHODCALLTYPE AddRef(void) override { return InterlockedIncrement(&_ref_cnt); }
+			virtual ULONG STDMETHODCALLTYPE Release(void) override
+			{
+				auto result = InterlockedDecrement(&_ref_cnt);
+				if (!result) delete this;
+				return result;
+			}
+			virtual HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) override
+			{
+				if (dwNewState != DEVICE_STATE_ACTIVE && pwstrDeviceId == _dev_id) SetEvent(_event_open);
+				return S_OK;
+			}
+			virtual HRESULT STDMETHODCALLTYPE OnDeviceAdded(LPCWSTR pwstrDeviceId) override { return S_OK; }
+			virtual HRESULT STDMETHODCALLTYPE OnDeviceRemoved(LPCWSTR pwstrDeviceId) override
+			{
+				if (pwstrDeviceId == _dev_id) SetEvent(_event_open);
+				return S_OK;
+			}
+			virtual HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) override { return S_OK; }
+			virtual HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key) override { return S_OK; }
+		};
 		class CoreAudioOutputDevice : public IAudioOutputDevice
 		{
 			StreamDesc format;
@@ -896,6 +948,7 @@ namespace Engine
 			_dispatch_task * task_first;
 			_dispatch_task * task_last;
 			HANDLE event;
+			_device_status_notification * notification;
 			volatile uint command; // 1 - terminate, 2 - drain
 
 			static int _dispatch_thread(void * arg)
@@ -1006,7 +1059,7 @@ namespace Engine
 				}
 			}
 		public:
-			CoreAudioOutputDevice(IMMDevice * device)
+			CoreAudioOutputDevice(IMMDeviceEnumerator * enumerator, IMMDevice * device)
 			{
 				const IID IID_IAudioClient = __uuidof(IAudioClient);
 				if (device->Activate(IID_IAudioClient, CLSCTX_ALL, 0, reinterpret_cast<void **>(&client)) != S_OK) throw Exception();
@@ -1029,7 +1082,9 @@ namespace Engine
 				if (!thread) { CloseHandle(event); client->Release(); throw Exception(); }
 				WaitForSingleObject(event, INFINITE);
 				if (!volume || !render) { CloseHandle(event); client->Release(); throw Exception(); }
-				if (client->SetEventHandle(event) != S_OK) {
+				try { notification = new _device_status_notification(enumerator, device, event); } catch (...) { notification = 0; }
+				if (client->SetEventHandle(event) != S_OK || !notification) {
+					if (notification) notification->Release();
 					_append_dispatch(0, 0, 0, 0, 1);
 					thread->Wait();
 					CloseHandle(event);
@@ -1045,6 +1100,7 @@ namespace Engine
 				thread->Wait();
 				CloseHandle(event);
 				client->Release();
+				notification->Release();
 			}
 			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override { return format; }
 			virtual AudioObjectType GetObjectType(void) const noexcept override { return AudioObjectType::DeviceOutput; }
@@ -1129,6 +1185,7 @@ namespace Engine
 			_dispatch_task * task_first;
 			_dispatch_task * task_last;
 			HANDLE event;
+			_device_status_notification * notification;
 			volatile uint command; // 1 - terminate, 2 - drain
 
 			static int _dispatch_thread(void * arg)
@@ -1277,7 +1334,7 @@ namespace Engine
 				}
 			}
 		public:
-			CoreAudioInputDevice(IMMDevice * device)
+			CoreAudioInputDevice(IMMDeviceEnumerator * enumerator, IMMDevice * device)
 			{
 				const IID IID_IAudioClient = __uuidof(IAudioClient);
 				if (device->Activate(IID_IAudioClient, CLSCTX_ALL, 0, reinterpret_cast<void **>(&client)) != S_OK) throw Exception();
@@ -1302,7 +1359,9 @@ namespace Engine
 				if (!thread) { CloseHandle(event); client->Release(); throw Exception(); }
 				WaitForSingleObject(event, INFINITE);
 				if (!volume || !capture) { CloseHandle(event); client->Release(); throw Exception(); }
-				if (client->SetEventHandle(event) != S_OK) {
+				try { notification = new _device_status_notification(enumerator, device, event); } catch (...) { notification = 0; }
+				if (client->SetEventHandle(event) != S_OK || !notification) {
+					if (notification) notification->Release();
 					_append_dispatch(0, 0, 0, 0, 1);
 					thread->Wait();
 					CloseHandle(event);
@@ -1318,6 +1377,7 @@ namespace Engine
 				thread->Wait();
 				CloseHandle(event);
 				client->Release();
+				notification->Release();
 			}
 			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override { return format; }
 			virtual AudioObjectType GetObjectType(void) const noexcept override { return AudioObjectType::DeviceInput; }
@@ -1445,7 +1505,7 @@ namespace Engine
 				IMMDevice * device;
 				if (enumerator->GetDevice(identifier, &device) != S_OK) return 0;
 				IAudioOutputDevice * result;
-				try { result = new CoreAudioOutputDevice(device); } catch (...) { device->Release(); return 0; }
+				try { result = new CoreAudioOutputDevice(enumerator, device); } catch (...) { device->Release(); return 0; }
 				device->Release();
 				return result;
 			}
@@ -1454,7 +1514,7 @@ namespace Engine
 				IMMDevice * device;
 				if (enumerator->GetDefaultAudioEndpoint(eRender, eConsole, &device) != S_OK) return 0;
 				IAudioOutputDevice * result;
-				try { result = new CoreAudioOutputDevice(device); } catch (...) { device->Release(); return 0; }
+				try { result = new CoreAudioOutputDevice(enumerator, device); } catch (...) { device->Release(); return 0; }
 				device->Release();
 				return result;
 			}
@@ -1463,7 +1523,7 @@ namespace Engine
 				IMMDevice * device;
 				if (enumerator->GetDevice(identifier, &device) != S_OK) return 0;
 				IAudioInputDevice * result;
-				try { result = new CoreAudioInputDevice(device); } catch (...) { device->Release(); return 0; }
+				try { result = new CoreAudioInputDevice(enumerator, device); } catch (...) { device->Release(); return 0; }
 				device->Release();
 				return result;
 			}
@@ -1472,7 +1532,7 @@ namespace Engine
 				IMMDevice * device;
 				if (enumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &device) != S_OK) return 0;
 				IAudioInputDevice * result;
-				try { result = new CoreAudioInputDevice(device); } catch (...) { device->Release(); return 0; }
+				try { result = new CoreAudioInputDevice(enumerator, device); } catch (...) { device->Release(); return 0; }
 				device->Release();
 				return result;
 			}
