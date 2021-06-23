@@ -443,6 +443,7 @@ namespace Engine
 			virtual IAudioDecoderStream * TryDecode(Streaming::Stream * source, const StreamDesc * desired_desc) noexcept override
 			{
 				try {
+					source->Seek(0, Streaming::Begin);
 					SafePointer<CoreAudioFileWrapper> wrapper = new CoreAudioFileWrapper(source, false, 0, 0);
 					AudioStreamBasicDescription internal, external;
 					StreamDesc input, output;

@@ -716,6 +716,7 @@ namespace Engine
 			virtual IAudioDecoderStream * TryDecode(Streaming::Stream * source, const StreamDesc * desired_desc) noexcept override
 			{
 				try {
+					source->Seek(0, Begin);
 					MediaFoundationStream * wrapper = new MediaFoundationStream(source, false);
 					IMFSourceReader * reader;
 					if (MFCreateSourceReaderFromByteStream(wrapper, 0, &reader) != S_OK) {

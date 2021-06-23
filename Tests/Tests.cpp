@@ -257,21 +257,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	}
 
 	IO::Console cns;
-	//cns.SetInputMode(IO::ConsoleInputMode::Raw);
-	//cns.AlternateScreenBuffer(true);
-	while (true) {
-		IO::ConsoleEventDesc desc;
-		cns.ReadEvent(desc);
-		if (desc.Event == IO::ConsoleEvent::KeyInput) {
-			cns.WriteLine(FormatString(L"Key code = %0, flags = %1", desc.KeyCode, desc.KeyFlags));
-		} else if (desc.Event == IO::ConsoleEvent::CharacterInput) {
-			cns.WriteLine(FormatString(L"Key char = %0", desc.CharacterCode));
-		} else if (desc.Event == IO::ConsoleEvent::ConsoleResized) {
-			cns.WriteLine(FormatString(L"Resized : (%0, %1)", desc.Width, desc.Height));
-		}
-	}
-	//cns.AlternateScreenBuffer(false);
-	//cns.SetInputMode(IO::ConsoleInputMode::Echo);
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	Codec::InitializeDefaultCodecs();

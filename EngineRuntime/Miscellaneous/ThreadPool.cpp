@@ -2,28 +2,47 @@
 
 namespace Engine
 {
-	ThreadPool::ThreadPool(void) : ThreadPool(-1) {}
+	void Task::DoTask(IDispatchQueue * queue) noexcept { DoTask(); }
+	ThreadPool::ThreadPool(void) : ThreadPool(0) {}
 	ThreadPool::ThreadPool(int num_threads) : Workers(8), Tasks(0x100)
 	{
-		if (num_threads <= 0) num_threads = GetProcessorsNumber();
+		if (num_threads <= 0) num_threads = GetProcessorsNumber() + num_threads;
+		if (num_threads <= 0) num_threads = 1;
 		ActiveThreads = num_threads;
 		Access = CreateSemaphore(1);
 		TaskCount = CreateSemaphore(0);
 		Idle = CreateSemaphore(0);
+		if (!Access || !TaskCount || !Idle) throw Exception();
 		for (int i = 0; i < num_threads; i++) {
 			SafePointer<Thread> worker = CreateThread(reinterpret_cast<ThreadRoutine>(ThreadProc), this);
+			if (!worker) {
+				BeginSubmit();
+				for (int j = 0; j < i; j++) { TaskCount->Open(); Tasks.Append(0); }
+				EndSubmit();
+				Wait();
+				throw Exception();
+			}
 			Workers.Append(worker);
 		}
 	}
 	ThreadPool::ThreadPool(int num_threads, uint32 stack_size) : Workers(8), Tasks(0x100)
 	{
-		if (num_threads <= 0) num_threads = GetProcessorsNumber();
+		if (num_threads <= 0) num_threads = GetProcessorsNumber() + num_threads;
+		if (num_threads <= 0) num_threads = 1;
 		ActiveThreads = num_threads;
 		Access = CreateSemaphore(1);
 		TaskCount = CreateSemaphore(0);
 		Idle = CreateSemaphore(0);
+		if (!Access || !TaskCount || !Idle) throw Exception();
 		for (int i = 0; i < num_threads; i++) {
 			SafePointer<Thread> worker = CreateThread(reinterpret_cast<ThreadRoutine>(ThreadProc), this, stack_size);
+			if (!worker) {
+				BeginSubmit();
+				for (int j = 0; j < i; j++) { TaskCount->Open(); Tasks.Append(0); }
+				EndSubmit();
+				Wait();
+				throw Exception();
+			}
 			Workers.Append(worker);
 		}
 	}
@@ -125,8 +144,7 @@ namespace Engine
 				owner->Access->Open();
 			}
 			if (task) {
-				try { task->DoTask(owner); }
-				catch (...) {}
+				task->DoTask(owner);
 				task.SetReference(0);
 			} else {
 				owner->Access->Wait();
@@ -138,5 +156,112 @@ namespace Engine
 		} while (true);
 		return 0;
 	}
-	void Task::DoTask(IDispatchQueue * queue) noexcept { DoTask(); }
+	TaskQueue::TaskQueue(void) : First(0), Last(0), IntTaskCount(0)
+	{
+		Access = CreateSemaphore(1);
+		TaskCount = CreateSemaphore(0);
+		if (!Access || !TaskCount) throw Exception();
+	}
+	TaskQueue::~TaskQueue(void)
+	{
+		auto current = First;
+		while (current) { auto copy = current; current = current->next; delete copy; }
+	}
+	void TaskQueue::SubmitTask(IDispatchTask * task)
+	{
+		if (!task) throw InvalidArgumentException();
+		BeginSubmit();
+		try { AppendTask(task); } catch (...) { EndSubmit(); throw; }
+		EndSubmit();
+	}
+	void TaskQueue::BeginSubmit(void) { Access->Wait(); }
+	void TaskQueue::AppendTask(IDispatchTask * task)
+	{
+		if (!task) throw InvalidArgumentException();
+		auto list = new (std::nothrow) ListTask;
+		if (!list) throw OutOfMemoryException();
+		list->task.SetRetain(task);
+		list->next = 0;
+		TaskCount->Open();
+		IntTaskCount++;
+		if (Last) {
+			Last->next = list;
+			Last = list;
+		} else First = Last = list;
+	}
+	void TaskQueue::EndSubmit(void) { Access->Open(); }
+	int TaskQueue::GetTaskQueueLength(void) const
+	{
+		Access->Wait();
+		int count = IntTaskCount;
+		Access->Open();
+		return count;
+	}
+	void TaskQueue::Process(void)
+	{
+		bool loop = true;
+		while (loop) {
+			TaskCount->Wait();
+			Access->Wait();
+			IntTaskCount--;
+			auto task = First;
+			if (First) First = First->next;
+			if (!First) Last = 0;
+			Access->Open();
+			if (task) {
+				if (task->task) task->task->DoTask(this);
+				else loop = false;
+				delete task;
+			}
+		}
+	}
+	bool TaskQueue::ProcessOnce(void)
+	{
+		if (TaskCount->TryWait()) {
+			Access->Wait();
+			IntTaskCount--;
+			auto task = First;
+			if (First) First = First->next;
+			if (!First) Last = 0;
+			Access->Open();
+			if (task) {
+				if (task->task) task->task->DoTask(this);
+				delete task;
+				return true;
+			} else return false;
+		} else return false;
+	}
+	void TaskQueue::Quit(void)
+	{
+		auto list = new (std::nothrow) ListTask;
+		if (!list) throw OutOfMemoryException();
+		Access->Wait();
+		TaskCount->Open();
+		IntTaskCount++;
+		list->next = 0;
+		if (Last) {
+			Last->next = list;
+			Last = list;
+		} else First = Last = list;
+		Access->Open();
+	}
+	void TaskQueue::Break(void)
+	{
+		auto list = new (std::nothrow) ListTask;
+		if (!list) throw OutOfMemoryException();
+		Access->Wait();
+		TaskCount->Open();
+		IntTaskCount++;
+		list->next = First;
+		First = list;
+		if (!Last) Last = list;
+		Access->Open();
+	}
+	string TaskQueue::ToString(void) const
+	{
+		Access->Wait();
+		string info = L"TaskQueue: " + string(IntTaskCount) + L" tasks pending";
+		Access->Open();
+		return info;
+	}
 }
