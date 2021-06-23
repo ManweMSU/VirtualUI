@@ -361,7 +361,7 @@ int Main(void)
 	// }
 	
 	IO::Console Console;
-
+	
 	Power::PreventIdleSleep(Power::Prevent::IdleDisplaySleep);
 
 	auto battery_status = Power::GetBatteryStatus();

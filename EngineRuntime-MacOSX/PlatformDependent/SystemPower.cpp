@@ -3,6 +3,8 @@
 #include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/ps/IOPSKeys.h>
 #include <IOKit/pwr_mgt/IOPMLib.h>
+#include <CoreServices/CoreServices.h>
+#include <Carbon/Carbon.h>
 
 namespace Engine
 {
@@ -86,15 +88,37 @@ namespace Engine
 			}
 			CFRelease(desc);
 		}
+		bool _CoreSendSystemEvent(AEEventID event)
+		{
+			ProcessSerialNumber system_process = { 0, kSystemProcess };
+			AEAddressDesc address_desc;
+			if (AECreateDesc(typeProcessSerialNumber, &system_process, sizeof(system_process), &address_desc) != noErr) return false;
+			AppleEvent event_send = { typeNull, 0 };
+			if (AECreateAppleEvent(kCoreEventClass, event, &address_desc, kAutoGenerateReturnID, kAnyTransactionID, &event_send) != noErr) {
+				AEDisposeDesc(&address_desc);
+				return false;
+			}
+			AEDisposeDesc(&address_desc);
+			AppleEvent event_reply = { typeNull, 0 };
+			if (AESend(&event_send, &event_reply, kAENoReply, kAENormalPriority, kAEDefaultTimeout, 0, 0) != noErr) {
+				AEDisposeDesc(&event_send);
+				return false;
+			}
+			AEDisposeDesc(&event_send);
+			AEDisposeDesc(&event_reply);
+			return true;
+		}
 		bool ExitSystem(Exit exit, bool forced)
 		{
-			// TODO: IMPLEMENT
-			return false;
+			if (exit == Exit::Shutdown) return _CoreSendSystemEvent(kAEShutDown);
+			else if (exit == Exit::Reboot) return _CoreSendSystemEvent(kAERestart);
+			else if (exit == Exit::Logout) return _CoreSendSystemEvent(kAEReallyLogOut);
+			else return false;
 		}
 		bool SuspendSystem(bool hibernate, bool allow_wakeup)
 		{
-			// TODO: IMPLEMENT
-			return false;
+			if (hibernate) return false;
+			else return _CoreSendSystemEvent(kAESleep);
 		}
 	}
 }
