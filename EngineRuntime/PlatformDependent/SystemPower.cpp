@@ -37,6 +37,7 @@ namespace Engine
 		{
 			HANDLE token;
 			TOKEN_PRIVILEGES privileges;
+			privileges.PrivilegeCount = 1;
 			if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) return false;
 			if (!LookupPrivilegeValueW(0, SE_SHUTDOWN_NAME, &privileges.Privileges[0].Luid)) {
 				CloseHandle(token);
@@ -63,6 +64,7 @@ namespace Engine
 		{
 			HANDLE token;
 			TOKEN_PRIVILEGES privileges;
+			privileges.PrivilegeCount = 1;
 			if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) return false;
 			if (!LookupPrivilegeValueW(0, SE_SHUTDOWN_NAME, &privileges.Privileges[0].Luid)) {
 				CloseHandle(token);
