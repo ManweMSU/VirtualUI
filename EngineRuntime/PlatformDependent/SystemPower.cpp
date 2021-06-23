@@ -37,12 +37,13 @@ namespace Engine
 		{
 			HANDLE token;
 			TOKEN_PRIVILEGES privileges;
-			privileges.PrivilegeCount = 1;
 			if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) return false;
 			if (!LookupPrivilegeValueW(0, SE_SHUTDOWN_NAME, &privileges.Privileges[0].Luid)) {
 				CloseHandle(token);
 				return false;
 			}
+			privileges.PrivilegeCount = 1;
+			privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 			if (!AdjustTokenPrivileges(token, FALSE, &privileges, 1, 0, 0)) {
 				CloseHandle(token);
 				return false;
@@ -64,12 +65,13 @@ namespace Engine
 		{
 			HANDLE token;
 			TOKEN_PRIVILEGES privileges;
-			privileges.PrivilegeCount = 1;
 			if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) return false;
 			if (!LookupPrivilegeValueW(0, SE_SHUTDOWN_NAME, &privileges.Privileges[0].Luid)) {
 				CloseHandle(token);
 				return false;
 			}
+			privileges.PrivilegeCount = 1;
+			privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 			if (!AdjustTokenPrivileges(token, FALSE, &privileges, 1, 0, 0)) {
 				CloseHandle(token);
 				return false;
