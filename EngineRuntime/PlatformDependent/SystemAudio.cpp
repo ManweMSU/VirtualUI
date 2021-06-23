@@ -949,6 +949,7 @@ namespace Engine
 			_dispatch_task * task_last;
 			HANDLE event;
 			_device_status_notification * notification;
+			bool device_dead;
 			volatile uint command; // 1 - terminate, 2 - drain
 
 			static int _dispatch_thread(void * arg)
@@ -1004,6 +1005,7 @@ namespace Engine
 					uint64 current_frame = 0;
 					bool local_status = true;
 					while (current_frame < current->buffer->FramesUsed()) {
+						if (device->device_dead) { local_status = false; break; }
 						WaitForSingleObject(device->event, INFINITE);
 						if (device->command) { local_status = false; break; }
 						UINT32 padding;
@@ -1023,6 +1025,13 @@ namespace Engine
 					if (current->open) current->open->Open();
 					if (current->task) current->task->DoTask(0);
 					delete current;
+					if (!local_status) {
+						device->access->Wait();
+						device->device_dead = true;
+						device->command |= 2;
+						device->task_count->Open();
+						device->access->Open();
+					}
 				}
 				device->volume->Release();
 				device->volume = 0;
@@ -1067,6 +1076,7 @@ namespace Engine
 				WAVEFORMATEX * wave;
 				DWORD convert = 0;
 				volume = 0; render = 0; command = 0;
+				device_dead = false;
 				task_first = task_last = 0;
 				if (client->GetMixFormat(&wave) != S_OK) { client->Release(); throw Exception(); }
 				try { _select_stream_format(format, wave); } catch (...) { _select_custom_format(format, wave, convert); }
@@ -1187,6 +1197,7 @@ namespace Engine
 			_dispatch_task * task_last;
 			HANDLE event;
 			_device_status_notification * notification;
+			bool device_dead;
 			volatile uint command; // 1 - terminate, 2 - drain
 
 			static int _dispatch_thread(void * arg)
@@ -1262,6 +1273,7 @@ namespace Engine
 						buffer_small_unread += write;
 					}
 					while (current->buffer->FramesUsed() < current->buffer->GetSizeInFrames()) {
+						if (device->device_dead) { local_status = false; break; }
 						WaitForSingleObject(device->event, INFINITE);
 						if (device->command) break;
 						UINT32 read_ready;
@@ -1298,6 +1310,13 @@ namespace Engine
 					if (current->open) current->open->Open();
 					if (current->task) current->task->DoTask(0);
 					delete current;
+					if (!local_status) {
+						device->access->Wait();
+						device->device_dead = true;
+						device->command |= 2;
+						device->task_count->Open();
+						device->access->Open();
+					}
 				}
 				device->volume->Release();
 				device->volume = 0;
@@ -1343,6 +1362,7 @@ namespace Engine
 				WAVEFORMATEX * wave;
 				DWORD convert = 0;
 				volume = 0; capture = 0; command = 0;
+				device_dead = false;
 				task_first = task_last = 0;
 				if (client->GetMixFormat(&wave) != S_OK) { client->Release(); throw Exception(); }
 				try { _select_stream_format(format, wave); } catch (...) { _select_custom_format(format, wave, convert); }
