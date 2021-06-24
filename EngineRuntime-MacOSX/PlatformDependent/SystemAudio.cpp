@@ -792,6 +792,7 @@ namespace Engine
 		};
 		class CoreAudioDeviceFactory : public IAudioDeviceFactory
 		{
+			SafePointer<Semaphore> access_sync;
 			Array<IAudioEventCallback *> callbacks;
 			Array<AudioDeviceID> devs_out, devs_in;
 
@@ -884,6 +885,7 @@ namespace Engine
 			static OSStatus _device_change_listener(AudioObjectID object, uint32 num_address, const AudioObjectPropertyAddress * addresses, void * user)
 			{
 				auto self = reinterpret_cast<CoreAudioDeviceFactory *>(user);
+				self->access_sync->Wait();
 				if (object == kAudioObjectSystemObject) for (int i = 0; i < num_address; i++) {
 					if (addresses[i].mScope == kAudioObjectPropertyScopeGlobal && addresses[i].mElement == kAudioObjectPropertyElementMaster) {
 						if (addresses[i].mSelector == kAudioHardwarePropertyDevices) {
@@ -916,23 +918,26 @@ namespace Engine
 									if (_check_device_io(dev, kAudioDevicePropertyScopeOutput)) self->devs_out << dev;
 									else if (_check_device_io(dev, kAudioDevicePropertyScopeInput)) self->devs_in << dev;
 								}
-							} catch (...) { return 0; }
+							} catch (...) {}
 						} else if (addresses[i].mSelector == kAudioHardwarePropertyDefaultOutputDevice) {
 							try {
 								self->_raise_event(AudioDeviceEvent::DefaultChanged, AudioObjectType::DeviceOutput, string(_get_default_device(addresses[i].mSelector)));
-							} catch (...) { return 0; }
+							} catch (...) {}
 						} else if (addresses[i].mSelector == kAudioHardwarePropertyDefaultInputDevice) {
 							try {
 								self->_raise_event(AudioDeviceEvent::DefaultChanged, AudioObjectType::DeviceInput, string(_get_default_device(addresses[i].mSelector)));
-							} catch (...) { return 0; }
+							} catch (...) {}
 						}
 					}
 				}
+				self->access_sync->Open();
 				return 0;
 			}
 		public:
 			CoreAudioDeviceFactory(void) : callbacks(0x10), devs_out(0x10), devs_in(0x10)
 			{
+				access_sync = CreateSemaphore(1);
+				if (!access_sync) throw Exception();
 				SafePointer< Array<AudioDeviceID> > devs = _list_audio_devices();
 				for (auto & dev : *devs) {
 					if (_check_device_io(dev, kAudioDevicePropertyScopeOutput)) devs_out << dev;
@@ -1040,18 +1045,23 @@ namespace Engine
 			}
 			virtual bool RegisterEventCallback(IAudioEventCallback * callback) noexcept override
 			{
+				access_sync->Wait();
 				try {
-					for (auto & cb : callbacks) if (cb == callback) return true;
+					for (auto & cb : callbacks) if (cb == callback) { access_sync->Open(); return true; }
 					callbacks.Append(callback);
+					access_sync->Open();
 					return true;
-				} catch (...) { return false; }
+				} catch (...) { access_sync->Open(); return false; }
 			}
 			virtual bool UnregisterEventCallback(IAudioEventCallback * callback) noexcept override
 			{
+				access_sync->Wait();
 				for (int i = 0; i < callbacks.Length(); i++) if (callbacks[i] == callback) {
 					callbacks.Remove(i);
+					access_sync->Open();
 					return true;
 				}
+				access_sync->Open();
 				return false;
 			}
 		};
