@@ -342,6 +342,16 @@ public:
 	}
 };
 
+SafePointer<TaskQueue> queue;
+class EventCallback : public Audio::IAudioEventCallback
+{
+public:
+	virtual void OnAudioDeviceEvent(Audio::AudioDeviceEvent event, Audio::AudioObjectType device_type, const string & device_identifier) noexcept override
+	{
+		int pp = 555;
+	}
+};
+
 int Main(void)
 {
 	// {
@@ -361,8 +371,13 @@ int Main(void)
 	// }
 	
 	IO::Console Console;
+	queue = new TaskQueue;
 	
 	Power::PreventIdleSleep(Power::Prevent::IdleDisplaySleep);
+
+	EventCallback callback;
+	SafePointer<Audio::IAudioDeviceFactory> factory = Audio::CreateAudioDeviceFactory();
+	factory->RegisterEventCallback(&callback);
 
 	auto battery_status = Power::GetBatteryStatus();
 	if (battery_status == Power::BatteryStatus::Charging) {
@@ -374,6 +389,7 @@ int Main(void)
 	} else if (battery_status == Power::BatteryStatus::Unknown) {
 		Console.WriteLine(L"The status of battery is unknown.");
 	}
+	queue->Process();
 	Sleep(10000);
 
 	// Console.SetInputMode(IO::ConsoleInputMode::Raw);

@@ -21,6 +21,7 @@ namespace Engine
 			S32_float = 0x00020020, S64_float = 0x00020040
 		};
 		enum class AudioObjectType { Unknown, DeviceOutput, DeviceInput, StreamEncoder, StreamDecoder };
+		enum class AudioDeviceEvent { Activated, Inactivated, DefaultChanged };
 		struct StreamDesc
 		{
 			SampleFormat Format;
@@ -130,9 +131,15 @@ namespace Engine
 			virtual bool Finalize(void) noexcept = 0;
 		};
 
+		class IAudioEventCallback
+		{
+		public:
+			virtual void OnAudioDeviceEvent(AudioDeviceEvent event, AudioObjectType device_type, const string & device_identifier) noexcept = 0;
+		};
 		class IAudioDevice : public IAudioObject
 		{
 		public:
+			virtual string GetDeviceIdentifier(void) const = 0;
 			virtual double GetVolume(void) noexcept = 0;
 			virtual void SetVolume(double volume) noexcept = 0;
 			virtual bool StartProcessing(void) noexcept = 0;
@@ -164,6 +171,8 @@ namespace Engine
 			virtual IAudioOutputDevice * CreateDefaultOutputDevice(void) noexcept = 0;
 			virtual IAudioInputDevice * CreateInputDevice(const string & identifier) noexcept = 0;
 			virtual IAudioInputDevice * CreateDefaultInputDevice(void) noexcept = 0;
+			virtual bool RegisterEventCallback(IAudioEventCallback * callback) noexcept = 0;
+			virtual bool UnregisterEventCallback(IAudioEventCallback * callback) noexcept = 0;
 		};
 
 		void InitializeDefaultCodecs(void);
