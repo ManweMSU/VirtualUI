@@ -1496,7 +1496,12 @@ namespace Engine
 			public:
 				_device_notification(void) : callbacks(0x10), _ref_cnt(1), enumerator(0) {}
 				~_device_notification(void) {}
-				void _raise_event(AudioDeviceEvent event, AudioObjectType type, const string & dev_id) { for (auto & callback : callbacks) callback->OnAudioDeviceEvent(event, type, dev_id); }
+				void _raise_event(AudioDeviceEvent event, AudioObjectType type, const string & dev_id)
+				{
+					access_sync->Wait();
+					for (auto & callback : callbacks) callback->OnAudioDeviceEvent(event, type, dev_id);
+					access_sync->Open();
+				}
 				virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void ** ppvObject) override
 				{
 					if (riid == __uuidof(IMMNotificationClient)) {
