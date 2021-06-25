@@ -26,7 +26,7 @@
 #undef CreateFile
 #undef CreateSemaphore
 #undef CreateSymbolicLink
-
+#undef LoadImage
 
 using namespace Engine;
 using namespace Engine::UI;
@@ -258,8 +258,17 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
 	IO::Console cns;
 
-	auto aaa = Power::GetBatteryStatus();
-	auto bbb = Power::GetBatteryChargeLevel();
+	auto battery_status = Power::GetBatteryStatus();
+	if (battery_status == Power::BatteryStatus::Charging) {
+		cns.WriteLine(FormatString(L"Battery is charging now, %0%%.", Power::GetBatteryChargeLevel() * 100.0));
+	} else if (battery_status == Power::BatteryStatus::InUse) {
+		cns.WriteLine(FormatString(L"Battery is in use now, %0%%.", Power::GetBatteryChargeLevel() * 100.0));
+	} else if (battery_status == Power::BatteryStatus::NoBattery) {
+		cns.WriteLine(L"No battery on this PC.");
+	} else if (battery_status == Power::BatteryStatus::Unknown) {
+		cns.WriteLine(L"The status of battery is unknown.");
+	}
+
 
 	IO::SetCurrentDirectory(IO::Path::GetDirectory(IO::GetExecutablePath()));
 	Codec::InitializeDefaultCodecs();

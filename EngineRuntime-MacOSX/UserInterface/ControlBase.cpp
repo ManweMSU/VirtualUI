@@ -222,6 +222,7 @@ namespace Engine
 		void Window::DeferredDestroy(void) { Station->DeferredDestroy(this); }
 		void Window::DeferredRaiseEvent(int ID) { Station->DeferredRaiseEvent(this, ID); }
 		void Window::PostEvent(int ID) { Station->DeferredRaiseEvent(this, ID); }
+		void Window::PostTask(IDispatchTask * task) { GetStation()->SubmitTask(task); }
 
 		void WindowStation::DeconstructChain(Window * window)
 		{

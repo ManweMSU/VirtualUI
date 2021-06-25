@@ -913,6 +913,7 @@ namespace Engine
 		{
 			try {
 				uint8 sign[8];
+				stream->Seek(0, Begin);
 				stream->Read(sign, 8);
 				if (sign[0] == 0xFF || MemoryCompare(sign, "ID3", 3) == 0) {
 					uint64 media_start, media_end;
@@ -956,6 +957,7 @@ namespace Engine
 		{
 			try {
 				uint8 sign[8];
+				source->Seek(0, Begin);
 				source->Read(sign, 8);
 				if (sign[0] == 0xFF || MemoryCompare(sign, "ID3", 3) == 0) {
 					uint64 media_start, media_end;
@@ -998,6 +1000,7 @@ namespace Engine
 		{
 			try {
 				ID3Header header;
+				stream->Seek(0, Begin);
 				stream->Read(&header, sizeof(header));
 				if (MemoryCompare(header.signature, "ID3", 3) == 0) return ID3_Read(stream, header, 0, metadata_format);
 				if (stream->Length() > 10) {

@@ -342,25 +342,55 @@ public:
 	}
 };
 
+SafePointer<TaskQueue> queue;
+class EventCallback : public Audio::IAudioEventCallback
+{
+public:
+	virtual void OnAudioDeviceEvent(Audio::AudioDeviceEvent event, Audio::AudioObjectType device_type, const string & device_identifier) noexcept override
+	{
+		int pp = 555;
+	}
+};
+
 int Main(void)
 {
-	{
-		SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
-		Math::ColorHSV clr(0.0, 1.0, 1.0);
-		while (true) {
-			canvas->BeginDraw();
-			canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
-			canvas->EndDraw();
-			auto key = canvas->ReadKey();
-			if (key == KeyCodes::Escape) break;
-			else if (key == KeyCodes::Right) {
-				clr.h += 1.0;
-				clr.ClampChannels();
-			}
-		}
-	}
+	// {
+	// 	SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
+	// 	Math::ColorHSV clr(0.0, 1.0, 1.0);
+	// 	while (true) {
+	// 		canvas->BeginDraw();
+	// 		canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
+	// 		canvas->EndDraw();
+	// 		auto key = canvas->ReadKey();
+	// 		if (key == KeyCodes::Escape) break;
+	// 		else if (key == KeyCodes::Right) {
+	// 			clr.h += 1.0;
+	// 			clr.ClampChannels();
+	// 		}
+	// 	}
+	// }
 	
 	IO::Console Console;
+	queue = new TaskQueue;
+	
+	Power::PreventIdleSleep(Power::Prevent::IdleDisplaySleep);
+
+	EventCallback callback;
+	SafePointer<Audio::IAudioDeviceFactory> factory = Audio::CreateAudioDeviceFactory();
+	factory->RegisterEventCallback(&callback);
+
+	auto battery_status = Power::GetBatteryStatus();
+	if (battery_status == Power::BatteryStatus::Charging) {
+		Console.WriteLine(FormatString(L"Battery is charging now, %0%%.", Power::GetBatteryChargeLevel() * 100.0));
+	} else if (battery_status == Power::BatteryStatus::InUse) {
+		Console.WriteLine(FormatString(L"Battery is in use now, %0%%.", Power::GetBatteryChargeLevel() * 100.0));
+	} else if (battery_status == Power::BatteryStatus::NoBattery) {
+		Console.WriteLine(L"No battery on this PC.");
+	} else if (battery_status == Power::BatteryStatus::Unknown) {
+		Console.WriteLine(L"The status of battery is unknown.");
+	}
+	queue->Process();
+	Sleep(10000);
 
 	// Console.SetInputMode(IO::ConsoleInputMode::Raw);
 	// Console.WriteLine(L"Hello!");

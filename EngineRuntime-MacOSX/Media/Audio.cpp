@@ -328,6 +328,34 @@ namespace Engine
 		}
 		void RegisterCodec(IAudioCodec * codec) { _audio_codecs.Append(codec); }
 		void UnregisterCodec(IAudioCodec * codec) { for (int i = 0; i < _audio_codecs.Length(); i++) if (_audio_codecs.ElementAt(i) == codec) { _audio_codecs.Remove(i); break; } }
+		Array<string> * GetEncodeFormats(void)
+		{
+			SafePointer< Array<string> > result = new Array<string>(0x10);
+			for (auto & codec : _audio_codecs) {
+				SafePointer< Array<string> > formats = codec.GetFormatsCanEncode();
+				for (auto & format : formats->Elements()) {
+					bool present = false;
+					for (auto & added : result->Elements()) if (added == format) { present = true; break; }
+					if (!present) result->Append(format);
+				}
+			}
+			result->Retain();
+			return result;
+		}
+		Array<string> * GetDecodeFormats(void)
+		{
+			SafePointer< Array<string> > result = new Array<string>(0x10);
+			for (auto & codec : _audio_codecs) {
+				SafePointer< Array<string> > formats = codec.GetFormatsCanDecode();
+				for (auto & format : formats->Elements()) {
+					bool present = false;
+					for (auto & added : result->Elements()) if (added == format) { present = true; break; }
+					if (!present) result->Append(format);
+				}
+			}
+			result->Retain();
+			return result;
+		}
 		IAudioCodec * FindEncoder(const string & format) { for (auto & codec : _audio_codecs) if (codec.CanEncode(format)) return &codec; return 0; }
 		IAudioCodec * FindDecoder(const string & format) { for (auto & codec : _audio_codecs) if (codec.CanDecode(format)) return &codec; return 0; }
 		IAudioDecoderStream * DecodeAudio(Streaming::Stream * stream, const StreamDesc * desired_desc)

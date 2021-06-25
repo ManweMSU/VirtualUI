@@ -123,6 +123,7 @@ namespace Engine
 			void DeferredDestroy(void);
 			void DeferredRaiseEvent(int ID);
 			void PostEvent(int ID);
+			void PostTask(IDispatchTask * task);
 			template <class W> W * As(void) { return static_cast<W *>(this); }
 		};
 		class ICursor : public Object {};
@@ -291,7 +292,7 @@ namespace Engine
 			virtual void BeginSubmit(void) override;
 			virtual void AppendTask(IDispatchTask * task) override;
 			virtual void EndSubmit(void) override;
-};
+		};
 		class ParentWindow : public Window
 		{
 		public:

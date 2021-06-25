@@ -569,6 +569,7 @@ namespace Engine
 		{
 			StreamDesc desc;
 			AudioQueueRef queue;
+			AudioDeviceID device; 
 			int state; // 0 - stopped, 1 - processing, 2 - paused
 
 			static void Queue_Callback(void * user, AudioQueueRef queue, AudioQueueBufferRef buffer)
@@ -603,7 +604,7 @@ namespace Engine
 				return true;
 			}
 		public:
-			CoreAudioOutputDevice(CFStringRef dev_uid, AudioStreamBasicDescription & dev_desc)
+			CoreAudioOutputDevice(AudioDeviceID dev_id, CFStringRef dev_uid, AudioStreamBasicDescription & dev_desc) : device(dev_id)
 			{
 				CoreAudioProduceStreamDescriptor(dev_desc, desc);
 				OSStatus status = AudioQueueNewOutput(&dev_desc, Queue_Callback, this, 0, 0, 0, &queue);
@@ -617,6 +618,7 @@ namespace Engine
 			virtual ~CoreAudioOutputDevice(void) override { AudioQueueDispose(queue, false); }
 			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override { return desc; }
 			virtual AudioObjectType GetObjectType(void) const noexcept override { return AudioObjectType::DeviceOutput; }
+			virtual string GetDeviceIdentifier(void) const override { return string(device); }
 			virtual double GetVolume(void) noexcept override
 			{
 				AudioQueueParameterValue value;
@@ -680,6 +682,7 @@ namespace Engine
 		{
 			StreamDesc desc;
 			AudioQueueRef queue;
+			AudioDeviceID device;
 			int state; // 0 - stopped, 1 - processing, 2 - paused
 
 			static void Queue_Callback(void * user, AudioQueueRef queue, AudioQueueBufferRef buffer, const AudioTimeStamp *, uint32, const AudioStreamPacketDescription *)
@@ -713,7 +716,7 @@ namespace Engine
 				return true;
 			}
 		public:
-			CoreAudioInputDevice(CFStringRef dev_uid, AudioStreamBasicDescription & dev_desc)
+			CoreAudioInputDevice(AudioDeviceID dev_id, CFStringRef dev_uid, AudioStreamBasicDescription & dev_desc) : device(dev_id)
 			{
 				CoreAudioProduceStreamDescriptor(dev_desc, desc);
 				OSStatus status = AudioQueueNewInput(&dev_desc, Queue_Callback, this, 0, 0, 0, &queue);
@@ -727,6 +730,7 @@ namespace Engine
 			virtual ~CoreAudioInputDevice(void) override { AudioQueueDispose(queue, false); }
 			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override { return desc; }
 			virtual AudioObjectType GetObjectType(void) const noexcept override { return AudioObjectType::DeviceInput; }
+			virtual string GetDeviceIdentifier(void) const override { return string(device); }
 			virtual double GetVolume(void) noexcept override
 			{
 				AudioQueueParameterValue value;
@@ -788,6 +792,10 @@ namespace Engine
 		};
 		class CoreAudioDeviceFactory : public IAudioDeviceFactory
 		{
+			SafePointer<Semaphore> access_sync;
+			Array<IAudioEventCallback *> callbacks;
+			Array<AudioDeviceID> devs_out, devs_in;
+
 			static bool _check_device_io(AudioDeviceID dev, AudioObjectPropertyScope scope)
 			{
 				AudioObjectPropertyAddress address;
@@ -872,7 +880,101 @@ namespace Engine
 				devs->Retain();
 				return devs;
 			}
+
+			void _raise_event(AudioDeviceEvent event, AudioObjectType type, const string & dev_id) { for (auto & callback : callbacks) callback->OnAudioDeviceEvent(event, type, dev_id); }
+			static OSStatus _device_change_listener(AudioObjectID object, uint32 num_address, const AudioObjectPropertyAddress * addresses, void * user)
+			{
+				auto self = reinterpret_cast<CoreAudioDeviceFactory *>(user);
+				self->access_sync->Wait();
+				if (object == kAudioObjectSystemObject) for (int i = 0; i < num_address; i++) {
+					if (addresses[i].mScope == kAudioObjectPropertyScopeGlobal && addresses[i].mElement == kAudioObjectPropertyElementMaster) {
+						if (addresses[i].mSelector == kAudioHardwarePropertyDevices) {
+							try {
+								SafePointer< Array<AudioDeviceID> > devs = _list_audio_devices();
+								for (auto & dev : self->devs_out) {
+									bool present = false;
+									for (auto & dev2 : *devs) if (dev2 == dev) { present = true; break; }
+									if (!present) self->_raise_event(AudioDeviceEvent::Inactivated, AudioObjectType::DeviceOutput, string(dev));
+								}
+								for (auto & dev : self->devs_in) {
+									bool present = false;
+									for (auto & dev2 : *devs) if (dev2 == dev) { present = true; break; }
+									if (!present) self->_raise_event(AudioDeviceEvent::Inactivated, AudioObjectType::DeviceInput, string(dev));
+								}
+								for (auto & dev : *devs) {
+									if (_check_device_io(dev, kAudioDevicePropertyScopeOutput)) {
+										bool present = false;
+										for (auto & dev2 : self->devs_out) if (dev2 == dev) { present = true; break; }
+										if (!present) self->_raise_event(AudioDeviceEvent::Activated, AudioObjectType::DeviceOutput, string(dev));
+									} else if (_check_device_io(dev, kAudioDevicePropertyScopeInput)) {
+										bool present = false;
+										for (auto & dev2 : self->devs_in) if (dev2 == dev) { present = true; break; }
+										if (!present) self->_raise_event(AudioDeviceEvent::Activated, AudioObjectType::DeviceInput, string(dev));
+									}
+								}
+								self->devs_in.Clear();
+								self->devs_out.Clear();
+								for (auto & dev : *devs) {
+									if (_check_device_io(dev, kAudioDevicePropertyScopeOutput)) self->devs_out << dev;
+									else if (_check_device_io(dev, kAudioDevicePropertyScopeInput)) self->devs_in << dev;
+								}
+							} catch (...) {}
+						} else if (addresses[i].mSelector == kAudioHardwarePropertyDefaultOutputDevice) {
+							try {
+								self->_raise_event(AudioDeviceEvent::DefaultChanged, AudioObjectType::DeviceOutput, string(_get_default_device(addresses[i].mSelector)));
+							} catch (...) {}
+						} else if (addresses[i].mSelector == kAudioHardwarePropertyDefaultInputDevice) {
+							try {
+								self->_raise_event(AudioDeviceEvent::DefaultChanged, AudioObjectType::DeviceInput, string(_get_default_device(addresses[i].mSelector)));
+							} catch (...) {}
+						}
+					}
+				}
+				self->access_sync->Open();
+				return 0;
+			}
 		public:
+			CoreAudioDeviceFactory(void) : callbacks(0x10), devs_out(0x10), devs_in(0x10)
+			{
+				access_sync = CreateSemaphore(1);
+				if (!access_sync) throw Exception();
+				SafePointer< Array<AudioDeviceID> > devs = _list_audio_devices();
+				for (auto & dev : *devs) {
+					if (_check_device_io(dev, kAudioDevicePropertyScopeOutput)) devs_out << dev;
+					else if (_check_device_io(dev, kAudioDevicePropertyScopeInput)) devs_in << dev;
+				}
+				AudioObjectPropertyAddress address;
+				address.mSelector = kAudioHardwarePropertyDevices;
+				address.mScope = kAudioObjectPropertyScopeGlobal;
+				address.mElement = kAudioObjectPropertyElementMaster;
+				if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this)) throw Exception();
+				address.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+				if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this)) {
+					address.mSelector = kAudioHardwarePropertyDevices;
+					AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this);
+					throw Exception();
+				}
+				address.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+				if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this)) {
+					address.mSelector = kAudioHardwarePropertyDevices;
+					AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this);
+					address.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+					AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this);
+					throw Exception();
+				}
+			}
+			virtual ~CoreAudioDeviceFactory(void) override
+			{
+				AudioObjectPropertyAddress address;
+				address.mSelector = kAudioHardwarePropertyDevices;
+				address.mScope = kAudioObjectPropertyScopeGlobal;
+				address.mElement = kAudioObjectPropertyElementMaster;
+				AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this);
+				address.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+				AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this);
+				address.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+				AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, _device_change_listener, this);
+			}
 			virtual Dictionary::PlainDictionary<string, string> * GetAvailableOutputDevices(void) noexcept override
 			{
 				try {
@@ -903,7 +1005,7 @@ namespace Engine
 					if (!uid) throw Exception();
 					AudioStreamBasicDescription desc;
 					_get_device_stream_format(dev_id, kAudioDevicePropertyScopeOutput, desc);
-					IAudioOutputDevice * device = new CoreAudioOutputDevice(uid, desc);
+					IAudioOutputDevice * device = new CoreAudioOutputDevice(dev_id, uid, desc);
 					CFRelease(uid);
 					return device;
 				} catch (...) { if (uid) CFRelease(uid); return 0; }
@@ -911,9 +1013,10 @@ namespace Engine
 			virtual IAudioOutputDevice * CreateDefaultOutputDevice(void) noexcept override
 			{
 				try {
+					AudioDeviceID dev_id = _get_default_device(kAudioHardwarePropertyDefaultOutputDevice);
 					AudioStreamBasicDescription desc;
-					_get_device_stream_format(_get_default_device(kAudioHardwarePropertyDefaultOutputDevice), kAudioDevicePropertyScopeOutput, desc);
-					return new CoreAudioOutputDevice(0, desc);
+					_get_device_stream_format(dev_id, kAudioDevicePropertyScopeOutput, desc);
+					return new CoreAudioOutputDevice(dev_id, 0, desc);
 				} catch (...) { return 0; }
 			}
 			virtual IAudioInputDevice * CreateInputDevice(const string & identifier) noexcept override
@@ -926,7 +1029,7 @@ namespace Engine
 					if (!uid) throw Exception();
 					AudioStreamBasicDescription desc;
 					_get_device_stream_format(dev_id, kAudioDevicePropertyScopeInput, desc);
-					IAudioInputDevice * device = new CoreAudioInputDevice(uid, desc);
+					IAudioInputDevice * device = new CoreAudioInputDevice(dev_id, uid, desc);
 					CFRelease(uid);
 					return device;
 				} catch (...) { if (uid) CFRelease(uid); return 0; }
@@ -934,10 +1037,32 @@ namespace Engine
 			virtual IAudioInputDevice * CreateDefaultInputDevice(void) noexcept override
 			{
 				try {
+					AudioDeviceID dev_id = _get_default_device(kAudioHardwarePropertyDefaultInputDevice);
 					AudioStreamBasicDescription desc;
-					_get_device_stream_format(_get_default_device(kAudioHardwarePropertyDefaultInputDevice), kAudioDevicePropertyScopeInput, desc);
-					return new CoreAudioInputDevice(0, desc);
+					_get_device_stream_format(dev_id, kAudioDevicePropertyScopeInput, desc);
+					return new CoreAudioInputDevice(dev_id, 0, desc);
 				} catch (...) { return 0; }
+			}
+			virtual bool RegisterEventCallback(IAudioEventCallback * callback) noexcept override
+			{
+				access_sync->Wait();
+				try {
+					for (auto & cb : callbacks) if (cb == callback) { access_sync->Open(); return true; }
+					callbacks.Append(callback);
+					access_sync->Open();
+					return true;
+				} catch (...) { access_sync->Open(); return false; }
+			}
+			virtual bool UnregisterEventCallback(IAudioEventCallback * callback) noexcept override
+			{
+				access_sync->Wait();
+				for (int i = 0; i < callbacks.Length(); i++) if (callbacks[i] == callback) {
+					callbacks.Remove(i);
+					access_sync->Open();
+					return true;
+				}
+				access_sync->Open();
+				return false;
 			}
 		};
 
