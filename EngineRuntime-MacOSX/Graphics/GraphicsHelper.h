@@ -36,11 +36,14 @@ namespace Engine
 		Math::Matrix4x4f MakePerspectiveViewTransformFoV(float fov_angle, float aspect, float near_plane, float far_plane);
 
 		ITexture * LoadTexture(IDevice * device, Codec::Frame * frame, uint32 mip_levels = 0, uint32 usage = ResourceUsageShaderRead,
-			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable);
+			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable,
+			Codec::AlphaMode alpha = Codec::AlphaMode::Straight, Codec::ScanOrigin origin = Codec::ScanOrigin::TopDown);
 		ITexture * LoadTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels = 0, uint32 usage = ResourceUsageShaderRead,
-			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable);
+			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable,
+			Codec::AlphaMode alpha = Codec::AlphaMode::Straight, Codec::ScanOrigin origin = Codec::ScanOrigin::TopDown);
 		ITexture * LoadCubeTexture(IDevice * device, Codec::Image * image, uint32 mip_levels = 0, uint32 usage = ResourceUsageShaderRead,
-			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable);
+			PixelFormat format = PixelFormat::Invalid, ResourceMemoryPool pool = ResourceMemoryPool::Immutable,
+			Codec::AlphaMode alpha = Codec::AlphaMode::Straight, Codec::ScanOrigin origin = Codec::ScanOrigin::TopDown);
 		Codec::Frame * CreateMipLevel(Codec::Frame * source);
 	}
 }

@@ -1,0 +1,13 @@
+CompileList {
+    A = "test.cxx"
+}
+Attachments {
+    A {
+        From = "test.ico"
+        To = "test.ico"
+    }
+    B {
+        From = "saryu.png"
+        To = "saryu.png"
+    }
+}

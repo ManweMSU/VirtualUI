@@ -1,7 +1,5 @@
 #include "Graphics.h"
 
-#include "../Interfaces/NativeStation.h"
-
 namespace Engine
 {
 	namespace Graphics
@@ -12,8 +10,6 @@ namespace Engine
 		VolumeIndex::VolumeIndex(uint32 sx, uint32 sy, uint32 sz) : x(sx), y(sy), z(sz) {}
 		SubresourceIndex::SubresourceIndex(void) : mip_level(0), array_index(0) {}
 		SubresourceIndex::SubresourceIndex(uint32 mip, uint32 index) : mip_level(mip), array_index(index) {}
-		IDeviceFactory * CreateDeviceFactory(void) { return NativeWindows::CreateDeviceFactory(); }
-		IDevice * GetCommonDevice(void) { return NativeWindows::GetCommonDevice(); }
 		bool IsColorFormat(PixelFormat format) { return (uint32(format) & 0xF0000000) == 0x80000000; }
 		bool IsDepthStencilFormat(PixelFormat format) { return (uint32(format) & 0xF0000000) == 0x40000000; }
 		int GetFormatChannelCount(PixelFormat format) { return (uint32(format) & 0x00F00000) >> 20; }

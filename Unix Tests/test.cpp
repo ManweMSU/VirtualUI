@@ -1,565 +1,323 @@
 #include <EngineRuntime.h>
 
-#include <Interfaces/SystemColors.h>
-#include <PlatformSpecific/MacWindowEffects.h>
-
-ENGINE_REFLECTED_CLASS(lv_item, Engine::Reflection::Reflected)
-	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text1)
-	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text2)
-	ENGINE_DEFINE_REFLECTED_PROPERTY(STRING, Text3)
-ENGINE_END_REFLECTED_CLASS
-
 using namespace Engine;
-using namespace Engine::UI;
-using namespace Engine::Network;
 
-UI::InterfaceTemplate interface;
+SafePointer<Graphics::IBitmap> synth;
 
-MacOSXSpecific::TouchBar * tb;
-
-SafePointer<Graphics::IDevice> device;
-SafePointer<Graphics::IWindowLayer> layer;
-
-class _cb2 : public Windows::IWindowEventCallback
+class WindowCallback : public Windows::IWindowCallback
 {
-	uint nvert;
-	SafePointer<Graphics::IBuffer> vertex_buffer;
-	SafePointer<Graphics::IBuffer> index_buffer;
-	SafePointer<Graphics::ITexture> depth_buffer;
-	SafePointer<Graphics::IPipelineState> state;
+	Box grad_box;
+	Windows::I2DPresentationEngine * engine;
+	SafePointer<Graphics::IFont> font;
+	SafePointer<Graphics::IColorBrush> bar, grad;
+	SafePointer<Graphics::IDevice> device;
+	SafePointer<Graphics::IWindowLayer> layer;
+	SafePointer<Graphics::ITexture> texture;
+	SafePointer<Graphics::IBitmapBrush> texture_brush;
+	SafePointer<UI::FrameShape> shape;
 public:
-	struct vertex_struct { Math::Vector3f pos, norm, clr; };
-	struct world_struct { Math::Matrix4x4f proj; Math::Vector3f light; float light_power; float ambient_power; };
-	virtual void OnInitialized(UI::Window * window) override
+	virtual void Created(Windows::IWindow * window) override
 	{
-		window->As<Controls::OverlappedWindow>()->GetAcceleratorTable() << Accelerators::AcceleratorCommand(192939, KeyCodes::Return, false, false, true);
-		auto list = window->FindChild(343434)->As<Controls::ListView>();
-		for (int i = 1; i <= 10; i++) {
-			lv_item item;
-			item.Text1 = L"Item " + string(i) + L".1";
-			item.Text2 = L"Item " + string(i) + L".2";
-			item.Text3 = L"Item " + string(i) + L".3";
-			list->AddItem(item);
-		}
-		list->OrderColumn(2, 0);
-		list->MultiChoose = true;
-		auto list2 = window->FindChild(353535)->As<Controls::TreeView>();
-		auto rt = list2->GetRootItem();
-		auto i1 = rt->AddItem(L"Tree View Item 1");
-		i1->AddItem(L"Tree View Item 1.1");
-		i1->AddItem(L"Tree View Item 1.2");
-		auto i13 = i1->AddItem(L"Tree View Item 1.3");
-		i1->AddItem(L"Tree View Item 1.4");
-		i13->AddItem(L"Tree View Item 1.3.1");
-		i13->AddItem(L"Tree View Item 1.3.2");
-		auto i2 = rt->AddItem(L"Tree View Item 2");
-		i2->AddItem(L"Tree View Item 2.1");
-		i2->AddItem(L"Tree View Item 2.2");
-		rt->AddItem(L"Tree View Item 3");
-		auto i4 = rt->AddItem(L"Tree View Item 4");
-		i4->AddItem(L"§ ыыыы §");
-		i1->Expand(true);
-		auto combo = window->FindChild(565656)->As<Controls::ComboBox>();
-		for (int i = 0; i < 100; i++) combo->AddItem(L"Combo Box Item " + string(i + 1));
-		auto box = window->FindChild(575757)->As<Controls::TextComboBox>();
-		for (int i = 0; i < 100; i++) box->AddItem(L"Text Combo Box Item " + string(i + 1));
-		box->AddItem(L"kornevgen pidor");
-
-		// Creating the device and layer
-		IO::Console console;
-		window->GetStation()->RequireRefreshRate(Window::RefreshPeriod::Cinematic);
-		SafePointer<Graphics::IDeviceFactory> fact = Graphics::CreateDeviceFactory();
-		device = fact->CreateDefaultDevice();
-		console << string(device.Inner()) << L"\n";
-		string tech;
-		uint32 ver;
-		device->GetImplementationInfo(tech, ver);
-		console << tech << L"/" << ver << L"\n";
-		console << device->GetDeviceName() << L" :: " << device->GetDeviceIdentifier() << L"\n";
-		auto dbox = window->GetStation()->GetBox();
-		Graphics::WindowLayerDesc desc;
-		desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-		desc.Width = dbox.Right - dbox.Left;
-		desc.Height = dbox.Bottom - dbox.Top;
-		desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
-		layer = device->CreateWindowLayer(window, desc);
-		console << string(layer.Inner()) << L"\n";
-		// Testing texture wrong creation
-		Graphics::TextureDesc tdesc;
-		tdesc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-		tdesc.Type = Graphics::TextureType::Type2D;
-		tdesc.Width = 0x8000;
-		tdesc.Height = 0x8000;
-		tdesc.MemoryPool = Graphics::ResourceMemoryPool::Default;
-		tdesc.MipmapCount = 1;
-		tdesc.Usage = Graphics::ResourceUsageShaderRead | Graphics::ResourceUsageRenderTarget;
-		SafePointer<Graphics::ITexture> test_tex = device->CreateTexture(tdesc);
-		console << string(test_tex.Inner()) << L"\n";
-		// Loading shaders
-		SafePointer<Streaming::Stream> slrs_stream = Assembly::QueryResource(L"SL");
-		SafePointer<Graphics::IShaderLibrary> sl = device->LoadShaderLibrary(slrs_stream);
-		console << string(sl.Inner()) << L"\n";
-		SafePointer< Array<string> > snames = sl->GetShaderNames();
-		for (auto & name : *snames) console << name << L"\n";
-		SafePointer<Graphics::IShader> vs = sl->CreateShader(L"VertexFunction");
-		console << string(vs.Inner()) << L"\n";
-		SafePointer<Graphics::IShader> ps = sl->CreateShader(L"PixelFunction");
-		console << string(ps.Inner()) << L"\n";
-		slrs_stream.SetReference(0);
-		sl.SetReference(0);
-		// Creating resources
-		Array<vertex_struct> vertex(0x100);
-		Array<uint16> index(0x100);
-		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
-		vertex << vertex_struct{ Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(1.0f, 1.0f, 1.0f) };
-		for (int i = 0; i < 100; i++) {
-			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
-			float c = cos(rad);
-			float s = sin(rad);
-			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
-			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(0.0f, 0.0f, -1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
-			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(0.0f, 0.0f, +1.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
-			if (i) {
-				index << 0;
-				index << vertex.Length() - 4;
-				index << vertex.Length() - 2;
-				index << 1;
-				index << vertex.Length() - 3;
-				index << vertex.Length() - 1;
-			}
-		}
-		index << 0;
-		index << 2;
-		index << vertex.Length() - 2;
-		index << 1;
-		index << 3;
-		index << vertex.Length() - 1;
-		auto vstart = vertex.Length();
-		for (int i = 0; i < 100; i++) {
-			float rad = float(i) * (2.0f * ENGINE_PI) / 100.0f;
-			float c = cos(rad);
-			float s = sin(rad);
-			Math::Color clr = Math::ColorHSV(rad, 1.0f, 1.0f);
-			vertex << vertex_struct{ Math::Vector3f(c, s, -1.0f), Math::Vector3f(c, s, 0.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
-			vertex << vertex_struct{ Math::Vector3f(c, s, +1.0f), Math::Vector3f(c, s, 0.0f), Math::Vector3f(clr.x, clr.y, clr.z) };
-			if (i) {
-				index << vertex.Length() - 4;
-				index << vertex.Length() - 3;
-				index << vertex.Length() - 2;
-				index << vertex.Length() - 3;
-				index << vertex.Length() - 2;
-				index << vertex.Length() - 1;
-			}
-		}
-		index << vertex.Length() - 2;
-		index << vertex.Length() - 1;
-		index << vstart;
-		index << vertex.Length() - 1;
-		index << vstart;
-		index << vstart + 1;
-		nvert = index.Length();
-	
-		vertex_buffer = device->CreateBuffer(
-			Graphics::CreateBufferDesc(vertex.Length() * sizeof(vertex_struct), Graphics::ResourceUsageShaderRead, sizeof(vertex_struct), Graphics::ResourceMemoryPool::Immutable),
-			Graphics::CreateInitDesc(vertex.GetBuffer()));
-		index_buffer = device->CreateBuffer(
-			Graphics::CreateBufferDesc(index.Length() * sizeof(uint16), Graphics::ResourceUsageIndexBuffer, 0, Graphics::ResourceMemoryPool::Immutable),
-			Graphics::CreateInitDesc(index.GetBuffer()));
-		depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, desc.Width, desc.Height, 1, Graphics::ResourceUsageDepthStencil));
-		auto state_desc = Graphics::DefaultPipelineStateDesc(vs, ps, Graphics::PixelFormat::B8G8R8A8_unorm, true, Graphics::PixelFormat::D32_float);
-		//state_desc.Rasterization.Fill = Graphics::FillMode::Wireframe;
-		state = device->CreateRenderingPipelineState(state_desc);
+		SafePointer<Graphics::I2DDeviceContextFactory> factory = Graphics::CreateDeviceContextFactory();
+		font = factory->LoadFont(Graphics::SystemMonoSerifFont, 100, 700, false, false, false);
+		engine = window->Set2DRenderingDevice();
+		grad_box = Box(10, 10, 60, 60);
+		shape = new UI::FrameShape(UI::Rectangle::Entire());
+		SafePointer<UI::Shape> text = new UI::TextShape(UI::Rectangle::Entire(), L"TEXT-1 TEXT-2\nTEXT-3 TEXT-4 TEXT-5 TEXT-6", font, Color(0, 0, 255),
+			UI::TextShape::TextRenderAlignCenter | UI::TextShape::TextRenderAlignVCenter | UI::TextShape::TextRenderMultiline);
+		SafePointer<UI::Shape> fx = new UI::BlurEffectShape(UI::Rectangle::Entire(), 5.0);
+		SafePointer<UI::Shape> bm = new UI::TextureShape(UI::Rectangle::Entire(), synth, UI::Rectangle::Entire(), UI::TextureShape::TextureRenderMode::AsIs);
+		SafePointer<UI::Shape> clr = new UI::BarShape(UI::Rectangle(10, 150, 50, 190), Color(0, 128, 255));
+		shape->Children.Append(clr);
+		shape->Children.Append(text);
+		shape->Children.Append(bm);
+		shape->Children.Append(fx);
 	}
-	virtual void OnControlEvent(UI::Window * window, int ID, Window::Event event, UI::Window * sender) override
+	virtual void Destroyed(Windows::IWindow * window) override { Windows::GetWindowSystem()->ExitMainLoop(); }
+	virtual void RenderWindow(Windows::IWindow * window) override
 	{
-		if (!window) {
-			IO::Console console;
-			console.WriteLine(L"Status bar event ID = " + string(ID));
+		auto size = window->GetClientSize();
+		Graphics::I2DDeviceContext * device;
+		SafePointer<Graphics::ITexture> rt;
+		Graphics::IDeviceContext * context;
+		if (engine) {
+			engine->BeginRenderingPass();
+			device = engine->GetContext();
 		}
-		if (ID == 343434) {
-			if (event == Window::Event::DoubleClick) {
-				sender->As<Controls::ListView>()->CreateEmbeddedEditor(interface.Dialog[L"editor"],
-					sender->As<Controls::ListView>()->GetLastCellID(),
-					Rectangle::Entire())->FindChild(888888)->SetFocus();
+		if (layer) {
+			rt = layer->QuerySurface();
+			context = this->device->GetDeviceContext();
+			Graphics::RenderTargetViewDesc rtv;
+			ZeroMemory(&rtv.ClearValue, sizeof(rtv.ClearValue));
+			rtv.LoadAction = Graphics::TextureLoadAction::Clear;
+			rtv.Texture = rt;
+			context->BeginRenderingPass(1, &rtv, 0);
+			context->EndCurrentPass();
+			context->Begin2DRenderingPass(rt);
+			device = context->Get2DContext();
+			size.x = rt->GetWidth();
+			size.y = rt->GetHeight();
+		}
+		if (device) {
+			if (!bar) {
+				bar = device->CreateSolidColorBrush(Color(0, 0, 128, 64));
 			}
-		} else if (ID == 353535) {
-			if (event == Window::Event::DoubleClick) {
-				sender->As<Controls::TreeView>()->CreateEmbeddedEditor(interface.Dialog[L"editor"], Rectangle::Entire())->FindChild(888888)->SetFocus();
+			if (!texture_brush && texture) {
+				texture_brush = device->CreateTextureBrush(texture, Graphics::TextureAlphaMode::Ignore);
 			}
-		} else if (ID == 1) {
-			auto group1 = window->FindChild(101);
-			auto group2 = window->FindChild(102);
-			if (group1->IsVisible()) {
-				group1->HideAnimated(Animation::SlideSide::Left, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-				group2->ShowAnimated(Animation::SlideSide::Right, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-			} else {
-				group2->HideAnimated(Animation::SlideSide::Left, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-				group1->ShowAnimated(Animation::SlideSide::Right, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
+			if (!grad) {
+				GradientPoint pt[3];
+				pt[0].Value = Color(255, 0, 0, 255);
+				pt[0].Position = 0.0;
+				pt[1].Value = Color(255, 255, 0, 255);
+				pt[1].Position = 0.5;
+				pt[2].Value = Color(0, 255, 0, 255);
+				pt[2].Position = 1.0;
+				grad = device->CreateGradientBrush(Point(0, 0), Point(50, 50), pt, 3);
 			}
-		} else if (ID == 2) {
-			auto group1 = window->FindChild(101);
-			auto group2 = window->FindChild(102);
-			if (group1->IsVisible()) {
-				group1->HideAnimated(Animation::SlideSide::Right, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-				group2->ShowAnimated(Animation::SlideSide::Left, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-			} else {
-				group2->HideAnimated(Animation::SlideSide::Right, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-				group1->ShowAnimated(Animation::SlideSide::Left, 500,
-					Animation::AnimationClass::Smooth, Animation::AnimationClass::Smooth);
-			}
-		} else if (ID == 555) {
-			UI::Color clr = static_cast<MacOSXSpecific::TouchBarColorPicker *>(tb->FindChild(555))->GetColor();
-			UI::ITexture * tex;
+			device->Render(bar, Box(10, 10, size.x - 10, size.y - 10));
+			device->Render(grad, grad_box);
+			shape->Render(device, Box(0, 0, size.x, size.y));
 			{
-				SafePointer<IObjectFactory> objfact = UI::CreateObjectFactory();
-				Array<Math::Vector2> line;
-				line << Math::Vector2(0.0, 0.0);
-				line << Math::Vector2(200.0, 100.0);
-				line << Math::Vector2(200.0, 200.0);
-				line << Math::Vector2(20.0, 200.0);
-				auto rd = objfact->CreateTextureRenderingDevice(256, 256, 0xFFC0C0FF);
-				rd->BeginDraw();
-				rd->FillPolygon(line.GetBuffer(), line.Length(), clr);
-				rd->DrawPolygon(line.GetBuffer(), line.Length(), 0x80000000, 10.0);
-				rd->EndDraw();
-				tex = rd->GetRenderTargetAsTexture();
-				rd->Release();
+				SafePointer<Graphics::IColorBrush> c1 = device->CreateSolidColorBrush(Color(255, 128, 0));
+				SafePointer<Graphics::IColorBrush> c2 = device->CreateSolidColorBrush(Color(0, 128, 255));
+				device->BeginLayer(Box(100, 10, 200, 110), 0.25);
+				device->Render(c1, Box(100, 0, 200, 100));
+				device->Render(c2, Box(150, 50, 200, 200));
+				device->EndLayer();
 			}
-			window->FindChild(789)->As<UI::Controls::Static>()->SetImage(tex);
-			tex->Release();
-			window->RequireRedraw();
-		} else if (ID == 10101) {
-			double value = static_cast<MacOSXSpecific::TouchBarSlider *>(tb->FindChild(10101))->GetPosition();
-			Streaming::TextWriter(SafePointer<Streaming::Stream>(new Streaming::FileStream(IO::GetStandardOutput()))).WriteLine(L"Slider: " + string(value));
-		} else if (ID == 192939 && layer) {
-			if (layer->IsFullscreen()) {
-				layer->SwitchToWindow();
-			} else {
-				layer->SwitchToFullscreen();
+			if (texture_brush) {
+				device->Render(texture_brush, Box(size.x - 50, 10, size.x - 10, 50));
 			}
 		}
-	}
-	virtual void OnFrameEvent(UI::Window * window, Windows::FrameEvent event) override
-	{
-		IO::Console console;
-		if (event == Windows::FrameEvent::Close) {
-			window->Destroy();
-			Windows::ExitMessageLoop();
-			return;
-		} else if (event == Windows::FrameEvent::Move) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Move Window");
-			auto box = window->GetStation()->GetBox();
-			if (layer) layer->ResizeSurface(box.Right - box.Left, box.Bottom - box.Top);
-			depth_buffer = device->CreateTexture(Graphics::CreateTextureDesc2D(Graphics::PixelFormat::D32_float, box.Right - box.Left, box.Bottom - box.Top, 1, Graphics::ResourceUsageDepthStencil));
-		} else if (event == Windows::FrameEvent::Minimize) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Minimize Window");
-		} else if (event == Windows::FrameEvent::Maximize) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Maximize Window");
-		} else if (event == Windows::FrameEvent::Restore) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Restore Window");
-		} else if (event == Windows::FrameEvent::Activate) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Activate Window");
-		} else if (event == Windows::FrameEvent::Deactivate) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Deactivate Window");
-		} else if (event == Windows::FrameEvent::SessionEnding) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Session is ending");
-		} else if (event == Windows::FrameEvent::SessionEnd) {
-			console.SetTextColor(14);
-			console.WriteLine(L"End session");
-		} else if (event == Windows::FrameEvent::Draw) {
-			console.SetTextColor(14);
-			console.WriteLine(L"Draw");
-			if (Keyboard::IsKeyPressed(KeyCodes::A)) console.WriteLine(L"'A' IS PRESSED");
-			SafePointer<Graphics::ITexture> rt = layer->QuerySurface();
-			auto context = device->GetDeviceContext();
-			auto angle = (GetTimerValue() % 20000) * 2.0 * ENGINE_PI / 20000.0;
-			auto a2 = (GetTimerValue() % 12000) * 2.0 * ENGINE_PI / 12000.0;
-			auto a3 = (GetTimerValue() % 8000) * 2.0 * ENGINE_PI / 8000.0;
-			auto cam = (Math::Vector3f(Math::cos(angle), Math::sin(angle), 0.0) + Math::Vector3f(0.0f, 0.0f, Math::sin(a2))) * 2.0f;
-			auto view = Graphics::MakeLookAtTransform(cam, -cam, Math::Vector3f(0.0f, 0.0f, 1.0f));
-			auto proj = Graphics::MakePerspectiveViewTransformFoV(ENGINE_PI / 2.0f, float(rt->GetWidth()) / float(rt->GetHeight()), 0.01f, 10.0f);
-			world_struct world;
-			world.proj = proj * view;
-			world.light_power = 0.7f;
-			world.ambient_power = 0.3f;
-			world.light = Math::Vector3f(Math::cos(a3), 0.0f, Math::sin(a3));
-			auto rtdesc = Graphics::CreateRenderTargetView(rt, Math::Vector4f(0.2f, 0.0f, 0.4f, 1.0f));
-			auto dsdesc = Graphics::CreateDepthStencilView(depth_buffer, 1.0f);
-			if (context->BeginRenderingPass(1, &rtdesc, &dsdesc)) {
-				context->SetViewport(0.0f, 0.0f, rt->GetWidth(), rt->GetHeight(), 0.0f, 1.0f);
-				context->SetRenderingPipelineState(state);
-				context->SetVertexShaderResource(1, vertex_buffer);
-				context->SetVertexShaderConstant(0, &world, sizeof(world));
-				context->SetPixelShaderConstant(0, &world, sizeof(world));
-				context->SetIndexBuffer(index_buffer, Graphics::IndexBufferFormat::UInt16);
-				context->DrawIndexedPrimitives(nvert, 0, 0);
-				context->EndCurrentPass();
-			}
-			if (context->Begin2DRenderingPass(rt)) {
-				auto device_2d = context->Get2DRenderingDevice();
-				device_2d->SetTimerValue(GetTimerValue());
-				window->GetStation()->SetRenderingDevice(device_2d);
-				window->GetStation()->Animate();
-				window->GetStation()->Render();
-				context->EndCurrentPass();
-			}
+		if (engine) {
+			engine->EndRenderingPass();
+		}
+		if (layer) {
+			context->EndCurrentPass();
+			rt.SetReference(0);
 			layer->Present();
 		}
-		if (Windows::IsWindowActive(window)) {
-			console.SetTextColor(10);
-		} else {
-			console.SetTextColor(12);
+	}
+	virtual void WindowClose(Windows::IWindow * window) override
+	{
+		window->Destroy();
+	}
+	virtual bool KeyDown(Windows::IWindow * window, int key_code) override
+	{
+		if (key_code == KeyCodes::V) {
+			SafePointer<Codec::Frame> frame;
+			if (Clipboard::GetData(frame.InnerRef())) {
+				window->SetBackbufferedRenderingDevice(frame, Windows::ImageRenderMode::FitKeepAspectRatio, Color(0x80, 0x00, 0xFF, 0x80));
+			}
+		} else if (key_code == KeyCodes::L) {
+			engine = 0;
+			bar.SetReference(0);
+			shape->ClearCache();
+			grad.SetReference(0);
+			texture_brush.SetReference(0);
+			SafePointer<Graphics::IDeviceFactory> factory = Graphics::CreateDeviceFactory();
+			device = factory->CreateDefaultDevice();
+			auto size = window->GetClientSize();
+			Graphics::WindowLayerDesc desc;
+			desc.Width = max(size.x, 1);
+			desc.Height = max(size.y, 1);
+			desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
+			desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
+			layer = device->CreateWindowLayer(window, desc);
+			SafePointer<Codec::Frame> frame = new Codec::Frame(40, 40, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Straight);
+			for (int y = 0; y < 40; y++) for (int x = 0; x < 40; x++) {
+				int c = abs(x - 20) + abs(y - 20);
+				if (c < 19) frame->SetPixel(x, y, Color(255, 0, 0, 128));
+				else frame->SetPixel(x, y, Color(0, 0, 0, 0));
+			}
+			texture = Graphics::LoadTexture(device, frame, 1, Graphics::ResourceUsageShaderRead, Graphics::PixelFormat::B8G8R8A8_unorm,
+				Graphics::ResourceMemoryPool::Immutable, Codec::AlphaMode::Premultiplied);
+		} else if (key_code == KeyCodes::F) {
+			if (layer) {
+				if (layer->IsFullscreen()) layer->SwitchToWindow();
+				else layer->SwitchToFullscreen();
+			}
+		} else if (key_code == KeyCodes::S) {
+			if (layer) {
+				auto size = window->GetClientSize();
+				layer->ResizeSurface(max(size.x, 1), max(size.y, 1));
+				window->InvalidateContents();
+			}
+		} else if (key_code == KeyCodes::Q) {
+			grad_box.Left = grad_box.Top = (grad_box.Left + 40) % 200;
+			grad_box.Right = grad_box.Bottom = grad_box.Left + 50;
+			window->InvalidateContents();
 		}
-		console.Write(L"A");
-		if (Windows::IsWindowMaximized(window)) {
-			console.SetTextColor(10);
-		} else {
-			console.SetTextColor(12);
-		}
-		console.Write(L"Z");
-		if (Windows::IsWindowMinimized(window)) {
-			console.SetTextColor(10);
-		} else {
-			console.SetTextColor(12);
-		}
-		console.Write(L"I");
-		console.SetTextColor(-1);
-		console.WriteLine(L"");
+		return true;
+	}
+};
+class WindowCallback2 : public UI::IEventCallback
+{
+public:
+	virtual void Created(Windows::IWindow * window) override
+	{
+
+	}
+	virtual void HandleControlEvent(Windows::IWindow * window, int ID, UI::ControlEvent event, UI::Control * sender) override
+	{
+
 	}
 };
 
-SafePointer<TaskQueue> queue;
-class EventCallback : public Audio::IAudioEventCallback
+void PrintTree(IO::Console & cns, const Volumes::BinaryTree<int>::Element * element, int y, int x, int width)
 {
-public:
-	virtual void OnAudioDeviceEvent(Audio::AudioDeviceEvent event, Audio::AudioObjectType device_type, const string & device_identifier) noexcept override
-	{
-		int pp = 555;
+	if (element) {
+		auto repr = string(element->GetValue());
+		auto l = repr.Length();
+		cns.SetTextColor(element->IsBlack() ? 15 : 12);
+		cns.MoveCaret(x + (width - l) / 2, y);
+		cns.Write(repr);
+		auto hw = width / 2;
+		PrintTree(cns, element->GetLeft(), y + 1, x, hw);
+		PrintTree(cns, element->GetRight(), y + 1, x + hw, width - hw);
 	}
-};
+}
+int CheckConsistency(IO::Console & cns, const Volumes::BinaryTree<int>::Element * element, const Volumes::BinaryTree<int>::Element * parent)
+{
+	auto value = element->GetValue();
+	if (element->GetParent() != parent) { cns.WriteLine(FormatString(L"Check failed: wrong parent at %0", value)); throw Exception(); }
+	int lh = 1;
+	int rh = 1;
+	if (element->GetLeft()) lh = CheckConsistency(cns, element->GetLeft(), element);
+	if (element->GetRight()) rh = CheckConsistency(cns, element->GetRight(), element);
+	if (parent) {
+		if (!parent->IsBlack() && !element->IsBlack()) { cns.WriteLine(FormatString(L"Check failed: sequential red nodes at %0", value)); throw Exception(); }
+	}
+	if (lh != rh) { cns.WriteLine(FormatString(L"Check failed: wrong left and right black heights at %0", value)); throw Exception(); }
+	if (element->IsBlack()) return lh + 1; else return lh;
+}
 
 int Main(void)
 {
-	// {
-	// 	SafePointer<Drawing::CanvasWindow> canvas = new Drawing::CanvasWindow(Drawing::Color(0.3, 0.3, 0.3), 256, 192, 1024, 768);
-	// 	Math::ColorHSV clr(0.0, 1.0, 1.0);
-	// 	while (true) {
-	// 		canvas->BeginDraw();
-	// 		canvas->DrawRectangleOutline(Drawing::Point(5.0, 5.0), Drawing::Point(128.0, 180.0), clr, 5.0);
-	// 		canvas->EndDraw();
-	// 		auto key = canvas->ReadKey();
-	// 		if (key == KeyCodes::Escape) break;
-	// 		else if (key == KeyCodes::Right) {
-	// 			clr.h += 1.0;
-	// 			clr.ClampChannels();
-	// 		}
-	// 	}
-	// }
+	IO::Console cns;
+
+	SafePointer<Windows::IScreen> screen = Windows::GetDefaultScreen();
+	UI::CurrentScaleFactor = screen->GetDpiScale();
+	UI::InterfaceTemplate ui;
+	SafePointer<Streaming::Stream> uis = new Streaming::FileStream(L"/Users/manwe/Documents/GitHub/VirtualUI/Tests/test.eui", Streaming::AccessRead, Streaming::OpenExisting);
+	UI::Loader::LoadUserInterfaceFromBinary(ui, uis);
+	uis.SetReference(0);
+
+	auto fact = Graphics::CreateDeviceContextFactory();
+	auto surface = fact->CreateBitmap(512, 256, Color(128, 0, 255, 128));
+	auto device = fact->CreateBitmapContext();
+	fact->Release();
+	if (!device->BeginRendering(surface)) {
+		cns.WriteLine(L"BeginRendering() failed");
+		return 0;
+	}
+	GradientPoint pt[] = { GradientPoint(Color(255, 0, 0), 0.0), GradientPoint(Color(255, 255, 0), 0.5), GradientPoint(Color(0, 255, 0), 1.0) };
+	auto grad = device->CreateGradientBrush(Point(0, 0), Point(128, 128), pt, 3);
+	device->Render(grad, Box(256, 128, 512, 256));
+	grad->Release();
+	if (!device->EndRendering()) {
+		cns.WriteLine(L"EndRendering() failed");
+		return 0;
+	}
+	device->Release();
+	synth.SetRetain(surface);
+	surface->Release();
+
+	Math::Random::Init();
+	//for (int k = 0; k < 10000; k++) {
+		Array<uint> I(0x100);
+		for (int i = 0; i < 30; i++) I << (Math::Random::RandomInteger() % 20);
+		cns.WriteLine(I.ToString());
+		SortArray(I, [](uint a, uint b) -> int {
+			if ((a + b) & 1) {
+				if (a & 1) return -1;
+				else return 1;
+			} else return a - b;
+		});
+		/*for (int i = 0; i < I.Length() - 1; i++) if (I[i] > I[i + 1]) {
+			cns.SetTextColor(12);
+			cns.WriteLine(L"ORDER VIOLATION");
+			cns.SetTextColor(-1);
+			abort();
+		}*/
+		cns.SetTextColor(15);
+		cns.WriteLine(I.ToString());
+		cns.SetTextColor(-1);
+	//}
+
+	Volumes::List<string> list_s;
+	Volumes::List<Point> list_p;
+	Volumes::List<Time> list_t;
+	Volumes::Stack<string> stack;
+	Volumes::BinaryTree<int> tree_i;
+	Volumes::BinaryTree<string> tree_s;
+	Volumes::Dictionary<string, int> dict;
+	stack << L"A" << L"B"<< L"C";
+	/*cns.AlternateScreenBuffer(true);
+	for (int i = 1; i < 20; i++) tree_i.FindElement(i, true);
+	while (true) {
+		int w, h;
+		cns.ClearScreen();
+		cns.GetScreenBufferDimensions(w, h);
+		PrintTree(cns, tree_i.GetRoot(), 0, 0, w);
+		cns.LineFeed();
+		cns.SetTextColor(10);
+		auto line = cns.ReadLine();
+		if (!line.Length()) break;
+		try {
+			int i = line.ToInt32();
+			if (i >= 0) tree_i.FindElement(i, true);
+			else tree_i.Remove(tree_i.FindElement(-i));
+		} catch (...) { break; }
+	}
+	cns.AlternateScreenBuffer(false);*/
+	cns.WriteLine(stack.ToString());
+	for (auto & e : stack) cns.WriteLine(e);
+	cns.WriteLine(tree_i.ToString());
+	cns.WriteLine(tree_s.ToString());
+	while (!stack.IsEmpty()) cns.WriteLine(stack.Pop());
+
+	SafePointer< Array<string> > args = Engine::GetCommandLine();
+
+	cns.WriteLine(args->ToString());
+
+	list_s.InsertLast(L"kornevgen");
+	list_s.InsertLast(L"pidor");
+	list_p.InsertLast(Point(1, 2));
+	list_p.InsertLast(Point(3, 4));
+	list_p.InsertLast(Point(5, 6));
+	list_t.InsertFirst(Time(2022, 11, 2, 0, 0, 0, 0));
+	list_t.InsertFirst(Time(2022, 11, 5, 0, 0, 0, 0));
+	list_t.InsertFirst(Time(2022, 11, 7, 0, 0, 0, 0));
+
+	cns.WriteLine(list_s.ToString());
+	cns.WriteLine(list_p.ToString());
+	cns.WriteLine(list_t.ToString());
+	cns.WriteLine(GetStringRepresentation(&cns));
+	cns.WriteLine(GetStringRepresentation(args));
+
+	Codec::InitializeDefaultCodecs();
 	
-	IO::Console Console;
-	queue = new TaskQueue;
-	
-	Power::PreventIdleSleep(Power::Prevent::IdleDisplaySleep);
-
-	EventCallback callback;
-	SafePointer<Audio::IAudioDeviceFactory> factory = Audio::CreateAudioDeviceFactory();
-	factory->RegisterEventCallback(&callback);
-
-	auto battery_status = Power::GetBatteryStatus();
-	if (battery_status == Power::BatteryStatus::Charging) {
-		Console.WriteLine(FormatString(L"Battery is charging now, %0%%.", Power::GetBatteryChargeLevel() * 100.0));
-	} else if (battery_status == Power::BatteryStatus::InUse) {
-		Console.WriteLine(FormatString(L"Battery is in use now, %0%%.", Power::GetBatteryChargeLevel() * 100.0));
-	} else if (battery_status == Power::BatteryStatus::NoBattery) {
-		Console.WriteLine(L"No battery on this PC.");
-	} else if (battery_status == Power::BatteryStatus::Unknown) {
-		Console.WriteLine(L"The status of battery is unknown.");
-	}
-	queue->Process();
-	Sleep(10000);
-
-	// Console.SetInputMode(IO::ConsoleInputMode::Raw);
-	// Console.WriteLine(L"Hello!");
-	// while (true) {
-	// 	IO::ConsoleEventDesc event;
-	// 	Console.ReadEvent(event);
-	// 	if (event.Event == IO::ConsoleEvent::CharacterInput) {
-	// 		if (event.CharacterCode < 32) {
-	// 			Console.Write(L" ");
-	// 			Console.SetTextColor(12);
-	// 			Console.Write(string(event.CharacterCode, HexadecimalBase, 2));
-	// 			Console.SetTextColor(-1);
-	// 			Console.Write(L" ");
-	// 		} else if (event.CharacterCode == 32) break;
-	// 		else Console.Write(string(&event.CharacterCode, 1, Encoding::UTF32));
-	// 	} else if (event.Event == IO::ConsoleEvent::KeyInput) {
-	// 		Console.Write(L" ");
-	// 		Console.SetBackgroundColor(15);
-	// 		Console.SetTextColor(0);
-	// 		Console.Write(string(event.KeyCode, HexadecimalBase, 4));
-	// 		Console.SetBackgroundColor(-1);
-	// 		Console.SetTextColor(-1);
-	// 		Console.Write(L" ");
-	// 	} else if (event.Event == IO::ConsoleEvent::ConsoleResized) {
-	// 		Console.Write(L" ");
-	// 		Console.SetTextColor(10);
-	// 		Console.Write(FormatString(L"(%0, %1)", event.Width, event.Height));
-	// 		Console.SetTextColor(-1);
-	// 		Console.Write(L" ");
-	// 	} else if (event.Event == IO::ConsoleEvent::EndOfFile) {
-	// 		Console.Write(L" ");
-	// 		Console.SetBackgroundColor(15);
-	// 		Console.SetTextColor(0);
-	// 		Console.Write(L"EOF");
-	// 		Console.SetBackgroundColor(-1);
-	// 		Console.SetTextColor(-1);
-	// 		Console.Write(L" ");
-	// 	}
-	// }
-	// Console.SetInputMode(IO::ConsoleInputMode::Echo);
-	// return 0;
-
-	SafePointer< Array<IO::Search::Volume> > vols = IO::Search::GetVolumes();
-	for (int i = 0; i < vols->Length(); i++) {
-		Console << L"Volume \"" + vols->ElementAt(i).Label + L"\" at path " + vols->ElementAt(i).Path + IO::LineFeedSequence;
-	}
-	{
-		SafePointer<Streaming::FileStream> self = new Streaming::FileStream(IO::GetExecutablePath(), Streaming::AccessRead, Streaming::OpenExisting);
-		Console << IO::Unix::GetFileUserAccessRights(self->Handle()) << IO::ConsoleControl::LineFeed();
-		Console << IO::Unix::GetFileGroupAccessRights(self->Handle()) << IO::ConsoleControl::LineFeed();
-		Console << IO::Unix::GetFileOtherAccessRights(self->Handle()) << IO::ConsoleControl::LineFeed();
-		IO::Unix::SetFileAccessRights(self->Handle(), IO::Unix::AccessRightReadOnly, IO::Unix::AccessRightReadOnly, IO::Unix::AccessRightReadOnly);
-	}
-
-	UI::Zoom = Windows::GetScreenScale();
-
-	DynamicString req;
-	req += Assembly::GetCurrentUserLocale() + IO::LineFeedSequence;
-	// try {
-	// 	SafePointer<Network::HttpSession> session = Network::OpenHttpSession(L"pidor");
-	// 	if (!session) throw Exception();
-	// 	SafePointer<Network::HttpConnection> connection = session->Connect(L"yandex.ru");
-	// 	if (!connection) throw Exception();
-	// 	SafePointer<Network::HttpRequest> request = connection->CreateRequest(L"/favicon.ico");
-	// 	if (!request) throw Exception();
-	// 	request->Send();
-	// 	req += string(request->GetStatus()) + string(IO::NewLineChar);
-	// 	SafePointer< Array<string> > hdrs = request->GetHeaders();
-	// 	for (int i = 0; i < hdrs->Length(); i++) {
-	// 		req += hdrs->ElementAt(i) + L": " + request->GetHeader(hdrs->ElementAt(i)) + IO::NewLineChar;
-	// 	}
-	// } catch (...) { req += L"kornevgen pidor"; }
-
-	Streaming::Stream * source = Assembly::QueryResource(L"GUI");
-	SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
-	UI::Loader::LoadUserInterfaceFromBinary(interface, source, loader, 0);
-	source->Release();
-
-	UI::ITexture * tex = 0;
-	// try {
-	// 	string host = L"i.pinimg.com";
-	// 	string url = L"/originals/80/7a/a2/807aa2cb5485f9e3bbb353b124428d93.jpg";
-	// 	SafePointer<HttpSession> session = OpenHttpSession();
-	// 	if (!session) return 1;
-	// 	SafePointer<HttpConnection> connection = session->SecureConnect(host);
-	// 	if (!connection) return 1;
-	// 	SafePointer<HttpRequest> request = connection->CreateRequest(url);
-	// 	if (!connection) return 1;
-	// 	request->Send();
-	// 	Streaming::MemoryStream stream(0x10000);
-	// 	request->GetResponceStream()->CopyToUntilEof(&stream);
-	// 	stream.Seek(0, Streaming::Begin);
-	// 	SafePointer<Codec::Image> image = Codec::DecodeImage(&stream);
-	// 	UI::Windows::SetApplicationIcon(image);
-	// 	SafePointer<UI::IResourceLoader> loader = UI::CreateObjectFactory();
-	// 	tex = loader->LoadTexture(image->Frames.FirstElement());
-	// } catch (Exception & e) { Console << e.ToString() << IO::NewLineChar; return 1; }
-
-	Console << L"Screen scale: " << Windows::GetScreenScale() << IO::LineFeedSequence;
-
-	auto Callback2 = new _cb2;
-	auto templ = interface.Dialog[L"Test3"];
-	templ->Properties->GetProperty(L"Background").Get< SafePointer<UI::Template::Shape> >().SetReference(0);
-	templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"ID").Set<int>(789);
-	if (tex) {
-		templ->Children.ElementAt(1)->Children.ElementAt(0)->Properties->GetProperty(L"Image").Get< SafePointer<UI::ITexture> >().SetRetain(tex);
-		tex->Release();
-	}
-	auto w4 = Windows::CreateFramedDialog(templ, Callback2, UI::Rectangle::Invalid(), 0, true);
-	auto fnt = loader->LoadFont(L"Menlo", 60, 400, false, true, false);
-
-	Console.WriteLine(FormatString(L"%0, %1, %2", fnt->GetHeight(), fnt->GetLineSpacing(), fnt->GetBaselineOffset()));
-	DynamicString long_str;
-	for (int i = 0; i <= 500; i++) long_str << L"Ыы";
-	w4->FindChild(212121)->As<Controls::MultiLineEdit>()->Font = fnt;
-	w4->FindChild(212121)->ResetCache();
-	w4->FindChild(212121)->SetText(string(L"Heart ❤️ Heart 💙 Heart 🧡💛💚💜🖤\n║\n║\n \n║") + long_str.ToString());
-	if (w4) w4->Show(true);
-
-	SafePointer<UI::Windows::StatusBarIcon> status = UI::Windows::CreateStatusBarIcon();
-	status->SetIconColorUsage(UI::Windows::StatusBarIconColorUsage::Monochromic);
-	{
-		SafePointer<IObjectFactory> objfact = UI::CreateObjectFactory();
-		SafePointer<Codec::Image> icon = new Codec::Image;
-		Array<Math::Vector2> line1;
-		line1 << Math::Vector2(6.0, 6.0);
-		line1 << Math::Vector2(34.0, 6.0);
-		line1 << Math::Vector2(34.0, 34.0);
-		line1 << Math::Vector2(6.0, 34.0);
-		Array<Math::Vector2> line2;
-		line2 << Math::Vector2(20.0, 6.0);
-		line2 << Math::Vector2(34.0, 34.0);
-		line2 << Math::Vector2(6.0, 34.0);
-		auto rd = objfact->CreateTextureRenderingDevice(40, 40, 0x00000000);
-		rd->BeginDraw();
-		rd->FillPolygon(line1.GetBuffer(), line1.Length(), Math::Color(1.0, 0.0, 0.0, 0.5));
-		rd->FillPolygon(line2.GetBuffer(), line2.Length(), Math::Color(0.0, 0.0, 1.0, 1.0));
-		rd->EndDraw();
-		SafePointer<Codec::Frame> frame = rd->GetRenderTargetAsFrame();
-		icon->Frames.Append(frame);
-		status->SetIcon(icon);
-		SafePointer<Menus::Menu> my_menu = new Menus::Menu(interface.Dialog[L"EditContextMenu"]);
-		for (int i = 0; i < interface.Dialog.Length(); i++) {
-			Console.WriteLine(interface.Dialog.ElementByIndex(i).key);
-		}
-		status->SetCallback(Callback2);
-		status->SetMenu(my_menu);
-		//status->SetEventID(666);
-	}
-	status->SetTooltip(L"pidor");
-	status->PresentIcon(true);
-
-	MacOSXSpecific::TouchBar * bar = new MacOSXSpecific::TouchBar;
-	MacOSXSpecific::TouchBarButton * btn = MacOSXSpecific::TouchBar::CreateButtonItem();
-	MacOSXSpecific::TouchBarPopover * pover = MacOSXSpecific::TouchBar::CreatePopoverItem();
-	pover->AddChild(btn);
-	pover->SetID(102);
-	pover->SetText(L"pidor");
-	pover->SetMainItemID(101);
-	btn->SetText(L"PIDOR");
-	btn->SetColor(UI::Color(0, 190, 0));
-	btn->SetID(101);
-	bar->AddChild(pover);
-	bar->SetMainItemID(102);
-	MacOSXSpecific::TouchBar::SetTouchBarForWindow(w4, bar);
-	
-	Windows::RunMessageLoop();
-
-	status->PresentIcon(false);
-
+	WindowCallback callback;
+	WindowCallback2 callback2;
+	Windows::CreateWindowDesc desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Callback = &callback;
+	desc.Flags = Windows::WindowFlagCloseButton | Windows::WindowFlagHasTitle |
+		Windows::WindowFlagBlurBehind |
+		Windows::WindowFlagTransparent |
+		Windows::WindowFlagBlurFactor |
+		Windows::WindowFlagMinimizeButton | Windows::WindowFlagMaximizeButton | Windows::WindowFlagSizeble;
+	desc.MinimalConstraints = Point(300, 200);
+	desc.Position = Box(100, 100, 800, 600);
+	desc.Title = L"New Blur Behind Test";
+	desc.BlurFactor = 150.0;
+	auto window = Windows::GetWindowSystem()->CreateWindow(desc);
+	auto window2 = UI::CreateWindow(ui.Dialog[L"Test2"], &callback2, UI::Rectangle::Entire());
+	window->Show(true);
+	window2->Show(true);
+	cns.WriteLine(window->GetBackgroundFlags());
+	Windows::GetWindowSystem()->RunMainLoop();
 	return 0;
 }

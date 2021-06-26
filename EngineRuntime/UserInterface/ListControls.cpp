@@ -1,7 +1,6 @@
 #include "ListControls.h"
 
 #include "../Interfaces/KeyCodes.h"
-#include "OverlappedWindows.h"
 
 namespace Engine
 {
@@ -25,8 +24,8 @@ namespace Engine
 						if (name == L"Text") *value = Text;
 						else *value = L"";
 					}
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -44,8 +43,8 @@ namespace Engine
 					virtual void GetArgument(const string & name, double * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, Color * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, string * value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, ITexture ** value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { Inner->GetArgument(name, value); }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font") {
 							*value = Owner->Font;
@@ -58,9 +57,9 @@ namespace Engine
 				public:
 					TreeView * Owner;
 					const string & Text;
-					ITexture * ImageNormal;
-					ITexture * ImageGrayed;
-					TreeViewSimpleArgumentProvider(TreeView * owner, const string & text, ITexture * image_normal, ITexture * image_grayed) : Owner(owner), Text(text), ImageNormal(image_normal), ImageGrayed(image_grayed) {}
+					Graphics::IBitmap * ImageNormal;
+					Graphics::IBitmap * ImageGrayed;
+					TreeViewSimpleArgumentProvider(TreeView * owner, const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed) : Owner(owner), Text(text), ImageNormal(image_normal), ImageGrayed(image_grayed) {}
 					virtual void GetArgument(const string & name, int * value) override { *value = 0; }
 					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
 					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
@@ -69,7 +68,7 @@ namespace Engine
 						if (name == L"Text") *value = Text;
 						else *value = L"";
 					}
-					virtual void GetArgument(const string & name, ITexture ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override
 					{
 						if (name == L"ImageNormal" && ImageNormal) {
 							*value = ImageNormal;
@@ -80,7 +79,7 @@ namespace Engine
 						}
 						*value = 0;
 					}
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -98,8 +97,8 @@ namespace Engine
 					virtual void GetArgument(const string & name, double * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, Color * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, string * value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, ITexture ** value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { Inner->GetArgument(name, value); }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font") {
 							*value = Owner->Font;
@@ -117,8 +116,8 @@ namespace Engine
 					virtual void GetArgument(const string & name, double * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, Color * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, string * value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, ITexture ** value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { Inner->GetArgument(name, value); }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font") {
 							*value = Owner->Font;
@@ -140,8 +139,8 @@ namespace Engine
 						if (name == L"Text") *value = Text;
 						else *value = L"";
 					}
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -152,8 +151,8 @@ namespace Engine
 			}
 			void ListBox::reset_scroll_ranges(void)
 			{
-				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
-				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border;
+				int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border - (_svisible ? ScrollSize : 0);
 				int lines_max;
 				if (Tiled) {
 					int epl = max(hpage / ElementHeight, 1);
@@ -168,7 +167,7 @@ namespace Engine
 			{
 				if (_current >= 0) {
 					if (Tiled) {
-						int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
+						int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border - (_svisible ? ScrollSize : 0);
 						int epl = max(hpage / ElementHeight, 1);
 						int min = ElementHeight * (_current / epl);
 						int max = min + ElementHeight;
@@ -192,15 +191,17 @@ namespace Engine
 								if (_current == index) {
 									_current = -1;
 									for (int i = 0; i < _elements.Length(); i++) if (_elements[i].Selected) { _current = i; break; }
-									if (_editor) { _editor->Destroy(); _editor = 0; }
+									if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 								}
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							} else {
 								_elements[index].Selected = true;
 								_current = index;
-								if (_editor) { _editor->Destroy(); _editor = 0; }
+								if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 								scroll_to_current();
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							}
 						}
 					} else if (Keyboard::IsKeyPressed(KeyCodes::Shift) && down) {
@@ -209,14 +210,16 @@ namespace Engine
 								_current = index;
 								_elements[_current].Selected = true;
 								scroll_to_current();
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							} else {
 								if (_current != index) {
 									for (int i = min(_current, index); i <= max(_current, index); i++) _elements[i].Selected = true;
 									_current = index;
-									if (_editor) { _editor->Destroy(); _editor = 0; }
+									if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 									scroll_to_current();
-									GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+									Invalidate();
+									GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 								}
 							}
 						}
@@ -225,16 +228,18 @@ namespace Engine
 							if (_elements[index].Selected) {
 								if (_current != index) {
 									_current = index;
-									if (_editor) { _editor->Destroy(); _editor = 0; }
+									if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 									scroll_to_current();
-									GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+									Invalidate();
+									GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 								}
 							} else {
 								_current = index;
 								for (int i = 0; i < _elements.Length(); i++) _elements[i].Selected = i == _current;
-								if (_editor) { _editor->Destroy(); _editor = 0; }
+								if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 								scroll_to_current();
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							}
 						}
 					}
@@ -243,17 +248,19 @@ namespace Engine
 						if (_current == index && index != -1) {
 							_elements[_current].Selected = false;
 							_current = -1;
-							if (_editor) { _editor->Destroy(); _editor = 0; }
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else {
 						if (_current != index && index != -1) {
 							if (_current != -1) _elements[_current].Selected = false;
 							_current = index;
 							_elements[_current].Selected = true;
-							if (_editor) { _editor->Destroy(); _editor = 0; }
+							if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 							scroll_to_current();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					}
 				}
@@ -267,43 +274,45 @@ namespace Engine
 						if (Keyboard::IsKeyPressed(KeyCodes::Shift) && _current != -1) {
 							for (int i = min(_current, index); i <= max(_current, index); i++) _elements[i].Selected = true;
 							_current = index;
-							if (_editor) { _editor->Destroy(); _editor = 0; }
+							if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 							scroll_to_current();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else {
 							_current = index;
 							for (int i = 0; i < _elements.Length(); i++) _elements[i].Selected = i == _current;
-							if (_editor) { _editor->Destroy(); _editor = 0; }
+							if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 							scroll_to_current();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else {
 						if (_current != -1) _elements[_current].Selected = false;
 						_current = index;
 						_elements[_current].Selected = true;
-						if (_editor) { _editor->Destroy(); _editor = 0; }
+						if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 						scroll_to_current();
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						Invalidate();
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					}
 				}
 			}
-			ListBox::ListBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _elements(0x10)
+			ListBox::ListBox(void) : _elements(0x10)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
 				EnumerateProperties(Initializer);
 				ResetCache();
 			}
-			ListBox::ListBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _elements(0x10)
+			ListBox::ListBox(Template::ControlTemplate * Template) : _elements(0x10)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ListBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::ListBox &>(*this) = static_cast<Template::Controls::ListBox &>(*Template->Properties);
 				ResetCache();
 			}
 			ListBox::~ListBox(void) {}
-			void ListBox::Render(const Box & at)
+			void ListBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
 				Shape ** back = 0;
 				Template::Shape * temp = 0;
 				if (Disabled) {
@@ -337,6 +346,19 @@ namespace Engine
 				device->PushClip(viewport);
 				int width = at.Right - at.Left - Border - Border - (_svisible ? ScrollSize : 0);
 				int height = at.Bottom - at.Top - Border - Border;
+				int from_unclamped = _scroll->Position / ElementHeight;
+				int to_unclamped = (_scroll->Position + _scroll->Page) / ElementHeight;
+				if (ViewElementAlternateBackground) {
+					if (!_view_element_alternate) {
+						ZeroArgumentProvider provider;
+						_view_element_alternate = ViewElementAlternateBackground->Initialize(&provider);
+					}
+					for (int i = from_unclamped; i <= to_unclamped; i++) if (i & 1) {
+						Box item(at.Left + Border, at.Top + Border + i * ElementHeight - _scroll->Position, at.Left + Border + width, 0);
+						item.Bottom = item.Top + ElementHeight;
+						_view_element_alternate->Render(device, item);
+					}
+				}
 				if (_elements.Length()) {
 					if (Tiled) {
 						int epl = max(width / ElementHeight, 1);
@@ -365,8 +387,8 @@ namespace Engine
 							}
 						}
 					} else {
-						int from = max(min(_scroll->Position / ElementHeight, _elements.Length() - 1), 0);
-						int to = max(min((_scroll->Position + _scroll->Page) / ElementHeight, _elements.Length() - 1), 0);
+						int from = max(min(from_unclamped, _elements.Length() - 1), 0);
+						int to = max(min(to_unclamped, _elements.Length() - 1), 0);
 						if (Disabled) {
 							for (int i = from; i <= to; i++) {
 								if (i == _current && _editor) continue;
@@ -394,26 +416,22 @@ namespace Engine
 				if (_editor && _editor->IsVisible()) {
 					Box pos = _editor->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_editor->Render(rect);
-					device->PopClip();
+					_editor->Render(device, rect);
 				}
 				device->PopClip();
 				if (_scroll && _svisible) {
 					Box pos = _scroll->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_scroll->Render(rect);
-					device->PopClip();
+					_scroll->Render(device, rect);
 				}
 			}
 			void ListBox::ResetCache(void)
 			{
 				int pos = (_scroll) ? _scroll->Position : 0;
 				if (_editor) _editor->ResetCache();
-				if (_scroll) _scroll->Destroy();
-				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
-				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
+				if (_scroll) _scroll->RemoveFromParent();
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border;
+				int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border - (_svisible ? ScrollSize : 0);
 				int lines_max;
 				if (Tiled) {
 					int epl = max(hpage / ElementHeight, 1);
@@ -421,9 +439,10 @@ namespace Engine
 				} else {
 					lines_max = ElementHeight * _elements.Length() - 1;
 				}
-				_scroll = GetStation()->CreateWindow<VerticalScrollBar>(this, this);
-				_scroll->SetRectangle(Rectangle(Coordinate::Right() - ScrollSize - Border, Border,
-					Coordinate::Right() - Border, Coordinate::Bottom() - Border));
+				SafePointer<VerticalScrollBar> vert = new VerticalScrollBar(this);
+				_scroll = vert;
+				AddChild(vert);
+				_scroll->SetRectangle(Rectangle(Coordinate::Right() - ScrollSize - Border, Border, Coordinate::Right() - Border, Coordinate::Bottom() - Border));
 				_scroll->Disabled = Disabled;
 				_scroll->Line = ElementHeight;
 				_scroll->SetPageSilent(page);
@@ -439,10 +458,11 @@ namespace Engine
 				_view_focused.SetReference(0);
 				_view_element_hot.SetReference(0);
 				_view_element_selected.SetReference(0);
+				_view_element_alternate.SetReference(0);
 			}
 			void ListBox::ArrangeChildren(void)
 			{
-				Box inner = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box inner = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				if (_scroll) {
 					auto rect = _scroll->GetRectangle();
 					if (rect.IsValid()) _scroll->SetPosition(Box(rect, inner));
@@ -450,7 +470,7 @@ namespace Engine
 				if (_editor) {
 					auto rect = _editor->GetRectangle();
 					if (Tiled) {
-						int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
+						int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border - (_svisible ? ScrollSize : 0);
 						int epl = max(hpage / ElementHeight, 1);
 						int x = _current % epl, y = _current / epl;
 						auto item = Box(Border + x * ElementHeight, Border + y * ElementHeight - _scroll->Position,
@@ -463,20 +483,20 @@ namespace Engine
 					}
 				}
 			}
-			void ListBox::Enable(bool enable) { Disabled = !enable; _hot = -1; if (_scroll) _scroll->Enable(enable); }
+			void ListBox::Enable(bool enable) { Disabled = !enable; _hot = -1; if (_scroll) _scroll->Enable(enable); Invalidate(); }
 			bool ListBox::IsEnabled(void) { return !Disabled; }
-			void ListBox::Show(bool visible) { Invisible = !visible; _hot = -1; }
+			void ListBox::Show(bool visible) { Invisible = !visible; _hot = -1; Invalidate(); }
 			bool ListBox::IsVisible(void) { return !Invisible; }
 			bool ListBox::IsTabStop(void) { return true; }
 			void ListBox::SetID(int _ID) { ID = _ID; }
 			int ListBox::GetID(void) { return ID; }
-			void ListBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void ListBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle ListBox::GetRectangle(void) { return ControlPosition; }
 			void ListBox::SetPosition(const Box & box)
 			{
-				WindowPosition = box;
-				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
-				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
+				ControlBoundaries = box;
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border;
+				int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border - (_svisible ? ScrollSize : 0);
 				int lines_max;
 				if (Tiled) {
 					int epl = max(hpage / ElementHeight, 1);
@@ -488,26 +508,27 @@ namespace Engine
 				_scroll->SetPage(page);
 				_scroll->Show(_svisible = (lines_max >= page));
 				ArrangeChildren();
+				Invalidate();
 			}
-			void ListBox::RaiseEvent(int ID, Event event, Window * sender)
+			void ListBox::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
 				if (sender == _scroll) {
+					Invalidate();
 					if (_editor) ArrangeChildren();
 				} else GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void ListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
+			void ListBox::FocusChanged(bool got_focus) { Invalidate(); }
+			void ListBox::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; Invalidate(); } }
 			void ListBox::LeftButtonDown(Point at) { SetFocus(); select(_hot, true); }
 			void ListBox::LeftButtonUp(Point at) { select(_hot, false); }
-			void ListBox::LeftButtonDoubleClick(Point at) { if (_hot != -1) GetParent()->RaiseEvent(ID, Event::DoubleClick, this); }
+			void ListBox::LeftButtonDoubleClick(Point at) { if (_hot != -1) GetParent()->RaiseEvent(ID, ControlEvent::DoubleClick, this); }
 			void ListBox::RightButtonDown(Point at) { SetFocus(); select(_hot, true); }
-			void ListBox::RightButtonUp(Point at) { select(_hot, false); GetParent()->RaiseEvent(ID, Event::ContextClick, this); }
+			void ListBox::RightButtonUp(Point at) { select(_hot, false); GetParent()->RaiseEvent(ID, ControlEvent::ContextClick, this); }
 			void ListBox::MouseMove(Point at)
 			{
-				Box element(Border, Border,
-					WindowPosition.Right - WindowPosition.Left - Border - (_svisible ? ScrollSize : 0),
-					WindowPosition.Bottom - WindowPosition.Top - Border);
+				Box element(Border, Border, ControlBoundaries.Right - ControlBoundaries.Left - Border - (_svisible ? ScrollSize : 0), ControlBoundaries.Bottom - ControlBoundaries.Top - Border);
 				int oh = _hot;
-				if (element.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+				if (element.IsInside(at) && IsHovered()) {
 					int index = (at.y - Border + _scroll->Position) / ElementHeight;
 					if (Tiled) {
 						int epl = max((element.Right - element.Left) / ElementHeight, 1);
@@ -521,6 +542,7 @@ namespace Engine
 				} else {
 					_hot = -1;
 				}
+				if (oh != _hot) Invalidate();
 				if (oh == -1 && _hot != -1) SetCapture();
 				else if ((oh != -1 || GetCapture() == this) && _hot == -1) ReleaseCapture();
 			}
@@ -534,8 +556,8 @@ namespace Engine
 			{
 				if (!_elements.Length()) return true;
 				if (Tiled) {
-					int page = max((WindowPosition.Bottom - WindowPosition.Top - Border - Border) / ElementHeight, 1);
-					int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border - (_svisible ? ScrollSize : 0);
+					int page = max((ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border) / ElementHeight, 1);
+					int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border - (_svisible ? ScrollSize : 0);
 					int epl = max(hpage / ElementHeight, 1);
 					if (key_code == KeyCodes::Right) {
 						if (_current != -1) move_selection(_current + 1); else move_selection(0);
@@ -555,7 +577,7 @@ namespace Engine
 						if (_current != -1) move_selection(_current - page * epl); else move_selection(0);
 					}
 				} else {
-					int page = max((WindowPosition.Bottom - WindowPosition.Top - Border - Border) / ElementHeight, 1);
+					int page = max((ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border) / ElementHeight, 1);
 					if (key_code == KeyCodes::Down) {
 						if (_current != -1) move_selection(_current + 1); else move_selection(0);
 					} else if (key_code == KeyCodes::Up) {
@@ -572,15 +594,14 @@ namespace Engine
 				}
 				return true;
 			}
-			Window * ListBox::HitTest(Point at)
+			Control * ListBox::HitTest(Point at)
 			{
 				if (!IsEnabled()) return this;
 				if (_scroll && _svisible) {
 					auto box = _scroll->GetPosition();
 					if (box.IsInside(at)) return _scroll->HitTest(Point(at.x - box.Left, at.y - box.Top));
 				}
-				if (_editor && at.x >= Border && at.y >= Border && at.x < WindowPosition.Right - WindowPosition.Left - Border &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border) {
+				if (_editor && at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border) {
 					if (!_editor->IsVisible()) return this;
 					auto box = _editor->GetPosition();
 					if (box.IsInside(at)) return _editor->HitTest(Point(at.x - box.Left, at.y - box.Top));
@@ -605,6 +626,7 @@ namespace Engine
 					_current++;
 					if (_editor) ArrangeChildren();
 				}
+				Invalidate();
 			}
 			void ListBox::InsertItem(IArgumentProvider * provider, int at, void * user)
 			{
@@ -620,6 +642,7 @@ namespace Engine
 					_current++;
 					if (_editor) ArrangeChildren();
 				}
+				Invalidate();
 			}
 			void ListBox::InsertItem(Reflection::Reflected & object, int at, void * user)
 			{
@@ -631,12 +654,14 @@ namespace Engine
 				ArgumentService::ListBoxSimpleArgumentProvider provider(this, text);
 				_elements[index].ViewNormal.SetReference(ViewElementNormal->Initialize(&provider));
 				_elements[index].ViewDisabled.SetReference(ViewElementDisabled->Initialize(&provider));
+				Invalidate();
 			}
 			void ListBox::ResetItem(int index, IArgumentProvider * provider)
 			{
 				ArgumentService::ListBoxWrapperArgumentProvider wrapper(this, provider);
 				_elements[index].ViewNormal.SetReference(ViewElementNormal->Initialize(&wrapper));
 				_elements[index].ViewDisabled.SetReference(ViewElementDisabled->Initialize(&wrapper));
+				Invalidate();
 			}
 			void ListBox::ResetItem(int index, Reflection::Reflected & object)
 			{
@@ -648,6 +673,7 @@ namespace Engine
 				if (_current == i) { _current = j; if (_editor) ArrangeChildren(); }
 				else if (_current == j) { _current = i; if (_editor) ArrangeChildren(); }
 				_elements.SwapAt(i, j);
+				Invalidate();
 			}
 			void ListBox::RemoveItem(int index)
 			{
@@ -655,19 +681,21 @@ namespace Engine
 				reset_scroll_ranges();
 				if (_current == index) {
 					_current = -1;
-					if (_editor) { _editor->Destroy(); _editor = 0; }
+					if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 				} else if (_current > index) {
 					_current--;
 					if (_editor) ArrangeChildren();
 				}
 				_hot = -1;
+				Invalidate();
 			}
 			void ListBox::ClearItems(void)
 			{
 				_elements.Clear();
-				if (_editor) { _editor->Destroy(); _editor = 0; }
+				if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 				_current = -1; _hot = -1;
 				reset_scroll_ranges();
+				Invalidate();
 			}
 			int ListBox::ItemCount(void) { return _elements.Length(); }
 			void * ListBox::GetItemUserData(int index) { return _elements[index].User; }
@@ -675,7 +703,7 @@ namespace Engine
 			int ListBox::GetSelectedIndex(void) { return _current; }
 			void ListBox::SetSelectedIndex(int index, bool scroll_to_view)
 			{
-				if (_current != index && _editor) { _editor->Destroy(); _editor = 0; }
+				if (_current != index && _editor) { _editor->RemoveFromParent(); _editor = 0; }
 				if (MultiChoose) {
 					_current = index;
 					for (int i = 0; i < _elements.Length(); i++) _elements[i].Selected = i == _current;
@@ -685,6 +713,7 @@ namespace Engine
 					if (_current != -1) _elements[_current].Selected = true;
 				}
 				if (scroll_to_view && _current >= 0) scroll_to_current();
+				Invalidate();
 			}
 			bool ListBox::IsItemSelected(int index) { return _elements[index].Selected; }
 			void ListBox::SelectItem(int index, bool select)
@@ -693,29 +722,34 @@ namespace Engine
 					_elements[index].Selected = select;
 					if (!select && index == _current) {
 						_current = -1;
-						if (_editor) { _editor->Destroy(); _editor = 0; }
+						if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 						for (int i = 0; i < _elements.Length(); i++) if (_elements[i].Selected) { _current = i; break; }
 					}
 				} else {
 					if (select) SetSelectedIndex(index);
 					else if (index == _current) SetSelectedIndex(-1);
 				}
+				Invalidate();
 			}
-			Window * ListBox::CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position)
+			Control * ListBox::CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position, IControlFactory * Factory)
 			{
 				CloseEmbeddedEditor();
 				if (_current == -1) return 0;
-				auto group = GetStation()->CreateWindow<ControlGroup>(this);
+				SafePointer<ControlGroup> group = new ControlGroup;
+				AddChild(group);
 				try {
 					group->ControlPosition = Position;
-					Constructor::ConstructChildren(group, Template);
-				} catch (...) { group->Destroy(); throw; }
+					CreateChildrenControls(group, Template, Factory);
+				} catch (...) { group->RemoveFromParent(); throw; }
 				_editor = group;
 				ArrangeChildren();
+				Invalidate();
 				return group;
 			}
-			Window * ListBox::GetEmbeddedEditor(void) { return _editor; }
-			void ListBox::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; editor->Destroy(); } }
+			Control * ListBox::GetEmbeddedEditor(void) { return _editor; }
+			void ListBox::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; editor->RemoveFromParent(); Invalidate(); } }
+			int ListBox::GetScrollerPosition(void) { return _scroll->Position; }
+			void ListBox::SetScrollerPosition(int position) { _scroll->SetScrollerPosition(position); }
 
 			int TreeView::TreeViewItem::get_height(void) const { int s = Parent ? 1 : 0; if (Expanded) for (int i = 0; i < Children.Length(); i++) s += Children[i].get_height(); return s; }
 			void TreeView::TreeViewItem::reset_cache(void)
@@ -724,7 +758,7 @@ namespace Engine
 				if (ViewDisabled) ViewDisabled->ClearCache();
 				for (int i = 0; i < Children.Length(); i++) Children[i].reset_cache();
 			}
-			int TreeView::TreeViewItem::render(IRenderingDevice * device, int left_offset, int & y, const Box & outer, bool enabled)
+			int TreeView::TreeViewItem::render(Graphics::I2DDeviceContext * device, int left_offset, int & y, const Box & outer, bool enabled)
 			{
 				if (Parent) {
 					int sy = y;
@@ -744,7 +778,7 @@ namespace Engine
 					y += View->ElementHeight;
 					int ry = y;
 					if (Expanded) {
-						ITextureRenderingInfo * line = 0;
+						Graphics::IBitmapBrush * line = 0;
 						if (enabled) line = View->_line_normal;
 						else line = View->_line_disabled;
 						int le = 0;
@@ -752,7 +786,7 @@ namespace Engine
 							int py = y;
 							le = Children[i].render(device, left_offset + View->ChildOffset, y, outer, enabled);
 							if (line && py + View->ElementHeight > 0) {
-								device->RenderTexture(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
+								device->Render(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
 									outer.Top + py + (View->ElementHeight >> 1),
 									outer.Left + left_offset + View->ChildOffset + (Children[i].IsParent() ? 0 : View->ChildOffset),
 									outer.Top + py + (View->ElementHeight >> 1) + 1));
@@ -762,7 +796,7 @@ namespace Engine
 							int s = sy + View->ElementHeight;
 							int e = le - (View->ElementHeight >> 1);
 							if (s < outer.Bottom && e > 0) {
-								device->RenderTexture(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
+								device->Render(line, Box(outer.Left + left_offset + (View->ChildOffset >> 1),
 									outer.Top + s, outer.Left + left_offset + (View->ChildOffset >> 1) + 1, outer.Top + e));
 							}
 						}
@@ -878,9 +912,10 @@ namespace Engine
 				if (View->_hot != this) View->_hot = 0;
 				View->reset_scroll_ranges();
 				if (!expand && View->_editor && View->_current && !View->_current->IsAccessible()) {
-					View->_editor->Destroy(); View->_editor = 0;
+					View->_editor->RemoveFromParent(); View->_editor = 0;
 				}
 				if (View->_editor) View->ArrangeChildren();
+				View->Invalidate();
 			}
 			Box TreeView::TreeViewItem::GetBounds(void) const
 			{
@@ -896,7 +931,7 @@ namespace Engine
 				}
 				auto box = Box(View->Border + (depth + 1) * View->ChildOffset,
 					View->Border - View->_scroll->Position + shift * View->ElementHeight,
-					View->WindowPosition.Right - View->WindowPosition.Left - View->Border - (View->_svisible ? View->ScrollSize : 0), 0);
+					View->ControlBoundaries.Right - View->ControlBoundaries.Left - View->Border - (View->_svisible ? View->ScrollSize : 0), 0);
 				box.Bottom = box.Top + View->ElementHeight;
 				return box;
 			}
@@ -912,7 +947,7 @@ namespace Engine
 			const TreeView::TreeViewItem * TreeView::TreeViewItem::GetChild(int index) const { return &Children[index]; }
 			TreeView::TreeViewItem * TreeView::TreeViewItem::GetChild(int index) { return &Children[index]; }
 			TreeView::TreeViewItem * TreeView::TreeViewItem::AddItem(const string & text, void * user) { return InsertItem(text, Children.Length(), user); }
-			TreeView::TreeViewItem * TreeView::TreeViewItem::AddItem(const string & text, ITexture * image_normal, ITexture * image_grayed, void * user) { return InsertItem(text, image_normal, image_grayed, Children.Length(), user); }
+			TreeView::TreeViewItem * TreeView::TreeViewItem::AddItem(const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed, void * user) { return InsertItem(text, image_normal, image_grayed, Children.Length(), user); }
 			TreeView::TreeViewItem * TreeView::TreeViewItem::AddItem(IArgumentProvider * provider, void * user) { return InsertItem(provider, Children.Length(), user); }
 			TreeView::TreeViewItem * TreeView::TreeViewItem::AddItem(Reflection::Reflected & object, void * user) { return InsertItem(object, Children.Length(), user); }
 			TreeView::TreeViewItem * TreeView::TreeViewItem::InsertItem(const string & text, int at, void * user)
@@ -923,9 +958,10 @@ namespace Engine
 				Children.Insert(item, at);
 				View->reset_scroll_ranges();
 				if (View->_editor) View->ArrangeChildren();
+				View->Invalidate();
 				return &Children[at];
 			}
-			TreeView::TreeViewItem * TreeView::TreeViewItem::InsertItem(const string & text, ITexture * image_normal, ITexture * image_grayed, int at, void * user)
+			TreeView::TreeViewItem * TreeView::TreeViewItem::InsertItem(const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed, int at, void * user)
 			{
 				TreeViewItem item(View, this);
 				item.User = user;
@@ -933,6 +969,7 @@ namespace Engine
 				Children.Insert(item, at);
 				View->reset_scroll_ranges();
 				if (View->_editor) View->ArrangeChildren();
+				View->Invalidate();
 				return &Children[at];
 			}
 			TreeView::TreeViewItem * TreeView::TreeViewItem::InsertItem(IArgumentProvider * provider, int at, void * user)
@@ -943,6 +980,7 @@ namespace Engine
 				Children.Insert(item, at);
 				View->reset_scroll_ranges();
 				if (View->_editor) View->ArrangeChildren();
+				View->Invalidate();
 				return &Children[at];
 			}
 			TreeView::TreeViewItem * TreeView::TreeViewItem::InsertItem(Reflection::Reflected & object, int at, void * user)
@@ -953,6 +991,7 @@ namespace Engine
 				Children.Insert(item, at);
 				View->reset_scroll_ranges();
 				if (View->_editor) View->ArrangeChildren();
+				View->Invalidate();
 				return &Children[at];
 			}
 			void TreeView::TreeViewItem::Reset(const string & text)
@@ -960,18 +999,21 @@ namespace Engine
 				ArgumentService::TreeViewSimpleArgumentProvider provider(View, text, 0, 0);
 				ViewNormal.SetReference(View->ViewElementNormal->Initialize(&provider));
 				ViewDisabled.SetReference(View->ViewElementDisabled->Initialize(&provider));
+				View->Invalidate();
 			}
-			void TreeView::TreeViewItem::Reset(const string & text, ITexture * image_normal, ITexture * image_grayed)
+			void TreeView::TreeViewItem::Reset(const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed)
 			{
 				ArgumentService::TreeViewSimpleArgumentProvider provider(View, text, image_normal, image_grayed);
 				ViewNormal.SetReference(View->ViewElementNormal->Initialize(&provider));
 				ViewDisabled.SetReference(View->ViewElementDisabled->Initialize(&provider));
+				View->Invalidate();
 			}
 			void TreeView::TreeViewItem::Reset(IArgumentProvider * provider)
 			{
 				ArgumentService::TreeViewWrapperArgumentProvider wrapper(View, provider);
 				ViewNormal.SetReference(View->ViewElementNormal->Initialize(&wrapper));
 				ViewDisabled.SetReference(View->ViewElementDisabled->Initialize(&wrapper));
+				View->Invalidate();
 			}
 			void TreeView::TreeViewItem::Reset(Reflection::Reflected & object) { ReflectorArgumentProvider provider(&object); Reset(&provider); }
 			void TreeView::TreeViewItem::SwapItems(int i, int j)
@@ -980,12 +1022,13 @@ namespace Engine
 				View->_hot = 0;
 				View->_is_arrow_hot = false;
 				if (View->_editor) View->ArrangeChildren();
+				View->Invalidate();
 			}
 			void TreeView::TreeViewItem::Remove(void)
 			{
 				if (!Parent) return;
 				if (View->_current->is_generalized_children(this)) {
-					if (View->_editor) { View->_editor->Destroy(); View->_editor = 0; }
+					if (View->_editor) { View->_editor->RemoveFromParent(); View->_editor = 0; }
 					View->_current = 0;
 				}
 				int at = GetIndexAtParent();
@@ -995,18 +1038,19 @@ namespace Engine
 				view->_is_arrow_hot = false;
 				view->reset_scroll_ranges();
 				if (view->_editor) view->ArrangeChildren();
+				View->Invalidate();
 			}
 
 			void TreeView::generate_line_textures(void)
 			{
 				if (BranchColorNormal.a) {
-					_line_texture_normal = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
+					_line_texture_normal = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Straight, Codec::ScanOrigin::TopDown);
 					for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
 						if ((x + y) & 1) _line_texture_normal->SetPixel(x, y, BranchColorNormal); else _line_texture_normal->SetPixel(x, y, 0);
 					}
 				} else _line_texture_normal.SetReference(0);
 				if (BranchColorDisabled.a) {
-					_line_texture_disabled = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
+					_line_texture_disabled = new Codec::Frame(8, 8, -1, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Straight, Codec::ScanOrigin::TopDown);
 					for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
 						if ((x + y) & 1) _line_texture_disabled->SetPixel(x, y, BranchColorDisabled); else _line_texture_disabled->SetPixel(x, y, 0);
 					}
@@ -1014,7 +1058,7 @@ namespace Engine
 			}
 			void TreeView::reset_scroll_ranges(void)
 			{
-				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border;
 				int lines_max = ElementHeight * _root.get_height() - 1;
 				_scroll->SetRange(0, lines_max);
 				_scroll->Show(_svisible = (lines_max >= page));
@@ -1027,7 +1071,7 @@ namespace Engine
 				while (current->Parent) { if (!current->Expanded) { current->Expanded = true; reset = true; } current = current->Parent; }
 				if (reset) reset_scroll_ranges();
 				auto bounds = _current->GetBounds();
-				int page = WindowPosition.Bottom - WindowPosition.Top;
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top;
 				if (bounds.Top < Border) _scroll->SetScrollerPosition(_scroll->Position - (Border - bounds.Top));
 				else if (bounds.Bottom > page - Border) _scroll->SetScrollerPosition(_scroll->Position + (bounds.Bottom - page + Border));
 			}
@@ -1036,15 +1080,17 @@ namespace Engine
 				if (Keyboard::IsKeyPressed(KeyCodes::Control)) {
 					if (_current == item && item) {
 						_current = 0;
-						if (_editor) { _editor->Destroy(); _editor = 0; }
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
+						Invalidate();
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					}
 				} else {
 					if (_current != item && item) {
 						_current = item;
-						if (_editor) { _editor->Destroy(); _editor = 0; }
+						if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 						scroll_to_current();
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						Invalidate();
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					}
 				}
 			}
@@ -1052,12 +1098,13 @@ namespace Engine
 			{
 				if (to && _current != to) {
 					_current = to;
-					if (_editor) { _editor->Destroy(); _editor = 0; }
+					if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 					scroll_to_current();
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
-			TreeView::TreeView(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _root(this, 0)
+			TreeView::TreeView(void) : _root(this, 0)
 			{
 				_root.Expanded = true;
 				ControlPosition = Rectangle::Invalid();
@@ -1065,7 +1112,7 @@ namespace Engine
 				EnumerateProperties(Initializer);
 				ResetCache();
 			}
-			TreeView::TreeView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _root(this, 0)
+			TreeView::TreeView(Template::ControlTemplate * Template) : _root(this, 0)
 			{
 				_root.Expanded = true;
 				if (Template->Properties->GetTemplateClass() != L"TreeView") throw InvalidArgumentException();
@@ -1073,9 +1120,8 @@ namespace Engine
 				ResetCache();
 			}
 			TreeView::~TreeView(void) {}
-			void TreeView::Render(const Box & at)
+			void TreeView::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
 				Shape ** back = 0;
 				Template::Shape * temp = 0;
 				if (Disabled) {
@@ -1130,33 +1176,42 @@ namespace Engine
 					_view_node_expanded_hot.SetReference(ViewNodeOpenedHot->Initialize(&provider));
 				}
 				if (!_line_normal && _line_texture_normal) {
-					SafePointer<ITexture> texture = device->LoadTexture(_line_texture_normal);
-					_line_normal.SetReference(device->CreateTextureRenderingInfo(texture, Box(0, 0, 8, 8), true));
+					SafePointer<Graphics::IBitmap> texture = device->GetParentFactory()->LoadBitmap(_line_texture_normal);
+					_line_normal.SetReference(device->CreateBitmapBrush(texture, Box(0, 0, 8, 8), true));
 				}
 				if (!_line_disabled && _line_texture_disabled) {
-					SafePointer<ITexture> texture = device->LoadTexture(_line_texture_disabled);
-					_line_disabled.SetReference(device->CreateTextureRenderingInfo(texture, Box(0, 0, 8, 8), true));
+					SafePointer<Graphics::IBitmap> texture = device->GetParentFactory()->LoadBitmap(_line_texture_disabled);
+					_line_disabled.SetReference(device->CreateBitmapBrush(texture, Box(0, 0, 8, 8), true));
 				}
 				Box viewport = Box(at.Left + Border, at.Top + Border, at.Right - Border - (_svisible ? ScrollSize : 0), at.Bottom - Border);
 				device->PushClip(viewport);
 				int width = at.Right - at.Left - Border - Border - (_svisible ? ScrollSize : 0);
 				int height = at.Bottom - at.Top - Border - Border;
 				int y = -_scroll->Position;
+				if (ViewElementAlternateBackground) {
+					int from = _scroll->Position / ElementHeight;
+					int to = (_scroll->Position + _scroll->Page) / ElementHeight;
+					if (!_view_element_alternate) {
+						ZeroArgumentProvider provider;
+						_view_element_alternate = ViewElementAlternateBackground->Initialize(&provider);
+					}
+					for (int i = from; i <= to; i++) if (i & 1) {
+						Box item(at.Left + Border, at.Top + Border + i * ElementHeight - _scroll->Position, at.Left + Border + width, 0);
+						item.Bottom = item.Top + ElementHeight;
+						_view_element_alternate->Render(device, item);
+					}
+				}
 				_root.render(device, 0, y, viewport, !Disabled);
 				if (_editor && _editor->IsVisible()) {
 					Box pos = _editor->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_editor->Render(rect);
-					device->PopClip();
+					_editor->Render(device, rect);
 				}
 				device->PopClip();
 				if (_scroll && _svisible) {
 					Box pos = _scroll->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_scroll->Render(rect);
-					device->PopClip();
+					_scroll->Render(device, rect);
 				}
 			}
 			void TreeView::ResetCache(void)
@@ -1164,11 +1219,13 @@ namespace Engine
 				generate_line_textures();
 				int pos = (_scroll) ? _scroll->Position : 0;
 				if (_editor) _editor->ResetCache();
-				if (_scroll) _scroll->Destroy();
-				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
+				if (_scroll) _scroll->RemoveFromParent();
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border;
 				int lines_max;
 				lines_max = ElementHeight * _root.get_height() - 1;
-				_scroll = GetStation()->CreateWindow<VerticalScrollBar>(this, this);
+				SafePointer<VerticalScrollBar> vert = new VerticalScrollBar(this);
+				_scroll = vert;
+				AddChild(vert);
 				_scroll->SetRectangle(Rectangle(Coordinate::Right() - ScrollSize - Border, Border,
 					Coordinate::Right() - Border, Coordinate::Bottom() - Border));
 				_scroll->Disabled = Disabled;
@@ -1183,6 +1240,7 @@ namespace Engine
 				_view_focused.SetReference(0);
 				_view_element_hot.SetReference(0);
 				_view_element_selected.SetReference(0);
+				_view_element_alternate.SetReference(0);
 				_view_node_collapsed_normal.SetReference(0);
 				_view_node_collapsed_disabled.SetReference(0);
 				_view_node_collapsed_hot.SetReference(0);
@@ -1194,7 +1252,7 @@ namespace Engine
 			}
 			void TreeView::ArrangeChildren(void)
 			{
-				Box inner = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box inner = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				if (_scroll) {
 					auto rect = _scroll->GetRectangle();
 					if (rect.IsValid()) _scroll->SetPosition(Box(rect, inner));
@@ -1204,32 +1262,35 @@ namespace Engine
 					_editor->SetPosition(Box(rect, _current->GetBounds()));
 				}
 			}
-			void TreeView::Enable(bool enable) { Disabled = !enable; _hot = 0; _is_arrow_hot = false; if (_scroll) _scroll->Enable(enable); }
+			void TreeView::Enable(bool enable) { Disabled = !enable; _hot = 0; _is_arrow_hot = false; if (_scroll) _scroll->Enable(enable); Invalidate(); }
 			bool TreeView::IsEnabled(void) { return !Disabled; }
-			void TreeView::Show(bool visible) { Invisible = !visible; _hot = 0; _is_arrow_hot = false; }
+			void TreeView::Show(bool visible) { Invisible = !visible; _hot = 0; _is_arrow_hot = false; Invalidate(); }
 			bool TreeView::IsVisible(void) { return !Invisible; }
 			bool TreeView::IsTabStop(void) { return true; }
 			void TreeView::SetID(int _ID) { ID = _ID; }
 			int TreeView::GetID(void) { return ID; }
-			void TreeView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void TreeView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle TreeView::GetRectangle(void) { return ControlPosition; }
 			void TreeView::SetPosition(const Box & box)
 			{
-				WindowPosition = box;
-				int page = WindowPosition.Bottom - WindowPosition.Top - Border - Border;
+				ControlBoundaries = box;
+				int page = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border;
 				int lines_max = ElementHeight * _root.get_height() - 1;
 				_scroll->SetRange(0, lines_max);
 				_scroll->SetPage(page);
 				_scroll->Show(_svisible = (lines_max >= page));
 				ArrangeChildren();
+				Invalidate();
 			}
-			void TreeView::RaiseEvent(int ID, Event event, Window * sender)
+			void TreeView::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
 				if (sender == _scroll) {
+					Invalidate();
 					if (_editor) ArrangeChildren();
 				} else GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void TreeView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = 0; _is_arrow_hot = false; } }
+			void TreeView::FocusChanged(bool got_focus) { Invalidate(); }
+			void TreeView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = 0; _is_arrow_hot = false; Invalidate(); } }
 			void TreeView::LeftButtonDown(Point at)
 			{
 				SetFocus();
@@ -1239,17 +1300,15 @@ namespace Engine
 					select(_hot);
 				}
 			}
-			void TreeView::LeftButtonDoubleClick(Point at) { if (!_is_arrow_hot && _hot) GetParent()->RaiseEvent(ID, Event::DoubleClick, this); }
+			void TreeView::LeftButtonDoubleClick(Point at) { if (!_is_arrow_hot && _hot) GetParent()->RaiseEvent(ID, ControlEvent::DoubleClick, this); }
 			void TreeView::RightButtonDown(Point at) { if (!_is_arrow_hot) { SetFocus(); select(_hot); } }
-			void TreeView::RightButtonUp(Point at) { if (!_is_arrow_hot && _hot) GetParent()->RaiseEvent(ID, Event::ContextClick, this); }
+			void TreeView::RightButtonUp(Point at) { if (!_is_arrow_hot && _hot) GetParent()->RaiseEvent(ID, ControlEvent::ContextClick, this); }
 			void TreeView::MouseMove(Point at)
 			{
-				Box element(Border, Border,
-					WindowPosition.Right - WindowPosition.Left - Border - (_svisible ? ScrollSize : 0),
-					WindowPosition.Bottom - WindowPosition.Top - Border);
+				Box element(Border, Border, ControlBoundaries.Right - ControlBoundaries.Left - Border - (_svisible ? ScrollSize : 0), ControlBoundaries.Bottom - ControlBoundaries.Top - Border);
 				TreeViewItem * oh = _hot;
 				bool ohn = _is_arrow_hot;
-				if (element.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+				if (element.IsInside(at) && IsHovered()) {
 					int y = -_scroll->Position;
 					bool is_arrow = false;
 					auto item = _root.hit_test(at, element, 0, y, is_arrow);
@@ -1257,6 +1316,7 @@ namespace Engine
 					_is_arrow_hot = is_arrow;
 
 				} else _hot = 0;
+				if (oh != _hot) Invalidate();
 				if (oh == 0 && _hot != 0) SetCapture();
 				else if ((oh != 0 || GetCapture() == this) && _hot == 0) ReleaseCapture();
 			}
@@ -1284,14 +1344,14 @@ namespace Engine
 					move_selection(_root.get_topmost());
 				} else if (key_code == KeyCodes::PageUp) {
 					if (_current) {
-						int page = max((WindowPosition.Bottom - WindowPosition.Top - Border - Border) / ElementHeight, 1);
+						int page = max((ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border) / ElementHeight, 1);
 						auto current = _current;
 						for (int i = 0; i < page; i++) current = current->get_previous();
 						move_selection(current);
 					} else move_selection(_root.get_topmost());
 				} else if (key_code == KeyCodes::PageDown) {
 					if (_current) {
-						int page = max((WindowPosition.Bottom - WindowPosition.Top - Border - Border) / ElementHeight, 1);
+						int page = max((ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border) / ElementHeight, 1);
 						auto current = _current;
 						for (int i = 0; i < page; i++) current = current->get_next();
 						move_selection(current);
@@ -1299,15 +1359,14 @@ namespace Engine
 				}
 				return true;
 			}
-			Window * TreeView::HitTest(Point at)
+			Control * TreeView::HitTest(Point at)
 			{
 				if (!IsEnabled()) return this;
 				if (_scroll && _svisible) {
 					auto box = _scroll->GetPosition();
 					if (box.IsInside(at)) return _scroll->HitTest(Point(at.x - box.Left, at.y - box.Top));
 				}
-				if (_editor && at.x >= Border && at.y >= Border && at.x < WindowPosition.Right - WindowPosition.Left - Border &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border) {
+				if (_editor && at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border) {
 					if (!_editor->IsVisible()) return this;
 					auto box = _editor->GetPosition();
 					if (box.IsInside(at)) return _editor->HitTest(Point(at.x - box.Left, at.y - box.Top));
@@ -1319,35 +1378,41 @@ namespace Engine
 			void TreeView::ClearItems(void)
 			{
 				_root.Children.Clear();
-				if (_editor) { _editor->Destroy(); _editor = 0; }
+				if (_editor) { _editor->RemoveFromParent(); _editor = 0; }
 				_current = 0; _hot = 0; _is_arrow_hot = false;
 				reset_scroll_ranges();
+				Invalidate();
 			}
 			TreeView::TreeViewItem * TreeView::GetSelectedItem(void) { return _current; }
 			void TreeView::SetSelectedItem(TreeViewItem * item, bool scroll_to_view)
 			{
 				if (!item || item->View == this) {
 					if (item && !item->Parent) item = 0;
-					if (_editor && _current != item) { _editor->Destroy(); _editor = 0; }
+					if (_editor && _current != item) { _editor->RemoveFromParent(); _editor = 0; }
 					_current = item;
 				}
 				if (scroll_to_view && _current) scroll_to_current();
+				Invalidate();
 			}
-			Window * TreeView::CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position)
+			Control * TreeView::CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position, IControlFactory * Factory)
 			{
 				CloseEmbeddedEditor();
 				if (!_current || !_current->IsAccessible()) return 0;
-				auto group = GetStation()->CreateWindow<ControlGroup>(this);
+				SafePointer<ControlGroup> group = new ControlGroup;
+				AddChild(group);
 				try {
 					group->ControlPosition = Position;
-					Constructor::ConstructChildren(group, Template);
-				} catch (...) { group->Destroy(); throw; }
+					CreateChildrenControls(group, Template, Factory);
+				} catch (...) { group->RemoveFromParent(); throw; }
 				_editor = group;
 				ArrangeChildren();
+				Invalidate();
 				return group;
 			}
-			Window * TreeView::GetEmbeddedEditor(void) { return _editor; }
-			void TreeView::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; editor->Destroy(); } }
+			Control * TreeView::GetEmbeddedEditor(void) { return _editor; }
+			void TreeView::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; editor->RemoveFromParent(); Invalidate(); } }
+			int TreeView::GetScrollerPosition(void) { return _scroll->Position; }
+			void TreeView::SetScrollerPosition(int position) { _scroll->SetScrollerPosition(position); }
 
 			ListView::Element::Element(void) : ViewNormal(0x10), ViewDisabled(0x10) {}
 			ListView::Element::Element(ListView * view) : ViewNormal(view->_columns.Length()), ViewDisabled(view->_columns.Length()) {}
@@ -1356,8 +1421,8 @@ namespace Engine
 
 			void ListView::reset_scroll_ranges(void)
 			{
-				int vpage = WindowPosition.Bottom - WindowPosition.Top - Border - Border - HeaderHeight;
-				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border;
+				int vpage = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border - HeaderHeight;
+				int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border;
 				int vspace = ElementHeight * _elements.Length();
 				int hspace = (_col_reorder.Length()) ? (_col_reorder.LastElement()->_position_limit + _col_reorder.LastElement()->_width) : 0;
 				bool ovv = _vsvisible;
@@ -1400,13 +1465,15 @@ namespace Engine
 									for (int i = 0; i < _elements.Length(); i++) if (_elements[i].Selected) { _current = i; break; }
 									if (_editor) CloseEmbeddedEditor();
 								}
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							} else {
 								_elements[index].Selected = true;
 								_current = index;
 								if (_editor) CloseEmbeddedEditor();
 								scroll_to_current();
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							}
 						}
 					} else if (Keyboard::IsKeyPressed(KeyCodes::Shift)) {
@@ -1415,14 +1482,16 @@ namespace Engine
 								_current = index;
 								_elements[_current].Selected = true;
 								scroll_to_current();
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							} else {
 								if (_current != index) {
 									for (int i = min(_current, index); i <= max(_current, index); i++) _elements[i].Selected = true;
 									_current = index;
 									if (_editor) CloseEmbeddedEditor();
 									scroll_to_current();
-									GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+									Invalidate();
+									GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 								}
 							}
 						}
@@ -1433,14 +1502,16 @@ namespace Engine
 									_current = index;
 									if (_editor) CloseEmbeddedEditor();
 									scroll_to_current();
-									GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+									Invalidate();
+									GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 								}
 							} else {
 								_current = index;
 								for (int i = 0; i < _elements.Length(); i++) _elements[i].Selected = i == _current;
 								if (_editor) CloseEmbeddedEditor();
 								scroll_to_current();
-								GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+								Invalidate();
+								GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 							}
 						}
 					}
@@ -1450,7 +1521,8 @@ namespace Engine
 							_elements[_current].Selected = false;
 							_current = -1;
 							if (_editor) CloseEmbeddedEditor();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else {
 						if (_current != index && index != -1) {
@@ -1459,7 +1531,8 @@ namespace Engine
 							_elements[_current].Selected = true;
 							if (_editor) CloseEmbeddedEditor();
 							scroll_to_current();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					}
 				}
@@ -1475,13 +1548,15 @@ namespace Engine
 							_current = index;
 							if (_editor) CloseEmbeddedEditor();
 							scroll_to_current();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else {
 							_current = index;
 							for (int i = 0; i < _elements.Length(); i++) _elements[i].Selected = i == _current;
 							if (_editor) CloseEmbeddedEditor();
 							scroll_to_current();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else {
 						if (_current != -1) _elements[_current].Selected = false;
@@ -1489,18 +1564,19 @@ namespace Engine
 						_elements[_current].Selected = true;
 						if (_editor) CloseEmbeddedEditor();
 						scroll_to_current();
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						Invalidate();
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					}
 				}
 			}
-			ListView::ListView(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _columns(0x10), _col_reorder(0x10), _elements(0x10)
+			ListView::ListView(void) : _columns(0x10), _col_reorder(0x10), _elements(0x10)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
 				EnumerateProperties(Initializer);
 				ResetCache();
 			}
-			ListView::ListView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _columns(0x10), _col_reorder(0x10), _elements(0x10)
+			ListView::ListView(Template::ControlTemplate * Template) : _columns(0x10), _col_reorder(0x10), _elements(0x10)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ListView") throw InvalidArgumentException();
 				static_cast<Template::Controls::ListView &>(*this) = static_cast<Template::Controls::ListView &>(*Template->Properties);
@@ -1517,9 +1593,8 @@ namespace Engine
 				ResetCache();
 			}
 			ListView::~ListView(void) {}
-			void ListView::Render(const Box & at)
+			void ListView::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
 				Shape ** back = 0;
 				Template::Shape * temp = 0;
 				Shape ** header = 0;
@@ -1626,13 +1701,24 @@ namespace Engine
 					}
 				}
 				device->PopClip();
-				Box viewport = Box(at.Left + Border, at.Top + Border + HeaderHeight,
-					at.Right - Border - (_vsvisible ? VerticalScrollSize : 0),
-					at.Bottom - Border - (_hsvisible ? HorizontalScrollSize : 0));
+				Box viewport = Box(at.Left + Border, at.Top + Border + HeaderHeight, at.Right - Border - (_vsvisible ? VerticalScrollSize : 0), at.Bottom - Border - (_hsvisible ? HorizontalScrollSize : 0));
 				device->PushClip(viewport);
+				int from_unclamped = _vscroll->Position / ElementHeight;
+				int to_unclamped = (_vscroll->Position + _vscroll->Page) / ElementHeight;
+				if (ViewElementAlternateBackground) {
+					if (!_view_element_alternate) {
+						ZeroArgumentProvider provider;
+						_view_element_alternate = ViewElementAlternateBackground->Initialize(&provider);
+					}
+					for (int i = from_unclamped; i <= to_unclamped; i++) if (i & 1) {
+						int y = -_vscroll->Position + i * ElementHeight;
+						Box item(viewport.Left, viewport.Top + y, viewport.Right, viewport.Top + y + ElementHeight);
+						_view_element_alternate->Render(device, item);
+					}
+				}
 				if (_elements.Length()) {
-					int from = max(min(_vscroll->Position / ElementHeight, _elements.Length() - 1), 0);
-					int to = max(min((_vscroll->Position + _vscroll->Page) / ElementHeight, _elements.Length() - 1), 0);
+					int from = max(min(from_unclamped, _elements.Length() - 1), 0);
+					int to = max(min(to_unclamped, _elements.Length() - 1), 0);
 					if (Disabled) {
 						int y = -_vscroll->Position + from * ElementHeight;
 						int sx = -_hscroll->Position;
@@ -1675,24 +1761,18 @@ namespace Engine
 				if (_editor && _editor->IsVisible()) {
 					Box pos = _editor->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_editor->Render(rect);
-					device->PopClip();
+					_editor->Render(device, rect);
 				}
 				device->PopClip();
 				if (_vscroll && _vsvisible) {
 					Box pos = _vscroll->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_vscroll->Render(rect);
-					device->PopClip();
+					_vscroll->Render(device, rect);
 				}
 				if (_hscroll && _hsvisible) {
 					Box pos = _hscroll->GetPosition();
 					Box rect = Box(pos.Left + at.Left, pos.Top + at.Top, pos.Right + at.Left, pos.Bottom + at.Top);
-					device->PushClip(rect);
-					_hscroll->Render(rect);
-					device->PopClip();
+					_hscroll->Render(device, rect);
 				}
 			}
 			void ListView::ResetCache(void)
@@ -1700,19 +1780,21 @@ namespace Engine
 				int vpos = (_vscroll) ? _vscroll->Position : 0;
 				int hpos = (_hscroll) ? _hscroll->Position : 0;
 				if (_editor) _editor->ResetCache();
-				if (_vscroll) _vscroll->Destroy();
-				if (_hscroll) _hscroll->Destroy();
+				if (_vscroll) _vscroll->RemoveFromParent();
+				if (_hscroll) _hscroll->RemoveFromParent();
 				_vscroll = 0;
 				_hscroll = 0;
-				int vpage = WindowPosition.Bottom - WindowPosition.Top - Border - Border - HeaderHeight;
-				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border;
+				int vpage = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border - HeaderHeight;
+				int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border;
 				int vspace = ElementHeight * _elements.Length();
 				int hspace = (_col_reorder.Length()) ? (_col_reorder.LastElement()->_position_limit + _col_reorder.LastElement()->_width) : 0;
 				_hsvisible = (hspace > hpage || (hspace > hpage - VerticalScrollSize && vspace > vpage));
 				_vsvisible = (vspace > vpage || (vspace > vpage - HorizontalScrollSize && hspace > hpage));
 				if (_vsvisible) hpage -= VerticalScrollSize;
 				if (_hsvisible) vpage -= HorizontalScrollSize;
-				_vscroll = GetStation()->CreateWindow<VerticalScrollBar>(this, this);
+				SafePointer<VerticalScrollBar> vert = new VerticalScrollBar(this);
+				_vscroll = vert;
+				AddChild(vert);
 				_vscroll->SetRectangle(Rectangle(Coordinate::Right() - VerticalScrollSize - Border, Border,
 					Coordinate::Right() - Border, Coordinate::Bottom() - Border - (_hsvisible ? HorizontalScrollSize : 0)));
 				_vscroll->Disabled = Disabled;
@@ -1721,7 +1803,9 @@ namespace Engine
 				_vscroll->SetRangeSilent(0, vspace - 1);
 				_vscroll->SetScrollerPositionSilent(vpos);
 				_vscroll->Invisible = !_vsvisible;
-				_hscroll = GetStation()->CreateWindow<HorizontalScrollBar>(this, this);
+				SafePointer<HorizontalScrollBar> horz = new HorizontalScrollBar(this);
+				_hscroll = horz;
+				AddChild(horz);
 				_hscroll->SetRectangle(Rectangle(Border, Coordinate::Bottom() - HorizontalScrollSize - Border,
 					Coordinate::Right() - Border - (_vsvisible ? VerticalScrollSize : 0), Coordinate::Bottom() - Border));
 				_hscroll->Disabled = Disabled;
@@ -1747,12 +1831,13 @@ namespace Engine
 				_view_focused.SetReference(0);
 				_view_element_hot.SetReference(0);
 				_view_element_selected.SetReference(0);
+				_view_element_alternate.SetReference(0);
 				_view_header_normal.SetReference(0);
 				_view_header_disabled.SetReference(0);
 			}
 			void ListView::ArrangeChildren(void)
 			{
-				Box inner = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box inner = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				if (_vscroll) {
 					auto rect = _vscroll->GetRectangle();
 					if (rect.IsValid()) _vscroll->SetPosition(Box(rect, inner));
@@ -1769,23 +1854,23 @@ namespace Engine
 					_editor->SetPosition(Box(_editor->GetRectangle(), item));
 				}
 			}
-			void ListView::Enable(bool enable) { Disabled = !enable; _hot = -1; _state = 0; if (_vscroll) _vscroll->Enable(enable); if (_hscroll) _hscroll->Enable(enable); }
+			void ListView::Enable(bool enable) { Disabled = !enable; _hot = -1; _state = 0; if (_vscroll) _vscroll->Enable(enable); if (_hscroll) _hscroll->Enable(enable); Invalidate(); }
 			bool ListView::IsEnabled(void) { return !Disabled; }
-			void ListView::Show(bool visible) { Invisible = !visible; _hot = -1; _state = 0; }
+			void ListView::Show(bool visible) { Invisible = !visible; _hot = -1; _state = 0; Invalidate(); }
 			bool ListView::IsVisible(void) { return !Invisible; }
 			bool ListView::IsTabStop(void) { return true; }
 			void ListView::SetID(int _ID) { ID = _ID; }
 			int ListView::GetID(void) { return ID; }
-			void ListView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void ListView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle ListView::GetRectangle(void) { return ControlPosition; }
 			void ListView::SetPosition(const Box & box)
 			{
-				WindowPosition = box;
+				ControlBoundaries = box;
 				int shift = 0;
 				for (int i = 0; i < _columns.Length(); i++) {
 					if (!_col_reorder[i]->_width && (_col_reorder[i]->_rel_width.Absolute || _col_reorder[i]->_rel_width.Anchor || _col_reorder[i]->_rel_width.Zoom)) {
 						_col_reorder[i]->_position = _col_reorder[i]->_position_limit = shift;
-						_col_reorder[i]->_width = _col_reorder[i]->_rel_width.Absolute + int(Zoom * _col_reorder[i]->_rel_width.Zoom) +
+						_col_reorder[i]->_width = _col_reorder[i]->_rel_width.Absolute + int(CurrentScaleFactor * _col_reorder[i]->_rel_width.Zoom) +
 							int(_col_reorder[i]->_rel_width.Anchor * double(box.Right - box.Left - Border - Border));
 						_col_reorder[i]->_rel_width = Coordinate(0, 0.0, 0.0);
 						shift += _col_reorder[i]->_width;
@@ -1793,8 +1878,8 @@ namespace Engine
 						shift = _col_reorder[i]->_position_limit + _col_reorder[i]->_width;
 					}
 				}
-				int vpage = WindowPosition.Bottom - WindowPosition.Top - Border - Border - HeaderHeight;
-				int hpage = WindowPosition.Right - WindowPosition.Left - Border - Border;
+				int vpage = ControlBoundaries.Bottom - ControlBoundaries.Top - Border - Border - HeaderHeight;
+				int hpage = ControlBoundaries.Right - ControlBoundaries.Left - Border - Border;
 				int vspace = ElementHeight * _elements.Length();
 				int hspace = (_col_reorder.Length()) ? (_col_reorder.LastElement()->_position_limit + _col_reorder.LastElement()->_width) : 0;
 				_hsvisible = (hspace > hpage || (hspace > hpage - VerticalScrollSize && vspace > vpage));
@@ -1811,14 +1896,17 @@ namespace Engine
 					Coordinate::Right() - Border, Coordinate::Bottom() - Border - (_hsvisible ? HorizontalScrollSize : 0)));
 				_hscroll->SetRectangle(Rectangle(Border, Coordinate::Bottom() - HorizontalScrollSize - Border,
 					Coordinate::Right() - Border - (_vsvisible ? VerticalScrollSize : 0), Coordinate::Bottom() - Border));
+				Invalidate();
 			}
-			void ListView::RaiseEvent(int ID, Event event, Window * sender)
+			void ListView::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
 				if (sender == _vscroll || sender == _hscroll) {
+					Invalidate();
 					if (_editor) ArrangeChildren();
 				} else GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void ListView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; _state = 0; _cell = 0; } }
+			void ListView::FocusChanged(bool got_focus) { Invalidate(); }
+			void ListView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; _state = 0; _cell = 0; Invalidate(); } }
 			void ListView::LeftButtonDown(Point at)
 			{
 				SetFocus();
@@ -1833,8 +1921,9 @@ namespace Engine
 					} else {
 						_state = 1;
 						_mouse = _mouse_start = at.x;
-						GetStation()->SetTimer(this, 20);
+						GetControlSystem()->SetTimer(this, 20);
 					}
+					Invalidate();
 				}
 			}
 			void ListView::LeftButtonUp(Point at)
@@ -1843,7 +1932,7 @@ namespace Engine
 					if (_state == 2) {
 						reset_scroll_ranges();
 					} else if (_state == 1) {
-						GetStation()->SetTimer(this, 0);
+						GetControlSystem()->SetTimer(this, 0);
 						int x = -_hscroll->Position + Border;
 						int p = (at.x < Border) ? 0 : (_columns.Length() - 1);
 						for (int j = 0; j < _columns.Length(); j++) {
@@ -1868,9 +1957,10 @@ namespace Engine
 					_hot = -1; _cell = 0;
 					_state = 0;
 					ReleaseCapture();
+					Invalidate();
 				}
 			}
-			void ListView::LeftButtonDoubleClick(Point at) { if (_hot != -1 && _cell) { _last_cell_id = _columns[_cell - 1].ID; GetParent()->RaiseEvent(ID, Event::DoubleClick, this); } }
+			void ListView::LeftButtonDoubleClick(Point at) { if (_hot != -1 && _cell) { _last_cell_id = _columns[_cell - 1].ID; GetParent()->RaiseEvent(ID, ControlEvent::DoubleClick, this); } }
 			void ListView::RightButtonDown(Point at)
 			{
 				SetFocus();
@@ -1879,16 +1969,15 @@ namespace Engine
 					select(_hot);
 				}
 			}
-			void ListView::RightButtonUp(Point at) { if (_hot != -1 && _cell) { _last_cell_id = _columns[_cell - 1].ID; GetParent()->RaiseEvent(ID, Event::ContextClick, this); } }
+			void ListView::RightButtonUp(Point at) { if (_hot != -1 && _cell) { _last_cell_id = _columns[_cell - 1].ID; GetParent()->RaiseEvent(ID, ControlEvent::ContextClick, this); } }
 			void ListView::MouseMove(Point at)
 			{
-				Box element(Border, Border, WindowPosition.Right - WindowPosition.Left - (_vsvisible ? VerticalScrollSize : 0),
-					WindowPosition.Bottom - WindowPosition.Top - (_hsvisible ? HorizontalScrollSize : 0));
+				Box element(Border, Border, ControlBoundaries.Right - ControlBoundaries.Left - (_vsvisible ? VerticalScrollSize : 0), ControlBoundaries.Bottom - ControlBoundaries.Top - (_hsvisible ? HorizontalScrollSize : 0));
 				bool stretch = false;
 				if (!_state) {
 					int oh = _hot;
 					int oc = _cell;
-					if (element.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+					if (element.IsInside(at) && IsHovered()) {
 						if (at.y < Border + HeaderHeight) {
 							_hot = -1;
 							int x = -_hscroll->Position + Border;
@@ -1930,6 +2019,7 @@ namespace Engine
 					}
 					_stretch = stretch;
 					if (oh != _hot || oc != _cell) {
+						Invalidate();
 						if (oh == -1 && oc == 0 && (_hot != -1 || _cell)) SetCapture();
 						else if ((oh != -1 || oc || GetCapture() == this) && _hot == -1 && _cell == 0) ReleaseCapture();
 					}
@@ -1949,6 +2039,7 @@ namespace Engine
 							_col_reorder[i]->_position_limit += dw;
 						}
 						if (_editor) ArrangeChildren();
+						Invalidate();
 					} else if (_state == 1) {
 						int om = _mouse;
 						_mouse = at.x;
@@ -1980,7 +2071,10 @@ namespace Engine
 								}
 							}
 						}
-						_columns[_cell - 1]._position += _mouse - om;
+						if (_mouse != om) {
+							_columns[_cell - 1]._position += _mouse - om;
+							Invalidate();
+						}
 					}
 				}
 			}
@@ -2019,16 +2113,18 @@ namespace Engine
 				for (int i = 0; i < _columns.Length(); i++) {
 					if (i + 1 == _cell) continue;
 					if (_columns[i]._position != _columns[i]._position_limit) {
+						int pos = _columns[i]._position;
 						int d = sgn(_columns[i]._position_limit - _columns[i]._position);
-						_columns[i]._position += int(double(d) * Zoom * 20.0);
+						_columns[i]._position += int(double(d) * CurrentScaleFactor * 20.0);
 						if ((_columns[i]._position_limit - _columns[i]._position) * d < 0) _columns[i]._position = _columns[i]._position_limit;
+						if (pos != _columns[i]._position) Invalidate();
 					}
 				}
 			}
-			Window * ListView::HitTest(Point at)
+			Control * ListView::HitTest(Point at)
 			{
 				if (!IsEnabled()) return this;
-				Box element(Border, Border, WindowPosition.Right - WindowPosition.Left - Border, WindowPosition.Bottom - WindowPosition.Top - Border);
+				Box element(Border, Border, ControlBoundaries.Right - ControlBoundaries.Left - Border, ControlBoundaries.Bottom - ControlBoundaries.Top - Border);
 				if (_vscroll && _vsvisible) {
 					element.Right -= VerticalScrollSize;
 					auto box = _vscroll->GetPosition();
@@ -2048,11 +2144,10 @@ namespace Engine
 			}
 			void ListView::SetCursor(Point at)
 			{
-				Box element(Border, Border, WindowPosition.Right - WindowPosition.Left - (_vsvisible ? VerticalScrollSize : 0),
-					WindowPosition.Bottom - WindowPosition.Top - (_hsvisible ? HorizontalScrollSize : 0));
+				Box element(Border, Border, ControlBoundaries.Right - ControlBoundaries.Left - (_vsvisible ? VerticalScrollSize : 0), ControlBoundaries.Bottom - ControlBoundaries.Top - (_hsvisible ? HorizontalScrollSize : 0));
 				bool stretch = false;
 				if (!_state) {
-					if (element.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+					if (element.IsInside(at) && IsHovered()) {
 						if (at.y < Border + HeaderHeight) {
 							int x = -_hscroll->Position + Border;
 							for (int j = 0; j < _columns.Length(); j++) {
@@ -2065,15 +2160,15 @@ namespace Engine
 						}
 					}
 					if (stretch) {
-						GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight));
+						SelectCursor(Windows::SystemCursorClass::SizeLeftRight);
 					} else {
-						GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::Arrow));
+						SelectCursor(Windows::SystemCursorClass::Arrow);
 					}
 				} else {
 					if (_state == 2) {
-						GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight));
+						SelectCursor(Windows::SystemCursorClass::SizeLeftRight);
 					} else {
-						GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::Arrow));
+						SelectCursor(Windows::SystemCursorClass::Arrow);
 					}
 				}
 			}
@@ -2096,6 +2191,7 @@ namespace Engine
 					_elements[i].ViewDisabled.Append(0);
 				}
 				reset_scroll_ranges();
+				Invalidate();
 			}
 			void ListView::OrderColumn(int ID, int index)
 			{
@@ -2117,6 +2213,7 @@ namespace Engine
 					shift += _col_reorder[j]->_width;
 				}
 				if (_editor) ArrangeChildren();
+				Invalidate();
 			}
 			int ListView::GetColumnOrder(int ID)
 			{
@@ -2131,6 +2228,7 @@ namespace Engine
 					_columns[i]._view_normal.SetReference(0);
 					_columns[i]._view_hot.SetReference(0);
 					_columns[i]._view_pressed.SetReference(0);
+					Invalidate();
 					break;
 				}
 			}
@@ -2150,6 +2248,7 @@ namespace Engine
 					}
 					reset_scroll_ranges();
 					if (_editor) ArrangeChildren();
+					Invalidate();
 					return;
 				}
 			}
@@ -2175,6 +2274,7 @@ namespace Engine
 				for (int i = 0; i < _columns.Length(); i++) if (_columns[i].ID == ID) {
 					_columns[i].ViewElementNormal.SetRetain(shape);
 					for (int j = 0; j < _elements.Length(); j++) _elements[j].ViewNormal.SetElement(0, i);
+					Invalidate();
 					return;
 				}
 			}
@@ -2188,6 +2288,7 @@ namespace Engine
 				for (int i = 0; i < _columns.Length(); i++) if (_columns[i].ID == ID) {
 					_columns[i].ViewElementDisabled.SetRetain(shape);
 					for (int j = 0; j < _elements.Length(); j++) _elements[j].ViewDisabled.SetElement(0, i);
+					Invalidate();
 					return;
 				}
 			}
@@ -2235,6 +2336,7 @@ namespace Engine
 					}
 					if (_editor) ArrangeChildren();
 					reset_scroll_ranges();
+					Invalidate();
 					return;
 				}
 			}
@@ -2249,6 +2351,7 @@ namespace Engine
 				_stretch = false;
 				if (GetCapture() == this) ReleaseCapture();
 				reset_scroll_ranges();
+				Invalidate();
 			}
 			void ListView::AddItem(IArgumentProvider * provider, void * user) { InsertItem(provider, _elements.Length(), user); }
 			void ListView::AddItem(Reflection::Reflected & object, void * user) { InsertItem(object, _elements.Length(), user); }
@@ -2271,6 +2374,7 @@ namespace Engine
 					_current++;
 					if (_editor) ArrangeChildren();
 				}
+				Invalidate();
 			}
 			void ListView::InsertItem(Reflection::Reflected & object, int at, void * user)
 			{
@@ -2288,6 +2392,7 @@ namespace Engine
 					_elements[index].ViewNormal.Append(normal);
 					_elements[index].ViewDisabled.Append(disabled);
 				}
+				Invalidate();
 			}
 			void ListView::ResetItem(int index, Reflection::Reflected & object)
 			{
@@ -2299,6 +2404,7 @@ namespace Engine
 				if (_current == i) { _current = j; if (_editor) ArrangeChildren(); }
 				else if (_current == j) { _current = i; if (_editor) ArrangeChildren(); }
 				_elements.SwapAt(i, j);
+				Invalidate();
 			}
 			void ListView::RemoveItem(int index)
 			{
@@ -2314,6 +2420,7 @@ namespace Engine
 				_hot = -1;
 				_state = _cell = _mouse = _mouse_start = 0;
 				_stretch = false;
+				Invalidate();
 			}
 			void ListView::ClearItems(void)
 			{
@@ -2323,6 +2430,7 @@ namespace Engine
 				_state = _cell = _mouse = _mouse_start = 0;
 				_stretch = false;
 				reset_scroll_ranges();
+				Invalidate();
 			}
 			int ListView::ItemCount(void) { return _elements.Length(); }
 			void * ListView::GetItemUserData(int index) { return _elements[index].User; }
@@ -2340,6 +2448,7 @@ namespace Engine
 					if (_current != -1) _elements[_current].Selected = true;
 				}
 				if (scroll_to_view && _current >= 0) scroll_to_current();
+				Invalidate();
 			}
 			bool ListView::IsItemSelected(int index) { return _elements[index].Selected; }
 			void ListView::SelectItem(int index, bool select)
@@ -2355,27 +2464,32 @@ namespace Engine
 					if (select) SetSelectedIndex(index);
 					else if (index == _current) SetSelectedIndex(-1);
 				}
+				Invalidate();
 			}
 			int ListView::GetLastCellID(void) { return _last_cell_id; }
-			Window * ListView::CreateEmbeddedEditor(Template::ControlTemplate * Template, int CellID, const Rectangle & Position)
+			Control * ListView::CreateEmbeddedEditor(Template::ControlTemplate * Template, int CellID, const Rectangle & Position, IControlFactory * Factory)
 			{
 				CloseEmbeddedEditor();
 				if (_current == -1) return 0;
 				int cell = -1;
 				for (int i = 0; i < _columns.Length(); i++) if (_columns[i].ID == CellID) { cell = i; break; }
 				if (cell == -1) return 0;
-				auto group = GetStation()->CreateWindow<ControlGroup>(this);
+				SafePointer<ControlGroup> group = new ControlGroup;
+				AddChild(group);
 				try {
 					group->ControlPosition = Position;
-					Constructor::ConstructChildren(group, Template);
-				} catch (...) { group->Destroy(); throw; }
+					CreateChildrenControls(group, Template, Factory);
+				} catch (...) { group->RemoveFromParent(); throw; }
 				_editor = group;
 				_editor_cell = cell;
 				ArrangeChildren();
+				Invalidate();
 				return group;
 			}
-			Window * ListView::GetEmbeddedEditor(void) { return _editor; }
-			void ListView::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; _editor_cell = -1; editor->Destroy(); } }
+			Control * ListView::GetEmbeddedEditor(void) { return _editor; }
+			void ListView::CloseEmbeddedEditor(void) { if (_editor) { auto editor = _editor; _editor = 0; _editor_cell = -1; editor->RemoveFromParent(); Invalidate(); } }
+			int ListView::GetScrollerPosition(void) { return _vscroll->Position; }
+			void ListView::SetScrollerPosition(int position) { _vscroll->SetScrollerPosition(position); }
 		}
 	}
 }

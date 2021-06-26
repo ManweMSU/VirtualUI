@@ -127,11 +127,11 @@
     </Expand>
   </Type>
 
-  <Type Name="Engine::UI::Point">
+  <Type Name="Engine::Point">
     <DisplayString>{{ {x}, {y} }}</DisplayString>
     <Expand> </Expand>
   </Type>
-  <Type Name="Engine::UI::Box">
+  <Type Name="Engine::Box">
     <DisplayString>{{ Лево = {Left}, Верх = {Top}, Право = {Right}, Низ = {Bottom} }}</DisplayString>
     <Expand>
       <Item Name="[Лево]">Left</Item>
@@ -140,7 +140,7 @@
       <Item Name="[Низ]">Bottom</Item>
     </Expand>
   </Type>
-  <Type Name="Engine::UI::Color">
+  <Type Name="Engine::Color">
     <DisplayString>{Value}</DisplayString>
     <Expand>
       <Item Name="[Красный]">r</Item>

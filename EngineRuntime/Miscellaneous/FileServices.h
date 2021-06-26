@@ -38,6 +38,10 @@ namespace Engine
 			OpenFailure = 0x0016,
 		}; }
 
+		enum class FileType { Unknown, Regular, Directory, SymbolicLink };
+
+		extern const handle InvalidHandle;
+
 #ifdef ENGINE_WINDOWS
 		constexpr widechar PathDirectorySeparator = L'\\';
 		constexpr const widechar * LineFeedSequence = L"\r\n";

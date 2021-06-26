@@ -4,6 +4,8 @@ namespace Engine
 {
 	namespace IO
 	{
+		const handle InvalidHandle = handle(sintptr(-1));
+
 		FileAccessException::FileAccessException(uint ec) : code(ec) {}
 		FileAccessException::FileAccessException(void) : code(Error::Unknown) {}
 		string FileAccessException::ToString(void) const { return L"FileAccessException (" + string(code, HexadecimalBase, 8) + L")"; }

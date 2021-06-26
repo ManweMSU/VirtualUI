@@ -2,7 +2,6 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
-#include "Menus.h"
 #include "ScrollableControls.h"
 
 #include "../Miscellaneous/UndoBuffer.h"
@@ -13,7 +12,7 @@ namespace Engine
 	{
 		namespace Controls
 		{
-			class RichEdit : public ParentWindow, public Template::Controls::RichEdit
+			class RichEdit : public ParentControl, public Template::Controls::RichEdit
 			{
 			public:
 				enum TextStyle { StyleNone = 0x0, StyleBold = 0x1, StyleItalic = 0x2, StyleUnderline = 0x4, StyleStrikeout = 0x8 };
@@ -22,18 +21,18 @@ namespace Engine
 				class IRichEditHook
 				{
 				public:
-					virtual void InitializeContextMenu(Menus::Menu * menu, RichEdit * sender);
+					virtual void InitializeContextMenu(Windows::IMenu * menu, RichEdit * sender);
 					virtual void LinkPressed(const string & resource, RichEdit * sender);
 					virtual void CaretPositionChanged(RichEdit * sender);
-					virtual ITexture * GetImageByName(const string & resource, RichEdit * sender);
+					virtual Graphics::IBitmap * GetImageByName(const string & resource, RichEdit * sender);
 				};
 				class ContentBox : public Object
 				{
 				public:
-					virtual void Render(IRenderingDevice * device, const Box & at) = 0;
-					virtual void RenderBackground(IRenderingDevice * device, const Box & at) = 0;
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) = 0;
+					virtual void RenderBackground(Graphics::I2DDeviceContext * device, const Box & at) = 0;
 					virtual void ResetCache(void) = 0;
-					virtual void AlignContents(IRenderingDevice * device, int box_width) = 0;
+					virtual void AlignContents(Graphics::I2DDeviceContext * device, int box_width) = 0;
 					virtual int GetContentsOriginX(void) = 0;
 					virtual int GetContentsOriginY(void) = 0;
 					virtual int GetContentsWidth(void) = 0;
@@ -51,7 +50,7 @@ namespace Engine
 					virtual void RemoveForward(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) = 0;
 					virtual void ChildContentsChanged(ContentBox * child) = 0;
 					virtual int GetMaximalPosition(void) = 0;
-					virtual SystemCursor RegularCursorForPosition(int x, int y) = 0;
+					virtual Windows::SystemCursorClass RegularCursorForPosition(int x, int y) = 0;
 					virtual ContentBox * ActiveBoxForPosition(int x, int y) = 0;
 					virtual void MouseMove(int x, int y) = 0;
 					virtual void MouseLeft(void) = 0;
@@ -80,7 +79,7 @@ namespace Engine
 				};
 				struct FontEntry
 				{
-					SafePointer<IFont> font;
+					SafePointer<Graphics::IFont> font;
 					int face, height, attr;
 				};
 				struct UndoBufferCopy
@@ -107,9 +106,9 @@ namespace Engine
 				friend class ContentBox;
 
 				VerticalScrollBar * _vscroll = 0;
-				SafePointer<Menus::Menu> _menu;
-				SafePointer<IBarRenderingInfo> _background;
-				SafePointer<IBarRenderingInfo> _selection;
+				SafePointer<Windows::IMenu> _menu;
+				SafePointer<Graphics::IColorBrush> _background;
+				SafePointer<Graphics::IColorBrush> _selection;
 				SafePointer<Object> _inversion;
 				SafePointer<ContentBox> _root;
 				ContentBox * _caret_box = 0;
@@ -129,16 +128,16 @@ namespace Engine
 				Array<FontEntry> _fonts;
 				IRichEditHook * _hook = 0;
 
-				void _align_contents(const Box & box);
+				void _align_contents(Graphics::I2DDeviceContext * device, const Box & box);
 				void _scroll_to_caret(void);
 				bool _selection_empty(void);
 				void _make_font_index(Array<int> & index, ContentBox * root, int from, int to);
 			public:
-				RichEdit(Window * Parent, WindowStation * Station);
-				RichEdit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				RichEdit(void);
+				RichEdit(Template::ControlTemplate * Template);
 				~RichEdit(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -152,7 +151,7 @@ namespace Engine
 				virtual void SetPosition(const Box & box) override;
 				virtual void SetText(const string & text) override;
 				virtual string GetText(void) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
 				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
@@ -165,7 +164,9 @@ namespace Engine
 				virtual bool KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void SetCursor(Point at) override;
-				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
+				virtual bool IsWindowEventEnabled(Windows::WindowHandler handler) override;
+				virtual void HandleWindowEvent(Windows::WindowHandler handler) override;
+				virtual ControlRefreshPeriod GetFocusedRefreshPeriod(void) override;
 				virtual string GetControlClass(void) override;
 
 				void Undo(void);
@@ -181,8 +182,8 @@ namespace Engine
 				string SerializeSelection(void);
 				string SerializeSelectionAttributed(void);
 				void ScrollToCaret(void);
-				void SetContextMenu(Menus::Menu * menu);
-				Menus::Menu * GetContextMenu(void);
+				void SetContextMenu(Windows::IMenu * menu);
+				Windows::IMenu * GetContextMenu(void);
 				void SetHook(IRichEditHook * hook);
 				IRichEditHook * GetHook(void);
 				void ClearFontCollection(void);
@@ -191,7 +192,7 @@ namespace Engine
 				const string & GetFontFaceWithIndex(int index);
 				int RegisterFont(int face, int height, int attributes);
 				void RecreateCachedFont(int index);
-				IFont * GetCachedFont(int index);
+				Graphics::IFont * GetCachedFont(int index);
 				void RealignContents(void);
 
 				bool IsSelectionEmpty(void);

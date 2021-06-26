@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Interfaces/Threading.h"
+#include "Volumes.h"
 
 namespace Engine
 {
@@ -64,7 +65,8 @@ namespace Engine
 		SafePointer<Semaphore> Access;
 		SafePointer<Semaphore> TaskCount;
 		SafePointer<Semaphore> Idle;
-		ObjectArray<IDispatchTask> Tasks;
+		Volumes::Queue< SafePointer<IDispatchTask> > Tasks;
+		int NumTasks;
 		int ActiveThreads;
 
 		static int ThreadProc(ThreadPool * owner);
@@ -90,11 +92,12 @@ namespace Engine
 	};
 	class TaskQueue : public IDispatchQueue
 	{
-		struct ListTask { SafePointer<IDispatchTask> task; ListTask * next; };
 		SafePointer<Semaphore> Access;
 		SafePointer<Semaphore> TaskCount;
-		ListTask * First, * Last;
+		Volumes::Queue< SafePointer<IDispatchTask> > Tasks;
 		int IntTaskCount;
+
+		static int ThreadProc(void * arg);
 	public:
 		TaskQueue(void);
 		virtual ~TaskQueue(void) override;
@@ -110,6 +113,43 @@ namespace Engine
 		void Quit(void);
 		void Break(void);
 
+		bool ProcessAsSeparateThread(Thread ** thread = 0);
+
 		virtual string ToString(void) const override;
+	};
+
+	class Scheduler;
+	class ISchedulerTask : public Object
+	{
+	public:
+		virtual void DoTask(Scheduler * scheduler) noexcept = 0;
+		virtual void Cancelled(Scheduler * scheduler) noexcept = 0;
+	};
+	class Scheduler : public Object
+	{
+		struct task_rec
+		{
+			uint time;
+			uint flags;
+			SafePointer<ISchedulerTask> object;
+		};
+
+		SafePointer<ISchedulerTask> _void_task;
+		SafePointer<Semaphore> _access;
+		SafePointer<Semaphore> _interrupt;
+		Array<task_rec> _tasks;
+
+		static int ThreadProc(void * arg);
+	public:
+		Scheduler(void);
+		virtual ~Scheduler(void) override;
+
+		bool Schedule(ISchedulerTask * task, uint time_on);
+		bool Interrupt(ISchedulerTask * with);
+		void CancelAll(void);
+		void Break(void);
+
+		void Process(void);
+		bool ProcessAsSeparateThread(Thread ** thread = 0);
 	};
 }

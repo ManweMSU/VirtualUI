@@ -2,7 +2,6 @@
 
 #include "../Interfaces/KeyCodes.h"
 #include "../Interfaces/Clipboard.h"
-#include "OverlappedWindows.h"
 
 namespace Engine
 {
@@ -21,8 +20,8 @@ namespace Engine
 					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
 					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
 					virtual void GetArgument(const string & name, string * value) override { *value = L""; }
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -44,8 +43,8 @@ namespace Engine
 						if (name == L"Text") *value = Text;
 						else *value = L"";
 					}
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -63,8 +62,8 @@ namespace Engine
 					virtual void GetArgument(const string & name, double * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, Color * value) override { Inner->GetArgument(name, value); }
 					virtual void GetArgument(const string & name, string * value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, ITexture ** value) override { Inner->GetArgument(name, value); }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { Inner->GetArgument(name, value); }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font") {
 							*value = Owner->Font;
@@ -81,8 +80,8 @@ namespace Engine
 					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
 					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
 					virtual void GetArgument(const string & name, string * value) override { *value = L""; }
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -104,8 +103,8 @@ namespace Engine
 						if (name == L"Text") *value = Text;
 						else *value = L"";
 					}
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && Owner->Font) {
 							*value = Owner->Font;
@@ -122,10 +121,9 @@ namespace Engine
 					if (_elements[i].ViewNormal) _elements[i].ViewNormal->ClearCache();
 					if (_elements[i].ViewDisabled) _elements[i].ViewDisabled->ClearCache();
 				}
-				auto my = GetStation()->GetAbsoluteDesktopBox(GetAbsolutePosition());
-				auto desktop = GetStation()->GetDesktopBox();
-				int uec = (my.Top - desktop.Top - (Border << 1)) / ElementHeight;
-				int dec = (desktop.Bottom - my.Bottom - (Border << 1)) / ElementHeight;
+				auto margins = GetPopupMargins(this);
+				int uec = (margins.Top - (Border << 1)) / ElementHeight;
+				int dec = (margins.Bottom - (Border << 1)) / ElementHeight;
 				bool su = false;
 				if (dec < _elements.Length() && uec >= _elements.Length()) su = true;
 				if (dec < _elements.Length() && uec < _elements.Length()) {
@@ -134,33 +132,36 @@ namespace Engine
 				int y, h, e;
 				if (su) {
 					e = min(uec, _elements.Length());
-					y = my.Top - e * ElementHeight - (Border << 1);
 					h = e * ElementHeight + (Border << 1);
+					y = -h;
 				} else {
 					e = min(dec, _elements.Length());
-					y = my.Bottom;
 					h = e * ElementHeight + (Border << 1);
+					y = ControlBoundaries.Bottom - ControlBoundaries.Top;
 				}
-				auto tlw = Windows::CreatePopupDialog(0, 0, Rectangle(my.Left, y, my.Right, y + h), GetStation());
-				auto client = tlw->GetContentFrame();
-				_list = client->GetStation()->CreateWindow<ComboListBox>(client, this);
-				tlw->ArrangeChildren();
-				tlw->Show(true);
-				tlw->GetStation()->SetExclusiveWindow(_list);
+				auto tlw = CreatePopup(this, Box(0, y, ControlBoundaries.Right - ControlBoundaries.Left, y + h));
+				if (tlw) {
+					SafePointer<ComboListBox> list = new ComboListBox(this);
+					_list = list.Inner();
+					tlw->AddChild(list);
+					tlw->ArrangeChildren();
+					ShowPopup(tlw, true);
+					tlw->GetControlSystem()->SetExclusiveControl(list);
+				} else _state = 0;
 			}
-			ComboBox::ComboBox(Window * Parent, WindowStation * Station) : Window(Parent, Station), _elements(0x10)
+			ComboBox::ComboBox(void) : _elements(0x10)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
 				EnumerateProperties(Initializer);
 			}
-			ComboBox::ComboBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _elements(0x10)
+			ComboBox::ComboBox(Template::ControlTemplate * Template) : _elements(0x10)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ComboBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::ComboBox &>(*this) = static_cast<Template::Controls::ComboBox &>(*Template->Properties);
 			}
-			ComboBox::~ComboBox(void) { if (_list) { _list->_owner = 0; _list->GetStation()->SetExclusiveWindow(0); } }
-			void ComboBox::Render(const Box & at)
+			ComboBox::~ComboBox(void) { if (_list) { _list->_owner = 0; _list->GetControlSystem()->SetExclusiveControl(0); } }
+			void ComboBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				Shape ** back = 0;
 				Template::Shape * temp = 0;
@@ -206,7 +207,6 @@ namespace Engine
 						}
 					}
 				}
-				auto device = GetStation()->GetRenderingDevice();
 				if (*back) (*back)->Render(device, at);
 				else if (temp) {
 					ArgumentService::ComboBoxFrameArgumentProvider provider(this);
@@ -225,25 +225,26 @@ namespace Engine
 				_view_hot_focused.SetReference(0);
 				_view_pressed.SetReference(0);
 			}
-			void ComboBox::Enable(bool enable) { Disabled = !enable; invalidate_viewport(); if (!enable) _state = 0; }
+			void ComboBox::Enable(bool enable) { Disabled = !enable; invalidate_viewport(); if (!enable) _state = 0; Invalidate(); }
 			bool ComboBox::IsEnabled(void) { return !Disabled; }
-			void ComboBox::Show(bool visible) { Invisible = !visible; if (!visible) _state = 0; }
+			void ComboBox::Show(bool visible) { Invisible = !visible; if (!visible) _state = 0; Invalidate(); }
 			bool ComboBox::IsVisible(void) { return !Invisible; }
 			bool ComboBox::IsTabStop(void) { return true; }
 			void ComboBox::SetID(int _ID) { ID = _ID; }
 			int ComboBox::GetID(void) { return ID; }
-			Window * ComboBox::FindChild(int _ID) { if (ID && ID == _ID) return this; else return 0; }
-			void ComboBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Control * ComboBox::FindChild(int _ID) { if (ID && ID == _ID) return this; else return 0; }
+			void ComboBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle ComboBox::GetRectangle(void) { return ControlPosition; }
-			void ComboBox::RaiseEvent(int _ID, Event event, Window * sender) { if (_ID == 1 && event == Event::Deferred) GetParent()->RaiseEvent(ID, Event::ValueChange, this); }
-			void ComboBox::FocusChanged(bool got_focus) { if (!got_focus && _list && _list->GetFocus() != _list) _list->GetStation()->SetExclusiveWindow(0); }
-			void ComboBox::CaptureChanged(bool got_capture) { if (!got_capture && (_state & 0xF) == 1) _state = 0; }
+			void ComboBox::RaiseEvent(int _ID, ControlEvent event, Control * sender) { if (_ID == 1 && event == ControlEvent::Deferred) GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this); }
+			void ComboBox::FocusChanged(bool got_focus) { if (!got_focus && _list && _list->GetFocus() != _list) _list->GetControlSystem()->SetExclusiveControl(0); Invalidate(); }
+			void ComboBox::CaptureChanged(bool got_capture) { if (!got_capture && (_state & 0xF) == 1) { _state = 0; Invalidate(); } }
 			void ComboBox::LeftButtonDown(Point at)
 			{
 				SetFocus();
 				if ((_state == 1 || _state == 0 || _state & 0x10) && !_list) {
 					_state = 2;
 					run_drop_down();
+					Invalidate();
 				}
 			}
 			void ComboBox::MouseMove(Point at)
@@ -251,7 +252,8 @@ namespace Engine
 				if (_state != 1 && _state != 2) {
 					_state = 1;
 					SetCapture();
-				} else if (GetStation()->HitTest(GetStation()->GetCursorPos()) != this) ReleaseCapture();
+					Invalidate();
+				} else if (!IsHovered()) ReleaseCapture();
 			}
 			bool ComboBox::KeyDown(int key_code)
 			{
@@ -261,57 +263,68 @@ namespace Engine
 					if (key_code == KeyCodes::Space) {
 						_state = 2;
 						run_drop_down();
+						Invalidate();
 					} else if (key_code == KeyCodes::Up) {
 						if (_current > 0) {
 							_current--;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else if (_current == -1 && _elements.Length()) {
 							_current = 0;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else if (key_code == KeyCodes::Down) {
 						if (_current == -1 && _elements.Length()) {
 							_current = 0;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else if (_current != -1 && _current < _elements.Length() - 1) {
 							_current++;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else if (key_code == KeyCodes::PageUp) {
 						if (_current > 0) {
 							_current--;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else if (_current == -1 && _elements.Length()) {
 							_current = 0;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else if (key_code == KeyCodes::PageDown) {
 						if (_current == -1 && _elements.Length()) {
 							_current = 0;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else if (_current != -1 && _current < _elements.Length() - 1) {
 							_current++;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else if (key_code == KeyCodes::Home) {
 						if (_elements.Length() && _current) {
 							_current = 0;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					} else if (key_code == KeyCodes::End) {
 						if (_elements.Length() && _current != _elements.Length() - 1) {
 							_current = _elements.Length() - 1;
 							invalidate_viewport();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					}
 				}
@@ -351,12 +364,14 @@ namespace Engine
 				ArgumentService::ComboBoxSimpleArgumentProvider provider(this, text);
 				_elements[index].ViewNormal.SetReference(ViewElementNormal->Initialize(&provider));
 				_elements[index].ViewDisabled.SetReference(ViewElementDisabled->Initialize(&provider));
+				if (index == _current) Invalidate();
 			}
 			void ComboBox::ResetItem(int index, IArgumentProvider * provider)
 			{
 				ArgumentService::ComboBoxWrapperArgumentProvider wrapper(this, provider);
 				_elements[index].ViewNormal.SetReference(ViewElementNormal->Initialize(&wrapper));
 				_elements[index].ViewDisabled.SetReference(ViewElementDisabled->Initialize(&wrapper));
+				if (index == _current) Invalidate();
 			}
 			void ComboBox::ResetItem(int index, Reflection::Reflected & object)
 			{
@@ -372,15 +387,15 @@ namespace Engine
 			void ComboBox::RemoveItem(int index)
 			{
 				_elements.Remove(index);
-				if (_current == index) { _current = -1; invalidate_viewport(); }
+				if (_current == index) { _current = -1; invalidate_viewport(); Invalidate(); }
 				else if (_current > index) _current--;
 			}
-			void ComboBox::ClearItems(void) { _elements.Clear(); _current = -1; invalidate_viewport(); }
+			void ComboBox::ClearItems(void) { _elements.Clear(); _current = -1; invalidate_viewport(); Invalidate(); }
 			int ComboBox::ItemCount(void) { return _elements.Length(); }
 			void * ComboBox::GetItemUserData(int index) { return _elements[index].User; }
 			void ComboBox::SetItemUserData(int index, void * user) { _elements[index].User = user; }
 			int ComboBox::GetSelectedIndex(void) { return _current; }
-			void ComboBox::SetSelectedIndex(int index) { _current = index; invalidate_viewport(); }
+			void ComboBox::SetSelectedIndex(int index) { _current = index; invalidate_viewport(); Invalidate(); }
 
 			void ComboBox::ComboListBox::scroll_to_current(void)
 			{
@@ -401,29 +416,29 @@ namespace Engine
 					_owner->_current = index;
 					_hot = index;
 					scroll_to_current();
-					_owner->PostEvent(1);
+					_owner->SubmitEvent(1);
 					_owner->invalidate_viewport();
-					_owner->RequireRedraw();
-					RequireRedraw();
+					_owner->Invalidate();
+					Invalidate();
 				}
 			}
-			ComboBox::ComboListBox::ComboListBox(Window * Parent, WindowStation * Station, ComboBox * Base) : ParentWindow(Parent, Station), _owner(Base)
+			ComboBox::ComboListBox::ComboListBox(ComboBox * Base) : _owner(Base)
 			{
 				_hot = Base->_current;
 				_position = Rectangle::Entire();
-				_scroll = GetStation()->CreateWindow<VerticalScrollBar>(this, Base);
-				_scroll->ControlPosition = Rectangle(Coordinate::Right() - Base->Border - Base->ScrollSize, Base->Border,
-					Coordinate::Right() - Base->Border, Coordinate::Bottom() - Base->Border);
+				SafePointer<VerticalScrollBar> bar = new VerticalScrollBar(Base);
+				_scroll = bar.Inner();
+				AddChild(bar);
+				_scroll->ControlPosition = Rectangle(Coordinate::Right() - Base->Border - Base->ScrollSize, Base->Border, Coordinate::Right() - Base->Border, Coordinate::Bottom() - Base->Border);
 				_scroll->Line = Base->ElementHeight;
 				_scroll->Invisible = true;
 				int space = Base->_elements.Length() * Base->ElementHeight;
 				_scroll->SetRangeSilent(0, space - 1);
 			}
-			ComboBox::ComboListBox::~ComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); } }
-			void ComboBox::ComboListBox::Render(const Box & at)
+			ComboBox::ComboListBox::~ComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->Invalidate(); _owner->SetFocus(); } }
+			void ComboBox::ComboListBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				if (!_owner) return;
-				auto device = GetStation()->GetRenderingDevice();
 				if (!_view) {
 					if (_owner->ViewDropDownList) {
 						ZeroArgumentProvider provider;
@@ -457,49 +472,48 @@ namespace Engine
 					}
 				}
 				device->PopClip();
-				ParentWindow::Render(at);
+				ParentControl::Render(device, at);
 			}
-			void ComboBox::ComboListBox::ResetCache(void) { GetStation()->SetExclusiveWindow(0); }
-			void ComboBox::ComboListBox::SetRectangle(const Rectangle & rect) { _position = rect; GetParent()->ArrangeChildren(); }
+			void ComboBox::ComboListBox::ResetCache(void) { if (GetControlSystem()) GetControlSystem()->SetExclusiveControl(0); }
+			void ComboBox::ComboListBox::SetRectangle(const Rectangle & rect) { _position = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle ComboBox::ComboListBox::GetRectangle(void) { return _position; }
 			void ComboBox::ComboListBox::SetPosition(const Box & box)
 			{
-				WindowPosition = box; ArrangeChildren();
+				ControlBoundaries = box; ArrangeChildren();
 				if (!_owner) return;
 				int page = box.Bottom - box.Top - (_owner->Border << 1);
 				_scroll->SetPageSilent(page);
 				_scroll->SetScrollerPositionSilent(_owner->_current * _owner->ElementHeight - (page >> 1));
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
-			void ComboBox::ComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void ComboBox::ComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
+			void ComboBox::ComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; Invalidate(); } }
+			void ComboBox::ComboListBox::LostExclusiveMode(void) { if (_owner) _owner->SetFocus(); DestroyPopup(GetParent()); }
 			void ComboBox::ComboListBox::LeftButtonUp(Point at)
 			{
 				if (!_owner) return;
 				if (_hot != -1) {
 					if (_hot != _owner->_current) {
 						_owner->_current = _hot;
-						_owner->PostEvent(1);
+						_owner->SubmitEvent(1);
 						_owner->invalidate_viewport();
-						_owner->RequireRedraw();
+						_owner->Invalidate();
 					}
 				}
-				GetStation()->SetExclusiveWindow(0);
+				GetControlSystem()->SetExclusiveControl(0);
 			}
 			void ComboBox::ComboListBox::MouseMove(Point at)
 			{
 				if (!_owner) return;
-				Box element(_owner->Border, _owner->Border,
-					WindowPosition.Right - WindowPosition.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0),
-					WindowPosition.Bottom - WindowPosition.Top - _owner->Border);
+				Box element(_owner->Border, _owner->Border, ControlBoundaries.Right - ControlBoundaries.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0), ControlBoundaries.Bottom - ControlBoundaries.Top - _owner->Border);
 				int oh = _hot;
-				if (element.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+				if (element.IsInside(at) && IsHovered()) {
 					int index = (at.y - _owner->Border + _scroll->Position) / _owner->ElementHeight;
 					if (index < 0 || index >= _owner->_elements.Length()) index = -1;
 					_hot = index;
 				} else {
 					_hot = -1;
 				}
+				if (oh != _hot) Invalidate();
 				if (oh == -1 && _hot != -1) SetCapture();
 				else if ((oh != -1 || GetCapture() == this) && _hot == -1) ReleaseCapture();
 			}
@@ -513,9 +527,9 @@ namespace Engine
 			bool ComboBox::ComboListBox::KeyDown(int key_code)
 			{
 				if (!_owner) return false;
-				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
+				int page = max((ControlBoundaries.Bottom - ControlBoundaries.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Space) {
-					GetStation()->SetExclusiveWindow(0);
+					GetControlSystem()->SetExclusiveControl(0);
 				} else if (key_code == KeyCodes::Down) {
 					if (_owner->_current != -1) move_selection(_owner->_current + 1); else move_selection(0);
 				} else if (key_code == KeyCodes::Up) {
@@ -531,7 +545,7 @@ namespace Engine
 				}
 				return true;
 			}
-			Window * ComboBox::ComboListBox::HitTest(Point at)
+			Control * ComboBox::ComboListBox::HitTest(Point at)
 			{
 				if (!IsEnabled()) return this;
 				if (_scroll && _svisible) {
@@ -552,6 +566,7 @@ namespace Engine
 					}
 				}
 				if (advice != _advice) {
+					Invalidate();
 					_advice = advice;
 					_advice_info.SetReference(0);
 				}
@@ -560,10 +575,9 @@ namespace Engine
 			{
 				if (GetCapture() == this) ReleaseCapture();
 				_save = true;
-				auto my = GetStation()->GetAbsoluteDesktopBox(GetAbsolutePosition());
-				auto desktop = GetStation()->GetDesktopBox();
-				int uec = (my.Top - desktop.Top - (Border << 1)) / ElementHeight;
-				int dec = (desktop.Bottom - my.Bottom - (Border << 1)) / ElementHeight;
+				auto margins = GetPopupMargins(this);
+				int uec = (margins.Top - (Border << 1)) / ElementHeight;
+				int dec = (margins.Bottom - (Border << 1)) / ElementHeight;
 				bool su = false;
 				if (dec < _elements.Length() && uec >= _elements.Length()) su = true;
 				if (dec < _elements.Length() && uec < _elements.Length()) {
@@ -572,27 +586,30 @@ namespace Engine
 				int y, h, e;
 				if (su) {
 					e = min(uec, _elements.Length());
-					y = my.Top - e * ElementHeight - (Border << 1);
 					h = e * ElementHeight + (Border << 1);
+					y = -h;
 				} else {
 					e = min(dec, _elements.Length());
-					y = my.Bottom;
 					h = e * ElementHeight + (Border << 1);
+					y = ControlBoundaries.Bottom - ControlBoundaries.Top;
 				}
-				auto tlw = Windows::CreatePopupDialog(0, 0, Rectangle(my.Left, y, my.Right, y + h), GetStation());
-				auto client = tlw->GetContentFrame();
-				_list = client->GetStation()->CreateWindow<TextComboListBox>(client, this);
-				tlw->ArrangeChildren();
-				tlw->Show(true);
-				tlw->GetStation()->SetExclusiveWindow(_list);
+				auto tlw = CreatePopup(this, Box(0, y, ControlBoundaries.Right - ControlBoundaries.Left, y + h));
+				if (tlw) {
+					SafePointer<TextComboListBox> list = new TextComboListBox(this);
+					_list = list.Inner();
+					tlw->AddChild(list);
+					tlw->ArrangeChildren();
+					ShowPopup(tlw, true);
+					tlw->GetControlSystem()->SetExclusiveControl(list);
+				} else _state = 0;
 			}
-			TextComboBox::TextComboBox(Window * Parent, WindowStation * Station) : Window(Parent, Station), _elements(0x10), _undo(_text), _text(0x100), _chars_enabled(0x100)
+			TextComboBox::TextComboBox(void) : _elements(0x10), _undo(_text), _text(0x100), _chars_enabled(0x100)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
 				EnumerateProperties(Initializer);
 			}
-			TextComboBox::TextComboBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _elements(0x10), _undo(_text), _text(0x100), _chars_enabled(0x100)
+			TextComboBox::TextComboBox(Template::ControlTemplate * Template) : _elements(0x10), _undo(_text), _text(0x100), _chars_enabled(0x100)
 			{
 				if (Template->Properties->GetTemplateClass() != L"TextComboBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::TextComboBox &>(*this) = static_cast<Template::Controls::TextComboBox &>(*Template->Properties);
@@ -601,17 +618,16 @@ namespace Engine
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_chars_enabled.SetLength(CharactersEnabled.GetEncodedLength(Encoding::UTF32));
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
-				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
+				if (ContextMenu) _menu.SetReference(CreateMenu(ContextMenu));
 			}
-			TextComboBox::~TextComboBox(void) { if (_list) { _list->_owner = 0; _list->GetStation()->SetExclusiveWindow(0); } }
-			void TextComboBox::Render(const Box & at)
+			TextComboBox::~TextComboBox(void) { if (_list) { _list->_owner = 0; _list->GetControlSystem()->SetExclusiveControl(0); } }
+			void TextComboBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
-				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetControlSystem()->GetCaretWidth();
 				Shape ** back = 0;
 				Template::Shape * source = 0;
-				UI::Color text_color;
-				UI::Color placeholder_color;
+				Engine::Color text_color;
+				Engine::Color placeholder_color;
 				bool focused = false;
 				if (Disabled) {
 					source = ViewDisabled;
@@ -641,11 +657,11 @@ namespace Engine
 				if (_text.Length()) {
 					if (Font) {
 						if (!_text_info) {
-							_text_info.SetReference(device->CreateTextRenderingInfo(Font, _text, 0, 1, text_color));
+							_text_info.SetReference(device->CreateTextBrush(Font, _text.GetBuffer(), _text.Length(), 0, 1, text_color));
 						}
 						if (!_advice_info && _advice != -1) {
 							string residue = _elements[_advice].Fragment(GetText().Length(), -1);
-							_advice_info.SetReference(device->CreateTextRenderingInfo(Font, residue, 0, 1, AdviceColor));
+							_advice_info.SetReference(device->CreateTextBrush(Font, residue, 0, 1, AdviceColor));
 						}
 						if (_deferred_scroll) {
 							ScrollToCaret();
@@ -659,34 +675,34 @@ namespace Engine
 							Box text_box(field.Left + _shift, field.Top, field.Right, field.Bottom);
 							if (_cp > 0) caret = _text_info->EndOfChar(_cp - 1);
 							caret += _shift;
-							device->RenderText(_text_info, text_box, false);
+							device->Render(_text_info, text_box, false);
 							if (_advice_info && focused) {
 								int w, h;
-								_text_info->GetExtent(w, h);
+								_text_info->GetExtents(w, h);
 								text_box.Left += w;
-								device->RenderText(_advice_info, text_box, false);
+								device->Render(_advice_info, text_box, false);
 							}
 						}
 					}
 				} else {
 					if (!_placeholder_info && Placeholder.Length() && PlaceholderFont) {
-						_placeholder_info.SetReference(device->CreateTextRenderingInfo(PlaceholderFont, Placeholder, 0, 1, placeholder_color));
+						_placeholder_info.SetReference(device->CreateTextBrush(PlaceholderFont, Placeholder, 0, 1, placeholder_color));
 					}
-					if (_placeholder_info && !focused) device->RenderText(_placeholder_info, field, false);
+					if (_placeholder_info && !focused) device->Render(_placeholder_info, field, false);
 				}
 				if (focused) {
 					if (!_inversion) {
 						if (CaretColor.a) {
-							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_inversion.SetReference(device->CreateSolidColorBrush(CaretColor));
 							_use_color_caret = true;
 						} else {
-							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_inversion.SetReference(device->CreateInversionEffectBrush());
 							_use_color_caret = false;
 						}
 					}
 					Box caret_box = Box(field.Left + caret, field.Top, field.Left + caret + _caret_width, field.Bottom);
-					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret_box); }
-					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo*>(_inversion.Inner()), caret_box, true);
+					if (_use_color_caret) { if (device->IsCaretVisible()) device->Render(static_cast<Graphics::IColorBrush *>(_inversion.Inner()), caret_box); }
+					else device->Render(static_cast<Graphics::IInversionEffectBrush *>(_inversion.Inner()), caret_box, true);
 				}
 				device->PopClip();
 				Shape ** button;
@@ -733,15 +749,16 @@ namespace Engine
 				if (Disabled) { _state = 0; _shift = 0, _cp = 0, _sp = 0; _advice_info.SetReference(0); _advice = -1; }
 				_text_info.SetReference(0);
 				_placeholder_info.SetReference(0);
+				Invalidate();
 			}
 			bool TextComboBox::IsEnabled(void) { return !Disabled; }
-			void TextComboBox::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			void TextComboBox::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; Invalidate(); }
 			bool TextComboBox::IsVisible(void) { return !Invisible; }
 			bool TextComboBox::IsTabStop(void) { return true; }
 			void TextComboBox::SetID(int _ID) { ID = _ID; }
 			int TextComboBox::GetID(void) { return ID; }
-			Window * TextComboBox::FindChild(int _ID) { if (ID && ID == _ID) return this; else return 0; }
-			void TextComboBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Control * TextComboBox::FindChild(int _ID) { if (ID && ID == _ID) return this; else return 0; }
+			void TextComboBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle TextComboBox::GetRectangle(void) { return ControlPosition; }
 			void TextComboBox::SetText(const string & text)
 			{
@@ -753,36 +770,38 @@ namespace Engine
 				_text_info.SetReference(0);
 				_advice_info.SetReference(0);
 				_shift = 0; _cp = 0; _sp = 0; _advice = -1;
+				Invalidate();
 			}
 			string TextComboBox::GetText(void) { return string(_text.GetBuffer(), _text.Length(), Encoding::UTF32); }
-			void TextComboBox::RaiseEvent(int _ID, Event event, Window * sender)
+			void TextComboBox::RaiseEvent(int _ID, ControlEvent event, Control * sender)
 			{
-				if (_state == 2) _state = 0;
-				if (event == Event::MenuCommand) {
+				if (_state == 2) { _state = 0; Invalidate(); }
+				if (event == ControlEvent::MenuCommand) {
 					if (_ID == 1001) Undo();
 					else if (_ID == 1000) Redo();
 					else if (_ID == 1002) Cut();
 					else if (_ID == 1003) Copy();
 					else if (_ID == 1004) Paste();
 					else if (_ID == 1005) Delete();
-					else GetParent()->RaiseEvent(_ID, Event::Command, this);
-				} else if (event == Event::Deferred && _ID == 1) {
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					else GetParent()->RaiseEvent(_ID, ControlEvent::Command, this);
+				} else if (event == ControlEvent::Deferred && _ID == 1) {
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				} else GetParent()->RaiseEvent(_ID, event, sender);
 			}
 			void TextComboBox::FocusChanged(bool got_focus)
 			{
 				if (!got_focus) {
 					if (_list && _list->GetFocus() != _list) {
-						_list->GetStation()->SetExclusiveWindow(0);
+						_list->GetControlSystem()->SetExclusiveControl(0);
 					} else if (!_list) { _save = true; }
 				}
+				Invalidate();
 			}
-			void TextComboBox::CaptureChanged(bool got_capture) { if (!got_capture && _state != 4) { _state = 0; } }
+			void TextComboBox::CaptureChanged(bool got_capture) { if (!got_capture && _state != 4) { _state = 0; Invalidate(); } }
 			void TextComboBox::LeftButtonDown(Point at)
 			{
 				SetFocus();
-				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box my = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				Box text = Box(TextPosition, my);
 				Box button = Box(ButtonPosition, my);
 				if (text.IsInside(at)) {
@@ -795,8 +814,11 @@ namespace Engine
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = pos;
 					_cp = pos;
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 					if (ocp != _cp || osp != _sp) find_advice();
-				} else if (button.IsInside(at) && !_list) { _state = 4; run_drop_down(); }
+					Invalidate();
+				} else if (button.IsInside(at) && !_list) { _state = 4; Invalidate(); run_drop_down(); }
 			}
 			void TextComboBox::LeftButtonUp(Point at) { if (_state == 1) ReleaseCapture(); }
 			void TextComboBox::LeftButtonDoubleClick(Point at)
@@ -806,11 +828,12 @@ namespace Engine
 				while (_sp > 0 && ((IsAlphabetical(_text[_sp - 1]) || (_text[_sp - 1] >= L'0' && _text[_sp - 1] <= L'9') || (_text[_sp - 1] == L'_')))) _sp--;
 				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp] >= L'0' && _text[_cp] <= L'9') || (_text[_cp] == L'_')))) _cp++;
 				find_advice();
+				Invalidate();
 			}
 			void TextComboBox::RightButtonDown(Point at)
 			{
 				SetFocus();
-				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box my = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				Box text = Box(TextPosition, my);
 				if (text.IsInside(at)) {
 					_save = true;
@@ -821,81 +844,97 @@ namespace Engine
 						if (sp > pos || ep < pos) _cp = _sp = pos;
 					} else { _cp = _sp = 0; }
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 					find_advice();
+					Invalidate();
 				}
 			}
 			void TextComboBox::RightButtonUp(Point at)
 			{
-				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box my = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				Box text = Box(TextPosition, my);
 				if (_menu && text.IsInside(at)) {
-					auto pos = GetStation()->GetCursorPos();
-					auto undo = _menu->FindChild(1001);
-					auto redo = _menu->FindChild(1000);
-					auto cut = _menu->FindChild(1002);
-					auto copy = _menu->FindChild(1003);
-					auto paste = _menu->FindChild(1004);
-					auto remove = _menu->FindChild(1005);
-					if (undo) undo->Disabled = !_undo.CanUndo();
-					if (redo) redo->Disabled = !_undo.CanRedo();
-					if (cut) cut->Disabled = _cp == _sp;
-					if (copy) copy->Disabled = _cp == _sp;
-					if (paste) paste->Disabled = !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
-					if (remove) remove->Disabled = _cp == _sp;
+					auto undo = _menu->FindMenuItem(1001);
+					auto redo = _menu->FindMenuItem(1000);
+					auto cut = _menu->FindMenuItem(1002);
+					auto copy = _menu->FindMenuItem(1003);
+					auto paste = _menu->FindMenuItem(1004);
+					auto remove = _menu->FindMenuItem(1005);
+					if (undo) undo->Enable(_undo.CanUndo());
+					if (redo) redo->Enable(_undo.CanRedo());
+					if (cut) cut->Enable(_cp != _sp);
+					if (copy) copy->Enable(_cp != _sp);
+					if (paste) paste->Enable(Clipboard::IsFormatAvailable(Clipboard::Format::Text));
+					if (remove) remove->Enable(_cp != _sp);
 					_state = 2;
-					_menu->RunPopup(this, pos);
+					Invalidate();
+					RunMenu(_menu, this, at);
 				}
 			}
 			void TextComboBox::MouseMove(Point at)
 			{
-				Box my = Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box my = Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				Box text = Box(TextPosition, my);
 				Box button = Box(ButtonPosition, my);
 				if (_state == 0) {
-					if (button.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+					if (button.IsInside(at) && IsHovered()) {
 						_state = 3;
 						SetCapture();
+						Invalidate();
 					}
 				} else if (_state == 3) {
-					if (!button.IsInside(at) || GetStation()->HitTest(GetStation()->GetCursorPos()) != this) ReleaseCapture();
+					if (!button.IsInside(at) || !IsHovered()) ReleaseCapture();
 				} else if (_state == 1) {
 					int ocp = _cp;
 					_cp = _text_info ? _text_info->TestPosition(at.x - text.Left - _shift) : 0;
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 					if (ocp != _cp) find_advice();
+					Invalidate();
 				}
 			}
 			bool TextComboBox::KeyDown(int key_code)
 			{
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
 				if (_state != 4) {
 					if (key_code == KeyCodes::Down) {
 						_state = 4;
 						run_drop_down();
 						return true;
-					} else if (key_code == KeyCodes::Back && (_cp != _sp || _cp > 0)) {
-						if (_save) {
-							_undo.PushCurrentVersion();
-							_save = false;
-						}
-						if (_cp == _sp) _cp = _sp - 1;
-						Print(L"");
-						_deferred_scroll = true;
+					} else if (key_code == KeyCodes::Back) {
+						if (_cp != _sp || _cp > 0) {
+							if (_save) {
+								_undo.PushCurrentVersion();
+								_save = false;
+							}
+							if (_cp == _sp) _cp = _sp - 1;
+							Print(L"");
+							_deferred_scroll = true;
+						} else Beep();
 						return true;
-					} else if (key_code == KeyCodes::Delete && (_cp != _sp || _cp < _text.Length())) {
-						if (_save) {
-							_undo.PushCurrentVersion();
-							_save = false;
-						}
-						if (_cp == _sp) _cp = _sp + 1;
-						Print(L"");
-						_deferred_scroll = true;
+					} else if (key_code == KeyCodes::Delete) {
+						if (_cp != _sp || _cp < _text.Length()) {
+							if (_save) {
+								_undo.PushCurrentVersion();
+								_save = false;
+							}
+							if (_cp == _sp) _cp = _sp + 1;
+							Print(L"");
+							_deferred_scroll = true;
+						} else Beep();
 						return true;
-					} else if (key_code == KeyCodes::Left && _cp > 0) {
-						_save = true;
-						_cp--;
-						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
-						_deferred_scroll = true;
-						find_advice();
+					} else if (key_code == KeyCodes::Left) {
+						if (_cp > 0) {
+							_save = true;
+							_cp--;
+							if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
+							_deferred_scroll = true;
+							find_advice();
+							Invalidate();
+						} else Beep();
 						return true;
 					} else if (key_code == KeyCodes::Right) {
 						if (_cp < _text.Length()) {
@@ -904,6 +943,7 @@ namespace Engine
 							if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 							_deferred_scroll = true;
 							find_advice();
+							Invalidate();
 						} else if (_cp == _sp && _cp && _advice != -1) {
 							if (_save) {
 								_undo.PushCurrentVersion();
@@ -918,20 +958,23 @@ namespace Engine
 							_cp = _text.Length();
 							_deferred_scroll = true;
 							find_advice();
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						} else {
 							if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) {
 								_save = true;
 								_sp = _cp;
 								_deferred_scroll = true;
 								find_advice();
-							}
+								Invalidate();
+							} else Beep();
 						}
 						return true;
 					} else if (key_code == KeyCodes::Escape) {
 						_save = true;
 						_sp = _cp;
 						find_advice();
+						Invalidate();
 						return true;
 					} else if (key_code == KeyCodes::Home) {
 						_save = true;
@@ -939,6 +982,7 @@ namespace Engine
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 						_deferred_scroll = true;
 						find_advice();
+						Invalidate();
 						return true;
 					} else if (key_code == KeyCodes::End) {
 						_save = true;
@@ -946,11 +990,9 @@ namespace Engine
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 						_deferred_scroll = true;
 						find_advice();
+						Invalidate();
 						return true;
-					} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) &&
-						Keyboard::IsKeyPressed(KeyCodes::Control) &&
-						!Keyboard::IsKeyPressed(KeyCodes::Alternative) &&
-						!Keyboard::IsKeyPressed(KeyCodes::System)) {
+					} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) && Keyboard::IsKeyPressed(KeyCodes::Control) && !Keyboard::IsKeyPressed(KeyCodes::Alternative) && !Keyboard::IsKeyPressed(KeyCodes::System)) {
 						if (key_code == KeyCodes::Z) { Undo(); return true; }
 						else if (key_code == KeyCodes::X) { Cut(); return true; }
 						else if (key_code == KeyCodes::C) { Copy(); return true; }
@@ -962,6 +1004,8 @@ namespace Engine
 			}
 			void TextComboBox::CharDown(uint32 ucs_code)
 			{
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
 				if (_state != 4) {
 					string filtered = FilterInput(string(&ucs_code, 1, Encoding::UTF32));
 					if (filtered.Length()) {
@@ -972,18 +1016,39 @@ namespace Engine
 						Print(filtered);
 						_deferred_scroll = true;
 						find_advice();
-					}
+					} else Beep();
 				}
 			}
-			void TextComboBox::PopupMenuCancelled(void) { if (_state == 2) _state = 0; }
+			void TextComboBox::PopupMenuCancelled(void) { if (_state == 2) { _state = 0; Invalidate(); } }
 			void TextComboBox::SetCursor(Point at)
 			{
-				SystemCursor cursor = SystemCursor::Arrow;
-				if (Box(TextPosition, Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top)).IsInside(at) || _state == 1)
-					cursor = SystemCursor::Beam;
-				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
+				auto cursor = Windows::SystemCursorClass::Arrow;
+				if (Box(TextPosition, Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top)).IsInside(at) || _state == 1)
+					cursor = Windows::SystemCursorClass::Beam;
+				SelectCursor(cursor);
 			}
-			Window::RefreshPeriod TextComboBox::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
+			bool TextComboBox::IsWindowEventEnabled(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) return _undo.CanUndo();
+				else if (handler == Windows::WindowHandler::Redo) return _undo.CanRedo();
+				else if (handler == Windows::WindowHandler::Cut) return _cp != _sp;
+				else if (handler == Windows::WindowHandler::Copy) return _cp != _sp;
+				else if (handler == Windows::WindowHandler::Paste) return Clipboard::IsFormatAvailable(Clipboard::Format::Text);
+				else if (handler == Windows::WindowHandler::Delete) return _cp != _sp;
+				else if (handler == Windows::WindowHandler::SelectAll) return true;
+				else return false;
+			}
+			void TextComboBox::HandleWindowEvent(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) Undo();
+				else if (handler == Windows::WindowHandler::Redo) Redo();
+				else if (handler == Windows::WindowHandler::Cut) Cut();
+				else if (handler == Windows::WindowHandler::Copy) Copy();
+				else if (handler == Windows::WindowHandler::Paste) Paste();
+				else if (handler == Windows::WindowHandler::Delete) Delete();
+				else if (handler == Windows::WindowHandler::SelectAll) SetSelection(0, _text.Length());
+			}
+			ControlRefreshPeriod TextComboBox::GetFocusedRefreshPeriod(void) { return ControlRefreshPeriod::CaretBlink; }
 			string TextComboBox::GetControlClass(void) { return L"TextComboBox"; }
 			void TextComboBox::Undo(void)
 			{
@@ -994,8 +1059,9 @@ namespace Engine
 					_deferred_scroll = true;
 					_text_info.SetReference(0);
 					find_advice();
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
-				}
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
+				} else Beep();
 			}
 			void TextComboBox::Redo(void)
 			{
@@ -1006,8 +1072,9 @@ namespace Engine
 					_deferred_scroll = true;
 					_text_info.SetReference(0);
 					find_advice();
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
-				}
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
+				} else Beep();
 			}
 			void TextComboBox::Cut(void)
 			{
@@ -1018,14 +1085,14 @@ namespace Engine
 					Print(L"");
 					_deferred_scroll = true;
 					find_advice();
-				}
+				} else Beep();
 			}
 			void TextComboBox::Copy(void)
 			{
 				if (_cp != _sp) {
 					_save = true;
 					Clipboard::SetData(GetSelection());
-				}
+				} else Beep();
 			}
 			void TextComboBox::Paste(void)
 			{
@@ -1038,8 +1105,8 @@ namespace Engine
 						Print(filter);
 						_deferred_scroll = true;
 						find_advice();
-					}
-				}
+					} else Beep();
+				} else Beep();
 			}
 			void TextComboBox::Delete(void)
 			{
@@ -1049,7 +1116,7 @@ namespace Engine
 					Print(L"");
 					_deferred_scroll = true;
 					find_advice();
-				}
+				} else Beep();
 			}
 			string TextComboBox::GetSelection(void)
 			{
@@ -1062,18 +1129,20 @@ namespace Engine
 				_sp = min(max(selection_position, 0), _text.Length());
 				_cp = min(max(caret_position, 0), _text.Length());
 				find_advice();
+				Invalidate();
 			}
 			void TextComboBox::ScrollToCaret(void)
 			{
 				if (_text_info) {
-					auto field = Box(TextPosition, Box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top));
+					auto field = Box(TextPosition, Box(0, 0, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top));
 					int width = field.Right - field.Left;
 					int shifted_caret = ((_cp > 0) ? _text_info->EndOfChar(_cp - 1) : 0) + _shift;
 					if (shifted_caret < 0) _shift -= shifted_caret;
 					else if (shifted_caret + _caret_width >= width) _shift -= shifted_caret + _caret_width - width;
+					Invalidate();
 				}
 			}
-			void TextComboBox::SetPlaceholder(const string & text) { Placeholder = text; _placeholder_info.SetReference(0); }
+			void TextComboBox::SetPlaceholder(const string & text) { Placeholder = text; _placeholder_info.SetReference(0); Invalidate(); }
 			string TextComboBox::GetPlaceholder(void) { return Placeholder; }
 			void TextComboBox::SetCharacterFilter(const string & filter)
 			{
@@ -1082,8 +1151,8 @@ namespace Engine
 				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
 			string TextComboBox::GetCharacterFilter(void) { return CharactersEnabled; }
-			void TextComboBox::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
-			Menus::Menu * TextComboBox::GetContextMenu(void) { return _menu; }
+			void TextComboBox::SetContextMenu(Windows::IMenu * menu) { _menu.SetRetain(menu); }
+			Windows::IMenu * TextComboBox::GetContextMenu(void) { return _menu; }
 			string TextComboBox::FilterInput(const string & input)
 			{
 				string conv = input;
@@ -1128,7 +1197,8 @@ namespace Engine
 				_text_info.SetReference(0);
 				_advice_info.SetReference(0);
 				find_advice();
-				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+				Invalidate();
+				GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 			}
 			void TextComboBox::AddItem(const string & text) { _elements.Append(text); }
 			void TextComboBox::InsertItem(const string & text, int at) { _elements.Insert(text, at); if (_advice >= at) _advice++; }
@@ -1140,10 +1210,10 @@ namespace Engine
 				}
 				_elements.SwapAt(i, j);
 			}
-			void TextComboBox::RemoveItem(int index) { _elements.Remove(index); _advice = -1; _advice_info.SetReference(0); }
-			void TextComboBox::ClearItems(void) { _elements.Clear(); _advice = -1; _advice_info.SetReference(0); }
+			void TextComboBox::RemoveItem(int index) { _elements.Remove(index); _advice = -1; _advice_info.SetReference(0); Invalidate(); }
+			void TextComboBox::ClearItems(void) { _elements.Clear(); _advice = -1; _advice_info.SetReference(0); Invalidate(); }
 			int TextComboBox::ItemCount(void) { return _elements.Length(); }
-			void TextComboBox::SetItemText(int index, const string & text) { _elements[index] = text; if (_advice == index) { _advice = -1; _advice_info.SetReference(0); } }
+			void TextComboBox::SetItemText(int index, const string & text) { _elements[index] = text; if (_advice == index) { _advice = -1; _advice_info.SetReference(0); Invalidate(); } }
 			string TextComboBox::GetItemText(int index) { return _elements[index]; }
 
 			void TextComboBox::TextComboListBox::scroll_to_current(void)
@@ -1177,12 +1247,12 @@ namespace Engine
 					_owner->_cp = _owner->_text.Length();
 					_owner->_deferred_scroll = true;
 					_owner->find_advice();
-					_owner->PostEvent(1);
-					_owner->RequireRedraw();
+					_owner->SubmitEvent(1);
+					_owner->Invalidate();
 				}
-				RequireRedraw();
+				Invalidate();
 			}
-			TextComboBox::TextComboListBox::TextComboListBox(Window * Parent, WindowStation * Station, TextComboBox * Base) : ParentWindow(Parent, Station), _elements(0x10), _owner(Base)
+			TextComboBox::TextComboListBox::TextComboListBox(TextComboBox * Base) : _elements(0x10), _owner(Base)
 			{
 				_hot = -1;
 				string text = Base->GetText();
@@ -1193,19 +1263,19 @@ namespace Engine
 				if (_hot == -1) _hot = Base->_advice;
 				_current = _hot;
 				_position = Rectangle::Entire();
-				_scroll = GetStation()->CreateWindow<VerticalScrollBar>(this, Base);
-				_scroll->ControlPosition = Rectangle(Coordinate::Right() - Base->Border - Base->ScrollSize, Base->Border,
-					Coordinate::Right() - Base->Border, Coordinate::Bottom() - Base->Border);
+				SafePointer<VerticalScrollBar> bar = new VerticalScrollBar(Base);
+				_scroll = bar.Inner();
+				AddChild(bar);
+				_scroll->ControlPosition = Rectangle(Coordinate::Right() - Base->Border - Base->ScrollSize, Base->Border, Coordinate::Right() - Base->Border, Coordinate::Bottom() - Base->Border);
 				_scroll->Line = Base->ElementHeight;
 				_scroll->Invisible = true;
 				int space = Base->_elements.Length() * Base->ElementHeight;
 				_scroll->SetRangeSilent(0, space - 1);
 			}
-			TextComboBox::TextComboListBox::~TextComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->RequireRedraw(); _owner->SetFocus(); } }
-			void TextComboBox::TextComboListBox::Render(const Box & at)
+			TextComboBox::TextComboListBox::~TextComboListBox(void) { if (_owner) { _owner->_list = 0; _owner->_state = 0; _owner->Invalidate(); _owner->SetFocus(); } }
+			void TextComboBox::TextComboListBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				if (!_owner) return;
-				auto device = GetStation()->GetRenderingDevice();
 				if (!_view) {
 					if (_owner->ViewDropDownList) {
 						ZeroArgumentProvider provider;
@@ -1246,44 +1316,43 @@ namespace Engine
 					}
 				}
 				device->PopClip();
-				ParentWindow::Render(at);
+				ParentControl::Render(device, at);
 			}
-			void TextComboBox::TextComboListBox::ResetCache(void) { GetStation()->SetExclusiveWindow(0); }
-			void TextComboBox::TextComboListBox::SetRectangle(const Rectangle & rect) { _position = rect; GetParent()->ArrangeChildren(); }
+			void TextComboBox::TextComboListBox::ResetCache(void) { if (GetControlSystem()) GetControlSystem()->SetExclusiveControl(0); }
+			void TextComboBox::TextComboListBox::SetRectangle(const Rectangle & rect) { _position = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle TextComboBox::TextComboListBox::GetRectangle(void) { return _position; }
 			void TextComboBox::TextComboListBox::SetPosition(const Box & box)
 			{
-				WindowPosition = box; ArrangeChildren();
+				ControlBoundaries = box; ArrangeChildren();
 				if (!_owner) return;
 				int page = box.Bottom - box.Top - (_owner->Border << 1);
 				_scroll->SetPageSilent(page);
 				_scroll->SetScrollerPositionSilent(_current * _owner->ElementHeight - (page >> 1));
 				if (page < _owner->_elements.Length() * _owner->ElementHeight) _scroll->Show(_svisible = true);
 			}
-			void TextComboBox::TextComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
-			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { GetParent()->GetParent()->DeferredDestroy(); if (_owner) _owner->SetFocus(); }
+			void TextComboBox::TextComboListBox::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; Invalidate(); } }
+			void TextComboBox::TextComboListBox::LostExclusiveMode(void) { if (_owner) _owner->SetFocus(); DestroyPopup(GetParent()); }
 			void TextComboBox::TextComboListBox::LeftButtonUp(Point at)
 			{
 				if (!_owner) return;
 				if (_hot != -1) {
 					move_selection(_hot);
 				}
-				GetStation()->SetExclusiveWindow(0);
+				GetControlSystem()->SetExclusiveControl(0);
 			}
 			void TextComboBox::TextComboListBox::MouseMove(Point at)
 			{
 				if (!_owner) return;
-				Box element(_owner->Border, _owner->Border,
-					WindowPosition.Right - WindowPosition.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0),
-					WindowPosition.Bottom - WindowPosition.Top - _owner->Border);
+				Box element(_owner->Border, _owner->Border, ControlBoundaries.Right - ControlBoundaries.Left - _owner->Border - (_svisible ? _owner->ScrollSize : 0), ControlBoundaries.Bottom - ControlBoundaries.Top - _owner->Border);
 				int oh = _hot;
-				if (element.IsInside(at) && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+				if (element.IsInside(at) && IsHovered()) {
 					int index = (at.y - _owner->Border + _scroll->Position) / _owner->ElementHeight;
 					if (index < 0 || index >= _owner->_elements.Length()) index = -1;
 					_hot = index;
 				} else {
 					_hot = -1;
 				}
+				if (oh != _hot) Invalidate();
 				if (oh == -1 && _hot != -1) SetCapture();
 				else if ((oh != -1 || GetCapture() == this) && _hot == -1) ReleaseCapture();
 			}
@@ -1297,9 +1366,9 @@ namespace Engine
 			bool TextComboBox::TextComboListBox::KeyDown(int key_code)
 			{
 				if (!_owner) return false;
-				int page = max((WindowPosition.Bottom - WindowPosition.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
+				int page = max((ControlBoundaries.Bottom - ControlBoundaries.Top - _owner->Border - _owner->Border) / _owner->ElementHeight, 1);
 				if (key_code == KeyCodes::Left) {
-					GetStation()->SetExclusiveWindow(0);
+					GetControlSystem()->SetExclusiveControl(0);
 				} else if (key_code == KeyCodes::Down) {
 					if (_current != -1) move_selection(_current + 1); else move_selection(0);
 				} else if (key_code == KeyCodes::Up) {
@@ -1315,7 +1384,7 @@ namespace Engine
 				}
 				return true;
 			}
-			Window * TextComboBox::TextComboListBox::HitTest(Point at)
+			Control * TextComboBox::TextComboListBox::HitTest(Point at)
 			{
 				if (!IsEnabled()) return this;
 				if (_scroll && _svisible) {

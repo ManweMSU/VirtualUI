@@ -8,4 +8,8 @@ namespace Engine
 	{
 		IAudioCodec * InitializeWaveCodec(void);
 	}
+	namespace Media
+	{
+		IMediaContainerCodec * InitializeRIFFCodec(void);
+	}
 }

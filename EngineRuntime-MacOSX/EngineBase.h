@@ -3,20 +3,7 @@
 #include "Interfaces/Base.h"
 
 #include <new>
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                    Retain/Release Policy
-// Function must call Retain() on object pointer if:
-//  - this object is an input argument and function wants
-//    to store it's reference,
-//  - object reference is the result value of this function,
-//    function assumes object's creation, but object was
-//    taken from another place (for example, from cache)
-//  Function must call Release() on object pointer if is is
-//  not required anymore and object's reference was taken as
-//  a result value of "Create" function or was retained
-//  explicitly.
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include <type_traits>
 
 #define ENGINE_MAKE_ITERATORS(array_type, element_type, length) \
 	ArrayEnumerator< array_type<element_type>, element_type > Elements(void) { return ArrayEnumerator< array_type<element_type>, element_type >(*this, 0, length, 1); } \
@@ -25,7 +12,8 @@
 	ArrayEnumerator< const array_type<element_type>, const element_type > InversedElements(void) const { return ArrayEnumerator< const array_type<element_type>, const element_type >(*this, length - 1, -1, -1); } \
 	ArrayIterator< array_type<element_type>, element_type > begin(void) { return ArrayIterator< array_type<element_type>, element_type >(*this, 0, 1); } \
 	ArrayIterator< const array_type<element_type>, const element_type > begin(void) const { return ArrayIterator< const array_type<element_type>, const element_type >(*this, 0, 1); } \
-	int end(void) const { return length; }
+	ArrayIterator< array_type<element_type>, element_type > end(void) { return ArrayIterator< array_type<element_type>, element_type >(*this, length, 1); } \
+	ArrayIterator< const array_type<element_type>, const element_type > end(void) const { return ArrayIterator< const array_type<element_type>, const element_type >(*this, length, 1); }
 
 namespace Engine
 {
@@ -79,6 +67,10 @@ namespace Engine
 		ImmutableString(const widechar * src);
 		ImmutableString(const widechar * sequence, int length);
 		ImmutableString(const char * src);
+		ImmutableString(int8 src);
+		ImmutableString(uint8 src);
+		ImmutableString(int16 src);
+		ImmutableString(uint16 src);
 		ImmutableString(int32 src);
 		ImmutableString(uint32 src);
 		ImmutableString(int64 src);
@@ -91,7 +83,7 @@ namespace Engine
 		ImmutableString(bool src);
 		ImmutableString(widechar src);
 		ImmutableString(widechar src, int repeats);
-		explicit ImmutableString(const Object * object);
+		ImmutableString(const Object * object);
 		explicit ImmutableString(const void * src);
 		~ImmutableString(void);
 
@@ -181,6 +173,13 @@ namespace Engine
 	float sgn(float x);
 	int sgn(int x);
 
+	template<class T, class = void> struct HasToStringTraits { static constexpr const bool value = false; };
+	template<class T> struct HasToStringTraits<T, std::void_t<decltype(&T::ToString)> > { static constexpr const bool value = true; };
+	
+	template<class T> std::enable_if_t<std::is_convertible<T, ImmutableString>::value, ImmutableString> GetStringRepresentation(const T & t) { return t; }
+	template<class T> std::enable_if_t<!std::is_convertible<T, ImmutableString>::value && HasToStringTraits<T>::value, ImmutableString> GetStringRepresentation(const T & t) { return t.ToString(); }
+	template<class T> std::enable_if_t<!std::is_convertible<T, ImmutableString>::value && !HasToStringTraits<T>::value, ImmutableString> GetStringRepresentation(const T & t) { return L"?"; }
+
 	template<class A, class V> class ArrayIterator
 	{
 		A & _array;
@@ -210,7 +209,7 @@ namespace Engine
 	public:
 		ArrayEnumerator(A & volume, int begin, int end, int delta) : _array(volume), _begin(begin), _end(end), _delta(delta) {}
 		ArrayIterator<A, V> begin(void) { return ArrayIterator<A, V>(_array, _begin, _delta); }
-		int end(void) { return _end; }
+		ArrayIterator<A, V> end(void) { return ArrayIterator<A, V>(_array, _end, _delta); }
 	};
 
 	template <class V> class Array : public Object
@@ -306,7 +305,15 @@ namespace Engine
 		V * GetBuffer(void) { return data; }
 		const V * GetBuffer(void) const { return data; }
 		
-		string ToString(void) const override { return L"Array[" + string(count) + L"]"; }
+		string ToString(void) const override
+		{
+			string result = L"Array : [";
+			for (int i = 0; i < count; i++) {
+				if (i) result += L", ";
+				result += GetStringRepresentation(data[i]);
+			}
+			return result + L"]";
+		}
 
 		operator V * (void) { return data; }
 		operator const V * (void) { return data; }
@@ -418,7 +425,15 @@ namespace Engine
 		}
 		int Length(void) const { return count; }
 
-		string ToString(void) const override { return L"SafeArray[" + string(count) + L"]"; }
+		string ToString(void) const override
+		{
+			string result = L"Safe Array : [";
+			for (int i = 0; i < count; i++) {
+				if (i) result += L", ";
+				result += GetStringRepresentation(*data[i]);
+			}
+			return result + L"]";
+		}
 
 		SafeArray & operator << (const V & v) { Append(v); return *this; }
 		SafeArray & operator << (const SafeArray & src) { Append(src); return *this; }
@@ -515,7 +530,7 @@ namespace Engine
 
 		string ToString(void) const override
 		{
-			string result = L"ObjectArray[";
+			string result = L"Object Array : [";
 			if (count) for (int i = 0; i < count; i++) { result += data[i]->ToString() + ((i == count - 1) ? L"]" : L", "); }
 			else result += L"]";
 			return result;
@@ -544,23 +559,58 @@ namespace Engine
 
 	ImmutableString StringFromDataBlock(const DataBlock * data, int max_length, bool byte_spaces);
 
-	template <class A> void SortArray(A & volume, bool ascending = true)
+	template <class A, class F> void SortArrayRange(A & volume, F comparator, int from, int count)
 	{
-		int len = volume.Length();
-		for (int i = 0; i < len - 1; i++) {
-			for (int j = i + 1; j < len; j++) {
-				bool swap = false;
-				if (ascending) {
-					swap = volume[i] > volume[j];
-				} else {
-					swap = volume[i] < volume[j];
-				}
-				if (swap) {
-					volume.SwapAt(i, j);
-				}
+		if (count < 2) return;
+		int ref = from + count / 2;
+		int l = from - 1;
+		int r = from + count;
+		while (true) {
+			do l++; while (comparator(volume[l], volume[ref]) < 0);
+			do r--; while (comparator(volume[r], volume[ref]) > 0);
+			if (l >= r) {
+				if (l > r) ref = r;
+				else if (r == from + count - 1) ref = r - 1;
+				else ref = r;
+				break;
 			}
+			volume.SwapAt(l, r);
+			if (ref == l) ref = r;
+			else if (ref == r) ref = l;
 		}
+		SortArrayRange(volume, comparator, from, ref - from + 1);
+		SortArrayRange(volume, comparator, ref + 1, count - ref + from - 1);
 	}
+	template <class A> void SortArrayRange(A & volume, bool ascending, int from, int count)
+	{
+		if (count < 2) return;
+		int ref = from + count / 2;
+		int l = from - 1;
+		int r = from + count;
+		while (true) {
+			if (ascending) {
+				do l++; while (volume[l] < volume[ref]);
+				do r--; while (volume[r] > volume[ref]);
+			} else {
+				do l++; while (volume[l] > volume[ref]);
+				do r--; while (volume[r] < volume[ref]);
+			}
+			if (l >= r) {
+				if (l > r) ref = r;
+				else if (r == from + count - 1) ref = r - 1;
+				else ref = r;
+				break;
+			}
+			volume.SwapAt(l, r);
+			if (ref == l) ref = r;
+			else if (ref == r) ref = l;
+		}
+		SortArrayRange(volume, ascending, from, ref - from + 1);
+		SortArrayRange(volume, ascending, ref + 1, count - ref + from - 1);
+	}
+	template <class A, class F> void SortArray(A & volume, F comparator) { SortArrayRange(volume, comparator, 0, volume.Length()); }
+	template <class A> void SortArray(A & volume, bool ascending = true) { SortArrayRange(volume, ascending, 0, volume.Length()); }
+
 	template <class V> int BinarySearchLE(const Array<V> & volume, const V & value)
 	{
 		if (!volume.Length()) throw InvalidArgumentException();
@@ -608,7 +658,13 @@ namespace Engine
 		void SetReference(O * ref) { if (reference) reference->Release(); reference = ref; }
 		void SetRetain(O * ref) { if (reference) reference->Release(); reference = ref; if (reference) reference->Retain(); }
 
+		string ToString(void) const { return string(reference); }
+
 		bool friend operator == (const SafePointer & a, const SafePointer & b) { return a.reference == b.reference; }
 		bool friend operator != (const SafePointer & a, const SafePointer & b) { return a.reference != b.reference; }
+		bool friend operator == (const SafePointer & a, O * b) { return a.reference == b; }
+		bool friend operator != (const SafePointer & a, O * b) { return a.reference != b; }
+		bool friend operator == (O * a, const SafePointer & b) { return a == b.reference; }
+		bool friend operator != (O * a, const SafePointer & b) { return a != b.reference; }
 	};
 }

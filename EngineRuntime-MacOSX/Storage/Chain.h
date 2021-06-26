@@ -2,7 +2,6 @@
 
 #include "Compression.h"
 #include "../Miscellaneous/ThreadPool.h"
-#include "../Miscellaneous/Dictionary.h"
 #include "../Streaming.h"
 
 namespace Engine

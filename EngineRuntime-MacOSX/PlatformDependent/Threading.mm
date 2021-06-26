@@ -24,8 +24,8 @@
 }
 - (void) dealloc
 {
-    wait_sem->Release();
-    [super dealloc];
+	wait_sem->Release();
+	[super dealloc];
 }
 @end
 
@@ -48,17 +48,17 @@ namespace Engine
 				[lock release];
 			}
 			virtual void Wait(void) override
-            {
-                [lock lockWhenCondition: 1];
+			{
+				[lock lockWhenCondition: 1];
 				if (semaphore == 0) {
 					[lock unlockWithCondition: 1];
 					throw InvalidArgumentException();
 				}
 				semaphore--;
 				[lock unlockWithCondition: ((semaphore == 0) ? 0 : 1) ];
-            }
+			}
 			virtual bool TryWait(void) override
-            {
+			{
 				while (true) {
 					if ([lock tryLockWhenCondition: 1]) {
 						if (semaphore == 0) {
@@ -74,13 +74,28 @@ namespace Engine
 						return false;
 					}
 				}
-            }
+			}
+			virtual bool WaitFor(uint time) override
+			{
+				@autoreleasepool {
+					auto date = [NSDate dateWithTimeIntervalSinceNow: double(time) / 1000.0];
+					auto result = [lock lockWhenCondition: 1 beforeDate: date];
+					if (!result) return false;
+				}
+				if (semaphore == 0) {
+					[lock unlockWithCondition: 1];
+					throw InvalidArgumentException();
+				}
+				semaphore--;
+				[lock unlockWithCondition: ((semaphore == 0) ? 0 : 1) ];
+				return true;
+			}
 			virtual void Open(void) override
-            {
-            	while (![lock tryLock]);
+			{
+				while (![lock tryLock]);
 				semaphore++;
 				[lock unlockWithCondition: ((semaphore == 0) ? 0 : 1) ];
-            }
+			}
 		};
 		class Thread : public Engine::Thread
 		{
@@ -120,16 +135,8 @@ namespace Engine
 		[thread start];
 		return new CocoaThreading::Thread(thread, info);
 	}
-	Thread * GetCurrentThread(void)
-	{
-		NSThread * thread = [NSThread currentThread];
-		[thread retain];
-		ThreadStartupInfo * info = [thread threadDictionary][@"einst"];
-		[info retain];
-		return new CocoaThreading::Thread(thread, info);
-	}
 	Semaphore * CreateSemaphore(uint32 initial)
 	{
-        return new (std::nothrow) CocoaThreading::Semaphore(initial);
+		return new (std::nothrow) CocoaThreading::Semaphore(initial);
 	}
 }

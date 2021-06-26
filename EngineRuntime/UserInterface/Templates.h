@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ShapeBase.h"
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 #include "../Miscellaneous/Reflection.h"
 #include "../Syntax/MathExpression.h"
 
@@ -16,8 +16,31 @@ namespace Engine
 			virtual void GetArgument(const string & name, double * value) = 0;
 			virtual void GetArgument(const string & name, Color * value) = 0;
 			virtual void GetArgument(const string & name, string * value) = 0;
-			virtual void GetArgument(const string & name, ITexture ** value) = 0;
-			virtual void GetArgument(const string & name, IFont ** value) = 0;
+			virtual void GetArgument(const string & name, Graphics::IBitmap ** value) = 0;
+			virtual void GetArgument(const string & name, Graphics::IFont ** value) = 0;
+		};
+		class ZeroArgumentProvider : public IArgumentProvider
+		{
+		public:
+			ZeroArgumentProvider(void);
+			virtual void GetArgument(const string & name, int * value) override;
+			virtual void GetArgument(const string & name, double * value) override;
+			virtual void GetArgument(const string & name, Color * value) override;
+			virtual void GetArgument(const string & name, string * value) override;
+			virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override;
+			virtual void GetArgument(const string & name, Graphics::IFont ** value) override;
+		};
+		class ReflectorArgumentProvider : public IArgumentProvider
+		{
+			Reflection::Reflected * Source;
+		public:
+			ReflectorArgumentProvider(Reflection::Reflected * source);
+			virtual void GetArgument(const string & name, int * value) override;
+			virtual void GetArgument(const string & name, double * value) override;
+			virtual void GetArgument(const string & name, Color * value) override;
+			virtual void GetArgument(const string & name, string * value) override;
+			virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override;
+			virtual void GetArgument(const string & name, Graphics::IFont ** value) override;
 		};
 
 		namespace Template
@@ -99,8 +122,8 @@ namespace Engine
 			typedef BasicTemplate<double> DoubleTemplate;
 			typedef BasicTemplate<Color> ColorTemplate;
 			typedef BasicTemplate<string> StringTemplate;
-			typedef ObjectTemplate<ITexture> TextureTemplate;
-			typedef ObjectTemplate<IFont> FontTemplate;
+			typedef ObjectTemplate<Graphics::IBitmap> TextureTemplate;
+			typedef ObjectTemplate<Graphics::IFont> FontTemplate;
 
 			class Coordinate
 			{
@@ -134,11 +157,11 @@ namespace Engine
 				BasicTemplate<double> Position;
 
 				GradientPoint(void);
-				GradientPoint(const Engine::UI::GradientPoint & gradient);
+				GradientPoint(const Engine::GradientPoint & gradient);
 				GradientPoint(const BasicTemplate<Color> & color, const BasicTemplate<double> & position);
 
 				bool IsDefined(void) const;
-				Engine::UI::GradientPoint Initialize(IArgumentProvider * provider) const;
+				Engine::GradientPoint Initialize(IArgumentProvider * provider) const;
 			};
 
 			class Shape : public Object
@@ -166,7 +189,7 @@ namespace Engine
 			{
 			public:
 				Array<GradientPoint> Gradient;
-				BasicTemplate<double> GradientAngle;
+				Coordinate X1, Y1, X2, Y2;
 
 				BarShape(void);
 				virtual ~BarShape(void) override;
@@ -197,7 +220,7 @@ namespace Engine
 			class TextureShape : public Shape
 			{
 			public:
-				ObjectTemplate<ITexture> Texture;
+				ObjectTemplate<Graphics::IBitmap> Texture;
 				Engine::UI::TextureShape::TextureRenderMode RenderMode;
 				Rectangle From;
 
@@ -210,11 +233,10 @@ namespace Engine
 			class TextShape : public Shape
 			{
 			public:
-				ObjectTemplate<IFont> Font;
+				ObjectTemplate<Graphics::IFont> Font;
 				BasicTemplate<string> Text;
-				Engine::UI::TextShape::TextHorizontalAlign HorizontalAlign;
-				Engine::UI::TextShape::TextVerticalAlign VerticalAlign;
 				BasicTemplate<Color> TextColor;
+				uint32 Flags;
 
 				TextShape(void);
 				virtual ~TextShape(void) override;
@@ -245,21 +267,22 @@ namespace Engine
 		class IResourceResolver : public Object
 		{
 		public:
-			virtual ITexture * GetTexture(const string & Name) = 0;
-			virtual IFont * GetFont(const string & Name) = 0;
+			virtual Graphics::IBitmap * GetTexture(const string & Name) = 0;
+			virtual Graphics::IFont * GetFont(const string & Name) = 0;
 			virtual Template::Shape * GetApplication(const string & Name) = 0;
 			virtual Template::ControlTemplate * GetDialog(const string & Name) = 0;
+			virtual Template::ControlReflectedBase * CreateCustomTemplate(const string & Class) = 0;
 		};
 
 		class InterfaceTemplate : public Object
 		{
 		public:
-			Dictionary::Dictionary<string, ITexture> Texture;
-			Dictionary::Dictionary<string, IFont> Font;
-			Dictionary::Dictionary<string, Template::Shape> Application;
-			Dictionary::Dictionary<string, Template::ControlTemplate> Dialog;
-			Dictionary::PlainDictionary<string, Color> Colors;
-			Dictionary::PlainDictionary<string, string> Strings;
+			Volumes::ObjectDictionary<string, Graphics::IBitmap> Texture;
+			Volumes::ObjectDictionary<string, Graphics::IFont> Font;
+			Volumes::ObjectDictionary<string, Template::Shape> Application;
+			Volumes::ObjectDictionary<string, Template::ControlTemplate> Dialog;
+			Volumes::Dictionary<string, Color> Colors;
+			Volumes::Dictionary<string, string> Strings;
 
 			InterfaceTemplate(void);
 			virtual ~InterfaceTemplate(void) override;

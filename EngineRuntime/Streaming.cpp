@@ -60,7 +60,48 @@ namespace Engine
 			result->Retain();
 			return result;
 		}
+		Array<uint8> * Stream::ReadBlock(uint32 length)
+		{
+			SafePointer< Array<uint8> > result = new (std::nothrow) Array<uint8>(length);
+			if (!result) throw OutOfMemoryException();
+			result->SetLength(length);
+			try {
+				Read(result->GetBuffer(), length);
+			} catch (IO::FileReadEndOfFileException & e) {
+				result->SetLength(e.DataRead);
+			}
+			result->Retain();
+			return result;
+		}
 		void Stream::WriteArray(const Array<uint8>* data) { Write(data->GetBuffer(), data->Length()); }
+		void Stream::RelocateData(uint64 offset_from, uint64 offset_to, uint64 length)
+		{
+			if (offset_to > offset_from) {
+				DataBlock block(0x10000);
+				block.SetLength(0x100000);
+				uint64 data_left = length;
+				while (data_left) {
+					uint32 current = uint32(min(data_left, uint64(block.Length())));
+					Seek(offset_from + data_left - current, Begin);
+					Read(block.GetBuffer(), current);
+					Seek(offset_to + data_left - current, Begin);
+					Write(block.GetBuffer(), current);
+					data_left -= current;
+				}
+			} else if (offset_to < offset_from) {
+				DataBlock block(0x10000);
+				block.SetLength(0x100000);
+				uint64 data_left = length;
+				while (data_left) {
+					uint32 current = uint32(min(data_left, uint64(block.Length())));
+					Seek(offset_from + length - data_left, Begin);
+					Read(block.GetBuffer(), current);
+					Seek(offset_to + length - data_left, Begin);
+					Write(block.GetBuffer(), current);
+					data_left -= current;
+				}
+			}
+		}
 		FileStream::FileStream(const string & path, FileAccess access, FileCreationMode mode) : owned(true) { file = CreateFile(path, access, mode); }
 		FileStream::FileStream(handle file_handle, bool take_control) : owned(take_control) { file = file_handle; }
 		void FileStream::Read(void * buffer, uint32 length) { ReadFile(file, buffer, length); }

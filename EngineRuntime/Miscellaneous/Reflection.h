@@ -230,10 +230,10 @@ public: cxx_type property_name define_postfix;
 #define ENGINE_CXX_TYPE_COMPLEX				::Engine::Math::Complex
 #define ENGINE_CXX_TYPE_BOOLEAN				::Engine::Boolean
 #define ENGINE_CXX_TYPE_STRING				::Engine::ImmutableString
-#define ENGINE_CXX_TYPE_COLOR				::Engine::UI::Color
+#define ENGINE_CXX_TYPE_COLOR				::Engine::Color
 #define ENGINE_CXX_TYPE_TIME				::Engine::Time
-#define ENGINE_CXX_TYPE_TEXTURE				::Engine::SafePointer<::Engine::UI::ITexture>
-#define ENGINE_CXX_TYPE_FONT				::Engine::SafePointer<::Engine::UI::IFont>
+#define ENGINE_CXX_TYPE_TEXTURE				::Engine::SafePointer<::Engine::Graphics::IBitmap>
+#define ENGINE_CXX_TYPE_FONT				::Engine::SafePointer<::Engine::Graphics::IFont>
 #define ENGINE_CXX_TYPE_APPLICATION			::Engine::SafePointer<::Engine::UI::Template::Shape>
 #define ENGINE_CXX_TYPE_DIALOG				::Engine::SafePointer<::Engine::UI::Template::ControlTemplate>
 #define ENGINE_CXX_TYPE_RECTANGLE			::Engine::UI::Rectangle

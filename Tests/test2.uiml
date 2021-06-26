@@ -1,0 +1,72 @@
+﻿# Waffle
+
+dialog Test {
+	DialogFrame {
+		position { 0, 0, z 600, z 400 }
+		Captioned Sizeble MinimalWidth z 400 MinimalHeight z 200
+		CloseButton MinimizeButton MaximizeButton
+		Title "Test Window Template"
+		
+		ProgressBar {
+			position { z 5, z 5, w 1 z -5, z 33 }
+			Progress 0.7 ID 202
+		}
+		Static {
+			position { z 5, z 38, w 1 z -5, z 66 }
+			Text "Kornevgen Pidor"
+		}
+		ScrollBox {
+			position { z 5, z 71, w 1 z -5, w 1 z -38 }
+			VerticalLine z 30 HorizontalLine z 30
+			Edit {
+				position { z 5, z 5, w 1 z -5, z 33 }
+				ID 6767 Placeholder "pidor"
+			}
+			ComboBox {
+				position { z 5, z 38, w 1 z -5, z 66 }
+				ID 909090
+			}
+			TextComboBox {
+				position { z 5, z 71, w 1 z -5, z 99 }
+				ID 808080
+			}
+			MultiLineEdit {
+				position { z 5, z 104, w 1 z -5, z 300 }
+				ID 8787
+			}
+		}
+		Button {
+			position { z 5, w 1 z -33, z 105, w 1 z -5 }
+			Text "Suka" ID 1
+		}
+		ToolButton {
+			position { z 110, w 1 z -33, z 164, w 1 z -5 }
+			ToolButtonPart {
+				position { 0, 0, w 0.5, w 1 }
+				Text "A" ID 101
+			}
+			ToolButtonPart {
+				position { w 0.5, 0, w 1, w 1 }
+				Text "B" DropDownMenu {
+					PopupMenu {
+						MenuItem { Text "sub item"
+							MenuItem { Text "suka" ID 1001 }
+							MenuItem { Text "suka - 2" ID 1301 }
+							MenuItem { Text "suka - 3" ID 1601 }
+						}
+						MenuSeparator {}
+						MenuItem { Text "blbl" ID 1002 Checked }
+					}
+				}
+			}
+		}
+		CheckBox {
+			position { z 169, w 1 z -33, z 269, w 1 z -5 }
+			Text "pidor" ID 103
+		}
+		Button {
+			position { w 1 z -105, w 1 z -33, w 1 z -5, w 1 z -5 }
+			Text "Pidor" ID 2
+		}
+	}
+}

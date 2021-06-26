@@ -62,8 +62,6 @@ namespace Engine
 			virtual bool CanDecode(const string & format) = 0;
 		};
 
-		void InitializeDefaultCodecs(void);
-
 		ICodec * FindEncoder(const string & format);
 		ICodec * FindDecoder(const string & format);
 		void EncodeFrame(Streaming::Stream * stream, Frame * frame, const string & format);

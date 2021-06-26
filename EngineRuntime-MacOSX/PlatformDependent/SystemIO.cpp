@@ -13,6 +13,8 @@
 #include <mach-o/dyld.h>
 #include <dirent.h>
 #include <sys/time.h>
+#include <sys/mount.h>
+#include <sys/param.h>
 
 namespace Engine
 {
@@ -56,15 +58,35 @@ namespace Engine
             if (access == Streaming::AccessRead) flags = O_RDONLY;
             else if (access == Streaming::AccessWrite) flags = O_WRONLY;
             else if (access == Streaming::AccessReadWrite) flags = O_RDWR;
+			else throw InvalidArgumentException();
             int result = -1;
             if (mode == Streaming::CreateNew) flags |= O_CREAT | O_EXCL;
             else if (mode == Streaming::CreateAlways) flags |= O_CREAT | O_TRUNC;
             else if (mode == Streaming::OpenAlways) flags |= O_CREAT;
             else if (mode == Streaming::TruncateExisting) flags |= O_TRUNC;
+			else if (mode == Streaming::OpenExisting);
+			else throw InvalidArgumentException();
 			do {
 				result = open(reinterpret_cast<char *>(Path->GetBuffer()), flags, 0777);
 				if (result == -1 && errno != EINTR) throw FileAccessException(PosixErrorToEngineError(errno));
 			} while (result == -1);
+			struct stat file_stat;
+			if (fstat(result, &file_stat) == -1) {
+				auto e = errno;
+				close(result);
+				throw FileAccessException(PosixErrorToEngineError(e));
+			}
+			if ((file_stat.st_mode & S_IFMT) == S_IFDIR) {
+				close(result);
+				throw FileAccessException(Error::AccessDenied);
+			}
+			int lf;
+			if (access == Streaming::AccessWrite || access == Streaming::AccessReadWrite) lf = LOCK_EX | LOCK_NB;
+			else if (access == Streaming::AccessRead) lf = LOCK_SH | LOCK_NB;
+			if (flock(result, lf) == -1) {
+				close(result);
+				throw FileAccessException(Error::AccessDenied);
+			}
             return handle(result);
 		}
         void CreatePipe(handle * pipe_in, handle * pipe_out)
@@ -76,11 +98,14 @@ namespace Engine
         }
         handle CloneHandle(handle file)
 		{
+			if (file == InvalidHandle) return InvalidHandle;
 			int new_file = dup(reinterpret_cast<intptr>(file));
 			if (new_file == -1) throw FileAccessException(PosixErrorToEngineError(errno));
 			return handle(new_file);
 		}
-		void CloseHandle(handle file) {
+		void CloseHandle(handle file)
+		{
+			if (file == InvalidHandle) return;
 			close(reinterpret_cast<intptr>(file));
 		}
         void ReadFile(handle file, void * to, uint32 amount)
@@ -136,6 +161,15 @@ namespace Engine
             SafePointer<Array<uint8>> Path = Path::NormalizePath(path).EncodeSequence(Encoding::UTF8, true);
             int file = open(reinterpret_cast<char *>(Path->GetBuffer()), O_RDONLY);
             if (file >= 0) {
+				struct stat file_stat;
+				if (fstat(file, &file_stat) == -1) {
+					close(file);
+					return false;
+				}
+				if ((file_stat.st_mode & S_IFMT) == S_IFDIR) {
+					close(file);
+					return false;
+				}
                 close(file);
                 return true;
             } else return false;
@@ -173,6 +207,63 @@ namespace Engine
 			if (symlink(reinterpret_cast<char *>(To->GetBuffer()), reinterpret_cast<char *>(At->GetBuffer())) == -1) {
 				throw FileAccessException(PosixErrorToEngineError(errno));
 			}
+		}
+		void CreateHardLink(const string & at, const string & to)
+		{
+			SafePointer< Array<uint8> > At = Path::NormalizePath(at).EncodeSequence(Encoding::UTF8, true);
+			SafePointer< Array<uint8> > To = Path::NormalizePath(to).EncodeSequence(Encoding::UTF8, true);
+			if (linkat(AT_FDCWD, reinterpret_cast<char *>(To->GetBuffer()), AT_FDCWD, reinterpret_cast<char *>(At->GetBuffer()), AT_SYMLINK_FOLLOW) == -1) {
+				throw FileAccessException(PosixErrorToEngineError(errno));
+			}
+		}
+		FileType GetFileType(const string & file)
+		{
+			SafePointer<DataBlock> path = Path::NormalizePath(file).EncodeSequence(Encoding::UTF8, true);
+			auto fd = open(reinterpret_cast<const char *>(path->GetBuffer()), O_RDONLY | O_SYMLINK);
+			if (fd == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+			struct stat file_stat;
+			if (fstat(fd, &file_stat) == -1) {
+				auto e = errno;
+				close(fd);
+				throw FileAccessException(PosixErrorToEngineError(e));
+			}
+			close(fd);
+			if ((file_stat.st_mode & S_IFMT) == S_IFREG) return FileType::Regular;
+			else if ((file_stat.st_mode & S_IFMT) == S_IFDIR) return FileType::Directory;
+			else if ((file_stat.st_mode & S_IFMT) == S_IFLNK) return FileType::SymbolicLink;
+			else return FileType::Unknown;
+		}
+		string GetSymbolicLinkDestination(const string & file)
+		{
+			SafePointer<DataBlock> path = Path::NormalizePath(file).EncodeSequence(Encoding::UTF8, true);
+			auto fd = open(reinterpret_cast<const char *>(path->GetBuffer()), O_RDONLY | O_SYMLINK);
+			if (fd == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+			struct stat file_stat;
+			if (fstat(fd, &file_stat) == -1) {
+				auto e = errno;
+				close(fd);
+				throw FileAccessException(PosixErrorToEngineError(e));
+			}
+			close(fd);
+			if ((file_stat.st_mode & S_IFMT) == S_IFLNK) {
+				Array<char> buffer(0x100);
+				buffer.SetLength(1024);
+				auto len = readlink(reinterpret_cast<const char *>(path->GetBuffer()), buffer.GetBuffer(), buffer.Length());
+				if (len == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+				auto base = string(buffer.GetBuffer(), len, Encoding::UTF8);
+				buffer.SetLength(0);
+				if (base[0] == L'/') return base;
+				else return ExpandPath(Path::GetDirectory(ExpandPath(file)) + L"/" + base);
+			} else return ExpandPath(file);
+		}
+		void GetVolumeSpace(const string & volume, uint64 * total_bytes, uint64 * free_bytes, uint64 * user_available_bytes)
+		{
+			SafePointer<DataBlock> path = Path::NormalizePath(volume).EncodeSequence(Encoding::UTF8, true);
+			struct statfs fss;
+			if (statfs(reinterpret_cast<const char *>(path->GetBuffer()), &fss) == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+			if (total_bytes) *total_bytes = fss.f_bsize * fss.f_blocks;
+			if (free_bytes) *free_bytes = fss.f_bsize * fss.f_bfree;
+			if (user_available_bytes) *user_available_bytes = fss.f_bsize * fss.f_bavail;
 		}
         string ExpandPath(const string & path)
         {
@@ -232,12 +323,63 @@ namespace Engine
             }
             return ExpandPath(string(Path.GetBuffer(), -1, Encoding::UTF8));
 		}
-        handle GetStandardOutput(void) { return handle(1); }
-		handle GetStandardInput(void) { return handle(0); }
-		handle GetStandardError(void) { return handle(2); }
-		void SetStandardOutput(handle file) { close(1); dup2(reinterpret_cast<intptr>(file), 1); }
-		void SetStandardInput(handle file) { close(0); dup2(reinterpret_cast<intptr>(file), 0); }
-		void SetStandardError(handle file) { close(2); dup2(reinterpret_cast<intptr>(file), 2); }
+		handle GetStandardOutput(void)
+		{
+			struct stat fs;
+			if (fstat(1, &fs) != -1) return handle(1);
+			else return InvalidHandle;
+		}
+		handle GetStandardInput(void)
+		{
+			struct stat fs;
+			if (fstat(0, &fs) != -1) return handle(0);
+			else return InvalidHandle;
+		}
+		handle GetStandardError(void)
+		{
+			struct stat fs;
+			if (fstat(2, &fs) != -1) return handle(2);
+			else return InvalidHandle;
+		}
+		void SetStandardOutput(handle file)
+		{
+			if (file != InvalidHandle) dup2(reinterpret_cast<intptr>(file), 1); else {
+				auto ndev = open("/dev/null", O_RDWR);
+				if (ndev == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+				if (dup2(ndev, 1) == -1) {
+					auto e = errno;
+					close(ndev);
+					throw FileAccessException(PosixErrorToEngineError(e));
+				}
+				close(ndev);
+			}
+		}
+		void SetStandardInput(handle file)
+		{
+			if (file != InvalidHandle) dup2(reinterpret_cast<intptr>(file), 0); else {
+				auto ndev = open("/dev/null", O_RDWR);
+				if (ndev == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+				if (dup2(ndev, 0) == -1) {
+					auto e = errno;
+					close(ndev);
+					throw FileAccessException(PosixErrorToEngineError(e));
+				}
+				close(ndev);
+			}
+		}
+		void SetStandardError(handle file)
+		{
+			if (file != InvalidHandle) dup2(reinterpret_cast<intptr>(file), 2); else {
+				auto ndev = open("/dev/null", O_RDWR);
+				if (ndev == -1) throw FileAccessException(PosixErrorToEngineError(errno));
+				if (dup2(ndev, 2) == -1) {
+					auto e = errno;
+					close(ndev);
+					throw FileAccessException(PosixErrorToEngineError(e));
+				}
+				close(ndev);
+			}
+		}
 
         namespace Search
 		{

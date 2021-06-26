@@ -14,6 +14,12 @@
 #define ENGINE_LIBRARY_EXTENSION L"dylib"
 
 #endif
+#ifdef ENGINE_LINUX
+
+#define ENGINE_EXPORT_API extern "C" __attribute__((visibility("default")))
+#define ENGINE_LIBRARY_EXTENSION L"so"
+
+#endif
 
 namespace Engine
 {

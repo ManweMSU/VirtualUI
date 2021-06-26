@@ -38,27 +38,72 @@ namespace Engine
 				class ReaderStream : public Streaming::Stream
 				{
 					SafePointer<Socket> target;
+					SafePointer<DataBlock> current_chunk;
 					uint32 max_length;
 					uint32 current = 0;
+					bool max_length_set;
+
+					string read_string(void)
+					{
+						DynamicString result;
+						widechar chr = 0;
+						while (true) {
+							target->Read(&chr, 1);
+							if (chr >= 32) {
+								result += chr;
+							} else if (chr == '\n') break;
+						}
+						return result;
+					}
 				public:
-					ReaderStream(Socket * connection, uint32 limit_len) : max_length(limit_len) { target.SetRetain(connection); }
-					virtual ~ReaderStream(void) override { try { uint8 r; while (current < max_length) Read(&r, 1); } catch (...) { target->Shutdown(true, true); } }
+					ReaderStream(Socket * connection, uint32 limit_len) : max_length(limit_len), max_length_set(true) { target.SetRetain(connection); }
+					ReaderStream(Socket * connection) : max_length(0), max_length_set(false) { target.SetRetain(connection); }
+					virtual ~ReaderStream(void) override { target->Shutdown(true, true); }
 					virtual void Read(void * buffer, uint32 length) override
 					{
-						uint32 avail = max_length - current;
-						if (length > avail) {
-							length = avail;
-							target->Read(buffer, length);
-							current = max_length;
-							throw IO::FileReadEndOfFileException(length);
+						if (max_length_set) {
+							uint32 avail = max_length - current;
+							if (length > avail) {
+								length = avail;
+								target->Read(buffer, length);
+								current = max_length;
+								throw IO::FileReadEndOfFileException(length);
+							} else {
+								target->Read(buffer, length);
+								current += length;
+							}
 						} else {
-							target->Read(buffer, length);
-							current += length;
+							auto dest = reinterpret_cast<uint8 *>(buffer);
+							int wp = 0;
+							while (length) {
+								if (!current_chunk) {
+									try {
+										auto len = read_string().ToUInt32(HexadecimalBase);
+										current = 0;
+										current_chunk = new DataBlock(1);
+										current_chunk->SetLength(len);
+										target->Read(current_chunk->GetBuffer(), current_chunk->Length());
+										read_string();
+									} catch (...) { throw IO::FileAccessException(); }
+								}
+								auto avail = min(length, uint32(current_chunk->Length()) - current);
+								if (avail) {
+									MemoryCopy(dest + wp, current_chunk->GetBuffer() + current, avail);
+									current += avail;
+									wp += avail;
+									length -= avail;
+									if (current_chunk->Length() == current) current_chunk.SetReference(0);
+								} else throw IO::FileReadEndOfFileException(wp);
+							}
 						}
 					}
 					virtual void Write(const void * data, uint32 length) override { throw Exception(); }
 					virtual int64 Seek(int64 position, Streaming::SeekOrigin origin) override { throw Exception(); }
-					virtual uint64 Length(void) override { return uint64(max_length); }
+					virtual uint64 Length(void) override
+					{
+						if (!max_length_set) throw IO::FileAccessException();
+						return uint64(max_length);
+					}
 					virtual void SetLength(uint64 length) override { throw Exception(); }
 					virtual void Flush(void) override {}
 				};
@@ -136,7 +181,12 @@ namespace Engine
 						} else break;
 					}
 					string len = GetHeader(L"Content-Length");
-					reader = new ReaderStream(_connection, len.Length() ? len.ToUInt32() : 0);
+					string con_enc = GetHeader(L"Transfer-Encoding");
+					if (len.Length()) {
+						reader = new ReaderStream(_connection, len.ToUInt32());
+					} else if (string::CompareIgnoreCase(con_enc, L"chunked") == 0) {
+						reader = new ReaderStream(_connection);
+					} else reader = new ReaderStream(_connection, 0);
 				}
 				void read_for_body(void)
 				{
@@ -151,6 +201,7 @@ namespace Engine
 					SetHeader(L"Accept", L"*");
 					SetHeader(L"Accept-Charset", L"utf-8");
 					SetHeader(L"Host", _host);
+					SetHeader(L"Connection", L"close");
 					if (_agent.Length()) SetHeader(L"User-Agent", _agent);
 				}
 				virtual ~HttpRequest(void) override {}

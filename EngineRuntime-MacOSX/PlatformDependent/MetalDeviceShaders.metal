@@ -16,6 +16,12 @@ typedef struct {
 	int bottom;
 } metal_device_box;
 typedef struct {
+	simd_packed_float2 from;
+	simd_packed_float2 to;
+	simd_packed_float2 side;
+	simd_packed_float2 extents;
+} metal_device_gradient_box;
+typedef struct {
 	int left;
 	int top;
 	int right;
@@ -66,9 +72,37 @@ vertex metal_device_main_output MetalDeviceMainVertexShader(
 	v.tex_coord = verticies[id].tex_coord;
 	return v;
 }
+vertex metal_device_main_output MetalDeviceMainVertexShaderGradient(
+	uint id [[vertex_id]],
+	constant metal_device_viewport * viewport [[buffer(0)]],
+	constant metal_device_main_input * verticies [[buffer(1)]],
+	constant metal_device_gradient_box * box [[buffer(2)]])
+{
+	metal_device_main_output v;
+	float p = verticies[id].position.x;
+	float o = verticies[id].position.y;
+	if (p < 0.0f) p = -box->extents.x;
+	else if (p > 1.0f) p = 1.0f + box->extents.x;
+	float2 c = mix(box->from, box->to, p) + o * box->extents.y * box->side;
+	float x = c.x - viewport->offset_x;
+	float y = c.y - viewport->offset_y;
+	v.position.x = 2.0f * (x / viewport->width) - 1.0f;
+	v.position.y = -(2.0f * (y / viewport->height) - 1.0f);
+	v.position.z = 0.0f;
+	v.position.w = 1.0f;
+	v.color = verticies[id].color;
+	v.tex_coord = verticies[id].tex_coord;
+	return v;
+}
 fragment float4 MetalDeviceMainPixelShader(metal_device_main_output data [[stage_in]], texture2d<float> tex [[texture(0)]])
 {
 	return data.color * tex.read(uint2(data.tex_coord.x, data.tex_coord.y));
+}
+fragment float4 MetalDeviceMainPixelShaderNoAlpha(metal_device_main_output data [[stage_in]], texture2d<float> tex [[texture(0)]])
+{
+	float4 result = data.color * tex.read(uint2(data.tex_coord.x, data.tex_coord.y));
+	result.a = 1.0f;
+	return result;
 }
 
 vertex metal_device_tile_output MetalDeviceTileVertexShader(

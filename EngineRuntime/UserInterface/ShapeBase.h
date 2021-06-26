@@ -3,270 +3,19 @@
 #include "../EngineBase.h"
 #include "../Streaming.h"
 #include "../ImageCodec/CodecBase.h"
-#include "../Graphics/Graphics.h"
+#include "../Graphics/GraphicsBase.h"
 #include "../Math/Vector.h"
 
 namespace Engine
 {
 	namespace UI
 	{
-		extern double Zoom;
-
-		class IRenderingDevice;
-		class ITextureRenderingDevice;
-
-		enum RenderingDeviceFeature {
-			RenderingDeviceFeatureBlurCapable = 0x00000001,
-			RenderingDeviceFeatureInversionCapable = 0x00000002,
-			RenderingDeviceFeaturePolygonCapable = 0x00000004,
-			RenderingDeviceFeatureLayersCapable = 0x00000008,
-			RenderingDeviceFeatureHardware = 0x20000000,
-			RenderingDeviceFeatureGraphicsInteropCapable = 0x40000000,
-			RenderingDeviceFeatureTextureTarget = 0x80000000
-		};
-
-		class Coordinate
-		{
-		public:
-			double Anchor, Zoom;
-			int Absolute;
-
-			Coordinate(void) noexcept;
-			Coordinate(int shift) noexcept;
-			Coordinate(int shift, double zoom, double anchor) noexcept;
-
-			Coordinate friend operator + (const Coordinate & a, const Coordinate & b) noexcept;
-			Coordinate friend operator - (const Coordinate & a, const Coordinate & b) noexcept;
-			Coordinate friend operator * (const Coordinate & a, double b) noexcept;
-			Coordinate friend operator * (double b, const Coordinate & a) noexcept;
-			Coordinate friend operator / (const Coordinate & a, double b) noexcept;
-
-			Coordinate & operator += (const Coordinate & a) noexcept;
-			Coordinate & operator -= (const Coordinate & a) noexcept;
-			Coordinate & operator *= (double a) noexcept;
-			Coordinate & operator /= (double a) noexcept;
-			Coordinate operator - (void) const noexcept;
-
-			bool friend operator == (const Coordinate & a, const Coordinate & b) noexcept;
-			bool friend operator != (const Coordinate & a, const Coordinate & b) noexcept;
-
-			static Coordinate Right() noexcept;
-			static Coordinate Bottom() noexcept;
-		};
-		class Rectangle
-		{
-		public:
-			Coordinate Left, Top, Right, Bottom;
-
-			Rectangle(void) noexcept;
-			Rectangle(const Coordinate & left, const Coordinate & top, const Coordinate & right, const Coordinate & bottom) noexcept;
-
-			Rectangle friend operator + (const Rectangle & a, const Rectangle & b) noexcept;
-			Rectangle friend operator - (const Rectangle & a, const Rectangle & b) noexcept;
-			Rectangle friend operator * (const Rectangle & a, double b) noexcept;
-			Rectangle friend operator * (double b, const Rectangle & a) noexcept;
-			Rectangle friend operator / (const Rectangle & a, double b) noexcept;
-
-			Rectangle & operator += (const Rectangle & a) noexcept;
-			Rectangle & operator -= (const Rectangle & a) noexcept;
-			Rectangle & operator *= (double a) noexcept;
-			Rectangle & operator /= (double a) noexcept;
-			Rectangle operator - (void) const noexcept;
-
-			bool friend operator == (const Rectangle & a, const Rectangle & b) noexcept;
-			bool friend operator != (const Rectangle & a, const Rectangle & b) noexcept;
-
-			bool IsValid(void) const noexcept;
-
-			static Rectangle Entire() noexcept;
-			static Rectangle Invalid() noexcept;
-		};
-		class Point
-		{
-		public:
-			int x, y;
-
-			Point(void) noexcept;
-			Point(int X, int Y) noexcept;
-
-			bool friend operator == (const Point & a, const Point & b) noexcept;
-			bool friend operator != (const Point & a, const Point & b) noexcept;
-		};
-		class Box
-		{
-		public:
-			int Left, Top, Right, Bottom;
-
-			Box(void) noexcept;
-			Box(const Rectangle & source, const Box & outer) noexcept;
-			Box(int left, int top, int right, int bottom) noexcept;
-
-			bool friend operator == (const Box & a, const Box & b) noexcept;
-			bool friend operator != (const Box & a, const Box & b) noexcept;
-
-			bool IsInside(const Point & p) const noexcept;
-
-			static Box Intersect(const Box & a, const Box & b) noexcept;
-		};
-		class Color
-		{
-		public:
-			union {
-				struct { uint8 r, g, b, a; };
-				uint32 Value;
-			};
-
-			Color(void) noexcept;
-			Color(uint8 sr, uint8 sg, uint8 sb, uint8 sa = 0xFF) noexcept;
-			Color(int sr, int sg, int sb, int sa = 0xFF) noexcept;
-			Color(float sr, float sg, float sb, float sa = 1.0) noexcept;
-			Color(double sr, double sg, double sb, double sa = 1.0) noexcept;
-			Color(uint32 code) noexcept;
-
-			operator uint32 (void) const noexcept;
-
-			bool friend operator == (const Color & a, const Color & b) noexcept;
-			bool friend operator != (const Color & a, const Color & b) noexcept;
-		};
-		class GradientPoint
-		{
-		public:
-			Color Color;
-			double Position;
-
-			GradientPoint(void) noexcept;
-			GradientPoint(const UI::Color & color) noexcept;
-			GradientPoint(const UI::Color & color, double position) noexcept;
-
-			bool friend operator == (const GradientPoint & a, const GradientPoint & b) noexcept;
-			bool friend operator != (const GradientPoint & a, const GradientPoint & b) noexcept;
-		};
-
-		class IRenderingDevice;
-		class FrameShape;
-		class BarShape;
-
-		class IBarRenderingInfo : public Object
-		{
-		public:
-			virtual ~IBarRenderingInfo(void);
-		};
-		class IBlurEffectRenderingInfo : public Object
-		{
-		public:
-			virtual ~IBlurEffectRenderingInfo(void);
-		};
-		class IInversionEffectRenderingInfo : public Object
-		{
-		public:
-			virtual ~IInversionEffectRenderingInfo(void);
-		};
-		class ITextureRenderingInfo : public Object
-		{
-		public:
-			virtual ~ITextureRenderingInfo(void);
-		};
-		class ITextRenderingInfo : public Object
-		{
-		public:
-			virtual void GetExtent(int & width, int & height) noexcept = 0;
-			virtual void SetHighlightColor(const Color & color) noexcept = 0;
-			virtual void HighlightText(int Start, int End) noexcept = 0;
-			virtual int TestPosition(int point) noexcept = 0;
-			virtual int EndOfChar(int Index) noexcept = 0;
-			virtual void SetCharPalette(const Array<Color> & colors) = 0;
-			virtual void SetCharColors(const Array<uint8> & indicies) = 0;
-			virtual ~ITextRenderingInfo(void);
-		};
-
-		class ITexture : public Object
-		{
-		public:
-			virtual int GetWidth(void) const noexcept = 0;
-			virtual int GetHeight(void) const noexcept = 0;
-			virtual void VersionWasDestroyed(ITexture * texture) noexcept = 0;
-			virtual void DeviceWasDestroyed(IRenderingDevice * device) noexcept = 0;
-			virtual void AddDeviceVersion(IRenderingDevice * device, ITexture * texture) noexcept = 0;
-			virtual bool IsDeviceSpecific(void) const noexcept = 0;
-			virtual IRenderingDevice * GetParentDevice(void) const noexcept = 0;
-			virtual ITexture * GetDeviceVersion(IRenderingDevice * target_device) noexcept = 0;
-			virtual void Reload(Codec::Frame * source) = 0;
-			virtual void Reload(ITexture * device_independent) = 0;
-		};
-		class IFont : public Object
-		{
-		public:
-			virtual int GetWidth(void) const noexcept = 0;
-			virtual int GetHeight(void) const noexcept = 0;
-			virtual int GetLineSpacing(void) const noexcept = 0;
-			virtual int GetBaselineOffset(void) const noexcept = 0;
-		};
-		class IResourceLoader : public Object
-		{
-		public:
-			virtual ITexture * LoadTexture(Codec::Frame * source) noexcept = 0;
-			virtual IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept = 0;
-		};
-		class IObjectFactory : public IResourceLoader
-		{
-		public:
-			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, Color color) noexcept = 0;
-			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept = 0;
-		};
-		class IRenderingDevice : public IObjectFactory
-		{
-		public:
-			virtual void TextureWasDestroyed(ITexture * texture) noexcept = 0;
-
-			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept = 0;
-			virtual uint32 GetFeatureList(void) noexcept = 0;
-
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint> & gradient, double angle) noexcept = 0;
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept = 0;
-			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept = 0;
-			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept = 0;
-			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept = 0;
-			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept = 0;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept  = 0;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept = 0;
-
-			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) = 0;
-
-			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept = 0;
-			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept = 0;
-			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept = 0;
-			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept = 0;
-			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept = 0;
-
-			virtual void DrawPolygon(const Math::Vector2 * points, int count, Color color, double width) noexcept = 0;
-			virtual void FillPolygon(const Math::Vector2 * points, int count, Color color) noexcept = 0;
-
-			virtual void PushClip(const Box & Rect) noexcept = 0;
-			virtual void PopClip(void) noexcept = 0;
-			virtual void BeginLayer(const Box & Rect, double Opacity) noexcept = 0;
-			virtual void EndLayer(void) noexcept = 0;
-			virtual void SetTimerValue(uint32 time) noexcept = 0;
-			virtual uint32 GetCaretBlinkHalfTime(void) noexcept = 0;
-			virtual bool CaretShouldBeVisible(void) noexcept = 0;
-			virtual void ClearCache(void) noexcept = 0;
-			virtual ~IRenderingDevice(void);
-		};
-		class ITextureRenderingDevice : public IRenderingDevice
-		{
-		public:
-			virtual void BeginDraw(void) noexcept = 0;
-			virtual void EndDraw(void) noexcept = 0;
-			virtual ITexture * GetRenderTargetAsTexture(void) noexcept = 0;
-			virtual Codec::Frame * GetRenderTargetAsFrame(void) noexcept = 0;
-		};
-
-		IObjectFactory * CreateObjectFactory(void);
-
 		class Shape : public Object
 		{
 		public:
 			Rectangle Position;
-			virtual void Render(IRenderingDevice * Device, const Box & Outer) const noexcept = 0;
+
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept = 0;
 			virtual void ClearCache(void) noexcept = 0;
 			virtual Shape * Clone(void) const = 0;
 		};
@@ -274,91 +23,112 @@ namespace Engine
 		{
 		public:
 			enum class FrameRenderMode { Normal = 0, Clipping = 1, Layering = 2 };
+
 			ObjectArray<Shape> Children;
 			FrameRenderMode RenderMode;
 			double Opacity;
+
 			FrameShape(const Rectangle & position);
 			FrameShape(const Rectangle & position, FrameRenderMode mode, double opacity = 1.0);
 			~FrameShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept override;
+			virtual void ClearCache(void) noexcept override;
+			virtual Shape * Clone(void) const override;
+			virtual string ToString(void) const override;
 		};
 		class BarShape : public Shape
 		{
-			mutable SafePointer<IBarRenderingInfo> Info;
-			Array<GradientPoint> Gradient;
-			double GradientAngle;
+			SafePointer<Graphics::IColorBrush> _info;
+			Array<GradientPoint> _gradient;
+			Coordinate _x1, _y1, _x2, _y2;
+			Point _p1, _p2;
+			int _w, _h;
 		public:
 			BarShape(const Rectangle & position, const Color & color);
-			BarShape(const Rectangle & position, const Array<GradientPoint> & gradient, double angle);
+			BarShape(const Rectangle & position, const Array<GradientPoint> & gradient, const Coordinate & x1, const Coordinate & y1, const Coordinate & x2, const Coordinate & y2);
 			~BarShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept override;
+			virtual void ClearCache(void) noexcept override;
+			virtual Shape * Clone(void) const override;
+			virtual string ToString(void) const override;
 		};
 		class BlurEffectShape : public Shape
 		{
-			mutable SafePointer<IBlurEffectRenderingInfo> Info;
-			double BlurPower;
+			SafePointer<Graphics::IBlurEffectBrush> _info;
+			double _power;
 		public:
 			BlurEffectShape(const Rectangle & position, double power);
 			~BlurEffectShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept override;
+			virtual void ClearCache(void) noexcept override;
+			virtual Shape * Clone(void) const override;
+			virtual string ToString(void) const override;
 		};
 		class InversionEffectShape : public Shape
 		{
-			mutable SafePointer<IInversionEffectRenderingInfo> Info;
+			SafePointer<Graphics::IInversionEffectBrush> _info;
 		public:
 			InversionEffectShape(const Rectangle & position);
 			~InversionEffectShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept override;
+			virtual void ClearCache(void) noexcept override;
+			virtual Shape * Clone(void) const override;
+			virtual string ToString(void) const override;
 		};
 		class TextureShape : public Shape
 		{
 		public:
 			enum class TextureRenderMode { Stretch = 0, Fit = 1, FillPattern = 2, AsIs = 3 };
 		private:
-			mutable SafePointer<ITextureRenderingInfo> Info;
-			mutable Box FromBox;
-			ITexture * Texture;
-			TextureRenderMode Mode;
-			Rectangle From;
+			SafePointer<Graphics::IBitmapBrush> _info;
+			SafePointer<Graphics::IBitmap> _bitmap;
+			TextureRenderMode _mode;
+			Rectangle _from;
+			Box _area;
 		public:
-			TextureShape(const Rectangle & position, ITexture * texture, const Rectangle & take_from, TextureRenderMode mode);
+			TextureShape(const Rectangle & position, Graphics::IBitmap * bitmap, const Rectangle & take_from, TextureRenderMode mode);
 			~TextureShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept override;
+			virtual void ClearCache(void) noexcept override;
+			virtual Shape * Clone(void) const override;
+			virtual string ToString(void) const override;
 		};
 		class TextShape : public Shape
 		{
 		public:
-			enum class TextHorizontalAlign { Left = 0, Center = 1, Right = 2 };
-			enum class TextVerticalAlign { Top = 0, Center = 1, Bottom = 2 };
+			enum TextRenderFlags {
+				TextRenderDirect		= 0x0000,
+				TextRenderMultiline		= 0x0001,
+				TextRenderAllowWordWrap	= 0x0002,
+				TextRenderAllowEllipsis	= 0x0004,
+				TextRenderAlignLeft		= 0x0000,
+				TextRenderAlignCenter	= 0x0010,
+				TextRenderAlignRight	= 0x0020,
+				TextRenderAlignTop		= 0x0000,
+				TextRenderAlignVCenter	= 0x0100,
+				TextRenderAlignBottom	= 0x0200,
+			};
 		private:
-			mutable SafePointer<ITextRenderingInfo> Info;
-			IFont * Font;
-			string Text;
-			TextHorizontalAlign halign;
-			TextVerticalAlign valign;
-			Color TextColor;
+			struct _text_atom {
+				SafePointer<Graphics::ITextBrush> info;
+				string text;
+				bool end_line;
+				int x, y;
+			};
+
+			Array<_text_atom> _atoms;
+			SafePointer<Graphics::ITextBrush> _info;
+			SafePointer<Graphics::IFont> _font;
+			string _text;
+			Color _color;
+			uint32 _flags, _w, _h;
 		public:
-			TextShape(const Rectangle & position, const string & text, IFont * font, const Color & color, TextHorizontalAlign horizontal_align, TextVerticalAlign vertical_align);
+			TextShape(const Rectangle & position, const string & text, Graphics::IFont * font, const Color & color, uint32 flags);
 			~TextShape(void) override;
-			void Render(IRenderingDevice * Device, const Box & Outer) const noexcept override;
-			void ClearCache(void) noexcept override;
-			Shape * Clone(void) const override;
-			string ToString(void) const override;
+			virtual void Render(Graphics::I2DDeviceContext * device, const Box & outer) noexcept override;
+			virtual void ClearCache(void) noexcept override;
+			virtual Shape * Clone(void) const override;
+			virtual string ToString(void) const override;
 		};
 	}
 }

@@ -7,8 +7,10 @@
 
 #include "ComInterop.h"
 #include "Direct3D.h"
+#include "SystemCodecs.h"
 
 #include "../Math/Color.h"
+#include "../Miscellaneous/DynamicString.h"
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -16,22 +18,18 @@
 
 #undef max
 
+using namespace Engine::Codec;
+using namespace Engine::Streaming;
+using namespace Engine::Graphics;
+
 namespace Engine
 {
 	namespace Direct2D
 	{
-		using namespace Codec;
-		using namespace Streaming;
-
-		class WICTexture;
-		class D2DTexture;
-		class DWFont;
-		class D2DRenderingDevice;
-
 		ID2D1Factory1 * D2DFactory1 = 0;
 		ID2D1Factory * D2DFactory = 0;
-		IWICImagingFactory * WICFactory = 0;
 		IDWriteFactory * DWriteFactory = 0;
+		SafePointer<Graphics::I2DDeviceContextFactory> CommonFactory;
 
 		void InitializeFactory(void)
 		{
@@ -46,587 +44,660 @@ namespace Engine
 					D2DFactory = D2DFactory1;
 				}
 			}
-			if (!WICFactory) {
-				if (CoCreateInstance(CLSID_WICImagingFactory1, 0, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&WICFactory)) != S_OK) throw Exception();
-			}
 			if (!DWriteFactory) {
 				if (DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&DWriteFactory)) != S_OK) throw Exception();
 			}
+			if (!WIC::WICFactory) WIC::CreateWICodec();
+			CommonFactory = new D2D_DeviceContextFactory;
 		}
 		void ShutdownFactory(void)
 		{
 			if (D2DFactory) { D2DFactory->Release(); D2DFactory = 0; }
-			if (WICFactory) { WICFactory->Release(); WICFactory = 0; }
 			if (DWriteFactory) { DWriteFactory->Release(); DWriteFactory = 0; }
+			CommonFactory.SetReference(0);
 		}
 
-		class WicCodec : public ICodec
+		class WIC_BitmapLink : public IBitmapLink
 		{
+			IBitmap * _bitmap;
 		public:
-			virtual void EncodeFrame(Stream * stream, Frame * frame, const string & format) override
+			WIC_BitmapLink(IBitmap * bitmap) : _bitmap(bitmap) {}
+			void Invalidate(void) noexcept { _bitmap = 0; }
+			virtual IBitmap * GetBitmap(void) const noexcept override { return _bitmap; }
+			virtual string ToString(void) const override { return L"WIC_BitmapLink"; }
+		};
+		class WIC_Bitmap : public IBitmap
+		{
+			SafePointer<WIC_BitmapLink> _link;
+			Volumes::ObjectDictionary<I2DDeviceContext *, IDeviceBitmap> _versions;
+			IWICBitmap * _bitmap;
+			int _w, _h;
+		public:
+			static IWICBitmap * CreateWICBitmap(Codec::Frame * frame) noexcept
 			{
-				SafePointer<Image> Fake = new Image;
-				Fake->Frames.Append(frame);
-				EncodeImage(stream, Fake, format);
-			}
-			virtual void EncodeImage(Stream * stream, Image * image, const string & format) override
-			{
-				if (!image->Frames.Length()) throw InvalidArgumentException();
-				SafePointer<IWICBitmapEncoder> Encoder;
-				if (format == L"BMP") {
-					if (WICFactory->CreateEncoder(GUID_ContainerFormatBmp, 0, Encoder.InnerRef()) != S_OK) throw Exception();
-				} else if (format == L"PNG") {
-					if (WICFactory->CreateEncoder(GUID_ContainerFormatPng, 0, Encoder.InnerRef()) != S_OK) throw Exception();
-				} else if (format == L"JPG") {
-					if (WICFactory->CreateEncoder(GUID_ContainerFormatJpeg, 0, Encoder.InnerRef()) != S_OK) throw Exception();
-				} else if (format == L"GIF") {
-					if (WICFactory->CreateEncoder(GUID_ContainerFormatGif, 0, Encoder.InnerRef()) != S_OK) throw Exception();
-				} else if (format == L"TIF") {
-					if (WICFactory->CreateEncoder(GUID_ContainerFormatTiff, 0, Encoder.InnerRef()) != S_OK) throw Exception();
-				} else if (format == L"DDS") {
-					if (WICFactory->CreateEncoder(GUID_ContainerFormatDds, 0, Encoder.InnerRef()) != S_OK) throw Exception();
-				} else throw InvalidArgumentException();
-				SafePointer<ComStream> Output = new ComStream(stream);
-				if (Encoder->Initialize(Output, WICBitmapEncoderNoCache) != S_OK) throw Exception();
-				int max_frame = (format == L"GIF" || format == L"TIF") ? image->Frames.Length() : 1;
-				for (int i = 0; i < max_frame; i++) {
-					SafePointer<IWICBitmapFrameEncode> Frame;
-					SafePointer<IPropertyBag2> Properties;
-					if (Encoder->CreateNewFrame(Frame.InnerRef(), Properties.InnerRef()) == S_OK) {
-						WICPixelFormatGUID PixelFormat = GUID_WICPixelFormat32bppBGRA;
-						Frame->Initialize(Properties);
-						Frame->SetSize(image->Frames[i].GetWidth(), image->Frames[i].GetHeight());
-						Frame->SetPixelFormat(&PixelFormat);
-						Codec::PixelFormat SourceFormat;
-						Codec::AlphaMode SourceAlpha = Codec::AlphaMode::Normal;
-						bool Deny = false;
-						if (PixelFormat == GUID_WICPixelFormat32bppBGRA) {
-							SourceFormat = PixelFormat::B8G8R8A8;
-						} else if (PixelFormat == GUID_WICPixelFormat32bppPBGRA) {
-							SourceFormat = PixelFormat::B8G8R8A8;
-							SourceAlpha = Codec::AlphaMode::Premultiplied;
-						} else if (PixelFormat == GUID_WICPixelFormat32bppRGBA) {
-							SourceFormat = PixelFormat::R8G8B8A8;
-						} else if (PixelFormat == GUID_WICPixelFormat32bppPRGBA) {
-							SourceFormat = PixelFormat::R8G8B8A8;
-							SourceAlpha = Codec::AlphaMode::Premultiplied;
-						} else if (PixelFormat == GUID_WICPixelFormat32bppBGR) {
-							SourceFormat = PixelFormat::B8G8R8X8;
-						} else if (PixelFormat == GUID_WICPixelFormat32bppRGB) {
-							SourceFormat = PixelFormat::R8G8B8X8;
-						} else if (PixelFormat == GUID_WICPixelFormat24bppBGR) {
-							SourceFormat = PixelFormat::B8G8R8;
-						} else if (PixelFormat == GUID_WICPixelFormat24bppRGB) {
-							SourceFormat = PixelFormat::R8G8B8;
-						} else if (PixelFormat == GUID_WICPixelFormat16bppBGR555) {
-							SourceFormat = PixelFormat::B5G5R5X1;
-						} else if (PixelFormat == GUID_WICPixelFormat16bppBGRA5551) {
-							SourceFormat = PixelFormat::B5G5R5A1;
-						} else if (PixelFormat == GUID_WICPixelFormat16bppBGR565) {
-							SourceFormat = PixelFormat::B5G6R5;
-						} else if (PixelFormat == GUID_WICPixelFormat8bppGray) {
-							SourceFormat = PixelFormat::R8;
-						} else if (PixelFormat == GUID_WICPixelFormat8bppAlpha) {
-							SourceFormat = PixelFormat::A8;
-						} else if (PixelFormat == GUID_WICPixelFormat8bppIndexed) {
-							SourceFormat = PixelFormat::P8;
-						} else Deny = true;
-						if (!Deny) {
-							SafePointer<Engine::Codec::Frame> Conv = image->Frames[i].ConvertFormat(SourceFormat, SourceAlpha, ScanOrigin::TopDown);
-							if (IsPalettePixel(SourceFormat)) {
-								SafePointer<IWICPalette> Palette;
-								WICFactory->CreatePalette(Palette.InnerRef());
-								Palette->InitializeCustom(const_cast<WICColor *>(Conv->GetPalette()), Conv->GetPaletteVolume());
-								Frame->SetPalette(Palette);
-							}
-							if (format == L"GIF") {
-								SafePointer<IWICMetadataQueryWriter> MetaWriter;
-								Frame->GetMetadataQueryWriter(MetaWriter.InnerRef());
-								PROPVARIANT Value;
-								PropVariantInit(&Value);
-								Value.vt = VT_UI2;
-								Value.uiVal = Conv->Duration / 10;
-								MetaWriter->SetMetadataByName(L"/grctlext/Delay", &Value);
-								PropVariantClear(&Value);
-							}
-							Frame->WritePixels(image->Frames[i].GetHeight(), Conv->GetScanLineLength(), Conv->GetScanLineLength() * Conv->GetHeight(), Conv->GetData());
-							Frame->Commit();
-						}
-					}
-				}
-				Encoder->Commit();
-			}
-			virtual Frame * DecodeFrame(Stream * stream) override
-			{
-				SafePointer<Image> image = DecodeImage(stream);
-				if (image) {
-					SafePointer<Frame> frame = image->Frames.ElementAt(0);
-					frame->Retain();
-					frame->Retain();
-					return frame;
-				} else return 0;
-			}
-			virtual Image * DecodeImage(Stream * stream) override
-			{
-				Streaming::ComStream * Stream = new Streaming::ComStream(stream);
-				IWICBitmapDecoder * Decoder = 0;
-				IWICBitmapFrameDecode * FrameDecoder = 0;
-				IWICMetadataQueryReader * Metadata = 0;
-				IWICFormatConverter * Converter = 0;		
-				SafePointer<Image> Result = new Image;
+				IWICBitmap * result;
+				if (WIC::WICFactory->CreateBitmap(frame->GetWidth(), frame->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, &result) != S_OK) return 0;
+				SafePointer<Frame> conv;
 				try {
-					uint32 FrameCount;
-					HRESULT r;
-					if (r = WICFactory->CreateDecoderFromStream(Stream, 0, WICDecodeMetadataCacheOnDemand, &Decoder) != S_OK) throw IO::FileFormatException();
-					if (Decoder->GetFrameCount(&FrameCount) != S_OK) throw IO::FileFormatException();
-					for (uint32 i = 0; i < FrameCount; i++) {
-						if (Decoder->GetFrame(i, &FrameDecoder) != S_OK) throw IO::FileFormatException();
-						uint32 fw, fh;
-						if (FrameDecoder->GetSize(&fw, &fh) != S_OK) throw IO::FileFormatException();
-						SafePointer<Frame> frame = new Frame(fw, fh, -1, PixelFormat::B8G8R8A8, AlphaMode::Normal, ScanOrigin::TopDown);
-						if (FrameDecoder->GetMetadataQueryReader(&Metadata) == S_OK) {
-							PROPVARIANT Value;
-							PropVariantInit(&Value);
-							if (Metadata->GetMetadataByName(L"/grctlext/Delay", &Value) == S_OK) {
-								if (Value.vt == VT_UI2) {
-									frame->Duration = uint(Value.uiVal) * 10;
-								}
-							}
-							PropVariantClear(&Value);
-							Metadata->Release();
-							Metadata = 0;
-						}
-						if (WICFactory->CreateFormatConverter(&Converter) != S_OK) throw Exception();
-						if (Converter->Initialize(FrameDecoder, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, 0, 0.0f, WICBitmapPaletteTypeCustom) != S_OK) throw IO::FileFormatException();
-						if (Converter->CopyPixels(0, 4 * frame->GetWidth(), 4 * frame->GetWidth() * frame->GetHeight(), frame->GetData()) != S_OK) throw IO::FileFormatException();
-						Converter->Release();
-						Converter = 0;
-						FrameDecoder->Release();
-						FrameDecoder = 0;
-						Result->Frames.Append(frame);
+					if (frame->GetPixelFormat() == Codec::PixelFormat::B8G8R8A8 && frame->GetAlphaMode() == AlphaMode::Premultiplied && frame->GetScanOrigin() == ScanOrigin::TopDown) {
+						conv.SetRetain(frame);
+					} else {
+						conv = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
 					}
-					Decoder->Release();
-					Decoder = 0;
 				} catch (...) {
-					Stream->Release();
-					if (Decoder) Decoder->Release();
-					if (FrameDecoder) FrameDecoder->Release();
-					if (Metadata) Metadata->Release();
-					if (Converter) Converter->Release();
+					result->Release();
 					return 0;
 				}
-				Stream->Release();
-				Result->Retain();
-				return Result;
+				IWICBitmapLock * lock;
+				if (result->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &lock) != S_OK) { result->Release(); return 0; }
+				UINT length, stride;
+				uint8 * pdata;
+				if (lock->GetDataPointer(&length, &pdata) != S_OK) { lock->Release(); result->Release(); return 0; }
+				if (lock->GetStride(&stride) != S_OK) { lock->Release(); result->Release(); return 0; }
+				for (int y = 0; y < conv->GetHeight(); y++) {
+					auto org = conv->GetData() + y * intptr(conv->GetScanLineLength());
+					auto dest = pdata + y * intptr(stride);
+					MemoryCopy(dest, org, intptr(conv->GetWidth()) * 4);
+				}
+				lock->Release();
+				return result;
 			}
-			virtual bool IsImageCodec(void) override { return true; }
-			virtual bool IsFrameCodec(void) override { return true; }
-			virtual string GetCodecName(void) override { return L"Windows Imaging Component"; }
-			virtual string ExamineData(Stream * stream) override
+			static IWICBitmap * CreateWICBitmap(int width, int height, Color color) noexcept
 			{
-				uint64 size = stream->Length() - stream->Seek(0, Current);
-				if (size < 8) return L"";
-				uint64 begin = stream->Seek(0, Current);
-				uint64 sign;
-				try {
-					stream->Read(&sign, sizeof(sign));
-					stream->Seek(begin, Begin);
-				} catch (...) { return L""; }
-				if ((sign & 0xFFFF) == 0x4D42) return L"BMP";
-				else if (sign == 0x0A1A0A0D474E5089) return L"PNG";
-				else if ((sign & 0xFFFFFF) == 0xFFD8FF) return L"JPG";
-				else if ((sign & 0xFFFFFFFFFFFF) == 0x613938464947 || (sign & 0xFFFFFFFFFFFF) == 0x613738464947) return L"GIF";
-				else if ((sign & 0xFFFFFFFF) == 0x2A004D4D) return L"TIF";
-				else if ((sign & 0xFFFFFFFF) == 0x002A4949) return L"TIF";
-				else if ((sign & 0xFFFFFFFF) == 0x20534444) return L"DDS";
-				else if ((sign & 0xFFFFFFFF00000000) == 0x7079746600000000) return L"HEIF";
-				else return L"";
+				IWICBitmap * result;
+				if (WIC::WICFactory->CreateBitmap(width, height, GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, &result) != S_OK) return 0;
+				IWICBitmapLock * lock;
+				if (result->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &lock) != S_OK) { result->Release(); return 0; }
+				UINT length, stride;
+				uint8 * pdata;
+				if (lock->GetDataPointer(&length, &pdata) != S_OK) { lock->Release(); result->Release(); return 0; }
+				if (lock->GetStride(&stride) != S_OK) { lock->Release(); result->Release(); return 0; }
+				color.r = int(color.r) * int(color.a) / 255;
+				color.g = int(color.g) * int(color.a) / 255;
+				color.b = int(color.b) * int(color.a) / 255;
+				swap(color.r, color.b);
+				for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) {
+					auto dest = pdata + y * intptr(stride) + intptr(x) * 4;
+					*reinterpret_cast<uint32 *>(dest) = color.Value;
+				}
+				lock->Release();
+				return result;
 			}
-			virtual bool CanEncode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS"); }
-			virtual bool CanDecode(const string & format) override { return (format == L"BMP" || format == L"PNG" || format == L"JPG" || format == L"GIF" || format == L"TIF" || format == L"DDS" || format == L"HEIF"); }
+			WIC_Bitmap(IWICBitmap * bitmap, int w, int h) : _w(w), _h(h), _bitmap(bitmap) { _link = new WIC_BitmapLink(this); if (_bitmap) _bitmap->AddRef(); }
+			virtual ~WIC_Bitmap(void) override { _link->Invalidate(); if (_bitmap) _bitmap->Release(); }
+			virtual int GetWidth(void) const noexcept override { return _w; }
+			virtual int GetHeight(void) const noexcept override { return _h; }
+			virtual bool Reload(Codec::Frame * source) noexcept override
+			{
+				if (!source) return false;
+				auto new_bitmap = CreateWICBitmap(source);
+				if (!new_bitmap) return false;
+				UpdateSurface(new_bitmap, source->GetWidth(), source->GetHeight());
+				new_bitmap->Release();
+				for (auto dv : _versions) dv.value->Reload();
+				return true;
+			}
+			virtual bool AddDeviceBitmap(IDeviceBitmap * bitmap, I2DDeviceContext * device_for) noexcept override { try { return _versions.Append(device_for, bitmap); } catch (...) { return false; } }
+			virtual bool RemoveDeviceBitmap(I2DDeviceContext * device_for) noexcept override { _versions.Remove(device_for); return true; }
+			virtual IDeviceBitmap * GetDeviceBitmap(I2DDeviceContext * device_for) const noexcept override { return _versions.GetObjectByKey(device_for); }
+			virtual IBitmapLink * GetLinkObject(void) const noexcept override { return _link; }
+			virtual Codec::Frame * QueryFrame(void) const noexcept override
+			{
+				if (!_bitmap) return 0;
+				SafePointer<Codec::Frame> result;
+				try { result = new Frame(_w, _h, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown); } catch (...) { return 0; }
+				IWICBitmapLock * lock;
+				if (_bitmap->Lock(0, WICBitmapLockRead, &lock) != S_OK) return 0;
+				UINT length, stride;
+				uint8 * pdata;
+				if (lock->GetDataPointer(&length, &pdata) != S_OK) { lock->Release(); return 0; }
+				if (lock->GetStride(&stride) != S_OK) { lock->Release(); return 0; }
+				for (int y = 0; y < _h; y++) {
+					auto dest = result->GetData() + y * intptr(result->GetScanLineLength());
+					auto org = pdata + y * intptr(stride);
+					MemoryCopy(dest, org, intptr(_w) * 4);
+				}
+				lock->Release();
+				result->Retain();
+				return result;
+			}
+			virtual string ToString(void) const override { return L"WIC_Bitmap"; }
+			void UpdateSurface(IWICBitmap * bitmap, int w, int h) noexcept { if (_bitmap) _bitmap->Release(); _bitmap = bitmap; if (_bitmap) _bitmap->AddRef(); _w = w; _h = h; }
+			void SyncDeviceVersions(void) noexcept { for (auto dv : _versions) dv.value->Reload(); }
+			IWICBitmap * GetSurface(void) const noexcept { return _bitmap; }
+		};
+		class D2D_Bitmap : public IDeviceBitmap
+		{
+			WIC_Bitmap * _base;
+			D2D_DeviceContext * _context;
+			ID2D1Bitmap * _bitmap;
+			int _w, _h;
+		public:
+			D2D_Bitmap(WIC_Bitmap * bitmap, D2D_DeviceContext * context) : _base(bitmap), _context(context), _bitmap(0)
+			{
+				if (bitmap) { _w = bitmap->GetWidth(); _h = bitmap->GetHeight(); } else _w = _h = 0;
+				if (!Reload()) throw Exception();
+			}
+			D2D_Bitmap(ID2D1Bitmap * bitmap, D2D_DeviceContext * context, int w, int h) : _base(0), _context(context), _bitmap(bitmap)
+			{
+				_w = w; _h = h;
+				if (_bitmap) _bitmap->AddRef();
+			}
+			virtual ~D2D_Bitmap(void) override { if (_bitmap) _bitmap->Release(); }
+			virtual int GetWidth(void) const noexcept override { return _w; }
+			virtual int GetHeight(void) const noexcept override { return _h; }
+			virtual bool Reload(void) noexcept override
+			{
+				auto device = _context->GetRenderTarget();
+				ID2D1Bitmap * new_bitmap;
+				if (!device || !_base) return false;
+				if (device->CreateBitmapFromWicBitmap(_base->GetSurface(), &new_bitmap) != S_OK) return false;
+				if (_bitmap) _bitmap->Release();
+				_bitmap = new_bitmap;
+				return true;
+			}
+			virtual IBitmap * GetParentBitmap(void) const noexcept override { return _base; }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _context; }
+			virtual string ToString(void) const override { return L"D2D_Bitmap"; }
+			ID2D1Bitmap * GetSurface(void) const noexcept { return _bitmap; }
+		};
+		class DW_Font : public Graphics::IFont
+		{
+			IDWriteFontFace * _font_face, * _alt_face;
+			string _font_name;
+			int _height, _weight, _actual_height;
+			bool _italic, _underline, _strikeout;
+			DWRITE_FONT_METRICS _font_metrics, _alt_metrics;
+		public:
+			DW_Font(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout)
+			{
+				_font_name = face_name;
+				_actual_height = height;
+				_height = int(double(height) * 72.0 / 96.0);
+				_weight = weight;
+				_italic = italic;
+				_underline = underline;
+				_strikeout = strikeout;
+				IDWriteFontCollection * collection;
+				if (DWriteFactory->GetSystemFontCollection(&collection) != S_OK) throw Exception();
+				uint32 index;
+				int exists;
+				if (collection->FindFamilyName(face_name, &index, &exists) != S_OK) { collection->Release(); throw Exception(); }
+				if (!exists) { collection->Release(); throw Exception(); }
+				IDWriteFontFamily * family;
+				if (collection->GetFontFamily(index, &family) != S_OK) { collection->Release(); throw Exception(); }
+				IDWriteFont * source;
+				if (family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(_weight), DWRITE_FONT_STRETCH_NORMAL, _italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &source) != S_OK) { family->Release(); collection->Release(); throw Exception(); }
+				if (source->CreateFontFace(&_font_face) != S_OK) { source->Release(); family->Release(); collection->Release(); throw Exception(); }
+				source->Release();
+				family->Release();
+				if (_font_face->GetGdiCompatibleMetrics(float(_actual_height), 1.0f, 0, &_font_metrics) != S_OK) { _font_face->Release(); collection->Release(); throw Exception(); }
+				if (collection->FindFamilyName(L"Segoe UI Emoji", &index, &exists) == S_OK && exists) {
+					if (collection->GetFontFamily(index, &family) == S_OK) {
+						if (family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(_weight), DWRITE_FONT_STRETCH_NORMAL, _italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &source) == S_OK) {
+							if (source->CreateFontFace(&_alt_face) == S_OK) {
+								if (_alt_face->GetGdiCompatibleMetrics(float(_actual_height), 1.0f, 0, &_alt_metrics) != S_OK) _alt_metrics = _font_metrics;
+							} else {
+								_alt_face = 0;
+								_alt_metrics = _font_metrics;
+							}
+							source->Release();
+						} else {
+							_alt_face = 0;
+							_alt_metrics = _font_metrics;
+						}
+						family->Release();
+					} else {
+						_alt_face = 0;
+						_alt_metrics = _font_metrics;
+					}
+				} else {
+					_alt_face = 0;
+					_alt_metrics = _font_metrics;
+				}
+				collection->Release();
+			}
+			virtual ~DW_Font(void) override { if (_font_face) _font_face->Release(); if (_alt_face) _alt_face->Release(); }
+			float UnitsToDIP(int units) const noexcept { return float(units) * float(_height) / float(_font_metrics.designUnitsPerEm); }
+			float AltUnitsToDIP(int units) const noexcept { return float(units) * float(_height) / float(_alt_metrics.designUnitsPerEm); }
+			virtual int GetWidth(void) const noexcept override
+			{
+				uint16 space_glyph;
+				uint32 space = 0x20;
+				_font_face->GetGlyphIndicesW(&space, 1, &space_glyph);
+				DWRITE_GLYPH_METRICS space_metrics;
+				_font_face->GetGdiCompatibleGlyphMetrics(float(_height), 1.0f, 0, TRUE, &space_glyph, 1, &space_metrics);
+				return UnitsToDIP(space_metrics.advanceWidth);
+			}
+			virtual int GetHeight(void) const noexcept override { return _actual_height; }
+			virtual int GetLineSpacing(void) const noexcept override { return UnitsToDIP(_font_metrics.ascent + _font_metrics.descent + _font_metrics.lineGap); }
+			virtual int GetBaselineOffset(void) const noexcept override { return UnitsToDIP(_font_metrics.ascent); }
+			virtual string ToString(void) const override { return L"DW_Font"; }
+			bool IsUnderlined(void) const noexcept { return _underline; }
+			bool IsStrikedout(void) const noexcept { return _strikeout; }
+			int GetUnitHeight(void) const noexcept { return _height; }
+			IDWriteFontFace * GetMainFont(void) const noexcept { return _font_face; }
+			IDWriteFontFace * GetAltFont(void) const noexcept { return _alt_face; }
+			DWRITE_FONT_METRICS & GetMainMetrics(void) noexcept { return _font_metrics; }
+			DWRITE_FONT_METRICS & GetAltMetrics(void) noexcept { return _alt_metrics; }
 		};
 
-		Engine::Codec::ICodec * _WicCodec = 0;
-		Engine::Codec::ICodec * CreateWicCodec(void) { if (!_WicCodec) { InitializeFactory(); _WicCodec = new WicCodec(); _WicCodec->Release(); } return _WicCodec; }
+		string D2D_DeviceContextFactory::ToString(void) const { return L"D2D_DeviceContextFactory"; }
+		IBitmap * D2D_DeviceContextFactory::CreateBitmap(int width, int height, Color clear_color) noexcept
+		{
+			auto surface = WIC_Bitmap::CreateWICBitmap(width, height, clear_color);
+			if (!surface) return 0;
+			auto result = new (std::nothrow) WIC_Bitmap(surface, width, height);
+			surface->Release();
+			return result;
+		}
+		IBitmap * D2D_DeviceContextFactory::LoadBitmap(Codec::Frame * source) noexcept
+		{
+			if (!source) return 0;
+			auto surface = WIC_Bitmap::CreateWICBitmap(source);
+			if (!surface) return 0;
+			auto result = new (std::nothrow) WIC_Bitmap(surface, source->GetWidth(), source->GetHeight());
+			surface->Release();
+			return result;
+		}
+		Graphics::IFont * D2D_DeviceContextFactory::LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
+		{
+			if (face_name[0] == L'@') {
+				bool serif = false;
+				bool sans = false;
+				bool mono = false;
+				auto words = face_name.Fragment(1, -1).Split(L' ');
+				for (auto & w : words) if (w.Length()) {
+					if (string::CompareIgnoreCase(w, FontWordSerif) == 0) serif = true;
+					else if (string::CompareIgnoreCase(w, FontWordSans) == 0) sans = true;
+					else if (string::CompareIgnoreCase(w, FontWordMono) == 0) mono = true;
+					else return 0;
+				}
+				if (!serif) return 0;
+				if (mono) {
+					if (sans) return LoadFont(L"Consolas", height, weight, italic, underline, strikeout);
+					else return LoadFont(L"Courier New", height, weight, italic, underline, strikeout);
+				} else {
+					if (sans) return LoadFont(L"Segoe UI", height, weight, italic, underline, strikeout);
+					else return LoadFont(L"Times New Roman", height, weight, italic, underline, strikeout);
+				}
+			} else { try { return new DW_Font(face_name, height, weight, italic, underline, strikeout); } catch (...) { return 0; } }
+		}
+		Array<string> * D2D_DeviceContextFactory::GetFontFamilies(void) noexcept
+		{
+			SafePointer<IDWriteFontCollection> collection;
+			if (Direct2D::DWriteFactory && Direct2D::DWriteFactory->GetSystemFontCollection(collection.InnerRef()) == S_OK) {
+				uint count = collection->GetFontFamilyCount();
+				SafePointer< Array<string> > result = new (std::nothrow) Array<string>(int(count));
+				if (!result) {
+					collection->Release();
+					return 0;
+				}
+				for (uint i = 0; i < count; i++) {
+					SafePointer<IDWriteFontFamily> family;
+					if (collection->GetFontFamily(i, family.InnerRef()) == S_OK) {
+						SafePointer<IDWriteLocalizedStrings> strings;
+						if (family->GetFamilyNames(strings.InnerRef()) == S_OK) {
+							UINT32 index, length;
+							BOOL exists;
+							if (strings->FindLocaleName(L"en-us", &index, &exists) != S_OK || !exists) index = 0;
+							if (strings->GetStringLength(index, &length) == S_OK) {
+								try {
+									DynamicString str;
+									str.ReserveLength(length + 1);
+									strings->GetString(index, str, length + 1);
+									result->Append(str.ToString());
+								} catch (...) {}
+							}
+						}
+					}
+				}
+				result->Retain();
+				return result;
+			}
+			return 0;
+		}
+		IBitmapContext * D2D_DeviceContextFactory::CreateBitmapContext(void) noexcept
+		{
+			try {
+				SafePointer<D2D_DeviceContext> dc = new D2D_DeviceContext;
+				dc->SetBitmapContext(true);
+				dc->Retain();
+				return dc;
+			} catch (...) { return 0; }
+		}
 
-		struct BarRenderingInfo : public IBarRenderingInfo
+		class D2D_ColorBrush : public IColorBrush
 		{
-			ID2D1GradientStopCollection * Collection = 0;
-			ID2D1SolidColorBrush * Brush = 0;
-			double prop_h = 0.0, prop_w = 0.0;
-			~BarRenderingInfo(void) override { if (Collection) Collection->Release(); if (Brush) Brush->Release(); }
+			I2DDeviceContext * _parent;
+			ID2D1Brush * _brush;
+			ID2D1LinearGradientBrush * _gradient;
+			D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES props;
+		public:
+			D2D_ColorBrush(I2DDeviceContext * parent, ID2D1SolidColorBrush * brush) : _parent(parent), _brush(brush), _gradient(0) { _brush->AddRef(); }
+			D2D_ColorBrush(I2DDeviceContext * parent, ID2D1LinearGradientBrush * brush) : _parent(parent), _brush(brush), _gradient(brush) { _brush->AddRef(); }
+			virtual ~D2D_ColorBrush(void) override { _brush->Release(); }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual string ToString(void) const override { return L"D2D_ColorBrush"; }
+			ID2D1Brush * GetBrush(void) const noexcept { return _brush; }
+			ID2D1LinearGradientBrush * GetGradient(void) const noexcept { return _gradient; }
+			D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES & GetGradientProperties(void) noexcept { return props; }
 		};
-		struct TextureRenderingInfo : public ITextureRenderingInfo
+		class D2D_BitmapBrush : public IBitmapBrush
 		{
-			SafePointer<D2DTexture> Texture;
-			Box From;
-			SafePointer<ID2D1BitmapBrush> Brush;
-			bool Fill;
-			TextureRenderingInfo(void) {}
-			~TextureRenderingInfo(void) override {}
-		};
-		struct TextRenderingInfo : public ITextRenderingInfo
-		{
-			struct TextRange
+			I2DDeviceContext * _parent;
+			SafePointer<D2D_Bitmap> _bitmap;
+			ID2D1BitmapBrush * _brush;
+			D2D1_RECT_F _area;
+			bool _tile;
+		public:
+			D2D_BitmapBrush(D2D_DeviceContext * parent, D2D_Bitmap * bitmap, Box area, bool tile) : _parent(parent), _brush(0), _tile(tile)
 			{
-				int LeftEdge;
-				int RightEdge;
-				BarRenderingInfo * Brush;
+				_bitmap.SetRetain(bitmap);
+				_area = D2D1::RectF(float(area.Left), float(area.Top), float(area.Right), float(area.Bottom));
+				if (tile) {
+					ID2D1Bitmap * fragment;
+					if (area.Left == 0 && area.Top == 0 && area.Right == bitmap->GetWidth() && area.Bottom == bitmap->GetHeight()) {
+						fragment = _bitmap->GetSurface();
+						fragment->AddRef();
+					} else {
+						auto size = D2D1::SizeU(uint(area.Right - area.Left), uint(area.Bottom - area.Top));
+						auto props = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
+						auto rect = D2D1::RectU(area.Left, area.Top, area.Right, area.Bottom);
+						if (parent->GetRenderTarget()->CreateBitmap(size, props, &fragment) != S_OK) throw Exception();
+						if (fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), _bitmap->GetSurface(), &rect) != S_OK) { fragment->Release(); throw Exception(); }
+					}
+					auto props = D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
+					if (parent->GetRenderTarget()->CreateBitmapBrush(fragment, props, &_brush) != S_OK) { fragment->Release(); throw Exception(); }
+					fragment->Release();
+				}
+			}
+			virtual ~D2D_BitmapBrush(void) override { if (_brush) _brush->Release(); }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual string ToString(void) const override { return L"D2D_BitmapBrush"; }
+			void inline Render(ID2D1RenderTarget * target, const Box & at) const noexcept
+			{
+				D2D1_RECT_F to = D2D1::RectF(float(at.Left), float(at.Top), float(at.Right), float(at.Bottom));
+				if (_tile) target->FillRectangle(to, _brush);
+				else target->DrawBitmap(_bitmap->GetSurface(), to, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, _area);
+			}
+		};
+		class D2D_TextBrush : public ITextBrush
+		{
+			struct _text_range
+			{
+				int left;
+				int right;
+				D2D_ColorBrush * brush;
 			};
-			DWFont * Font;
-			Array<uint32> CharString;
-			Array<uint16> GlyphString;
-			Array<float> GlyphAdvances;
-			Array<uint8> UseAlternative;
-			Array<TextRange> Ranges;
-			ID2D1PathGeometry * Geometry;
-			ID2D1SolidColorBrush * TextBrush;
-			ID2D1SolidColorBrush * HighlightBrush;
-			D2DRenderingDevice * Device;
-			uint16 NormalSpaceGlyph;
-			uint16 AlternativeSpaceGlyph;
-			int BaselineOffset;
-			int halign, valign;
-			int run_length;
-			float UnderlineOffset;
-			float UnderlineHalfWidth;
-			float StrikeoutOffset;
-			float StrikeoutHalfWidth;
-			int hls, hle;
-			SafePointer<BarRenderingInfo> MainBrushInfo;
-			SafePointer<BarRenderingInfo> BackBrushInfo;
-			SafePointer< ObjectArray<BarRenderingInfo> > ExtraBrushes;
 
-			TextRenderingInfo(void) : CharString(0x40), GlyphString(0x40), GlyphAdvances(0x40), UseAlternative(0x40), Ranges(0x10), hls(-1), hle(-1) {}
+			D2D_DeviceContext * _parent;
+			SafePointer<DW_Font> _font;
+			int _valign, _halign, _hl_start, _hl_end;
+			Array<uint32> _text_ucs;
+			Array<uint16> _glyphs;
+			Array<float> _advances;
+			Array<uint8> _alt_face;
+			Array<_text_range> _ranges;
+			ID2D1PathGeometry * _geometry;
+			uint16 _main_space_glyph, _alt_space_glyph;
+			int _baseline, _run_length;
+			float _underline_offs, _underline_hw;
+			float _strikeout_offs, _strikeout_hw;
+			SafePointer<D2D_ColorBrush> _main_brush;
+			SafePointer<D2D_ColorBrush> _back_brush;
+			ObjectArray<D2D_ColorBrush> _extra_brushes;
 
-			void FillAdvances(void);
-			void FillGlyphs(void);
-			void BuildGeometry(void);
-			float FontUnitsToDIP(int units);
-			float AltFontUnitsToDIP(int units);
-
-			virtual void GetExtent(int & width, int & height) noexcept override;
-			virtual void SetHighlightColor(const Color & color) noexcept override
+			void _fill_glyphs(void)
 			{
-				if (HighlightBrush) { HighlightBrush->Release(); HighlightBrush = 0; }
-				Device->GetRenderTarget()->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &HighlightBrush);
+				uint32 space = L' ';
+				if (_font->GetMainFont()->GetGlyphIndicesW(&space, 1, &_main_space_glyph) != S_OK) throw Exception();
+				if (_font->GetAltFont()) {
+					if (_font->GetAltFont()->GetGlyphIndicesW(&space, 1, &_alt_space_glyph) != S_OK) _alt_space_glyph = _main_space_glyph;
+				} else _alt_space_glyph = _main_space_glyph;
+				if (_font->GetMainFont()->GetGlyphIndicesW(_text_ucs, _text_ucs.Length(), _glyphs) != S_OK) throw Exception();
+				for (int i = 0; i < _alt_face.Length(); i++) {
+					if (_text_ucs[i] == L'\t') {
+						_glyphs[i] = _main_space_glyph;
+						_alt_face[i] = false;
+					} else {
+						if (!_glyphs[i]) {
+							auto af = _font->GetAltFont();
+							if (af && af->GetGlyphIndicesW(_text_ucs.GetBuffer() + i, 1, _glyphs.GetBuffer() + i) == S_OK && _glyphs[i]) _alt_face[i] = true;
+							else _alt_face[i] = false;
+						} else _alt_face[i] = false;
+					}
+				}
 			}
-			virtual void HighlightText(int Start, int End) noexcept override { hls = Start; hle = End; }
+			void _fill_advances(void)
+			{
+				Array<DWRITE_GLYPH_METRICS> metrics(1);
+				metrics.SetLength(_text_ucs.Length());
+				auto ff = _font->GetMainFont();
+				auto af = _font->GetAltFont();
+				if (ff->GetGdiCompatibleGlyphMetrics(float(_font->GetUnitHeight()), 1.0f, 0, TRUE, _glyphs, _glyphs.Length(), metrics) != S_OK) throw Exception();
+				if (af) for (int i = 0; i < _glyphs.Length(); i++) if (_alt_face[i]) {
+					af->GetGdiCompatibleGlyphMetrics(float(_font->GetUnitHeight()), 1.0f, 0, TRUE, _glyphs.GetBuffer() + i, 1, metrics.GetBuffer() + i);
+				}
+				for (int i = 0; i < _glyphs.Length(); i++) _advances[i] = _alt_face[i] ? _font->AltUnitsToDIP(metrics[i].advanceWidth) : _font->UnitsToDIP(metrics[i].advanceWidth);
+				_baseline = int(_font->UnitsToDIP(_font->GetMainMetrics().ascent));
+				float run_length_f = 0.0f;
+				int tab_width = _font->GetWidth() * 4;
+				for (int i = 0; i < _glyphs.Length(); i++) {
+					if (_text_ucs[i] == L'\t') {
+						int64 align = ((int64(run_length_f) + tab_width) / tab_width) * tab_width;
+						_advances[i] = float(align) - run_length_f;
+						run_length_f = float(align);
+					} else run_length_f += _advances[i];
+				}
+				_run_length = int(run_length_f + 0.9f);
+			}
+			void _build_geometry(void)
+			{
+				if (_geometry) { _geometry->Release(); _geometry = 0; }
+				ID2D1GeometrySink * sink;
+				if (D2DFactory->CreatePathGeometry(&_geometry) != S_OK) throw Exception();
+				if (_geometry->Open(&sink) != S_OK) { _geometry->Release(); _geometry = 0; throw Exception(); }
+				auto ssink = static_cast<ID2D1SimplifiedGeometrySink *>(sink);
+				try {
+					auto glyphs = _glyphs;
+					for (int i = 0; i < glyphs.Length(); i++) if (_alt_face[i]) glyphs[i] = _main_space_glyph;
+					if (_font->GetMainFont()->GetGlyphRunOutline(float(_font->GetUnitHeight()), glyphs, _advances, 0, glyphs.Length(), FALSE, FALSE, ssink) != S_OK) throw Exception();
+					if (_font->GetAltFont()) {
+						for (int i = 0; i < glyphs.Length(); i++) glyphs[i] = _alt_face[i] ? _glyphs[i] : _alt_space_glyph;
+						_font->GetAltFont()->GetGlyphRunOutline(float(_font->GetUnitHeight()), glyphs, _advances, 0, glyphs.Length(), FALSE, FALSE, ssink);
+					}
+				} catch (...) {
+					sink->Close();
+					sink->Release();
+					_geometry->Release();
+					_geometry = 0;
+					throw;
+				}
+				sink->Close();
+				sink->Release();
+				_underline_offs = -_font->UnitsToDIP(int16(_font->GetMainMetrics().underlinePosition));
+				_underline_hw = _font->UnitsToDIP(_font->GetMainMetrics().underlineThickness) / 2.0f;
+				_strikeout_offs = -_font->UnitsToDIP(int16(_font->GetMainMetrics().strikethroughPosition));
+				_strikeout_hw = _font->UnitsToDIP(_font->GetMainMetrics().strikethroughThickness) / 2.0f;
+			}
+		public:
+			D2D_TextBrush(D2D_DeviceContext * parent, DW_Font * font, const uint32 * ucs, int length, uint32 halign, uint32 valign, const Color & color) : _parent(parent),
+				_text_ucs(1), _glyphs(1), _advances(1), _alt_face(1), _ranges(0x10), _extra_brushes(0x10), _geometry(0), _hl_start(-1), _hl_end(-1), _run_length(0)
+			{
+				_valign = valign;
+				_halign = halign;
+				_font.SetRetain(font);
+				_main_brush = static_cast<D2D_ColorBrush *>(_parent->CreateSolidColorBrush(color));
+				if (!_main_brush) throw Exception();
+				_text_ucs.SetLength(length);
+				_glyphs.SetLength(length);
+				_advances.SetLength(length);
+				_alt_face.SetLength(length);
+				MemoryCopy(_text_ucs.GetBuffer(), ucs, length * sizeof(uint32));
+				if (length) {
+					_fill_glyphs();
+					_fill_advances();
+					_build_geometry();
+				}
+			}
+			virtual ~D2D_TextBrush(void) override { if (_geometry) _geometry->Release(); }
+			virtual void GetExtents(int & width, int & height) noexcept override { width = _run_length; height = _font->GetHeight(); }
+			virtual void SetHighlightColor(const Color & color) noexcept override { _back_brush = static_cast<D2D_ColorBrush *>(_parent->CreateSolidColorBrush(color)); }
+			virtual void HighlightText(int start, int end) noexcept override { _hl_start = start; _hl_end = end; }
 			virtual int TestPosition(int point) noexcept override
 			{
 				if (point < 0) return 0;
-				if (point > run_length) return CharString.Length();
-				float p = float(point);
-				float s = 0.0f;
-				for (int i = 0; i < GlyphAdvances.Length(); i++) {
-					if (p <= s + GlyphAdvances[i]) {
-						if (p < s + GlyphAdvances[i] / 2.0f) return i;
+				if (point > _run_length) return _text_ucs.Length();
+				float p = float(point), s = 0.0f;
+				for (int i = 0; i < _advances.Length(); i++) {
+					if (p <= s + _advances[i]) {
+						if (p < s + _advances[i] / 2.0f) return i;
 						else return i + 1;
-						break;
 					}
-					s += GlyphAdvances[i];
+					s += _advances[i];
 				}
-				return CharString.Length();
+				return _text_ucs.Length();
 			}
-			virtual int EndOfChar(int Index) noexcept override
+			virtual int EndOfChar(int index) noexcept override
 			{
-				if (Index < 0) return 0;
-				float summ = 0.0f;
-				for (int i = 0; i <= Index; i++) summ += GlyphAdvances[i];
-				return int(summ);
+				if (index < 0) return 0;
+				float s = 0.0f;
+				for (int i = 0; i <= index; i++) s += _advances[i];
+				return int(s);
 			}
-			virtual void SetCharPalette(const Array<Color> & colors) override
+			virtual int GetStringLength(void) noexcept override { return _text_ucs.Length(); }
+			virtual void SetCharPalette(const Color * colors, int count) override
 			{
-				ExtraBrushes.SetReference(new ObjectArray<BarRenderingInfo>(colors.Length()));
-				for (int i = 0; i < colors.Length(); i++) {
-					SafePointer<BarRenderingInfo> Brush = reinterpret_cast<BarRenderingInfo *>(Device->CreateBarRenderingInfo(colors[i]));
-					ExtraBrushes->Append(Brush);
+				_ranges.Clear();
+				_extra_brushes.Clear();
+				for (int i = 0; i < count; i++) {
+					SafePointer<D2D_ColorBrush> brush = static_cast<D2D_ColorBrush *>(_parent->CreateSolidColorBrush(colors[i]));
+					if (!brush) throw Exception();
+					_extra_brushes.Append(brush);
 				}
 			}
-			virtual void SetCharColors(const Array<uint8> & indicies) override
+			virtual void SetCharColors(const uint8 * indicies, int count) override
 			{
-				Ranges.Clear();
+				_ranges.Clear();
 				int cp = 0;
-				float summ = 0.0f;
-				while (cp < indicies.Length()) {
-					float base = summ;
+				float s = 0.0f;
+				while (cp < count) {
+					float base = s;
 					int ep = cp;
-					while (ep < indicies.Length() && indicies[ep] == indicies[cp]) { summ += GlyphAdvances[ep]; ep++; }
+					while (ep < count && indicies[ep] == indicies[cp]) { s += _advances[ep]; ep++; }
 					int index = indicies[cp];
-					Ranges << TextRange{ int(base), int(summ + 1.0), (index == 0) ? MainBrushInfo.Inner() : ExtraBrushes->ElementAt(index - 1) };
+					_text_range range;
+					range.left = int(base);
+					range.right = int(s + 1.0f);
+					range.brush = (index == 0) ? _main_brush.Inner() : _extra_brushes.ElementAt(index - 1);
+					_ranges << range;
 					cp = ep;
 				}
 			}
-			virtual ~TextRenderingInfo(void) override
+			virtual void SetCharAdvances(const double * advances) override
 			{
-				if (Geometry) Geometry->Release();
-				if (TextBrush) TextBrush->Release();
-				if (HighlightBrush) HighlightBrush->Release();
-			}
-		};
-		struct BlurEffectRenderingInfo : public IBlurEffectRenderingInfo
-		{
-			SafePointer<ID2D1Effect> Effect;
-			virtual ~BlurEffectRenderingInfo(void) override {}
-		};
-		struct InversionEffectRenderingInfo : public IInversionEffectRenderingInfo
-		{
-			SafePointer<ID2D1Effect> Effect;
-			SafePointer<IBarRenderingInfo> WhiteBar;
-			SafePointer<IBarRenderingInfo> BlackBar;
-			virtual ~InversionEffectRenderingInfo(void) override {}
-		};
-		class WICTexture : public ITexture
-		{
-			struct dev_pair { ITexture * dev_tex; IRenderingDevice * dev_ptr; };
-		public:
-			Array<dev_pair> variants;
-			IWICBitmap * bitmap;
-			int w, h;
-			WICTexture(void) : variants(0x10), bitmap(0) {}
-			virtual ~WICTexture(void)
-			{
-				if (bitmap) bitmap->Release();
-				for (int i = 0; i < variants.Length(); i++) {
-					variants[i].dev_tex->VersionWasDestroyed(this);
-					variants[i].dev_ptr->TextureWasDestroyed(this);
-				}
-			}
-			virtual int GetWidth(void) const noexcept override { return w; }
-			virtual int GetHeight(void) const noexcept override { return h; }
-
-			virtual void VersionWasDestroyed(ITexture * texture) noexcept override
-			{
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_tex == texture) { variants.Remove(i); break; }
-			}
-			virtual void DeviceWasDestroyed(IRenderingDevice * device) noexcept override
-			{
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == device) { variants.Remove(i); break; }
-			}
-			virtual void AddDeviceVersion(IRenderingDevice * device, ITexture * texture) noexcept override
-			{
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == device) return;
-				variants << dev_pair{ texture, device };
-			}
-			virtual bool IsDeviceSpecific(void) const noexcept override { return false; }
-			virtual IRenderingDevice * GetParentDevice(void) const noexcept override { return 0; }
-			virtual ITexture * GetDeviceVersion(IRenderingDevice * target_device) noexcept override
-			{
-				if (!target_device) return this;
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == target_device) return variants[i].dev_tex;
-				return 0;
-			}
-
-			virtual void Reload(Codec::Frame * source) override
-			{
-				if (bitmap) bitmap->Release();
-				SafePointer<WICTexture> new_texture = static_cast<WICTexture *>(D2DRenderingDevice::StaticLoadTexture(source));
-				bitmap = new_texture->bitmap;
-				w = new_texture->w; h = new_texture->h;
-				new_texture->bitmap = 0;
-				for (int i = 0; i < variants.Length(); i++) variants[i].dev_tex->Reload(this);
-			}
-			virtual void Reload(ITexture * device_independent) override {}
-			virtual string ToString(void) const override { return L"Engine.Direct2D.WICTexture"; }
-		};
-		class D2DTexture : public ITexture
-		{
-		public:
-			WICTexture * base;
-			IRenderingDevice * factory_device;
-			ID2D1Bitmap * bitmap;
-			int w, h;
-			D2DTexture(void) : base(0), factory_device(0), bitmap(0) {}
-			virtual ~D2DTexture(void)
-			{
-				if (bitmap) bitmap->Release();
-				if (factory_device) factory_device->TextureWasDestroyed(this);
-				if (base) base->VersionWasDestroyed(this);
-			}
-			virtual int GetWidth(void) const noexcept override { return w; }
-			virtual int GetHeight(void) const noexcept override { return h; }
-
-			virtual void VersionWasDestroyed(ITexture * texture) noexcept override { if (texture == base) { base = 0; factory_device = 0; } }
-			virtual void DeviceWasDestroyed(IRenderingDevice * device) noexcept override { if (device == factory_device) { base = 0; factory_device = 0; } }
-			virtual void AddDeviceVersion(IRenderingDevice * device, ITexture * texture) noexcept override {}
-			virtual bool IsDeviceSpecific(void) const noexcept override { return true; }
-			virtual IRenderingDevice * GetParentDevice(void) const noexcept override { return factory_device; }
-			virtual ITexture * GetDeviceVersion(IRenderingDevice * target_device) noexcept override
-			{
-				if (factory_device && target_device == factory_device) return this;
-				else if (!target_device) return base;
-				return 0;
-			}
-
-			virtual void Reload(Codec::Frame * source) override { SafePointer<ITexture> base = D2DRenderingDevice::StaticLoadTexture(source); Reload(base); }
-			virtual void Reload(ITexture * device_independent) override
-			{
-				WICTexture * source = static_cast<WICTexture *>(device_independent);
-				w = source->w; h = source->h;
-				SafePointer<ID2D1Bitmap> texture;
-				auto device = static_cast<D2DRenderingDevice *>(factory_device);
-				auto render_target = device->GetRenderTarget();
-				if (render_target->CreateBitmapFromWicBitmap(source->bitmap, texture.InnerRef()) != S_OK) throw Exception();
-				texture->AddRef();
-				bitmap = texture;
-			}
-			virtual string ToString(void) const override { return L"Engine.Direct2D.D2DTexture"; }
-		};
-		class DWFont : public IFont
-		{
-		public:
-			IDWriteFontFace * FontFace;
-			IDWriteFontFace * AlternativeFace;
-			string FontName;
-			int Height, Weight;
-			int ActualHeight;
-			bool Italic, Underline, Strikeout;
-			DWRITE_FONT_METRICS FontMetrics;
-			DWRITE_FONT_METRICS AltMetrics;
-			virtual ~DWFont(void) override { if (FontFace) FontFace->Release(); if (AlternativeFace) AlternativeFace->Release(); }
-			float UnitsToDIP(int units) const { return float(units) * float(Height) / float(FontMetrics.designUnitsPerEm); }
-			virtual int GetWidth(void) const noexcept override
-			{
-				uint16 SpaceGlyph;
-				uint32 Space = 0x20;
-				FontFace->GetGlyphIndicesW(&Space, 1, &SpaceGlyph);
-				DWRITE_GLYPH_METRICS SpaceMetrics;
-				FontFace->GetGdiCompatibleGlyphMetrics(float(Height), 1.0f, 0, TRUE, &SpaceGlyph, 1, &SpaceMetrics);
-				return int(float(SpaceMetrics.advanceWidth) * float(Height) / float(FontMetrics.designUnitsPerEm));
-			}
-			virtual int GetHeight(void) const noexcept override { return ActualHeight; }
-			virtual int GetLineSpacing(void) const noexcept override { return int(UnitsToDIP(FontMetrics.ascent + FontMetrics.descent + FontMetrics.lineGap)); }
-			virtual int GetBaselineOffset(void) const noexcept override { return int(UnitsToDIP(FontMetrics.ascent)); }
-			virtual string ToString(void) const override { return L"Engine.Direct2D.DWFont"; }
-		};
-
-		D2DRenderingDevice::D2DRenderingDevice(ID2D1DeviceContext * target) :
-			ExtendedTarget(target), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0), ParentWrappedDevice(0)
-		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
-		D2DRenderingDevice::D2DRenderingDevice(ID2D1RenderTarget * target) :
-			ExtendedTarget(0), Target(target), Layers(0x10), Clipping(0x20), BrushCache(0x100, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			BlurCache(0x10, Dictionary::ExcludePolicy::ExcludeLeastRefrenced),
-			TextureCache(0x100), BitmapTargetState(0), BitmapTargetResX(0), BitmapTargetResY(0), ParentWrappedDevice(0)
-		{ Target->AddRef(); HalfBlinkPeriod = GetCaretBlinkTime(); BlinkPeriod = HalfBlinkPeriod * 2; }
-		D2DRenderingDevice::~D2DRenderingDevice(void)
-		{
-			if (Target) Target->Release();
-			for (int i = 0; i < TextureCache.Length(); i++) {
-				TextureCache[i].base->DeviceWasDestroyed(this);
-				TextureCache[i].spec->DeviceWasDestroyed(this);
-			}
-		}
-		ID2D1RenderTarget * D2DRenderingDevice::GetRenderTarget(void) const noexcept { return Target; }
-		void D2DRenderingDevice::UpdateRenderTarget(ID2D1RenderTarget * target) noexcept
-		{
-			if (Target) { Target->Release(); Target = 0; }
-			if (target) { Target = target; Target->AddRef(); }
-		}
-		void D2DRenderingDevice::SetParentWrappedDevice(Graphics::IDevice * device) noexcept { ParentWrappedDevice = device; }
-		void D2DRenderingDevice::TextureWasDestroyed(ITexture * texture) noexcept
-		{
-			for (int i = 0; i < TextureCache.Length(); i++) {
-				if (TextureCache[i].base == texture || TextureCache[i].spec == texture) {
-					TextureCache.Remove(i);
-					break;
-				}
-			}
-		}
-		string D2DRenderingDevice::ToString(void) const { return L"Engine.Direct2D.D2DRenderingDevice"; }
-		void D2DRenderingDevice::GetImplementationInfo(string & tech, uint32 & version) noexcept { tech = L"Direct2D"; version = 1; }
-		uint32 D2DRenderingDevice::GetFeatureList(void) noexcept
-		{
-			uint32 result = RenderingDeviceFeaturePolygonCapable | RenderingDeviceFeatureLayersCapable;
-			if (ExtendedTarget) {
-				result |= RenderingDeviceFeatureBlurCapable;
-				result |= RenderingDeviceFeatureInversionCapable;
-			}
-			if (BitmapTarget) result |= RenderingDeviceFeatureTextureTarget;
-			else result |= RenderingDeviceFeatureHardware;
-			if (ParentWrappedDevice) result |= RenderingDeviceFeatureGraphicsInteropCapable;
-			return result;
-		}
-		IBarRenderingInfo * D2DRenderingDevice::CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept
-		{
-			try {
-				if (gradient.Length() > 1) {
-					D2D1_GRADIENT_STOP * stop = new (std::nothrow) D2D1_GRADIENT_STOP[gradient.Length()];
-					if (!stop) { return 0; }
-					for (int i = 0; i < gradient.Length(); i++) {
-						stop[i].color = D2D1::ColorF(gradient[i].Color.r / 255.0f, gradient[i].Color.g / 255.0f, gradient[i].Color.b / 255.0f, gradient[i].Color.a / 255.0f);
-						stop[i].position = float(gradient[i].Position);
+				_ranges.Clear();
+				if (advances) {
+					double run_length_f = 0.0;
+					for (int i = 0; i < _advances.Length(); i++) {
+						_advances[i] = advances[i];
+						run_length_f += advances[i];
 					}
-					ID2D1GradientStopCollection * Collection;
-					if (Target->CreateGradientStopCollection(stop, gradient.Length(), &Collection) != S_OK) { delete[] stop; return 0; }
-					BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
-					if (!Info) { delete[] stop; Collection->Release(); return 0; }
-					Info->Collection = Collection;
-					Info->prop_w = cos(angle), Info->prop_h = sin(angle);
-					delete[] stop;
-					return Info;
-				} else {
-					auto CachedInfo = BrushCache.ElementByKey(gradient[0].Color);
-					if (CachedInfo) {
-						CachedInfo->Retain();
-						return CachedInfo;
+					_run_length = int(run_length_f + 0.9);
+				} else _fill_advances();
+				_build_geometry();
+			}
+			virtual void GetCharAdvances(double * advances) noexcept override { for (int i = 0; i < _advances.Length(); i++) advances[i] = _advances[i]; }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual string ToString(void) const override { return L"D2D_TextBrush"; }
+			bool inline IsEmpty(void) const noexcept { return !_advances.Length(); }
+			void inline Render(ID2D1RenderTarget * target, const Box & at) noexcept
+			{
+				if (!_geometry) return;
+				int width, height;
+				GetExtents(width, height);
+				D2D1_MATRIX_3X2_F transform;
+				target->GetTransform(&transform);
+				int shift_x = at.Left;
+				int shift_y = at.Top + _baseline;
+				if (_halign == 1) shift_x += (at.Right - at.Left - width) / 2;
+				else if (_halign == 2) shift_x += (at.Right - at.Left - width);
+				if (_valign == 1) shift_y += (at.Bottom - at.Top - height) / 2;
+				else if (_valign == 2) shift_y += (at.Bottom - at.Top - height);
+				if (_hl_start >= 0 && _back_brush) {
+					int start = EndOfChar(_hl_start - 1);
+					int end = EndOfChar(_hl_end - 1);
+					D2D1_RECT_F rect = D2D1::RectF(float(shift_x + start), float(at.Top), float(shift_x + end), float(at.Bottom));
+					target->FillRectangle(rect, _back_brush->GetBrush());
+				}
+				target->SetTransform(D2D1::Matrix3x2F::Translation(D2D1::SizeF(float(shift_x), float(shift_y))));
+				if (_ranges.Length()) {
+					for (auto & range : _ranges) {
+						auto rect = D2D1::RectF(float(range.left), float(at.Top - shift_y), float(range.right), float(at.Bottom - shift_y));
+						target->PushAxisAlignedClip(rect, D2D1_ANTIALIAS_MODE_ALIASED);
+						target->FillGeometry(_geometry, range.brush->GetBrush());
+						target->PopAxisAlignedClip();
 					}
-					BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
-					if (!Info) { return 0; }
-					ID2D1SolidColorBrush * Brush;
-					if (Target->CreateSolidColorBrush(D2D1::ColorF(gradient[0].Color.r / 255.0f, gradient[0].Color.g / 255.0f, gradient[0].Color.b / 255.0f, gradient[0].Color.a / 255.0f), &Brush) != S_OK) { Info->Release(); return 0; }
-					Info->Brush = Brush;
-					BrushCache.Append(gradient[0].Color, Info);
-					return Info;
+				} else target->FillGeometry(_geometry, _main_brush->GetBrush());
+				if (_font->IsUnderlined()) {
+					auto rect = D2D1::RectF(0.0f, _underline_offs - _underline_hw, float(_run_length), _underline_offs + _underline_hw);
+					target->FillRectangle(rect, _main_brush->GetBrush());
 				}
-			} catch (...) { return 0; }
-		}
-		IBarRenderingInfo * D2DRenderingDevice::CreateBarRenderingInfo(Color color) noexcept
+				if (_font->IsStrikedout()) {
+					auto rect = D2D1::RectF(0.0f, _strikeout_offs - _strikeout_hw, float(_run_length), _strikeout_offs + _strikeout_hw);
+					target->FillRectangle(rect, _main_brush->GetBrush());
+				}
+				target->SetTransform(transform);
+			}
+		};
+		class D2D_BlurBrush : public IBlurEffectBrush
 		{
-			try {
-				auto CachedInfo = BrushCache.ElementByKey(color);
-				if (CachedInfo) {
-					CachedInfo->Retain();
-					return CachedInfo;
+			D2D_DeviceContext * _parent;
+			ID2D1Effect * _fx;
+		public:
+			D2D_BlurBrush(D2D_DeviceContext * context, ID2D1DeviceContext * dc, double power) : _parent(context)
+			{
+				if (dc->CreateEffect(CLSID_D2D1GaussianBlur, &_fx) != S_OK) throw Exception();
+				_fx->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
+				_fx->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
+				_fx->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+			}
+			virtual ~D2D_BlurBrush(void) override { if (_fx) _fx->Release(); }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual string ToString(void) const override { return L"D2D_BlurBrush"; }
+			void inline Render(ID2D1DeviceContext * dc, const Box & at) const noexcept
+			{
+				ID2D1Bitmap * fragment;
+				Box corrected = at;
+				if (corrected.Left < 0) corrected.Left = 0;
+				if (corrected.Top < 0) corrected.Top = 0;
+				if (corrected.Left >= corrected.Right) return;
+				if (corrected.Top >= corrected.Bottom) return;
+				auto props = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
+				if (dc->CreateBitmap(D2D1::SizeU(corrected.Right - corrected.Left, corrected.Bottom - corrected.Top), props, &fragment) == S_OK) {
+					_parent->ClippingUndo();
+					fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), dc, &D2D1::RectU(corrected.Left, corrected.Top, corrected.Right, corrected.Bottom));
+					_parent->ClippingRedo();
+					_fx->SetInput(0, fragment);
+					dc->PushAxisAlignedClip(D2D1::RectF(corrected.Left, corrected.Top, corrected.Right, corrected.Bottom), D2D1_ANTIALIAS_MODE_ALIASED);
+					dc->DrawImage(_fx, D2D1::Point2F(float(corrected.Left), float(corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_COPY);
+					dc->PopAxisAlignedClip();
+					fragment->Release();
 				}
-				BarRenderingInfo * Info = new (std::nothrow) BarRenderingInfo;
-				if (!Info) { return 0; }
-				ID2D1SolidColorBrush * Brush;
-				if (Target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &Brush) != S_OK) { Info->Release(); return 0; }
-				Info->Brush = Brush;
-				BrushCache.Append(color, Info);
-				return Info;
-			} catch (...) { return 0; }
-		}
-		IBlurEffectRenderingInfo * D2DRenderingDevice::CreateBlurEffectRenderingInfo(double power) noexcept
+			}
+		};
+		class D2D_InversionBrush : public IInversionEffectBrush
 		{
-			try {
-				auto CachedInfo = BlurCache.ElementByKey(power);
-				if (CachedInfo) {
-					CachedInfo->Retain();
-					return CachedInfo;
-				}
-				auto Info = new (std::nothrow) BlurEffectRenderingInfo;
-				if (!Info) return 0;
-				if (ExtendedTarget) {
-					if (ExtendedTarget->CreateEffect(CLSID_D2D1GaussianBlur, Info->Effect.InnerRef()) != S_OK) { Info->Release(); return 0; }
-					Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, float(power));
-					Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
-					Info->Effect->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
-				}
-				BlurCache.Append(power, Info);
-				return Info;
-			} catch (...) { return 0; }
-		}
-		IInversionEffectRenderingInfo * D2DRenderingDevice::CreateInversionEffectRenderingInfo(void) noexcept
-		{
-			if (!InversionInfo.Inner()) {
-				auto Info = new (std::nothrow) InversionEffectRenderingInfo;
-				if (!Info) return 0;
-				if (ExtendedTarget) {
-					if (ExtendedTarget->CreateEffect(CLSID_D2D1ColorMatrix, Info->Effect.InnerRef()) != S_OK) { Info->Release(); return 0; }
-					Info->Effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
+			D2D_DeviceContext * _parent;
+			ID2D1Effect * _fx;
+			SafePointer<IColorBrush> _dropback_white, _dropback_black;
+		public:
+			D2D_InversionBrush(D2D_DeviceContext * context, ID2D1DeviceContext * dc) : _parent(context)
+			{
+				if (dc) {
+					if (dc->CreateEffect(CLSID_D2D1ColorMatrix, &_fx) != S_OK) throw Exception();
+					_fx->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1::Matrix5x4F(
 						-1.0f, 0.0f, 0.0f, 0.0f,
 						0.0f, -1.0f, 0.0f, 0.0f,
 						0.0f, 0.0f, -1.0f, 0.0f,
@@ -634,64 +705,184 @@ namespace Engine
 						1.0f, 1.0f, 1.0f, 0.0f
 					));
 				} else {
-					Info->BlackBar.SetReference(CreateBarRenderingInfo(UI::Color(0, 0, 0)));
-					Info->WhiteBar.SetReference(CreateBarRenderingInfo(UI::Color(255, 255, 255)));
+					_fx = 0;
+					_dropback_white = context->CreateSolidColorBrush(0xFFFFFFFF);
+					_dropback_black = context->CreateSolidColorBrush(0xFF000000);
+					if (!_dropback_white || !_dropback_black) throw Exception();
 				}
-				InversionInfo.SetReference(Info);
 			}
-			InversionInfo->Retain();
-			return InversionInfo;
-		}
-		ITextureRenderingInfo * D2DRenderingDevice::CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept
-		{
-			if (!texture) return 0;
-			try {
-				SafePointer<D2DTexture> device_texture;
-				if (texture->IsDeviceSpecific()) {
-					if (texture->GetParentDevice() == this) device_texture.SetRetain(static_cast<D2DTexture *>(texture));
-					else return 0;
-				} else {
-					ITexture * cached = texture->GetDeviceVersion(this);
-					if (!cached) {
-						device_texture.SetReference(new (std::nothrow) D2DTexture);
-						if (!device_texture) return 0;
-						texture->AddDeviceVersion(this, device_texture);
-						TextureCache << tex_pair{ texture, device_texture };
-						device_texture->base = static_cast<WICTexture *>(texture);
-						device_texture->factory_device = this;
-						device_texture->Reload(texture);
-					} else device_texture.SetRetain(static_cast<D2DTexture *>(cached));
-				}
-				auto * Info = new (std::nothrow) TextureRenderingInfo;
-				if (!Info) return 0;
-				Info->Texture = device_texture;
-				Info->From = take_area;
-				Info->Fill = fill_pattern;
-				if (fill_pattern) {
-					SafePointer<ID2D1Bitmap> fragment;
-					if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == Info->Texture->w && take_area.Bottom == Info->Texture->h) {
-						fragment.SetReference(Info->Texture->bitmap);
-						fragment->AddRef();
-					} else {
-						if (Target->CreateBitmap(D2D1::SizeU(uint(take_area.Right - take_area.Left), uint(take_area.Bottom - take_area.Top)),
-							D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), fragment.InnerRef()) != S_OK) {
-							Info->Release(); throw Exception();
+			virtual ~D2D_InversionBrush(void) override { if (_fx) _fx->Release(); }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual string ToString(void) const override { return L"D2D_InversionBrush"; }
+			void inline Render(ID2D1DeviceContext * dc, const Box & at, bool vstate) const noexcept
+			{
+				if (dc) {
+					if (vstate) {
+						ID2D1Bitmap * fragment;
+						Box corrected = at;
+						if (corrected.Left < 0) corrected.Left = 0;
+						if (corrected.Top < 0) corrected.Top = 0;
+						if (corrected.Left >= corrected.Right) return;
+						if (corrected.Top >= corrected.Bottom) return;
+						auto props = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f);
+						if (dc->CreateBitmap(D2D1::SizeU(corrected.Right - corrected.Left, corrected.Bottom - corrected.Top), props, &fragment) == S_OK) {
+							_parent->ClippingUndo();
+							fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), dc, &D2D1::RectU(corrected.Left, corrected.Top, corrected.Right, corrected.Bottom));
+							_parent->ClippingRedo();
+							_fx->SetInput(0, fragment);
+							dc->PushAxisAlignedClip(D2D1::RectF(corrected.Left, corrected.Top, corrected.Right, corrected.Bottom), D2D1_ANTIALIAS_MODE_ALIASED);
+							dc->DrawImage(_fx, D2D1::Point2F(float(corrected.Left), float(corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_COPY);
+							dc->PopAxisAlignedClip();
+							fragment->Release();
 						}
-						if (fragment->CopyFromBitmap(&D2D1::Point2U(0, 0), Info->Texture->bitmap, &D2D1::RectU(take_area.Left, take_area.Top, take_area.Right, take_area.Bottom)) != S_OK)
-						{ Info->Release(); throw Exception(); }
 					}
-					ID2D1BitmapBrush * Brush;
-					if (Target->CreateBitmapBrush(fragment, D2D1::BitmapBrushProperties(D2D1_EXTEND_MODE_WRAP, D2D1_EXTEND_MODE_WRAP, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR), &Brush) != S_OK)
-					{ Info->Release(); throw Exception(); }
-					Info->Brush.SetReference(Brush);
+				} else {
+					if (vstate) _parent->Render(_dropback_black, at);
+					else _parent->Render(_dropback_white, at);
 				}
-				return Info;
+			}
+		};
+
+		D2D_DeviceContext::D2D_DeviceContext(void) : _render_target(0), _render_target_ex(0), _wrapped_device(0), _bitmap_context_enabled(0), _time(0), _ref_time(0),
+			_bitmap_context_state(0), _clear_counter(0), _color_cache(0x100), _blur_cache(0x10) { _hblink_time = GetCaretBlinkTime(); _blink_time = _hblink_time * 2; }
+		D2D_DeviceContext::~D2D_DeviceContext(void)
+		{
+			ClearInternalCache();
+			for (auto & layer : _layers) layer->Release();
+			if (_render_target) _render_target->Release();
+		}
+		void D2D_DeviceContext::SetBitmapContext(bool set) noexcept { _bitmap_context_enabled = set; }
+		void D2D_DeviceContext::SetRenderTarget(ID2D1RenderTarget * target) noexcept
+		{
+			if (_render_target) _render_target->Release();
+			_render_target = target;
+			_render_target_ex = 0;
+			if (_render_target) _render_target->AddRef();
+		}
+		void D2D_DeviceContext::SetRenderTargetEx(ID2D1DeviceContext * target) noexcept
+		{
+			if (_render_target) _render_target->Release();
+			_render_target = target;
+			_render_target_ex = target;
+			if (_render_target) _render_target->AddRef();
+		}
+		void D2D_DeviceContext::SetWrappedDevice(Graphics::IDevice * device) noexcept { _wrapped_device = device; }
+		ID2D1RenderTarget * D2D_DeviceContext::GetRenderTarget(void) const noexcept { return _render_target; }
+		void D2D_DeviceContext::ClippingUndo(void) noexcept { for (auto & c : _clipping) _render_target->PopAxisAlignedClip(); }
+		void D2D_DeviceContext::ClippingRedo(void) noexcept { for (auto & c : _clipping) _render_target->PushAxisAlignedClip(D2D1::RectF(float(c.Left), float(c.Top), float(c.Right), float(c.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED); }
+		void D2D_DeviceContext::GetImplementationInfo(string & tech, uint32 & version) { tech = L"Direct2D"; version = 1; }
+		uint32 D2D_DeviceContext::GetFeatureList(void) noexcept
+		{
+			uint32 result = DeviceContextFeaturePolygonCapable | DeviceContextFeatureLayersCapable;
+			if (_render_target_ex) {
+				result |= DeviceContextFeatureBlurCapable;
+				result |= DeviceContextFeatureInversionCapable;
+			}
+			if (_bitmap_context_enabled) result |= DeviceContextFeatureBitmapTarget;
+			else result |= DeviceContextFeatureHardware;
+			if (_wrapped_device) result |= DeviceContextFeatureGraphicsInteropEnabled;
+			return result;
+		}
+		string D2D_DeviceContext::ToString(void) const { return L"D2D_DeviceContext"; }
+		Graphics::IColorBrush * D2D_DeviceContext::CreateSolidColorBrush(Color color) noexcept
+		{
+			auto cached = _color_cache.GetObjectByKey(color);
+			if (cached) {
+				cached->Retain();
+				return cached;
+			}
+			ID2D1SolidColorBrush * brush;
+			SafePointer<IColorBrush> result;
+			if (_render_target->CreateSolidColorBrush(D2D1::ColorF(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f), &brush) != S_OK) return 0;
+			try { result = new D2D_ColorBrush(this, brush); } catch (...) { brush->Release(); return 0; }
+			brush->Release();
+			try { _color_cache.Push(color, result); } catch (...) {}
+			result->Retain();
+			return result;
+		}
+		Graphics::IColorBrush * D2D_DeviceContext::CreateGradientBrush(Point rel_from, Point rel_to, const GradientPoint * points, int count) noexcept
+		{
+			if (count < 1) return 0;
+			if (count == 1) return CreateSolidColorBrush(points[0].Value);
+			Array<D2D1_GRADIENT_STOP> stops(count);
+			try {
+				stops.SetLength(count);
+				for (int i = 0; i < count; i++) {
+					stops[i].color = D2D1::ColorF(points[i].Value.r / 255.0f, points[i].Value.g / 255.0f, points[i].Value.b / 255.0f, points[i].Value.a / 255.0f);
+					stops[i].position = float(points[i].Position);
+				}
+			} catch (...) { return 0; }
+			ID2D1GradientStopCollection * collection;
+			if (_render_target->CreateGradientStopCollection(stops, count, &collection) != S_OK) return 0;
+			D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES brush_props;
+			brush_props.startPoint.x = rel_from.x;
+			brush_props.startPoint.y = rel_from.y;
+			brush_props.endPoint.x = rel_to.x;
+			brush_props.endPoint.y = rel_to.y;
+			ID2D1LinearGradientBrush * brush;
+			if (_render_target->CreateLinearGradientBrush(brush_props, collection, &brush) != S_OK) brush = 0;
+			collection->Release();
+			if (brush) {
+				SafePointer<D2D_ColorBrush> result;
+				try { result = new D2D_ColorBrush(this, brush); } catch (...) { brush->Release(); return 0; }
+				brush->Release();
+				result->GetGradientProperties() = brush_props;
+				result->Retain();
+				return result;
+			} else return 0;
+		}
+		Graphics::IBlurEffectBrush * D2D_DeviceContext::CreateBlurEffectBrush(double power) noexcept
+		{
+			auto cached = _blur_cache.GetObjectByKey(power);
+			if (cached) {
+				cached->Retain();
+				return cached;
+			}
+			if (_render_target_ex) {
+				SafePointer<Graphics::IBlurEffectBrush> brush;
+				try { brush = new D2D_BlurBrush(this, _render_target_ex, power); } catch (...) { return 0; }
+				try { _blur_cache.Push(power, brush); } catch (...) {}
+				brush->Retain();
+				return brush;
+			} else return 0;
+		}
+		Graphics::IInversionEffectBrush * D2D_DeviceContext::CreateInversionEffectBrush(void) noexcept
+		{
+			if (!_inversion_cache) {
+				try { _inversion_cache = new D2D_InversionBrush(this, _render_target_ex); } catch (...) { return 0; }
+			}
+			_inversion_cache->Retain();
+			return _inversion_cache;
+		}
+		Graphics::IBitmapBrush * D2D_DeviceContext::CreateBitmapBrush(Graphics::IBitmap * bitmap, const Box & area, bool tile) noexcept
+		{
+			if (!bitmap) return 0;
+			try {
+				SafePointer<D2D_Bitmap> device_bitmap;
+				auto cached = bitmap->GetDeviceBitmap(this);
+				if (!cached) {
+					device_bitmap = new D2D_Bitmap(static_cast<WIC_Bitmap *>(bitmap), this);
+					SafePointer<IBitmapLink> link;
+					link.SetRetain(bitmap->GetLinkObject());
+					_bitmaps.InsertLast(link);
+					_clear_counter++;
+					if (!bitmap->AddDeviceBitmap(device_bitmap, this)) throw OutOfMemoryException();
+					if (_clear_counter == 0x80) {
+						auto current = _bitmaps.GetFirst();
+						while (current) {
+							auto next = current->GetNext();
+							if (!current->GetValue()->GetBitmap()) _bitmaps.Remove(current);
+							current = next;
+						}
+						_clear_counter = 0;
+					}
+				} else device_bitmap.SetRetain(static_cast<D2D_Bitmap *>(cached));
+				return new D2D_BitmapBrush(this, device_bitmap, area, tile);
 			} catch (...) { return 0; }
 		}
-		ITextureRenderingInfo * D2DRenderingDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept
+		Graphics::IBitmapBrush * D2D_DeviceContext::CreateTextureBrush(Graphics::ITexture * texture, Graphics::TextureAlphaMode mode) noexcept
 		{
-			if (!texture) return 0;
-			if (texture->GetParentDevice() != ParentWrappedDevice) return 0;
+			if (!texture || texture->GetParentDevice() != _wrapped_device) return 0;
 			if (!(texture->GetResourceUsage() & Graphics::ResourceUsageShaderRead)) return 0;
 			if (texture->GetTextureType() != Graphics::TextureType::Type2D) return 0;
 			if (texture->GetPixelFormat() != Graphics::PixelFormat::B8G8R8A8_unorm) return 0;
@@ -701,278 +892,113 @@ namespace Engine
 			if (resource->QueryInterface(__uuidof(IDXGISurface), reinterpret_cast<void **>(&surface)) != S_OK) return 0;
 			D2D1_BITMAP_PROPERTIES props;
 			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+			props.pixelFormat.alphaMode = mode == TextureAlphaMode::Premultiplied ? D2D1_ALPHA_MODE_PREMULTIPLIED : D2D1_ALPHA_MODE_IGNORE;
 			props.dpiX = props.dpiY = 0.0f;
 			ID2D1Bitmap * bitmap = 0;
-			if (Target->CreateSharedBitmap(__uuidof(IDXGISurface), surface, &props, &bitmap) != S_OK) {
-				surface->Release();
-				return 0;
-			}
+			if (_render_target->CreateSharedBitmap(__uuidof(IDXGISurface), surface, &props, &bitmap) != S_OK) { surface->Release(); return 0; }
 			surface->Release();
-			SafePointer<D2DTexture> cover = new (std::nothrow) D2DTexture;
-			if (!cover) {
-				bitmap->Release();
-				return 0;
-			}
-			cover->bitmap = bitmap;
-			cover->w = texture->GetWidth();
-			cover->h = texture->GetHeight();
-			auto info = new (std::nothrow) TextureRenderingInfo;
-			if (!info) return 0;
-			info->Texture = cover;
-			info->From = UI::Box(0, 0, cover->w, cover->h);
-			info->Fill = false;
-			return info;
+			SafePointer<D2D_Bitmap> device_bitmap;
+			try { device_bitmap = new D2D_Bitmap(bitmap, this, texture->GetWidth(), texture->GetHeight()); } catch (...) { bitmap->Release(); return 0; }
+			bitmap->Release();
+			try { return new D2D_BitmapBrush(this, device_bitmap, Box(0, 0, device_bitmap->GetWidth(), device_bitmap->GetHeight()), false); } catch (...) { return 0; }
 		}
-		ITextRenderingInfo * D2DRenderingDevice::CreateTextRenderingInfo(IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept
+		Graphics::ITextBrush * D2D_DeviceContext::CreateTextBrush(Graphics::IFont * font, const string & text, uint32 horizontal_align, uint32 vertical_align, const Color & color) noexcept
 		{
 			if (!font) return 0;
-			TextRenderingInfo * Info = 0;
 			try {
-				Info = new TextRenderingInfo;
-				Array<GradientPoint> array(1);
-				array << GradientPoint(color, 0.0);
-				Info->halign = horizontal_align;
-				Info->valign = vertical_align;
-				Info->Font = static_cast<DWFont *>(font);
-				Info->Device = this;
-				Info->HighlightBrush = 0;
-				Info->TextBrush = 0;
-				Info->Geometry = 0;
-				Info->run_length = 0;
-				Info->MainBrushInfo.SetReference(static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0)));
-				Info->MainBrushInfo->Retain();
-				Info->TextBrush = Info->MainBrushInfo->Brush;
-				Info->TextBrush->AddRef();
-				if (text.Length()) {
-					Info->CharString.SetLength(text.GetEncodedLength(Encoding::UTF32));
-					text.Encode(Info->CharString, Encoding::UTF32, false);
-					Info->FillGlyphs();
-					Info->FillAdvances();
-					Info->BuildGeometry();
-				}
-			}
-			catch (...) {
-				Info->Release();
-				return 0;
-			}
-			return Info;
+				Array<uint32> ucs(1);
+				ucs.SetLength(text.GetEncodedLength(Encoding::UTF32));
+				text.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
+				return new D2D_TextBrush(this, static_cast<DW_Font *>(font), ucs, ucs.Length(), horizontal_align, vertical_align, color);
+			} catch (...) { return 0; }
 		}
-		ITextRenderingInfo * D2DRenderingDevice::CreateTextRenderingInfo(IFont * font, const Array<uint32>& text, int horizontal_align, int vertical_align, const Color & color) noexcept
+		Graphics::ITextBrush * D2D_DeviceContext::CreateTextBrush(Graphics::IFont * font, const uint32 * ucs, int length, uint32 horizontal_align, uint32 vertical_align, const Color & color) noexcept
 		{
 			if (!font) return 0;
-			TextRenderingInfo * Info = 0; 
-			try {
-				Info = new TextRenderingInfo;
-				Array<GradientPoint> array(1);
-				array << GradientPoint(color, 0.0);
-				Info->halign = horizontal_align;
-				Info->valign = vertical_align;
-				Info->Font = static_cast<DWFont *>(font);
-				Info->Device = this;
-				Info->HighlightBrush = 0;
-				Info->TextBrush = 0;
-				Info->Geometry = 0;
-				Info->run_length = 0;
-				Info->MainBrushInfo.SetReference(static_cast<BarRenderingInfo *>(CreateBarRenderingInfo(array, 0.0)));
-				Info->MainBrushInfo->Retain();
-				Info->TextBrush = Info->MainBrushInfo->Brush;
-				Info->TextBrush->AddRef();
-				if (text.Length()) {
-					Info->CharString = text;
-					Info->FillGlyphs();
-					Info->FillAdvances();
-					Info->BuildGeometry();
-				}
-			} catch (...) {
-				Info->Release();
-				return 0;
-			}
-			return Info;
+			try { return new D2D_TextBrush(this, static_cast<DW_Font *>(font), ucs, length, horizontal_align, vertical_align, color); } catch (...) { return 0; }
 		}
-		Graphics::ITexture * D2DRenderingDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height)
+		void D2D_DeviceContext::ClearInternalCache(void) noexcept
 		{
-			if (!ParentWrappedDevice) return 0;
-			if (width <= 0 || height <= 0) throw InvalidArgumentException();
-			if (format != Graphics::PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
-			Graphics::TextureDesc desc;
-			desc.Type = Graphics::TextureType::Type2D;
-			desc.Format = Graphics::PixelFormat::B8G8R8A8_unorm;
-			desc.Width = width;
-			desc.Height = height;
-			desc.Depth = 1;
-			desc.MipmapCount = 1;
-			desc.Usage = Graphics::ResourceUsageRenderTarget | Graphics::ResourceUsageShaderRead;
-			desc.MemoryPool = Graphics::ResourceMemoryPool::Default;
-			return ParentWrappedDevice->CreateTexture(desc);
+			_color_cache.Clear();
+			_blur_cache.Clear();
+			_inversion_cache.SetReference(0);
+			auto element = _bitmaps.GetFirst();
+			while (element) {
+				auto bitmap = element->GetValue()->GetBitmap();
+				if (bitmap) bitmap->RemoveDeviceBitmap(this);
+				element = element->GetNext();
+			}
+			_bitmaps.Clear();
+			_clear_counter = 0;
 		}
-		void D2DRenderingDevice::RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept
-		{
-			if (!Info) return;
-			auto info = reinterpret_cast<BarRenderingInfo *>(Info);
-			if (info->Brush) {
-				Target->FillRectangle(D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom)), info->Brush);
-			} else {
-				int w = At.Right - At.Left, h = At.Bottom - At.Top;
-				if (!w || !h) return;
-				D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES bp;
-				double cx = double(At.Right + At.Left) / 2.0;
-				double cy = double(At.Top + At.Bottom) / 2.0;
-				double rx = double(w) / 2.0;
-				double ry = double(h) / 2.0;
-				double mx = max(abs(info->prop_w), abs(info->prop_h));
-				double boundary_sx = info->prop_w / mx;
-				double boundary_sy = info->prop_h / mx;
-				bp.startPoint.x = float(cx - rx * boundary_sx);
-				bp.startPoint.y = float(cy + ry * boundary_sy);
-				bp.endPoint.x = float(cx + rx * boundary_sx);
-				bp.endPoint.y = float(cy - ry * boundary_sy);
-				ID2D1LinearGradientBrush * Brush;
-				if (Target->CreateLinearGradientBrush(bp, info->Collection, &Brush) == S_OK) {
-					Target->FillRectangle(D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom)), Brush);
-					Brush->Release();
-				}
-			}
-		}
-		void D2DRenderingDevice::RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept
-		{
-			if (!Info) return;
-			auto info = static_cast<TextureRenderingInfo *>(Info);
-			D2D1_RECT_F To = D2D1::RectF(float(At.Left), float(At.Top), float(At.Right), float(At.Bottom));
-			if (info->Fill) {
-				Target->FillRectangle(To, info->Brush);
-			} else {
-				D2D1_RECT_F From = D2D1::RectF(float(info->From.Left), float(info->From.Top), float(info->From.Right), float(info->From.Bottom));
-				Target->DrawBitmap(info->Texture->bitmap, To, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, From);
-			}
-		}
-		void D2DRenderingDevice::RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept
-		{
-			if (!Info) return;
-			auto info = static_cast<TextRenderingInfo *>(Info);
-			if (!info->GlyphAdvances.Length()) return;
-			if (Clip) PushClip(At);
-			int width, height;
-			Info->GetExtent(width, height);
-			D2D1_MATRIX_3X2_F Transform;
-			Target->GetTransform(&Transform);
-			int shift_x = At.Left;
-			int shift_y = At.Top + info->BaselineOffset;
-			if (info->halign == 1) shift_x += (At.Right - At.Left - width) / 2;
-			else if (info->halign == 2) shift_x += (At.Right - At.Left - width);
-			if (info->valign == 1) shift_y += (At.Bottom - At.Top - height) / 2;
-			else if (info->valign == 2) shift_y += (At.Bottom - At.Top - height);
-			if (info->hls != -1 && info->HighlightBrush) {
-				int start = info->EndOfChar(info->hls - 1);
-				int end = info->EndOfChar(info->hle - 1);
-				D2D1_RECT_F Rect = D2D1::RectF(float(shift_x + start), float(At.Top), float(shift_x + end), float(At.Bottom));
-				Target->FillRectangle(Rect, info->HighlightBrush);
-			}
-			Target->SetTransform(D2D1::Matrix3x2F::Translation(D2D1::SizeF(float(shift_x), float(shift_y))));
-			if (info->Ranges.Length()) {
-				for (int i = 0; i < info->Ranges.Length(); i++) {
-					Target->PushAxisAlignedClip(
-						D2D1::RectF(float(info->Ranges[i].LeftEdge), float(At.Top - shift_y), float(info->Ranges[i].RightEdge), float(At.Bottom - shift_y)),
-						D2D1_ANTIALIAS_MODE_ALIASED);
-					Target->FillGeometry(info->Geometry, info->Ranges[i].Brush->Brush, 0);
-					Target->PopAxisAlignedClip();
-				}
-			} else {
-				Target->FillGeometry(info->Geometry, info->TextBrush, 0);
-			}
-			if (info->Font->Underline) {
-				Target->FillRectangle(D2D1::RectF(0.0f, info->UnderlineOffset - info->UnderlineHalfWidth, float(info->run_length), info->UnderlineOffset + info->UnderlineHalfWidth), info->TextBrush);
-			}
-			if (info->Font->Strikeout) {
-				Target->FillRectangle(D2D1::RectF(0.0f, info->StrikeoutOffset - info->StrikeoutHalfWidth, float(info->run_length), info->StrikeoutOffset + info->StrikeoutHalfWidth), info->TextBrush);
-			}
-			Target->SetTransform(Transform);
-			if (Clip) PopClip();
-		}
-		void D2DRenderingDevice::ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept
-		{
-			if (Layers.Length() || !Info) return;
-			auto info = static_cast<BlurEffectRenderingInfo *>(Info);
-			if (info->Effect) {
-				SafePointer<ID2D1Bitmap> Fragment;
-				Box Corrected = At;
-				if (Corrected.Left < 0) Corrected.Left = 0;
-				if (Corrected.Top < 0) Corrected.Top = 0;
-				if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
-					for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
-					Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
-					for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
-					info->Effect->SetInput(0, Fragment);
-					ExtendedTarget->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
-				}
-			}
-		}
-		void D2DRenderingDevice::ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept
-		{
-			if (Layers.Length() || !Info) return;
-			auto info = static_cast<InversionEffectRenderingInfo *>(Info);
-			if (info->Effect) {
-				if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
-					SafePointer<ID2D1Bitmap> Fragment;
-					Box Corrected = At;
-					if (Corrected.Left < 0) Corrected.Left = 0;
-					if (Corrected.Top < 0) Corrected.Top = 0;
-					if (Target->CreateBitmap(D2D1::SizeU(Corrected.Right - Corrected.Left, Corrected.Bottom - Corrected.Top), D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), 0.0f, 0.0f), Fragment.InnerRef()) == S_OK) {
-						for (int i = 0; i < Clipping.Length(); i++) Target->PopAxisAlignedClip();
-						Fragment->CopyFromRenderTarget(&D2D1::Point2U(0, 0), Target, &D2D1::RectU(Corrected.Left, Corrected.Top, Corrected.Right, Corrected.Bottom));
-						for (int i = 0; i < Clipping.Length(); i++) Target->PushAxisAlignedClip(D2D1::RectF(float(Clipping[i].Left), float(Clipping[i].Top), float(Clipping[i].Right), float(Clipping[i].Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
-						info->Effect->SetInput(0, Fragment);
-						ExtendedTarget->DrawImage(info->Effect, D2D1::Point2F(float(Corrected.Left), float(Corrected.Top)), D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPOSITE_MODE_SOURCE_OVER);
-					}
-				}
-			} else {
-				if (!Blink || (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod) {
-					RenderBar(info->BlackBar, At);
-				} else {
-					RenderBar(info->WhiteBar, At);
-				}
-			}
-		}
-		void D2DRenderingDevice::PushClip(const Box & Rect) noexcept
+		void D2D_DeviceContext::PushClip(const Box & rect) noexcept
 		{
 			try {
-				Clipping << Rect;
-				Target->PushAxisAlignedClip(D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
+				_clipping.Push(rect);
+				_render_target->PushAxisAlignedClip(D2D1::RectF(float(rect.Left), float(rect.Top), float(rect.Right), float(rect.Bottom)), D2D1_ANTIALIAS_MODE_ALIASED);
 			} catch (...) {}
 		}
-		void D2DRenderingDevice::PopClip(void) noexcept
+		void D2D_DeviceContext::PopClip(void) noexcept { _clipping.RemoveLast(); _render_target->PopAxisAlignedClip(); }
+		void D2D_DeviceContext::BeginLayer(const Box & rect, double opacity) noexcept
 		{
-			Clipping.RemoveLast();
-			Target->PopAxisAlignedClip();
+			ID2D1Layer * layer;
+			if (_render_target->CreateLayer(0, &layer) != S_OK) return;
+			try { _layers.Push(layer); } catch (...) { layer->Release(); return; }
+			D2D1_LAYER_PARAMETERS props;
+			props.contentBounds = D2D1::RectF(float(rect.Left), float(rect.Top), float(rect.Right), float(rect.Bottom));
+			props.geometricMask = 0;
+			props.maskAntialiasMode = D2D1_ANTIALIAS_MODE_ALIASED;
+			props.maskTransform = D2D1::IdentityMatrix();
+			props.opacity = float(opacity);
+			props.opacityBrush = 0;
+			props.layerOptions = D2D1_LAYER_OPTIONS_NONE;
+			_render_target->PushLayer(&props, layer);
 		}
-		void D2DRenderingDevice::BeginLayer(const Box & Rect, double Opacity) noexcept
+		void D2D_DeviceContext::EndLayer(void) noexcept { if (_layers.IsEmpty()) return; _render_target->PopLayer(); _layers.GetLast()->GetValue()->Release(); _layers.RemoveLast(); }
+		void D2D_DeviceContext::Render(Graphics::IColorBrush * brush, const Box & at) noexcept
 		{
-			try {
-				ID2D1Layer * Layer;
-				if (Target->CreateLayer(0, &Layer) != S_OK) throw Exception();
-				Layers << Layer;
-				D2D1_LAYER_PARAMETERS lp;
-				lp.contentBounds = D2D1::RectF(float(Rect.Left), float(Rect.Top), float(Rect.Right), float(Rect.Bottom));
-				lp.geometricMask = 0;
-				lp.maskAntialiasMode = D2D1_ANTIALIAS_MODE_ALIASED;
-				lp.maskTransform = D2D1::IdentityMatrix();
-				lp.opacity = float(Opacity);
-				lp.opacityBrush = 0;
-				lp.layerOptions = D2D1_LAYER_OPTIONS_NONE;
-				Target->PushLayer(&lp, Layer);
-			} catch (...) {}
+			if (!brush) return;
+			if (at.Left >= at.Right || at.Top >= at.Bottom) return;
+			auto info = static_cast<D2D_ColorBrush *>(brush);
+			auto gradient = info->GetGradient();
+			if (gradient) {
+				auto & props = info->GetGradientProperties();
+				D2D1_POINT_2F s, e;
+				s.x = props.startPoint.x + at.Left;
+				s.y = props.startPoint.y + at.Top;
+				e.x = props.endPoint.x + at.Left;
+				e.y = props.endPoint.y + at.Top;
+				gradient->SetStartPoint(s);
+				gradient->SetEndPoint(e);
+			}
+			_render_target->FillRectangle(D2D1::RectF(float(at.Left), float(at.Top), float(at.Right), float(at.Bottom)), info->GetBrush());
 		}
-		void D2DRenderingDevice::EndLayer(void) noexcept
+		void D2D_DeviceContext::Render(Graphics::IBitmapBrush * brush, const Box & at) noexcept
 		{
-			Target->PopLayer();
-			Layers.LastElement()->Release();
-			Layers.RemoveLast();
+			if (!brush) return;
+			if (at.Left >= at.Right || at.Top >= at.Bottom) return;
+			static_cast<D2D_BitmapBrush *>(brush)->Render(_render_target, at);
 		}
-		void D2DRenderingDevice::SetTimerValue(uint32 time) noexcept { AnimationTimer = time; }
-		uint32 D2DRenderingDevice::GetCaretBlinkHalfTime(void) noexcept { return HalfBlinkPeriod; }
-		bool D2DRenderingDevice::CaretShouldBeVisible(void) noexcept { return (AnimationTimer % BlinkPeriod) < HalfBlinkPeriod; }
-		void D2DRenderingDevice::ClearCache(void) noexcept { InversionInfo.SetReference(0); BrushCache.Clear(); BlurCache.Clear(); }
-		void D2DRenderingDevice::DrawPolygon(const Math::Vector2 * points, int count, Color color, double width) noexcept
+		void D2D_DeviceContext::Render(Graphics::ITextBrush * brush, const Box & at, bool clip) noexcept
+		{
+			if (!brush) return;
+			auto info = static_cast<D2D_TextBrush *>(brush);
+			if (info->IsEmpty()) return;
+			if (clip) PushClip(at);
+			info->Render(_render_target, at);
+			if (clip) PopClip();
+		}
+		void D2D_DeviceContext::Render(Graphics::IBlurEffectBrush * brush, const Box & at) noexcept
+		{
+			if (!_layers.IsEmpty() || !brush) return;
+			static_cast<D2D_BlurBrush *>(brush)->Render(_render_target_ex, at);
+		}
+		void D2D_DeviceContext::Render(Graphics::IInversionEffectBrush * brush, const Box & at, bool blink) noexcept
+		{
+			if (!_layers.IsEmpty() || !brush) return;
+			static_cast<D2D_InversionBrush *>(brush)->Render(_render_target_ex, at, !blink || IsCaretVisible());
+		}
+		void D2D_DeviceContext::RenderPolyline(const Math::Vector2 * points, int count, Color color, double width) noexcept
 		{
 			SafePointer<ID2D1PathGeometry> geometry;
 			SafePointer<ID2D1SolidColorBrush> brush;
@@ -985,10 +1011,10 @@ namespace Engine
 				sink->EndFigure(D2D1_FIGURE_END_OPEN);
 				sink->Close();
 			}
-			if (Target->CreateSolidColorBrush(D2D1::ColorF(float(color.r) / 255.0f, float(color.g) / 255.0f, float(color.b) / 255.0f, float(color.a) / 255.0f), brush.InnerRef()) != S_OK) return;
-			Target->DrawGeometry(geometry, brush, float(width));
+			if (_render_target->CreateSolidColorBrush(D2D1::ColorF(float(color.r) / 255.0f, float(color.g) / 255.0f, float(color.b) / 255.0f, float(color.a) / 255.0f), brush.InnerRef()) != S_OK) return;
+			_render_target->DrawGeometry(geometry, brush, float(width));
 		}
-		void D2DRenderingDevice::FillPolygon(const Math::Vector2 * points, int count, Color color) noexcept
+		void D2D_DeviceContext::RenderPolygon(const Math::Vector2 * points, int count, Color color) noexcept
 		{
 			SafePointer<ID2D1PathGeometry> geometry;
 			SafePointer<ID2D1SolidColorBrush> brush;
@@ -1001,279 +1027,54 @@ namespace Engine
 				sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 				sink->Close();
 			}
-			if (Target->CreateSolidColorBrush(D2D1::ColorF(float(color.r) / 255.0f, float(color.g) / 255.0f, float(color.b) / 255.0f, float(color.a) / 255.0f), brush.InnerRef()) != S_OK) return;
-			Target->FillGeometry(geometry, brush);
+			if (_render_target->CreateSolidColorBrush(D2D1::ColorF(float(color.r) / 255.0f, float(color.g) / 255.0f, float(color.b) / 255.0f, float(color.a) / 255.0f), brush.InnerRef()) != S_OK) return;
+			_render_target->FillGeometry(geometry, brush);
 		}
-		void D2DRenderingDevice::BeginDraw(void) noexcept
+		void D2D_DeviceContext::SetAnimationTime(uint32 value) noexcept { _time = value; }
+		uint32 D2D_DeviceContext::GetAnimationTime(void) noexcept { return _time; }
+		void D2D_DeviceContext::SetCaretReferenceTime(uint32 value) noexcept { _ref_time = value; }
+		uint32 D2D_DeviceContext::GetCaretReferenceTime(void) noexcept { return _ref_time; }
+		void D2D_DeviceContext::SetCaretBlinkPeriod(uint32 value) noexcept { _blink_time = value; _hblink_time = _blink_time / 2; }
+		uint32 D2D_DeviceContext::GetCaretBlinkPeriod(void) noexcept { return _blink_time; }
+		bool D2D_DeviceContext::IsCaretVisible(void) noexcept { return (((_time - _ref_time) / _hblink_time) & 1) == 0; }
+		Graphics::IDevice * D2D_DeviceContext::GetParentDevice(void) noexcept { return _wrapped_device; }
+		Graphics::I2DDeviceContextFactory * D2D_DeviceContext::GetParentFactory(void) noexcept { return CommonFactory; }
+		bool D2D_DeviceContext::BeginRendering(Graphics::IBitmap * dest) noexcept
 		{
-			if (BitmapTarget && BitmapTargetState == 0) {
-				Target->BeginDraw();
-				BitmapTargetState = 1;
-			}
+			if (!_bitmap_context_enabled || !dest || _bitmap_context_state) return false;
+			auto bitmap = static_cast<WIC_Bitmap *>(dest)->GetSurface();
+			D2D1_RENDER_TARGET_PROPERTIES props;
+			props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+			props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+			props.dpiX = 0.0f;
+			props.dpiY = 0.0f;
+			props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
+			props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+			if (D2DFactory->CreateWicBitmapRenderTarget(bitmap, props, &_render_target) != S_OK) return false;
+			_render_target->BeginDraw();
+			_bitmap_context_state = 1;
+			_bitmap_target.SetRetain(dest);
+			return true;
 		}
-		void D2DRenderingDevice::EndDraw(void) noexcept
+		bool D2D_DeviceContext::BeginRendering(Graphics::IBitmap * dest, Color clear_color) noexcept
 		{
-			if (BitmapTarget && BitmapTargetState == 1) {
-				Target->EndDraw();
-				BitmapTargetState = 0;
-			}
+			if (!BeginRendering(dest)) return false;
+			_render_target->Clear(D2D1::ColorF(clear_color.r / 255.0f, clear_color.g / 255.0f, clear_color.b / 255.0f, clear_color.a / 255.0f));
+			return true;
 		}
-		UI::ITexture * D2DRenderingDevice::GetRenderTargetAsTexture(void) noexcept
+		bool D2D_DeviceContext::EndRendering(void) noexcept
 		{
-			if (!BitmapTarget || BitmapTargetState) return 0;
-			SafePointer<WICTexture> result = new (std::nothrow) WICTexture;
-			if (!result) return 0;
-			result->bitmap = BitmapTarget;
-			result->w = BitmapTargetResX;
-			result->h = BitmapTargetResY;
-			result->Retain();
-			BitmapTarget->AddRef();
-			return result;
+			if (!_bitmap_context_enabled && !_bitmap_context_state) return false;
+			auto status = _render_target->EndDraw();
+			_render_target->Release();
+			_render_target = 0;
+			_bitmap_context_state = 0;
+			ClearInternalCache();
+			if (status == S_OK) static_cast<WIC_Bitmap *>(_bitmap_target.Inner())->SyncDeviceVersions();
+			_bitmap_target.SetReference(0);
+			return status == S_OK;
 		}
-		Engine::Codec::Frame * D2DRenderingDevice::GetRenderTargetAsFrame(void) noexcept
-		{
-			if (!BitmapTarget || BitmapTargetState) return 0;
-			SafePointer<Engine::Codec::Frame> result = new Engine::Codec::Frame(BitmapTargetResX, BitmapTargetResY, BitmapTargetResX * 4, PixelFormat::B8G8R8A8, AlphaMode::Premultiplied, ScanOrigin::TopDown);
-			SafePointer<IWICBitmapLock> lock;
-			if (BitmapTarget->Lock(0, WICBitmapLockRead, lock.InnerRef()) == S_OK) {
-				UINT size;
-				WICInProcPointer ptr;
-				lock->GetDataPointer(&size, &ptr);
-				MemoryCopy(result->GetData(), ptr, min(size, uint(4 * BitmapTargetResX * BitmapTargetResY)));
-			}
-			result->Retain();
-			return result;
-		}
-		ITexture * D2DRenderingDevice::LoadTexture(Codec::Frame * source) noexcept
-		{
-			return StaticLoadTexture(source);
-		}
-		IFont * D2DRenderingDevice::LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
-		{
-			return StaticLoadFont(face_name, height, weight, italic, underline, strikeout);
-		}
-		ITextureRenderingDevice * D2DRenderingDevice::CreateTextureRenderingDevice(int width, int height, Color color) noexcept
-		{
-			return StaticCreateTextureRenderingDevice(width, height, color);
-		}
-		ITextureRenderingDevice * D2DRenderingDevice::CreateTextureRenderingDevice(Codec::Frame * frame) noexcept
-		{
-			return StaticCreateTextureRenderingDevice(frame);
-		}
-		ITexture * D2DRenderingDevice::StaticLoadTexture(Codec::Frame * source) noexcept
-		{
-			try {
-				SafePointer<IWICBitmap> Bitmap;
-				if (WICFactory->CreateBitmap(source->GetWidth(), source->GetHeight(), GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnDemand, Bitmap.InnerRef()) != S_OK) return 0;
-				SafePointer<Frame> conv = source->ConvertFormat(PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, ScanOrigin::TopDown);
-				IWICBitmapLock * Lock;
-				if (Bitmap->Lock(0, WICBitmapLockRead | WICBitmapLockWrite, &Lock) != S_OK) return 0;
-				UINT len;
-				uint8 * data;
-				if (Lock->GetDataPointer(&len, &data) != S_OK) { Lock->Release(); return 0; }
-				MemoryCopy(data, conv->GetData(), intptr(conv->GetScanLineLength()) * intptr(conv->GetHeight()));
-				Lock->Release();
-				WICTexture * Texture = new (std::nothrow) WICTexture;
-				if (!Texture) { return 0; }
-				try {
-					Bitmap->AddRef();
-					Texture->bitmap = Bitmap;
-					Texture->w = source->GetWidth();
-					Texture->h = source->GetHeight();
-				} catch (...) {
-					if (Texture) Texture->Release();
-					return 0;
-				}
-				return Texture;
-			} catch (...) { return 0; }
-		}
-		IFont * D2DRenderingDevice::StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
-		{
-			DWFont * Font = new (std::nothrow) DWFont;
-			if (!Font) return 0;
-			Font->AlternativeFace = 0;
-			Font->FontFace = 0;
-			Font->FontName = face_name;
-			Font->ActualHeight = height;
-			Font->Height = int(float(height) * 72.0f / 96.0f);
-			Font->Weight = weight;
-			Font->Italic = italic;
-			Font->Underline = underline;
-			Font->Strikeout = strikeout;
-			IDWriteFontCollection * Collection = 0;
-			IDWriteFontFamily * FontFamily = 0;
-			IDWriteFont * FontSource = 0;
-			try {
-				if (DWriteFactory->GetSystemFontCollection(&Collection) != S_OK) return 0;
-				uint32 Index;
-				BOOL Exists;
-				if (Collection->FindFamilyName(face_name, &Index, &Exists) != S_OK) return 0;
-				if (!Exists) return 0;
-				if (Collection->GetFontFamily(Index, &FontFamily) != S_OK) return 0;
-				if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(weight), DWRITE_FONT_STRETCH_NORMAL, italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) != S_OK) return 0;
-				if (FontSource->CreateFontFace(&Font->FontFace) != S_OK) return 0;
-				if (Font->FontFace->GetGdiCompatibleMetrics(float(height), 1.0f, 0, &Font->FontMetrics) != S_OK) return 0;
-				FontSource->Release();
-				FontSource = 0;
-				FontFamily->Release();
-				FontFamily = 0;
-				if (Collection->FindFamilyName(L"Segoe UI Emoji", &Index, &Exists) == S_OK) {
-					if (Exists) {
-						if (Collection->GetFontFamily(Index, &FontFamily) == S_OK) {
-							if (FontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT(weight), DWRITE_FONT_STRETCH_NORMAL, italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, &FontSource) == S_OK) {
-								FontSource->CreateFontFace(&Font->AlternativeFace);
-								if (Font->AlternativeFace) Font->AlternativeFace->GetGdiCompatibleMetrics(float(height), 1.0f, 0, &Font->AltMetrics);
-								FontSource->Release();
-								FontSource = 0;
-							}
-							FontFamily->Release();
-							FontFamily = 0;
-						}
-					}
-				}
-				Collection->Release();
-				Collection = 0;
-			} catch (...) {
-				Font->Release();
-				if (Collection) Collection->Release();
-				if (FontFamily) FontFamily->Release();
-				if (FontSource) FontSource->Release();
-				return 0;
-			}
-			return Font;
-		}
-		ITextureRenderingDevice * D2DRenderingDevice::StaticCreateTextureRenderingDevice(int width, int height, Color color) noexcept
-		{
-			try {
-				SafePointer<IWICBitmap> Bitmap;
-				Array<UI::Color> Pixels(width);
-				Pixels.SetLength(width * height);
-				{
-					Math::Color prem = color;
-					prem.x *= prem.w;
-					prem.y *= prem.w;
-					prem.z *= prem.w;
-					swap(prem.x, prem.z);
-					UI::Color pixel = prem;
-					for (int i = 0; i < Pixels.Length(); i++) Pixels[i] = pixel;
-				}
-				if (WICFactory->CreateBitmapFromMemory(width, height, GUID_WICPixelFormat32bppPBGRA, 4 * width, 4 * width * height, reinterpret_cast<LPBYTE>(Pixels.GetBuffer()), Bitmap.InnerRef()) != S_OK) return 0;
-				SafePointer<ID2D1RenderTarget> RenderTarget;
-				D2D1_RENDER_TARGET_PROPERTIES props;
-				props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-				props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-				props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-				props.dpiX = 0.0f;
-				props.dpiY = 0.0f;
-				props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-				props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-				if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
-				SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
-				Device->BitmapTarget.SetReference(Bitmap);
-				Device->BitmapTarget->AddRef();
-				Device->BitmapTargetResX = width;
-				Device->BitmapTargetResY = height;
-				Device->Retain();
-				return Device;
-			} catch (...) { return 0; }
-		}
-		ITextureRenderingDevice * D2DRenderingDevice::StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept
-		{
-			try {
-				SafePointer<IWICBitmap> Bitmap;
-				SafePointer<Codec::Frame> converted = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-				if (WICFactory->CreateBitmapFromMemory(frame->GetWidth(), frame->GetHeight(), GUID_WICPixelFormat32bppPBGRA, converted->GetScanLineLength(),
-					converted->GetScanLineLength() * converted->GetHeight(), reinterpret_cast<LPBYTE>(converted->GetData()), Bitmap.InnerRef()) != S_OK) return 0;
-				SafePointer<ID2D1RenderTarget> RenderTarget;
-				D2D1_RENDER_TARGET_PROPERTIES props;
-				props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-				props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-				props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-				props.dpiX = 0.0f;
-				props.dpiY = 0.0f;
-				props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-				props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-				if (D2DFactory->CreateWicBitmapRenderTarget(Bitmap, props, RenderTarget.InnerRef()) != S_OK) return 0;
-				SafePointer<D2DRenderingDevice> Device = new D2DRenderingDevice(RenderTarget);
-				Device->BitmapTarget.SetReference(Bitmap);
-				Device->BitmapTarget->AddRef();
-				Device->BitmapTargetResX = converted->GetWidth();
-				Device->BitmapTargetResY = converted->GetHeight();
-				Device->Retain();
-				return Device;
-			} catch (...) { return 0; }
-		}
-
-		void TextRenderingInfo::FillAdvances(void)
-		{
-			GlyphAdvances.SetLength(GlyphString.Length());
-			Array<DWRITE_GLYPH_METRICS> Metrics(0x40);
-			Metrics.SetLength(GlyphString.Length());
-			if (Font->FontFace->GetGdiCompatibleGlyphMetrics(float(Font->Height), 1.0f, 0, TRUE, GlyphString, GlyphString.Length(), Metrics) != S_OK) throw Exception();
-			if (Font->AlternativeFace) {
-				for (int i = 0; i < GlyphString.Length(); i++) if (UseAlternative[i]) {
-					Font->AlternativeFace->GetGdiCompatibleGlyphMetrics(float(Font->Height), 1.0f, 0, TRUE, GlyphString.GetBuffer() + i, 1, Metrics.GetBuffer() + i);
-				}
-			}
-			for (int i = 0; i < GlyphString.Length(); i++) GlyphAdvances[i] = (UseAlternative[i]) ? AltFontUnitsToDIP(Metrics[i].advanceWidth) : FontUnitsToDIP(Metrics[i].advanceWidth);
-			BaselineOffset = int(FontUnitsToDIP(Font->FontMetrics.ascent));
-			float rl = 0.0f;
-			int tab_width = Font->GetWidth() * 4;
-			for (int i = 0; i < GlyphString.Length(); i++) {
-				if (CharString[i] == L'\t') {
-					int64 align_pos = ((int64(rl) + tab_width) / tab_width) * tab_width;
-					GlyphAdvances[i] = float(align_pos) - rl;
-					rl = float(align_pos);
-				} else {
-					rl += GlyphAdvances[i];
-				}
-			}
-			run_length = int(rl);
-		}
-		void TextRenderingInfo::FillGlyphs(void)
-		{
-			uint32 Space = 0x20;
-			Font->FontFace->GetGlyphIndicesW(&Space, 1, &NormalSpaceGlyph);
-			if (Font->AlternativeFace) Font->AlternativeFace->GetGlyphIndicesW(&Space, 1, &AlternativeSpaceGlyph);
-			GlyphString.SetLength(CharString.Length());
-			if (Font->FontFace->GetGlyphIndicesW(CharString, CharString.Length(), GlyphString) != S_OK) throw Exception();
-			UseAlternative.SetLength(CharString.Length());
-			for (int i = 0; i < UseAlternative.Length(); i++) {
-				if (CharString[i] == L'\t') {
-					GlyphString[i] = NormalSpaceGlyph;
-					UseAlternative[i] = false;
-				} else {
-					if (!GlyphString[i]) {
-						if (Font->AlternativeFace && Font->AlternativeFace->GetGlyphIndicesW(CharString.GetBuffer() + i, 1, GlyphString.GetBuffer() + i) == S_OK && GlyphString[i]) UseAlternative[i] = true;
-						else UseAlternative[i] = false;
-					} else UseAlternative[i] = false;
-				}
-			}
-		}
-		void TextRenderingInfo::BuildGeometry(void)
-		{
-			if (Geometry) { Geometry->Release(); Geometry = 0; }
-			ID2D1GeometrySink * Sink;
-			if (D2DFactory->CreatePathGeometry(&Geometry) != S_OK) throw Exception();
-			if (Geometry->Open(&Sink) != S_OK) { Geometry->Release(); Geometry = 0; throw Exception(); }
-			Array<uint16> Glyph = GlyphString;
-			for (int i = 0; i < Glyph.Length(); i++) if (UseAlternative[i]) Glyph[i] = NormalSpaceGlyph;
-			if (Font->FontFace->GetGlyphRunOutline(float(Font->Height), Glyph, GlyphAdvances, 0, GlyphString.Length(), FALSE, FALSE, static_cast<ID2D1SimplifiedGeometrySink*>(Sink)) != S_OK)
-			{ Sink->Close(); Sink->Release(); Geometry->Release(); Geometry = 0; throw Exception(); }
-			if (Font->AlternativeFace) {
-				for (int i = 0; i < Glyph.Length(); i++) Glyph[i] = (UseAlternative[i]) ? GlyphString[i] : AlternativeSpaceGlyph;
-				Font->AlternativeFace->GetGlyphRunOutline(float(Font->Height), Glyph, GlyphAdvances, 0, GlyphString.Length(), FALSE, FALSE, static_cast<ID2D1SimplifiedGeometrySink*>(Sink));
-			}
-			Sink->Close();
-			Sink->Release();
-			UnderlineOffset = -FontUnitsToDIP(int16(Font->FontMetrics.underlinePosition));
-			UnderlineHalfWidth = FontUnitsToDIP(Font->FontMetrics.underlineThickness) / 2.0f;
-			StrikeoutOffset = -FontUnitsToDIP(int16(Font->FontMetrics.strikethroughPosition));
-			StrikeoutHalfWidth = FontUnitsToDIP(Font->FontMetrics.strikethroughThickness) / 2.0f;
-		}
-		float TextRenderingInfo::FontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->FontMetrics.designUnitsPerEm); }
-		float TextRenderingInfo::AltFontUnitsToDIP(int units) { return float(units) * float(Font->Height) / float(Font->AltMetrics.designUnitsPerEm); }
-		void TextRenderingInfo::GetExtent(int & width, int & height) noexcept { width = run_length; height = Font->ActualHeight; }
 	}
 }
 

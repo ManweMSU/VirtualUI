@@ -3,7 +3,6 @@
 #include "ControlBase.h"
 #include "ControlClasses.h"
 #include "ScrollableControls.h"
-#include "Menus.h"
 #include "../Miscellaneous/UndoBuffer.h"
 
 namespace Engine
@@ -12,7 +11,7 @@ namespace Engine
 	{
 		namespace Controls
 		{
-			class ComboBox : public Window, public Template::Controls::ComboBox
+			class ComboBox : public Control, public Template::Controls::ComboBox
 			{
 				friend class ComboListBox;
 			private:
@@ -22,7 +21,7 @@ namespace Engine
 					SafePointer<Shape> ViewDisabled;
 					void * User;
 				};
-				class ComboListBox : public ParentWindow
+				class ComboListBox : public ParentControl
 				{
 					friend class ComboBox;
 				private:
@@ -38,10 +37,10 @@ namespace Engine
 					void scroll_to_current(void);
 					void move_selection(int to);
 				public:
-					ComboListBox(Window * Parent, WindowStation * Station, ComboBox * Base);
+					ComboListBox(ComboBox * Base);
 					~ComboListBox(void) override;
 
-					virtual void Render(const Box & at) override;
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 					virtual void ResetCache(void) override;
 					virtual void SetRectangle(const Rectangle & rect) override;
 					virtual Rectangle GetRectangle(void) override;
@@ -52,7 +51,7 @@ namespace Engine
 					virtual void MouseMove(Point at) override;
 					virtual void ScrollVertically(double delta) override;
 					virtual bool KeyDown(int key_code) override;
-					virtual Window * HitTest(Point at) override;
+					virtual Control * HitTest(Point at) override;
 					virtual string GetControlClass(void) override;
 				};
 
@@ -71,11 +70,11 @@ namespace Engine
 				void invalidate_viewport(void);
 				void run_drop_down(void);
 			public:
-				ComboBox(Window * Parent, WindowStation * Station);
-				ComboBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				ComboBox(void);
+				ComboBox(Template::ControlTemplate * Template);
 				~ComboBox(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -84,10 +83,10 @@ namespace Engine
 				virtual bool IsTabStop(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
 				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
@@ -113,11 +112,11 @@ namespace Engine
 				int GetSelectedIndex(void);
 				void SetSelectedIndex(int index);
 			};
-			class TextComboBox : public Window, public Template::Controls::TextComboBox
+			class TextComboBox : public Control, public Template::Controls::TextComboBox
 			{
 				friend class TextComboListBox;
 			private:
-				class TextComboListBox : public ParentWindow
+				class TextComboListBox : public ParentControl
 				{
 					friend class TextComboBox;
 				private:
@@ -134,10 +133,10 @@ namespace Engine
 					void scroll_to_current(void);
 					void move_selection(int to);
 				public:
-					TextComboListBox(Window * Parent, WindowStation * Station, TextComboBox * Base);
+					TextComboListBox(TextComboBox * Base);
 					~TextComboListBox(void) override;
 
-					virtual void Render(const Box & at) override;
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 					virtual void ResetCache(void) override;
 					virtual void SetRectangle(const Rectangle & rect) override;
 					virtual Rectangle GetRectangle(void) override;
@@ -148,7 +147,7 @@ namespace Engine
 					virtual void MouseMove(Point at) override;
 					virtual void ScrollVertically(double delta) override;
 					virtual bool KeyDown(int key_code) override;
-					virtual Window * HitTest(Point at) override;
+					virtual Control * HitTest(Point at) override;
 					virtual string GetControlClass(void) override;
 				};
 
@@ -162,10 +161,10 @@ namespace Engine
 				SafePointer<Shape> _view_button_hot;
 				SafePointer<Shape> _view_button_pressed;
 				SafePointer<Shape> _view_button_disabled;
-				SafePointer<Menus::Menu> _menu;
-				SafePointer<ITextRenderingInfo> _text_info;
-				SafePointer<ITextRenderingInfo> _advice_info;
-				SafePointer<ITextRenderingInfo> _placeholder_info;
+				SafePointer<Windows::IMenu> _menu;
+				SafePointer<Graphics::ITextBrush> _text_info;
+				SafePointer<Graphics::ITextBrush> _advice_info;
+				SafePointer<Graphics::ITextBrush> _placeholder_info;
 				SafePointer<Object> _inversion;
 				Array<uint32> _text;
 				UndoBuffer< Array<uint32> > _undo;
@@ -181,11 +180,11 @@ namespace Engine
 				void find_advice(void);
 				void run_drop_down(void);
 			public:
-				TextComboBox(Window * Parent, WindowStation * Station);
-				TextComboBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				TextComboBox(void);
+				TextComboBox(Template::ControlTemplate * Template);
 				~TextComboBox(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -194,12 +193,12 @@ namespace Engine
 				virtual bool IsTabStop(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetText(const string & text) override;
 				virtual string GetText(void) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
 				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
@@ -212,7 +211,9 @@ namespace Engine
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
-				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
+				virtual bool IsWindowEventEnabled(Windows::WindowHandler handler) override;
+				virtual void HandleWindowEvent(Windows::WindowHandler handler) override;
+				virtual ControlRefreshPeriod GetFocusedRefreshPeriod(void) override;
 				virtual string GetControlClass(void) override;
 
 				void Undo(void);
@@ -228,8 +229,8 @@ namespace Engine
 				string GetPlaceholder(void);
 				void SetCharacterFilter(const string & filter);
 				string GetCharacterFilter(void);
-				void SetContextMenu(Menus::Menu * menu);
-				Menus::Menu * GetContextMenu(void);
+				void SetContextMenu(Windows::IMenu * menu);
+				Windows::IMenu * GetContextMenu(void);
 				string FilterInput(const string & input);
 				void Print(const string & text);
 

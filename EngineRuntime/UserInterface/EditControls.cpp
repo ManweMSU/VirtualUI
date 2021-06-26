@@ -10,13 +10,13 @@ namespace Engine
 	{
 		namespace Controls
 		{
-			Edit::Edit(Window * Parent, WindowStation * Station) : Window(Parent, Station), _undo(_text), _text(0x100), _chars_enabled(0x100)
+			Edit::Edit(void) : _undo(_text), _text(0x100), _chars_enabled(0x100)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
 				EnumerateProperties(Initializer);
 			}
-			Edit::Edit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : Window(Parent, Station), _undo(_text), _text(0x100), _chars_enabled(0x100)
+			Edit::Edit(Template::ControlTemplate * Template) : _undo(_text), _text(0x100), _chars_enabled(0x100)
 			{
 				if (Template->Properties->GetTemplateClass() != L"Edit") throw InvalidArgumentException();
 				static_cast<Template::Controls::Edit &>(*this) = static_cast<Template::Controls::Edit &>(*Template->Properties);
@@ -27,17 +27,16 @@ namespace Engine
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 				SafePointer< Array<uint8> > mask = PasswordCharacter.EncodeSequence(Encoding::UTF32, true);
 				MemoryCopy(&_mask_char, mask->GetBuffer(), sizeof(uint32));
-				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
+				if (ContextMenu) _menu.SetReference(CreateMenu(ContextMenu));
 			}
 			Edit::~Edit(void) {}
-			void Edit::Render(const Box & at)
+			void Edit::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
-				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetControlSystem()->GetCaretWidth();
 				Shape ** back = 0;
 				Template::Shape * source = 0;
-				UI::Color text_color;
-				UI::Color placeholder_color;
+				Engine::Color text_color;
+				Engine::Color placeholder_color;
 				bool focused = false;
 				if (Disabled) {
 					source = ViewDisabled;
@@ -81,15 +80,15 @@ namespace Engine
 								Array<uint32> masked(0x100);
 								masked.SetLength(_text.Length());
 								for (int i = 0; i < masked.Length(); i++) masked[i] = _mask_char;
-								_text_info.SetReference(device->CreateTextRenderingInfo(Font, masked, 0, 1, text_color));
+								_text_info.SetReference(device->CreateTextBrush(Font, masked.GetBuffer(), masked.Length(), 0, 1, text_color));
 							} else {
-								_text_info.SetReference(device->CreateTextRenderingInfo(Font, _text, 0, 1, text_color));
+								_text_info.SetReference(device->CreateTextBrush(Font, _text.GetBuffer(), _text.Length(), 0, 1, text_color));
 								if (_hook) {
-									SafePointer< Array<UI::Color> > colors = _hook->GetPalette(this);
+									SafePointer< Array<Engine::Color> > colors = _hook->GetPalette(this);
 									SafePointer< Array<uint8> > indicies = _hook->ColorHighlight(this, _text);
 									if (colors && indicies) {
-										_text_info->SetCharPalette(*colors);
-										_text_info->SetCharColors(*indicies);
+										_text_info->SetCharPalette(*colors, colors->Length());
+										_text_info->SetCharColors(*indicies, indicies->Length());
 									}
 								}
 							}
@@ -106,29 +105,29 @@ namespace Engine
 							field.Left += _shift;
 							if (_cp > 0) caret = _text_info->EndOfChar(_cp - 1);
 							caret += _shift;
-							device->RenderText(_text_info, field, false);
+							device->Render(_text_info, field, false);
 						}
 					}
 				} else {
 					if (Placeholder.Length() && PlaceholderFont && !_placeholder_info) {
-						_placeholder_info.SetReference(device->CreateTextRenderingInfo(PlaceholderFont, Placeholder, 0, 1, placeholder_color));
+						_placeholder_info.SetReference(device->CreateTextBrush(PlaceholderFont, Placeholder, 0, 1, placeholder_color));
 					}
-					if (_placeholder_info && !focused) device->RenderText(_placeholder_info, field, false);
+					if (_placeholder_info && !focused) device->Render(_placeholder_info, field, false);
 				}
 				if (focused) {
 					if (!_inversion) {
 						if (CaretColor.a) {
-							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_inversion.SetReference(device->CreateSolidColorBrush(CaretColor));
 							_use_color_caret = true;
 						} else {
-							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_inversion.SetReference(device->CreateInversionEffectBrush());
 							_use_color_caret = false;
 						}
 					}
 					Box caret_box = Box(at.Left + Border + LeftSpace + caret, at.Top + Border,
 						at.Left + Border + LeftSpace + caret + _caret_width, at.Bottom - Border);
-					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret_box); }
-					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo *>(_inversion.Inner()), caret_box, true);
+					if (_use_color_caret) { if (device->IsCaretVisible()) device->Render(static_cast<Graphics::IColorBrush *>(_inversion.Inner()), caret_box); }
+					else device->Render(static_cast<Graphics::IInversionEffectBrush *>(_inversion.Inner()), caret_box, true);
 				}
 				device->PopClip();
 			}
@@ -149,19 +148,16 @@ namespace Engine
 				if (Disabled) { _state = 0; _shift = 0, _cp = 0, _sp = 0; }
 				_text_info.SetReference(0);
 				_placeholder_info.SetReference(0);
+				Invalidate();
 			}
 			bool Edit::IsEnabled(void) { return !Disabled; }
-			void Edit::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			void Edit::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; Invalidate(); }
 			bool Edit::IsVisible(void) { return !Invisible; }
 			bool Edit::IsTabStop(void) { return true; }
 			void Edit::SetID(int _ID) { ID = _ID; }
 			int Edit::GetID(void) { return ID; }
-			Window * Edit::FindChild(int _ID)
-			{
-				if (ID == _ID && ID != 0) return this;
-				else return 0;
-			}
-			void Edit::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			Control * Edit::FindChild(int _ID) { if (ID == _ID && ID != 0) return this; else return 0; }
+			void Edit::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle Edit::GetRectangle(void) { return ControlPosition; }
 			void Edit::SetText(const string & text)
 			{
@@ -172,33 +168,32 @@ namespace Engine
 				Text.Encode(_text.GetBuffer(), Encoding::UTF32, false);
 				_text_info.SetReference(0);
 				_shift = 0; _cp = 0; _sp = 0;
+				Invalidate();
 			}
 			string Edit::GetText(void)
 			{
 				Text = string(_text.GetBuffer(), _text.Length(), Encoding::UTF32);
 				return Text;
 			}
-			void Edit::RaiseEvent(int ID, Event event, Window * sender)
+			void Edit::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
-				if (_state == 2) _state = 0;
-				if (event == Event::MenuCommand) {
+				if (_state == 2) { _state = 0; Invalidate(); }
+				if (event == ControlEvent::MenuCommand) {
 					if (ID == 1001) Undo();
 					else if (ID == 1000) Redo();
 					else if (ID == 1002) Cut();
 					else if (ID == 1003) Copy();
 					else if (ID == 1004) Paste();
 					else if (ID == 1005) Delete();
-					else GetParent()->RaiseEvent(ID, Event::Command, this);
+					else GetParent()->RaiseEvent(ID, ControlEvent::Command, this);
 				} else GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void Edit::PopupMenuCancelled(void) { if (_state == 2) _state = 0; }
-			void Edit::FocusChanged(bool got_focus) { if (!got_focus) { _save = true; } }
+			void Edit::PopupMenuCancelled(void) { if (_state == 2) _state = 0; Invalidate(); }
+			void Edit::FocusChanged(bool got_focus) { if (!got_focus) { _save = true; } Invalidate(); }
 			void Edit::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; } }
 			void Edit::LeftButtonDown(Point at)
 			{
-				if ((at.x >= Border && at.y >= Border &&
-					at.x < WindowPosition.Right - WindowPosition.Left - Border &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border)) {
+				if ((at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border)) {
 					if (_text_info) {
 						_state = 1;
 						SetFocus();
@@ -208,6 +203,8 @@ namespace Engine
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = pos;
 						_cp = pos;
 						ScrollToCaret();
+						auto device = GetRenderingDevice();
+						if (device) device->SetCaretReferenceTime(GetTimerValue());
 					} else {
 						_state = 1;
 						SetFocus();
@@ -216,6 +213,8 @@ namespace Engine
 						_cp = 0;
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 						ScrollToCaret();
+						auto device = GetRenderingDevice();
+						if (device) device->SetCaretReferenceTime(GetTimerValue());
 					}
 				}
 			}
@@ -226,12 +225,11 @@ namespace Engine
 				int len = _text.Length();
 				while (_sp > 0 && ((IsAlphabetical(_text[_sp - 1]) || (_text[_sp - 1] >= L'0' && _text[_sp - 1] <= L'9') || (_text[_sp - 1] == L'_')))) _sp--;
 				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp] >= L'0' && _text[_cp] <= L'9') || (_text[_cp] == L'_')))) _cp++;
+				Invalidate();
 			}
 			void Edit::RightButtonDown(Point at)
 			{
-				if ((at.x >= Border && at.y >= Border &&
-					at.x < WindowPosition.Right - WindowPosition.Left - Border &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border)) {
+				if ((at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border)) {
 					if (_text_info) {
 						SetFocus();
 						_save = true;
@@ -240,33 +238,37 @@ namespace Engine
 						int pos = _text_info->TestPosition(at.x - Border - LeftSpace - _shift);
 						if (sp > pos || ep < pos) _cp = _sp = pos;
 						ScrollToCaret();
+						auto device = GetRenderingDevice();
+						if (device) device->SetCaretReferenceTime(GetTimerValue());
 					} else {
 						SetFocus();
 						_save = true;
 						_cp = _sp = 0;
 						ScrollToCaret();
+						auto device = GetRenderingDevice();
+						if (device) device->SetCaretReferenceTime(GetTimerValue());
 					}
 				}
 			}
 			void Edit::RightButtonUp(Point at)
 			{
 				if (_menu) {
-					auto pos = GetStation()->GetCursorPos();
-					auto undo = _menu->FindChild(1001);
-					auto redo = _menu->FindChild(1000);
-					auto cut = _menu->FindChild(1002);
-					auto copy = _menu->FindChild(1003);
-					auto paste = _menu->FindChild(1004);
-					auto remove = _menu->FindChild(1005);
-					if (undo) undo->Disabled = ReadOnly || !_undo.CanUndo();
-					if (redo) redo->Disabled = ReadOnly || !_undo.CanRedo();
-					if (cut) cut->Disabled = ReadOnly || _cp == _sp;
-					if (copy) copy->Disabled = _cp == _sp;
-					if (paste) paste->Disabled = ReadOnly || !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
-					if (remove) remove->Disabled = ReadOnly || _cp == _sp;
+					auto undo = _menu->FindMenuItem(1001);
+					auto redo = _menu->FindMenuItem(1000);
+					auto cut = _menu->FindMenuItem(1002);
+					auto copy = _menu->FindMenuItem(1003);
+					auto paste = _menu->FindMenuItem(1004);
+					auto remove = _menu->FindMenuItem(1005);
+					if (undo) undo->Enable(!ReadOnly && _undo.CanUndo());
+					if (redo) redo->Enable(!ReadOnly && _undo.CanRedo());
+					if (cut) cut->Enable(!ReadOnly && _cp != _sp);
+					if (copy) copy->Enable(_cp != _sp);
+					if (paste) paste->Enable(!ReadOnly && Clipboard::IsFormatAvailable(Clipboard::Format::Text));
+					if (remove) remove->Enable(!ReadOnly && _cp != _sp);
 					_state = 2;
+					Invalidate();
 					if (_hook) _hook->InitializeContextMenu(_menu, this);
-					_menu->RunPopup(this, pos);
+					RunMenu(_menu, this, at);
 				}
 			}
 			void Edit::MouseMove(Point at)
@@ -274,60 +276,74 @@ namespace Engine
 				if (_state == 1) {
 					_cp = _text_info ? _text_info->TestPosition(at.x - Border - LeftSpace - _shift) : 0;
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 				}
 			}
 			bool Edit::KeyDown(int key_code)
 			{
-				if (key_code == KeyCodes::Back && !ReadOnly && (_cp != _sp || _cp > 0)) {
-					if (_save) {
-						_undo.PushCurrentVersion();
-						_save = false;
-					}
-					if (_cp == _sp) _cp = _sp - 1;
-					Print(L"");
-					_deferred_scroll = true;
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
+				if (key_code == KeyCodes::Back) {
+					if (!ReadOnly && (_cp != _sp || _cp > 0)) {
+						if (_save) {
+							_undo.PushCurrentVersion();
+							_save = false;
+						}
+						if (_cp == _sp) _cp = _sp - 1;
+						Print(L"");
+						_deferred_scroll = true;
+					} else Beep();
 					return true;
-				} else if (key_code == KeyCodes::Delete && !ReadOnly && (_cp != _sp || _cp < _text.Length())) {
-					if (_save) {
-						_undo.PushCurrentVersion();
-						_save = false;
-					}
-					if (_cp == _sp) _cp = _sp + 1;
-					Print(L"");
-					_deferred_scroll = true;
+				} else if (key_code == KeyCodes::Delete) {
+					if (!ReadOnly && (_cp != _sp || _cp < _text.Length())) {
+						if (_save) {
+							_undo.PushCurrentVersion();
+							_save = false;
+						}
+						if (_cp == _sp) _cp = _sp + 1;
+						Print(L"");
+						_deferred_scroll = true;
+					} else Beep();
 					return true;
-				} else if (key_code == KeyCodes::Left && _cp > 0) {
-					_save = true;
-					_cp--;
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
-					_deferred_scroll = true;
+				} else if (key_code == KeyCodes::Left) {
+					if (_cp > 0) {
+						_save = true;
+						_cp--;
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
-				} else if (key_code == KeyCodes::Right && _cp < _text.Length()) {
-					_save = true;
-					_cp++;
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
-					_deferred_scroll = true;
+				} else if (key_code == KeyCodes::Right) {
+					if (_cp < _text.Length()) {
+						_save = true;
+						_cp++;
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
 				} else if (key_code == KeyCodes::Escape) {
 					_save = true;
 					_sp = _cp;
+					Invalidate();
 					return true;
 				} else if (key_code == KeyCodes::Home) {
 					_save = true;
 					_cp = 0;
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 					_deferred_scroll = true;
+					Invalidate();
 					return true;
 				} else if (key_code == KeyCodes::End) {
 					_save = true;
 					_cp = _text.Length();
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _sp = _cp;
 					_deferred_scroll = true;
+					Invalidate();
 					return true;
-				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) &&
-					Keyboard::IsKeyPressed(KeyCodes::Control) &&
-					!Keyboard::IsKeyPressed(KeyCodes::Alternative) &&
-					!Keyboard::IsKeyPressed(KeyCodes::System)) {
+				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) && Keyboard::IsKeyPressed(KeyCodes::Control) && !Keyboard::IsKeyPressed(KeyCodes::Alternative) && !Keyboard::IsKeyPressed(KeyCodes::System)) {
 					if (key_code == KeyCodes::Z) { Undo(); return true; }
 					else if (key_code == KeyCodes::X) { Cut(); return true; }
 					else if (key_code == KeyCodes::C) { Copy(); return true; }
@@ -338,6 +354,8 @@ namespace Engine
 			}
 			void Edit::CharDown(uint32 ucs_code)
 			{
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
 				if (!ReadOnly) {
 					string filtered = FilterInput(string(&ucs_code, 1, Encoding::UTF32));
 					if (filtered.Length()) {
@@ -347,17 +365,37 @@ namespace Engine
 						}
 						Print(filtered);
 						_deferred_scroll = true;
-					}
-				}
+					} else Beep();
+				} else Beep();
 			}
 			void Edit::SetCursor(Point at)
 			{
-				SystemCursor cursor = SystemCursor::Arrow;
-				if ((at.x >= Border && at.y >= Border && at.x < WindowPosition.Right - WindowPosition.Left - Border &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border) || _state) cursor = SystemCursor::Beam;
-				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
+				auto cursor = Windows::SystemCursorClass::Arrow;
+				if ((at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border) || _state) cursor = Windows::SystemCursorClass::Beam;
+				SelectCursor(cursor);
 			}
-			Window::RefreshPeriod Edit::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
+			bool Edit::IsWindowEventEnabled(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) return !ReadOnly && _undo.CanUndo();
+				else if (handler == Windows::WindowHandler::Redo) return !ReadOnly && _undo.CanRedo();
+				else if (handler == Windows::WindowHandler::Cut) return !ReadOnly && _cp != _sp;
+				else if (handler == Windows::WindowHandler::Copy) return _cp != _sp;
+				else if (handler == Windows::WindowHandler::Paste) return !ReadOnly && Clipboard::IsFormatAvailable(Clipboard::Format::Text);
+				else if (handler == Windows::WindowHandler::Delete) return !ReadOnly && _cp != _sp;
+				else if (handler == Windows::WindowHandler::SelectAll) return true;
+				else return false;
+			}
+			void Edit::HandleWindowEvent(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) Undo();
+				else if (handler == Windows::WindowHandler::Redo) Redo();
+				else if (handler == Windows::WindowHandler::Cut) Cut();
+				else if (handler == Windows::WindowHandler::Copy) Copy();
+				else if (handler == Windows::WindowHandler::Paste) Paste();
+				else if (handler == Windows::WindowHandler::Delete) Delete();
+				else if (handler == Windows::WindowHandler::SelectAll) SetSelection(0, _text.Length());
+			}
+			ControlRefreshPeriod Edit::GetFocusedRefreshPeriod(void) { return ControlRefreshPeriod::CaretBlink; }
 			string Edit::GetControlClass(void) { return L"Edit"; }
 			void Edit::Undo(void)
 			{
@@ -367,8 +405,9 @@ namespace Engine
 					_save = true;
 					_deferred_scroll = true;
 					_text_info.SetReference(0);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
-				}
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
+				} else Beep();
 			}
 			void Edit::Redo(void)
 			{
@@ -378,8 +417,9 @@ namespace Engine
 					_save = true;
 					_deferred_scroll = true;
 					_text_info.SetReference(0);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
-				}
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
+				} else Beep();
 			}
 			void Edit::Cut(void)
 			{
@@ -389,14 +429,14 @@ namespace Engine
 					Clipboard::SetData(GetSelection());
 					Print(L"");
 					_deferred_scroll = true;
-				}
+				} else Beep();
 			}
 			void Edit::Copy(void)
 			{
 				if (_cp != _sp) {
 					_save = true;
 					Clipboard::SetData(GetSelection());
-				}
+				} else Beep();
 			}
 			void Edit::Paste(void)
 			{
@@ -409,9 +449,9 @@ namespace Engine
 							_save = true;
 							Print(filter);
 							_deferred_scroll = true;
-						}
-					}
-				}
+						} else Beep();
+					} else Beep();
+				} else Beep();
 			}
 			void Edit::Delete(void)
 			{
@@ -420,7 +460,7 @@ namespace Engine
 					_save = true;
 					Print(L"");
 					_deferred_scroll = true;
-				}
+				} else Beep();
 			}
 			string Edit::GetSelection(void)
 			{
@@ -432,17 +472,19 @@ namespace Engine
 			{
 				_sp = min(max(selection_position, 0), _text.Length());
 				_cp = min(max(caret_position, 0), _text.Length());
+				Invalidate();
 			}
 			void Edit::ScrollToCaret(void)
 			{
 				if (_text_info) {
-					int width = WindowPosition.Right - WindowPosition.Left - 2 * Border - LeftSpace;
+					int width = ControlBoundaries.Right - ControlBoundaries.Left - 2 * Border - LeftSpace;
 					int shifted_caret = ((_cp > 0) ? _text_info->EndOfChar(_cp - 1) : 0) + _shift;
 					if (shifted_caret < 0) _shift -= shifted_caret;
 					else if (shifted_caret + _caret_width >= width) _shift -= shifted_caret + _caret_width - width;
+					Invalidate();
 				}
 			}
-			void Edit::SetPlaceholder(const string & text) { Placeholder = text; _placeholder_info.SetReference(0); }
+			void Edit::SetPlaceholder(const string & text) { Placeholder = text; _placeholder_info.SetReference(0); Invalidate(); }
 			string Edit::GetPlaceholder(void) { return Placeholder; }
 			void Edit::SetCharacterFilter(const string & filter)
 			{
@@ -451,18 +493,19 @@ namespace Engine
 				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
 			string Edit::GetCharacterFilter(void) { return CharactersEnabled; }
-			void Edit::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
-			Menus::Menu * Edit::GetContextMenu(void) { return _menu; }
-			void Edit::SetPasswordMode(bool hide) { Password = hide; _text_info.SetReference(0); }
+			void Edit::SetContextMenu(Windows::IMenu * menu) { _menu.SetRetain(menu); }
+			Windows::IMenu * Edit::GetContextMenu(void) { return _menu; }
+			void Edit::SetPasswordMode(bool hide) { Password = hide; _text_info.SetReference(0); Invalidate(); }
 			bool Edit::GetPasswordMode(void) { return Password; }
 			void Edit::SetPasswordChar(uint32 ucs)
 			{
 				_mask_char = ucs;
 				PasswordCharacter = string(&_mask_char, 1, Encoding::UTF32);
 				_text_info.SetReference(0);
+				Invalidate();
 			}
 			uint32 Edit::GetPasswordChar(void) { return _mask_char; }
-			void Edit::SetHook(IEditHook * hook) { _hook = hook; _text_info.SetReference(0); }
+			void Edit::SetHook(IEditHook * hook) { _hook = hook; _text_info.SetReference(0); Invalidate(); }
 			Edit::IEditHook * Edit::GetHook(void) { return _hook; }
 			string Edit::FilterInput(const string & input)
 			{
@@ -508,14 +551,15 @@ namespace Engine
 				for (int i = 0; i < utf32.Length(); i++) _text[i + _cp] = utf32[i];
 				_cp += utf32.Length(); _sp = _cp;
 				_text_info.SetReference(0);
-				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+				Invalidate();
+				GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 			}
-			void Edit::IEditHook::InitializeContextMenu(Menus::Menu * menu, Edit * sender) {}
+			void Edit::IEditHook::InitializeContextMenu(Windows::IMenu * menu, Edit * sender) {}
 			string Edit::IEditHook::Filter(Edit * sender, const string & input) { return input; }
 			Array<uint8> * Edit::IEditHook::ColorHighlight(Edit * sender, const Array<uint32>& text) { return 0; }
-			Array<UI::Color>* Edit::IEditHook::GetPalette(Edit * sender) { return 0; }
+			Array<Color>* Edit::IEditHook::GetPalette(Edit * sender) { return 0; }
 
-			MultiLineEdit::MultiLineEdit(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _undo(_content, 10), _chars_enabled(0x100), _text_info(0x20)
+			MultiLineEdit::MultiLineEdit(void) : _undo(_content, 10), _chars_enabled(0x100), _text_info(0x20)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
@@ -524,23 +568,22 @@ namespace Engine
 				_content.lines << EditorLine();
 				_text_info.Append(0);
 			}
-			MultiLineEdit::MultiLineEdit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _undo(_content, 10), _chars_enabled(0x100), _text_info(0x20)
+			MultiLineEdit::MultiLineEdit(Template::ControlTemplate * Template) : _undo(_content, 10), _chars_enabled(0x100), _text_info(0x20)
 			{
 				if (Template->Properties->GetTemplateClass() != L"MultiLineEdit") throw InvalidArgumentException();
 				static_cast<Template::Controls::MultiLineEdit &>(*this) = static_cast<Template::Controls::MultiLineEdit &>(*Template->Properties);
-				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
+				if (ContextMenu) _menu.SetReference(CreateMenu(ContextMenu));
 				ResetCache(); _chars_enabled.SetLength(CharactersEnabled.GetEncodedLength(Encoding::UTF32));
 				CharactersEnabled.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 				SetText(Text);
 			}
 			MultiLineEdit::~MultiLineEdit(void) {}
-			void MultiLineEdit::Render(const Box & at)
+			void MultiLineEdit::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
-				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetControlSystem()->GetCaretWidth();
 				Shape ** back = 0;
 				Template::Shape * source = 0;
-				UI::Color text_color;
+				Engine::Color text_color;
 				bool focused = false;
 				if (Disabled) {
 					source = ViewDisabled;
@@ -584,19 +627,19 @@ namespace Engine
 					int vpl = _vscroll->Position / _fh;
 					int vph = (_vscroll->Position + _vscroll->Page) / _fh + 1;
 					for (int i = max(vpl, 0); i < min(vph, _content.lines.Length()); i++) {
-						SafePointer<ITextRenderingInfo> line = device->CreateTextRenderingInfo(Font, _content.lines[i].text, 0, 0, text_color);
+						SafePointer<Graphics::ITextBrush> line = device->CreateTextBrush(Font, _content.lines[i].text, _content.lines[i].text.Length(), 0, 0, text_color);
 						if (_hook) {
-							SafePointer< Array<UI::Color> > colors = _hook->GetPalette(this);
+							SafePointer< Array<Engine::Color> > colors = _hook->GetPalette(this);
 							SafePointer< Array<uint8> > indicies = _hook->ColorHighlight(this, _content.lines[i].text, i);
 							if (colors && indicies) {
-								line->SetCharPalette(*colors);
-								line->SetCharColors(*indicies);
+								line->SetCharPalette(*colors, colors->Length());
+								line->SetCharColors(*indicies, indicies->Length());
 							}
 						}
 						line->SetHighlightColor(SelectionColor);
 						_text_info.SetElement(line, i);
 						int w, h;
-						line->GetExtent(w, h);
+						line->GetExtents(w, h);
 						_content.lines[i].width = w;
 					}
 					if (_deferred_update) {
@@ -638,34 +681,36 @@ namespace Engine
 							}
 							Box rb(field.Left - _hscroll->Position, field.Top - _vscroll->Position + i * _fh, field.Right, 0);
 							rb.Bottom = rb.Top + _fh;
-							device->RenderText(_text_info.ElementAt(i), rb, false);
+							device->Render(_text_info.ElementAt(i), rb, false);
 						}
 					}
 				}
 				if (focused && caret_y >= -_fh) {
 					if (!_inversion) {
 						if (CaretColor.a) {
-							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_inversion.SetReference(device->CreateSolidColorBrush(CaretColor));
 							_use_color_caret = true;
 						} else {
-							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_inversion.SetReference(device->CreateInversionEffectBrush());
 							_use_color_caret = false;
 						}
 					}
 					Box caret_box = Box(at.Left + Border + caret_x, at.Top + Border + caret_y,
 						at.Left + Border + caret_x + _caret_width, at.Top + Border + caret_y + _fh);
-					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret_box); }
-					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo*>(_inversion.Inner()), caret_box, true);
+					if (_use_color_caret) { if (device->IsCaretVisible()) device->Render(static_cast<Graphics::IColorBrush *>(_inversion.Inner()), caret_box); }
+					else device->Render(static_cast<Graphics::IInversionEffectBrush *>(_inversion.Inner()), caret_box, true);
 				}
 				device->PopClip();
-				ParentWindow::Render(at);
+				ParentControl::Render(device, at);
 			}
 			void MultiLineEdit::ResetCache(void)
 			{
-				if (_vscroll) _vscroll->Destroy();
-				if (_hscroll) _hscroll->Destroy();
-				_vscroll = GetStation()->CreateWindow<VerticalScrollBar>(this, this);
-				_hscroll = GetStation()->CreateWindow<HorizontalScrollBar>(this, this);
+				if (_vscroll) _vscroll->RemoveFromParent();
+				if (_hscroll) _hscroll->RemoveFromParent();
+				SafePointer<VerticalScrollBar> vert = new VerticalScrollBar(this);
+				SafePointer<HorizontalScrollBar> horz = new HorizontalScrollBar(this);
+				_vscroll = vert; _hscroll = horz;
+				AddChild(vert); AddChild(horz);
 				_vscroll->SetRectangle(Rectangle(
 					Coordinate::Right() - Border - VerticalScrollSize, Border,
 					Coordinate::Right() - Border, Coordinate::Bottom() - Border - HorizontalScrollSize));
@@ -687,7 +732,7 @@ namespace Engine
 					_fw = Font->GetWidth();
 					_fh = Font->GetLineSpacing();
 				}
-				ParentWindow::ResetCache();
+				ParentControl::ResetCache();
 			}
 			void MultiLineEdit::Enable(bool enable)
 			{
@@ -695,16 +740,17 @@ namespace Engine
 				if (Disabled) { _state = 0; _vscroll->Enable(false); _hscroll->Enable(false); }
 				else { _deferred_update = true; }
 				for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i);
+				Invalidate();
 			}
 			bool MultiLineEdit::IsEnabled(void) { return !Disabled; }
-			void MultiLineEdit::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; }
+			void MultiLineEdit::Show(bool visible) { Invisible = !visible; if (Invisible) _state = 0; Invalidate(); }
 			bool MultiLineEdit::IsVisible(void) { return !Invisible; }
 			bool MultiLineEdit::IsTabStop(void) { return true; }
 			void MultiLineEdit::SetID(int _ID) { ID = _ID; }
 			int MultiLineEdit::GetID(void) { return ID; }
-			void MultiLineEdit::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void MultiLineEdit::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); }
 			Rectangle MultiLineEdit::GetRectangle(void) { return ControlPosition; }
-			void MultiLineEdit::SetPosition(const Box & box) { ParentWindow::SetPosition(box); _deferred_update = true; }
+			void MultiLineEdit::SetPosition(const Box & box) { ParentControl::SetPosition(box); _deferred_update = true; Invalidate(); }
 			void MultiLineEdit::SetText(const string & text)
 			{
 				_undo.RemoveAllVersions();
@@ -736,6 +782,7 @@ namespace Engine
 				_hscroll->Position = 0;
 				_deferred_update = true;
 				if (_hook) _hook->CaretPositionChanged(this);
+				Invalidate();
 			}
 			string MultiLineEdit::GetText(void)
 			{
@@ -746,26 +793,24 @@ namespace Engine
 				}
 				return result.ToString();
 			}
-			void MultiLineEdit::RaiseEvent(int ID, Event event, Window * sender)
+			void MultiLineEdit::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
-				if (_state == 2) _state = 0;
-				if (event == Event::MenuCommand) {
+				if (_state == 2) { _state = 0; Invalidate(); }
+				if (event == ControlEvent::MenuCommand) {
 					if (ID == 1001) Undo();
 					else if (ID == 1000) Redo();
 					else if (ID == 1002) Cut();
 					else if (ID == 1003) Copy();
 					else if (ID == 1004) Paste();
 					else if (ID == 1005) Delete();
-					else GetParent()->RaiseEvent(ID, Event::Command, this);
+					else GetParent()->RaiseEvent(ID, ControlEvent::Command, this);
 				} else if (ID) GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void MultiLineEdit::FocusChanged(bool got_focus) { if (!got_focus) { _save = true; } }
+			void MultiLineEdit::FocusChanged(bool got_focus) { if (!got_focus) { _save = true; } Invalidate(); }
 			void MultiLineEdit::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; } }
 			void MultiLineEdit::LeftButtonDown(Point at)
 			{
-				if ((at.x >= Border && at.y >= Border &&
-					at.x < WindowPosition.Right - WindowPosition.Left - Border - VerticalScrollSize &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border - HorizontalScrollSize)) {
+				if ((at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border - VerticalScrollSize && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border - HorizontalScrollSize)) {
 					int y = (at.y - Border + _vscroll->Position) / _fh;
 					_state = 1;
 					SetFocus();
@@ -787,6 +832,8 @@ namespace Engine
 						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					}
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 					if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
@@ -802,12 +849,11 @@ namespace Engine
 				while (_sp > 0 && ((IsAlphabetical(_text[_sp - 1]) || (_text[_sp - 1] >= L'0' && _text[_sp - 1] <= L'9') || (_text[_sp - 1] == L'_')))) _sp--;
 				while (_cp < len && ((IsAlphabetical(_text[_cp]) || (_text[_cp] >= L'0' && _text[_cp] <= L'9') || (_text[_cp] == L'_')))) _cp++;
 				if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
+				Invalidate();
 			}
 			void MultiLineEdit::RightButtonDown(Point at)
 			{
-				if ((at.x >= Border && at.y >= Border &&
-					at.x < WindowPosition.Right - WindowPosition.Left - Border - VerticalScrollSize &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border - HorizontalScrollSize)) {
+				if ((at.x >= Border && at.y >= Border && at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border - VerticalScrollSize && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border - HorizontalScrollSize)) {
 					int y = (at.y - Border + _vscroll->Position) / _fh;
 					SetFocus();
 					_save = true;
@@ -826,28 +872,30 @@ namespace Engine
 					}
 					if (sp > pos || ep < pos) _content.cp = _content.sp = pos;
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 					if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
 			void MultiLineEdit::RightButtonUp(Point at)
 			{
 				if (_menu) {
-					auto pos = GetStation()->GetCursorPos();
-					auto undo = _menu->FindChild(1001);
-					auto redo = _menu->FindChild(1000);
-					auto cut = _menu->FindChild(1002);
-					auto copy = _menu->FindChild(1003);
-					auto paste = _menu->FindChild(1004);
-					auto remove = _menu->FindChild(1005);
-					if (undo) undo->Disabled = ReadOnly || !_undo.CanUndo();
-					if (redo) redo->Disabled = ReadOnly || !_undo.CanRedo();
-					if (cut) cut->Disabled = ReadOnly || _content.cp == _content.sp;
-					if (copy) copy->Disabled = _content.cp == _content.sp;
-					if (paste) paste->Disabled = ReadOnly || !Clipboard::IsFormatAvailable(Clipboard::Format::Text);
-					if (remove) remove->Disabled = ReadOnly || _content.cp == _content.sp;
+					auto undo = _menu->FindMenuItem(1001);
+					auto redo = _menu->FindMenuItem(1000);
+					auto cut = _menu->FindMenuItem(1002);
+					auto copy = _menu->FindMenuItem(1003);
+					auto paste = _menu->FindMenuItem(1004);
+					auto remove = _menu->FindMenuItem(1005);
+					if (undo) undo->Enable(!ReadOnly && _undo.CanUndo());
+					if (redo) redo->Enable(!ReadOnly && _undo.CanRedo());
+					if (cut) cut->Enable(!ReadOnly && _content.cp != _content.sp);
+					if (copy) copy->Enable(_content.cp != _content.sp);
+					if (paste) paste->Enable(!ReadOnly && Clipboard::IsFormatAvailable(Clipboard::Format::Text));
+					if (remove) remove->Enable(!ReadOnly && _content.cp != _content.sp);
 					_state = 2;
+					Invalidate();
 					if (_hook) _hook->InitializeContextMenu(_menu, this);
-					_menu->RunPopup(this, pos);
+					RunMenu(_menu, this, at);
 				}
 			}
 			void MultiLineEdit::MouseMove(Point at)
@@ -863,6 +911,8 @@ namespace Engine
 						_content.cp = EditorCoord(_text_info[y].TestPosition(at.x - Border + _hscroll->Position), y);
 					}
 					ScrollToCaret();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
 					if (pcp != _content.cp) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
@@ -870,64 +920,76 @@ namespace Engine
 			void MultiLineEdit::ScrollHorizontally(double delta) { _hscroll->SetScrollerPositionSilent(_hscroll->Position + int(delta * double(_hscroll->Line))); }
 			bool MultiLineEdit::KeyDown(int key_code)
 			{
-				if (key_code == KeyCodes::Back && !ReadOnly && (_content.cp != _content.sp || _content.cp > EditorCoord())) {
-					if (_save) {
-						_undo.PushCurrentVersion();
-						_save = false;
-					}
-					if (_content.cp == _content.sp) {
-						if (_content.sp.x > 0) {
-							_content.cp = EditorCoord(_content.sp.x - 1, _content.sp.y);
-						} else if (_content.sp.y > 0) {
-							_content.cp = EditorCoord(_content.lines[_content.sp.y - 1].text.Length(), _content.sp.y - 1);
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
+				if (key_code == KeyCodes::Back) {
+					if (!ReadOnly && (_content.cp != _content.sp || _content.cp > EditorCoord())) {
+						if (_save) {
+							_undo.PushCurrentVersion();
+							_save = false;
 						}
-					}
-					Print(L"");
-					_deferred_scroll = true;
-					return true;
-				} else if (key_code == KeyCodes::Delete && !ReadOnly &&
-					(_content.cp != _content.sp || _content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1))) {
-					if (_save) {
-						_undo.PushCurrentVersion();
-						_save = false;
-					}
-					if (_content.cp == _content.sp) {
-						if (_content.sp.x < _content.lines[_content.sp.y].text.Length()) {
-							_content.cp = EditorCoord(_content.sp.x + 1, _content.sp.y);
-						} else if (_content.sp.y < _content.lines.Length() - 1) {
-							_content.cp = EditorCoord(0, _content.sp.y + 1);
+						if (_content.cp == _content.sp) {
+							if (_content.sp.x > 0) {
+								_content.cp = EditorCoord(_content.sp.x - 1, _content.sp.y);
+							} else if (_content.sp.y > 0) {
+								_content.cp = EditorCoord(_content.lines[_content.sp.y - 1].text.Length(), _content.sp.y - 1);
+							}
 						}
-					}
-					Print(L"");
-					_deferred_scroll = true;
+						Print(L"");
+						_deferred_scroll = true;
+					} else Beep();
 					return true;
-				} else if (key_code == KeyCodes::Left && _content.cp > EditorCoord()) {
-					_save = true;
-					if (_content.cp.x > 0) {
-						_content.cp = EditorCoord(_content.cp.x - 1, _content.cp.y);
-						if (_hook) _hook->CaretPositionChanged(this);
-					} else if (_content.cp.y > 0) {
-						_content.cp = EditorCoord(_content.lines[_content.cp.y - 1].text.Length(), _content.cp.y - 1);
-						if (_hook) _hook->CaretPositionChanged(this);
-					}
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
-					_deferred_scroll = true;
+				} else if (key_code == KeyCodes::Delete) {
+					if (!ReadOnly && (_content.cp != _content.sp || _content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1))) {
+						if (_save) {
+							_undo.PushCurrentVersion();
+							_save = false;
+						}
+						if (_content.cp == _content.sp) {
+							if (_content.sp.x < _content.lines[_content.sp.y].text.Length()) {
+								_content.cp = EditorCoord(_content.sp.x + 1, _content.sp.y);
+							} else if (_content.sp.y < _content.lines.Length() - 1) {
+								_content.cp = EditorCoord(0, _content.sp.y + 1);
+							}
+						}
+						Print(L"");
+						_deferred_scroll = true;
+					} else Beep();
 					return true;
-				} else if (key_code == KeyCodes::Right && _content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1)) {
-					_save = true;
-					if (_content.cp.x < _content.lines[_content.cp.y].text.Length()) {
-						_content.cp = EditorCoord(_content.cp.x + 1, _content.cp.y);
-						if (_hook) _hook->CaretPositionChanged(this);
-					} else if (_content.cp.y < _content.lines.Length() - 1) {
-						_content.cp = EditorCoord(0, _content.cp.y + 1);
-						if (_hook) _hook->CaretPositionChanged(this);
-					}
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
-					_deferred_scroll = true;
+				} else if (key_code == KeyCodes::Left) {
+					if (_content.cp > EditorCoord()) {
+						_save = true;
+						if (_content.cp.x > 0) {
+							_content.cp = EditorCoord(_content.cp.x - 1, _content.cp.y);
+							if (_hook) _hook->CaretPositionChanged(this);
+						} else if (_content.cp.y > 0) {
+							_content.cp = EditorCoord(_content.lines[_content.cp.y - 1].text.Length(), _content.cp.y - 1);
+							if (_hook) _hook->CaretPositionChanged(this);
+						}
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
+					return true;
+				} else if (key_code == KeyCodes::Right) {
+					if (_content.cp < EditorCoord(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1)) {
+						_save = true;
+						if (_content.cp.x < _content.lines[_content.cp.y].text.Length()) {
+							_content.cp = EditorCoord(_content.cp.x + 1, _content.cp.y);
+							if (_hook) _hook->CaretPositionChanged(this);
+						} else if (_content.cp.y < _content.lines.Length() - 1) {
+							_content.cp = EditorCoord(0, _content.cp.y + 1);
+							if (_hook) _hook->CaretPositionChanged(this);
+						}
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
 				} else if (key_code == KeyCodes::Escape) {
 					_save = true;
 					_content.sp = _content.cp;
+					Invalidate();
 					return true;
 				} else if (key_code == KeyCodes::Home) {
 					_save = true;
@@ -935,6 +997,7 @@ namespace Engine
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					Invalidate();
 					return true;
 				} else if (key_code == KeyCodes::End) {
 					_save = true;
@@ -942,53 +1005,63 @@ namespace Engine
 					if (_hook) _hook->CaretPositionChanged(this);
 					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
 					_deferred_scroll = true;
+					Invalidate();
 					return true;
 				} else if (key_code == KeyCodes::Up) {
-					_save = true;
-					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
-					_content.cp.y = max(_content.cp.y - 1, 0);
-					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
-					if (_hook) _hook->CaretPositionChanged(this);
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
-					_deferred_scroll = true;
+					if (_content.cp.y > 0) {
+						_save = true;
+						int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
+						_content.cp.y = _content.cp.y - 1;
+						_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+						if (_hook) _hook->CaretPositionChanged(this);
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
 				} else if (key_code == KeyCodes::Down) {
-					_save = true;
-					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
-					_content.cp.y = min(_content.cp.y + 1, _content.lines.Length() - 1);
-					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
-					if (_hook) _hook->CaretPositionChanged(this);
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
-					_deferred_scroll = true;
+					if (_content.cp.y < _content.lines.Length() - 1) {
+						_save = true;
+						int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
+						_content.cp.y = _content.cp.y + 1, _content.lines.Length();
+						_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+						if (_hook) _hook->CaretPositionChanged(this);
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
 				} else if (key_code == KeyCodes::PageUp) {
-					_save = true;
-					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
-					int dy = _vscroll->Page / _fh;
-					_content.cp.y = max(_content.cp.y - dy, 0);
-					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
-					if (_hook) _hook->CaretPositionChanged(this);
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
-					_deferred_scroll = true;
+					if (_content.cp.y > 0) {
+						_save = true;
+						int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
+						int dy = _vscroll->Page / _fh;
+						_content.cp.y = max(_content.cp.y - dy, 0);
+						_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+						if (_hook) _hook->CaretPositionChanged(this);
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
 				} else if (key_code == KeyCodes::PageDown) {
-					_save = true;
-					int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
-					int dy = _vscroll->Page / _fh;
-					_content.cp.y = min(_content.cp.y + dy, _content.lines.Length() - 1);
-					_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
-					if (_hook) _hook->CaretPositionChanged(this);
-					if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
-					_deferred_scroll = true;
+					if (_content.cp.y < _content.lines.Length() - 1) {
+						_save = true;
+						int sx = (_content.cp.x > 0) ? _text_info[_content.cp.y].EndOfChar(_content.cp.x - 1) : 0;
+						int dy = _vscroll->Page / _fh;
+						_content.cp.y = min(_content.cp.y + dy, _content.lines.Length() - 1);
+						_content.cp.x = _text_info[_content.cp.y].TestPosition(sx);
+						if (_hook) _hook->CaretPositionChanged(this);
+						if (!Keyboard::IsKeyPressed(KeyCodes::Shift)) _content.sp = _content.cp;
+						_deferred_scroll = true;
+						Invalidate();
+					} else Beep();
 					return true;
 				} else if (key_code == KeyCodes::Return) {
 					_save = true;
 					CharDown(L'\n');
 					return true;
-				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) &&
-					Keyboard::IsKeyPressed(KeyCodes::Control) &&
-					!Keyboard::IsKeyPressed(KeyCodes::Alternative) &&
-					!Keyboard::IsKeyPressed(KeyCodes::System)) {
+				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) && Keyboard::IsKeyPressed(KeyCodes::Control) && !Keyboard::IsKeyPressed(KeyCodes::Alternative) && !Keyboard::IsKeyPressed(KeyCodes::System)) {
 					if (key_code == KeyCodes::Z) { Undo(); return true; }
 					else if (key_code == KeyCodes::X) { Cut(); return true; }
 					else if (key_code == KeyCodes::C) { Copy(); return true; }
@@ -999,6 +1072,8 @@ namespace Engine
 			}
 			void MultiLineEdit::CharDown(uint32 ucs_code)
 			{
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
 				if (!ReadOnly) {
 					string filtered = FilterInput(string(&ucs_code, 1, Encoding::UTF32));
 					if (filtered.Length()) {
@@ -1008,19 +1083,40 @@ namespace Engine
 						}
 						Print(filtered);
 						_deferred_scroll = true;
-					}
-				}
+					} else Beep();
+				} else Beep();
 			}
-			void MultiLineEdit::PopupMenuCancelled(void) { if (_state == 2) _state = 0; }
+			void MultiLineEdit::PopupMenuCancelled(void) { if (_state == 2) _state = 0; Invalidate(); }
 			void MultiLineEdit::SetCursor(Point at)
 			{
-				SystemCursor cursor = SystemCursor::Arrow;
+				auto cursor = Windows::SystemCursorClass::Arrow;
 				if ((at.x >= Border && at.y >= Border &&
-					at.x < WindowPosition.Right - WindowPosition.Left - Border - VerticalScrollSize &&
-					at.y < WindowPosition.Bottom - WindowPosition.Top - Border - HorizontalScrollSize) || _state) cursor = SystemCursor::Beam;
-				GetStation()->SetCursor(GetStation()->GetSystemCursor(cursor));
+					at.x < ControlBoundaries.Right - ControlBoundaries.Left - Border - VerticalScrollSize &&
+					at.y < ControlBoundaries.Bottom - ControlBoundaries.Top - Border - HorizontalScrollSize) || _state) cursor = Windows::SystemCursorClass::Beam;
+				SelectCursor(cursor);
 			}
-			Window::RefreshPeriod MultiLineEdit::FocusedRefreshPeriod(void) { return RefreshPeriod::CaretBlink; }
+			bool MultiLineEdit::IsWindowEventEnabled(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) return !ReadOnly && _undo.CanUndo();
+				else if (handler == Windows::WindowHandler::Redo) return !ReadOnly && _undo.CanRedo();
+				else if (handler == Windows::WindowHandler::Cut) return !ReadOnly && _content.cp != _content.sp;
+				else if (handler == Windows::WindowHandler::Copy) return _content.cp != _content.sp;
+				else if (handler == Windows::WindowHandler::Paste) return !ReadOnly && Clipboard::IsFormatAvailable(Clipboard::Format::Text);
+				else if (handler == Windows::WindowHandler::Delete) return !ReadOnly && _content.cp != _content.sp;
+				else if (handler == Windows::WindowHandler::SelectAll) return true;
+				else return false;
+			}
+			void MultiLineEdit::HandleWindowEvent(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) Undo();
+				else if (handler == Windows::WindowHandler::Redo) Redo();
+				else if (handler == Windows::WindowHandler::Cut) Cut();
+				else if (handler == Windows::WindowHandler::Copy) Copy();
+				else if (handler == Windows::WindowHandler::Paste) Paste();
+				else if (handler == Windows::WindowHandler::Delete) Delete();
+				else if (handler == Windows::WindowHandler::SelectAll) SetSelection(Point(0, 0), Point(_content.lines.LastElement().text.Length(), _content.lines.Length() - 1));
+			}
+			ControlRefreshPeriod MultiLineEdit::GetFocusedRefreshPeriod(void) { return ControlRefreshPeriod::CaretBlink; }
 			string MultiLineEdit::GetControlClass(void) { return L"MultiLineEdit"; }
 			void MultiLineEdit::Undo(void)
 			{
@@ -1030,10 +1126,11 @@ namespace Engine
 					_deferred_scroll = true;
 					_deferred_update = true;
 					_text_info.Clear();
-				for (int i = 0; i < _content.lines.Length(); i++) _text_info.Append(0);
+					for (int i = 0; i < _content.lines.Length(); i++) _text_info.Append(0);
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
-				}
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
+				} else Beep();
 			}
 			void MultiLineEdit::Redo(void)
 			{
@@ -1045,8 +1142,9 @@ namespace Engine
 					_text_info.Clear();
 					for (int i = 0; i < _content.lines.Length(); i++) _text_info.Append(0);
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
-				}
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
+				} else Beep();
 			}
 			void MultiLineEdit::Cut(void)
 			{
@@ -1056,14 +1154,14 @@ namespace Engine
 					Clipboard::SetData(GetSelection());
 					Print(L"");
 					_deferred_scroll = true;
-				}
+				} else Beep();
 			}
 			void MultiLineEdit::Copy(void)
 			{
 				if (_content.cp != _content.sp) {
 					_save = true;
 					Clipboard::SetData(GetSelection());
-				}
+				} else Beep();
 			}
 			void MultiLineEdit::Paste(void)
 			{
@@ -1076,9 +1174,9 @@ namespace Engine
 							_save = true;
 							Print(filter);
 							_deferred_scroll = true;
-						}
-					}
-				}
+						} else Beep();
+					} else Beep();
+				} else Beep();
 			}
 			void MultiLineEdit::Delete(void)
 			{
@@ -1087,7 +1185,7 @@ namespace Engine
 					_save = true;
 					Print(L"");
 					_deferred_scroll = true;
-				}
+				} else Beep();
 			}
 			string MultiLineEdit::GetSelection(void)
 			{
@@ -1117,6 +1215,7 @@ namespace Engine
 				_content.sp.x = max(min(selection_position.x, _content.lines[_content.sp.y].text.Length()), 0);
 				_content.cp.x = max(min(caret_position.x, _content.lines[_content.cp.y].text.Length()), 0);
 				if (_hook) _hook->CaretPositionChanged(this);
+				Invalidate();
 			}
 			Point MultiLineEdit::GetCaretPosition(void) { return Point(_content.cp.x, _content.cp.y); }
 			Point MultiLineEdit::GetSelectionPosition(void) { return Point(_content.sp.x, _content.sp.y); }
@@ -1129,6 +1228,7 @@ namespace Engine
 					else if (caret_x + _caret_width >= _hscroll->Position + _hscroll->Page) _hscroll->SetScrollerPositionSilent(caret_x + _caret_width - _hscroll->Page);
 					if (caret_y < _vscroll->Position) _vscroll->SetScrollerPositionSilent(caret_y);
 					else if (caret_y + _fh >= _vscroll->Position + _vscroll->Page) _vscroll->SetScrollerPositionSilent(caret_y + _fh - _vscroll->Page);
+					Invalidate();
 				}
 			}
 			void MultiLineEdit::SetCharacterFilter(const string & filter)
@@ -1138,13 +1238,13 @@ namespace Engine
 				filter.Encode(_chars_enabled.GetBuffer(), Encoding::UTF32, false);
 			}
 			string MultiLineEdit::GetCharacterFilter(void) { return CharactersEnabled; }
-			void MultiLineEdit::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
-			Menus::Menu * MultiLineEdit::GetContextMenu(void) { return _menu; }
-			void MultiLineEdit::SetHook(IMultiLineEditHook * hook) { _hook = hook; for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i); }
+			void MultiLineEdit::SetContextMenu(Windows::IMenu * menu) { _menu.SetRetain(menu); }
+			Windows::IMenu * MultiLineEdit::GetContextMenu(void) { return _menu; }
+			void MultiLineEdit::SetHook(IMultiLineEditHook * hook) { _hook = hook; for (int i = 0; i < _text_info.Length(); i++) _text_info.SetElement(0, i); Invalidate(); }
 			MultiLineEdit::IMultiLineEditHook * MultiLineEdit::GetHook(void) { return _hook; }
 			const Array<uint32>& MultiLineEdit::GetRawLine(int line_index) { return _content.lines[line_index].text; }
 			int MultiLineEdit::GetLineCount(void) { return _content.lines.Length(); }
-			void MultiLineEdit::InvalidateLine(int line_index) { _text_info.SetElement(0, line_index); }
+			void MultiLineEdit::InvalidateLine(int line_index) { _text_info.SetElement(0, line_index); Invalidate(); }
 			uint64 MultiLineEdit::GetUserDataForRawLine(int line_index) { return _content.lines[line_index].user_data; }
 			void MultiLineEdit::SetUserDataForRawLine(int line_index, uint64 value) { _content.lines[line_index].user_data = value; }
 			string MultiLineEdit::FilterInput(const string & input)
@@ -1238,13 +1338,14 @@ namespace Engine
 				}
 				_deferred_update = true;
 				if (_hook) _hook->CaretPositionChanged(this);
-				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+				Invalidate();
+				GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 			}
 
-			void MultiLineEdit::IMultiLineEditHook::InitializeContextMenu(Menus::Menu * menu, MultiLineEdit * sender) {}
+			void MultiLineEdit::IMultiLineEditHook::InitializeContextMenu(Windows::IMenu * menu, MultiLineEdit * sender) {}
 			string MultiLineEdit::IMultiLineEditHook::Filter(MultiLineEdit * sender, const string & input, Point insert_at) { return input; }
 			Array<uint8>* MultiLineEdit::IMultiLineEditHook::ColorHighlight(MultiLineEdit * sender, const Array<uint32>& text, int line) { return 0; }
-			Array<UI::Color>* MultiLineEdit::IMultiLineEditHook::GetPalette(MultiLineEdit * sender) { return 0; }
+			Array<Color>* MultiLineEdit::IMultiLineEditHook::GetPalette(MultiLineEdit * sender) { return 0; }
 			void MultiLineEdit::IMultiLineEditHook::CaretPositionChanged(MultiLineEdit * sender) {}
 
 			MultiLineEdit::EditorCoord::EditorCoord(void) {}

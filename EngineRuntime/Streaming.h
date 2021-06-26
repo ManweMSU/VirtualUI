@@ -16,11 +16,14 @@ namespace Engine
 			virtual uint64 Length(void) = 0;
 			virtual void SetLength(uint64 length) = 0;
 			virtual void Flush(void) = 0;
+
 			void CopyTo(Stream * to, uint64 length);
 			void CopyTo(Stream * to);
 			void CopyToUntilEof(Stream * to);
 			Array<uint8> * ReadAll(void);
+			Array<uint8> * ReadBlock(uint32 length);
 			void WriteArray(const Array<uint8> * data);
+			void RelocateData(uint64 offset_from, uint64 offset_to, uint64 length);
 		};
 
 		class FileStream final : public Stream

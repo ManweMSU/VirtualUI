@@ -34,6 +34,7 @@
             "browse": {
                 "path": [
                     "/usr/local/include",
+                    "/usr/include/freetype2",
                     "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1",
                     "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/9.0.0/include",
                     "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
@@ -50,6 +51,46 @@
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c11",
             "cppStandard": "c++17"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "ENGINE_UNIX",
+                "ENGINE_LINUX",
+                "ENGINE_X64",
+                "ENGINE_SUBSYSTEM_CONSOLE",
+                "ENGINE_VI_APPNAME",
+                "ENGINE_VI_COMPANY",
+                "ENGINE_VI_COPYRIGHT",
+                "ENGINE_VI_APPSYSNAME",
+                "ENGINE_VI_APPSHORTVERSION",
+                "ENGINE_VI_APPVERSION",
+                "ENGINE_VI_VERSIONMAJOR",
+                "ENGINE_VI_VERSIONMINOR",
+                "ENGINE_VI_SUBVERSION",
+                "ENGINE_VI_BUILD",
+                "ENGINE_VI_APPIDENT",
+                "ENGINE_VI_COMPANYIDENT",
+                "ENGINE_VI_DESCRIPTION"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "browse": {
+                "path": [
+                    "/usr/local/include",
+                    "/usr/include",
+                    "/usr/include/freetype2/*",
+                    "${workspaceRoot}/EngineRuntime-Linux/*",
+                    "${workspaceRoot}"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            },
         }
     ],
     "version": 4

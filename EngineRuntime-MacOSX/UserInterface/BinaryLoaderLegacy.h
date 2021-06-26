@@ -1,8 +1,6 @@
 #pragma once
 
-#include "ShapeBase.h"
 #include "Templates.h"
-#include "ControlClasses.h"
 #include "../Streaming.h"
 
 namespace Engine
@@ -11,7 +9,7 @@ namespace Engine
 	{
 		namespace Loader
 		{
-			void LoadUserInterfaceFromBinaryLegacy(InterfaceTemplate & Template, Streaming::Stream * Source, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver);
+			void LoadUserInterfaceFromBinaryLegacy(InterfaceTemplate & Template, Streaming::Stream * Source, Graphics::I2DDeviceContextFactory * ResourceLoader, IResourceResolver * ResourceResolver);
 		}
 	}
 }

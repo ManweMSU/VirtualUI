@@ -201,7 +201,7 @@ namespace Engine
 				else if (type == RegistryValueType::Time) value_int64 = int64(new_value);
 				else if (type == RegistryValueType::Binary) Set(&new_value, sizeof(new_value));
 			}
-			void Set(UI::Color new_value) { Set(int32(new_value.Value)); }
+			void Set(Color new_value) { Set(int32(new_value.Value)); }
 			void Set(Time new_value) { Set(int64(new_value.Ticks)); }
 			void Set(const void * new_value, int size)
 			{
@@ -285,7 +285,7 @@ namespace Engine
 				else if (type == RegistryValueType::LongInteger) return string(value_int64);
 				else if (type == RegistryValueType::LongFloat) return string(value_double);
 				else if (type == RegistryValueType::Color) {
-					UI::Color val = UI::Color(uint32(value_int32));
+					Color val = Color(uint32(value_int32));
 					return L"(" + string(val.r) + L", " + string(val.g) + L", " + string(val.b) + L", " + string(val.a) + L")";
 				} else if (type == RegistryValueType::Time) return Time(uint64(value_int64)).ToString();
 				else if (type == RegistryValueType::Binary) {
@@ -322,7 +322,7 @@ namespace Engine
 					else return 0.0;
 				} else return 0.0;
 			}
-			UI::Color GetColor(void) const { return UI::Color(uint32(GetInteger())); }
+			Color GetColor(void) const { return Color(uint32(GetInteger())); }
 			Time GetTime(void) const { return Time(uint64(GetLongInteger())); }
 			int GetBinarySize() const
 			{
@@ -597,10 +597,10 @@ namespace Engine
 				auto storage = ResolveValueByPath(path);
 				return storage ? storage->GetLongFloat() : 0.0;
 			}
-			virtual UI::Color GetValueColor(const string & path) const override
+			virtual Color GetValueColor(const string & path) const override
 			{
 				auto storage = ResolveValueByPath(path);
-				return storage ? storage->GetColor() : UI::Color(0);
+				return storage ? storage->GetColor() : Color(0);
 			}
 			virtual Time GetValueTime(const string & path) const override
 			{
@@ -649,7 +649,7 @@ namespace Engine
 				auto storage = ResolveValueByPath(path);
 				if (storage) storage->Set(value);
 			}
-			virtual void SetValue(const string & path, UI::Color value) override
+			virtual void SetValue(const string & path, Color value) override
 			{
 				auto storage = ResolveValueByPath(path);
 				if (storage) storage->Set(value);
@@ -846,7 +846,7 @@ namespace Engine
 			virtual string GetValueString(const string & path) const override { return Root->GetValueString(path); }
 			virtual int64 GetValueLongInteger(const string & path) const override { return Root->GetValueLongInteger(path); }
 			virtual double GetValueLongFloat(const string & path) const override { return Root->GetValueLongFloat(path); }
-			virtual UI::Color GetValueColor(const string & path) const override { return Root->GetValueColor(path); }
+			virtual Color GetValueColor(const string & path) const override { return Root->GetValueColor(path); }
 			virtual Time GetValueTime(const string & path) const override { return Root->GetValueTime(path); }
 			virtual void GetValueBinary(const string & path, void * buffer) const override { Root->GetValueBinary(path, buffer); }
 			virtual int GetValueBinarySize(const string & path) const override { return Root->GetValueBinarySize(path); }
@@ -858,7 +858,7 @@ namespace Engine
 			virtual void SetValue(const string & path, const char * value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, int64 value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, double value) override { Root->SetValue(path, value); }
-			virtual void SetValue(const string & path, UI::Color value) override { Root->SetValue(path, value); }
+			virtual void SetValue(const string & path, Color value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, Time value) override { Root->SetValue(path, value); }
 			virtual void SetValue(const string & path, const void * value, int size) override { Root->SetValue(path, value, size); }
 		};
@@ -1027,7 +1027,7 @@ namespace Engine
 				}
 				return 0.0;
 			}
-			virtual UI::Color GetValueColor(const string & path) const override
+			virtual Color GetValueColor(const string & path) const override
 			{
 				for (auto & node : _nodes) {
 					auto type = node.GetValueType(path);
@@ -1066,7 +1066,7 @@ namespace Engine
 			virtual void SetValue(const string & path, const char * value) override { throw Exception(); }
 			virtual void SetValue(const string & path, int64 value) override { throw Exception(); }
 			virtual void SetValue(const string & path, double value) override { throw Exception(); }
-			virtual void SetValue(const string & path, UI::Color value) override { throw Exception(); }
+			virtual void SetValue(const string & path, Color value) override { throw Exception(); }
 			virtual void SetValue(const string & path, Time value) override { throw Exception(); }
 			virtual void SetValue(const string & path, const void * value, int size) override { throw Exception(); }
 		};

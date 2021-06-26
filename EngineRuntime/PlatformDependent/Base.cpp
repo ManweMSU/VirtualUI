@@ -2,9 +2,11 @@
 
 #include <Windows.h>
 #include <Shlwapi.h>
+#include <Wbemidl.h>
 
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "wbemuuid.lib")
 
 #ifdef InterlockedIncrement
 #undef InterlockedIncrement
@@ -189,5 +191,64 @@ namespace Engine
 		uint64 result;
 		GetPhysicallyInstalledSystemMemory(&result);
 		return result * 0x400;
+	}
+	bool GetSystemInformation(SystemDesc & desc)
+	{
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Architecture = GetSystemPlatform();
+		desc.PhysicalMemory = GetInstalledMemory();
+		OSVERSIONINFOW vi;
+		vi.dwOSVersionInfoSize = sizeof(vi);
+		if (!GetVersionExW(&vi)) return false;
+		desc.SystemVersionMajor = vi.dwMajorVersion;
+		desc.SystemVersionMinor = vi.dwMinorVersion;
+		IWbemLocator * locator = 0;
+		auto status = CoInitializeSecurity(0, -1, 0, 0, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, 0, EOAC_NONE, 0);
+		if (status != S_OK && status != RPC_E_TOO_LATE) return false;
+		status = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&locator)); //CLSID_WbemAdministrativeLocator
+		if (status != S_OK) return false;
+		IWbemServices * services = 0;
+		status = locator->ConnectServer(L"Root\\CIMV2", 0, 0, 0, WBEM_FLAG_CONNECT_USE_MAX_WAIT, 0, 0, &services);
+		locator->Release();
+		if (status != S_OK) return false;
+		IEnumWbemClassObject * enumerator = 0;
+		status = services->ExecQuery(L"WQL", L"SELECT * FROM Win32_Processor", WBEM_FLAG_RETURN_IMMEDIATELY | WBEM_FLAG_FORWARD_ONLY, 0, &enumerator);
+		services->Release();
+		if (status != S_OK) return false;
+		while (true) {
+			ULONG num_objects;
+			IWbemClassObject * object = 0;
+			status = enumerator->Next(WBEM_INFINITE, 1, &object, &num_objects);
+			if (status < 0) {
+				enumerator->Release();
+				return false;
+			}
+			if (!num_objects) break;
+			VARIANT prop;
+			if (!desc.ProcessorName[0]) {
+				if (object->Get(L"Name", 0, &prop, 0, 0) == S_OK) {
+					MemoryCopy(desc.ProcessorName, prop.bstrVal, min(sizeof(desc.ProcessorName) - 2, StringLength(prop.bstrVal) * 2));
+					VariantClear(&prop);
+				}
+			}
+			if (!desc.ClockFrequency) {
+				if (object->Get(L"MaxClockSpeed", 0, &prop, 0, 0) == S_OK) {
+					desc.ClockFrequency = uint64(prop.ulVal) * 1000000;
+					VariantClear(&prop);
+				}
+			}
+			if (object->Get(L"NumberOfCores", 0, &prop, 0, 0) == S_OK) {
+				desc.PhysicalCores = prop.ulVal;
+				VariantClear(&prop);
+			}
+			if (object->Get(L"NumberOfLogicalProcessors", 0, &prop, 0, 0) == S_OK) {
+				desc.VirtualCores = prop.ulVal;
+				VariantClear(&prop);
+			}
+			object->Release();
+			if (status == WBEM_S_FALSE) break;
+		}
+		enumerator->Release();
+		return true;
 	}
 }

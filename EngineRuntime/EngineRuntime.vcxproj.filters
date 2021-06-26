@@ -55,14 +55,8 @@
     <ClInclude Include="PlatformDependent\ComInterop.h">
       <Filter>PlatformDependent</Filter>
     </ClInclude>
-    <ClInclude Include="Miscellaneous\Dictionary.h">
-      <Filter>Miscellaneous</Filter>
-    </ClInclude>
     <ClInclude Include="Miscellaneous\DynamicString.h">
       <Filter>Miscellaneous</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInterface\ControlBase.h">
-      <Filter>UserInterface</Filter>
     </ClInclude>
     <ClInclude Include="UserInterface\ShapeBase.h">
       <Filter>UserInterface</Filter>
@@ -79,16 +73,10 @@
     <ClInclude Include="UserInterface\StaticControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformDependent\WindowStation.h">
-      <Filter>PlatformDependent</Filter>
-    </ClInclude>
     <ClInclude Include="UserInterface\ButtonControls.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
     <ClInclude Include="UserInterface\GroupControls.h">
-      <Filter>UserInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInterface\OverlappedWindows.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
     <ClInclude Include="Syntax\Tokenization.h">
@@ -118,7 +106,7 @@
     <ClInclude Include="ImageCodec\IconCodec.h">
       <Filter>ImageCodec</Filter>
     </ClInclude>
-    <ClInclude Include="UserInterface\Animation.h">
+    <ClInclude Include="UserInterface\ControlService.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
     <ClInclude Include="PlatformDependent\Direct3D.h">
@@ -184,16 +172,10 @@
     <ClInclude Include="Math\Matrix.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="PlatformSpecific\WindowsTaskbar.h">
-      <Filter>PlatformSpecific</Filter>
-    </ClInclude>
     <ClInclude Include="PlatformSpecific\WindowsRegistry.h">
       <Filter>PlatformSpecific</Filter>
     </ClInclude>
     <ClInclude Include="PlatformSpecific\WindowsShortcut.h">
-      <Filter>PlatformSpecific</Filter>
-    </ClInclude>
-    <ClInclude Include="PlatformSpecific\WindowsEffects.h">
       <Filter>PlatformSpecific</Filter>
     </ClInclude>
     <ClInclude Include="Storage\JSON.h">
@@ -217,17 +199,11 @@
     <ClInclude Include="UserInterface\RichEditControl.h">
       <Filter>UserInterface</Filter>
     </ClInclude>
-    <ClInclude Include="UserInterface\Menus.h">
-      <Filter>UserInterface</Filter>
-    </ClInclude>
     <ClInclude Include="Graphics\Graphics.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\GraphicsHelper.h">
       <Filter>Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInterface\VirtualStation.h">
-      <Filter>UserInterface</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\Drawing.h">
       <Filter>Graphics</Filter>
@@ -253,9 +229,6 @@
     <ClInclude Include="Miscellaneous\Encoding.h">
       <Filter>Miscellaneous</Filter>
     </ClInclude>
-    <ClInclude Include="Interfaces\Application.h">
-      <Filter>Interfaces</Filter>
-    </ClInclude>
     <ClInclude Include="Interfaces\Assembly.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -263,9 +236,6 @@
       <Filter>Interfaces</Filter>
     </ClInclude>
     <ClInclude Include="Interfaces\Clipboard.h">
-      <Filter>Interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="Interfaces\SystemColors.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
     <ClInclude Include="Interfaces\KeyCodes.h">
@@ -280,12 +250,6 @@
     <ClInclude Include="Miscellaneous\FileServices.h">
       <Filter>Miscellaneous</Filter>
     </ClInclude>
-    <ClInclude Include="Interfaces\Notifications.h">
-      <Filter>Interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="Interfaces\NativeStation.h">
-      <Filter>Interfaces</Filter>
-    </ClInclude>
     <ClInclude Include="Interfaces\Console.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -298,14 +262,74 @@
     <ClInclude Include="Media\Audio.h">
       <Filter>Media</Filter>
     </ClInclude>
-    <ClInclude Include="Media\WaveCodec.h">
-      <Filter>Media</Filter>
-    </ClInclude>
     <ClInclude Include="Media\Metadata.h">
       <Filter>Media</Filter>
     </ClInclude>
     <ClInclude Include="Interfaces\SystemPower.h">
       <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\SystemWindows.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\SystemGraphics.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\PresentationCore.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\GraphicsBase.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\ControlBase.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\Media.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\MPEG4.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\Subtitles.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\Video.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\AudioBase.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\SystemVideo.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\MediaRoutines.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\WaveCodec.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\MediaOptions.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="Media\AudioStorage.h">
+      <Filter>Media</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\ControlServiceEx.h">
+      <Filter>UserInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="Interfaces\SystemIPC.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\EffectPlugin.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="Miscellaneous\Volumes.h">
+      <Filter>Miscellaneous</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformDependent\SystemCodecs.h">
+      <Filter>PlatformDependent</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\MenuBarControl.h">
+      <Filter>UserInterface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -320,9 +344,6 @@
     </ClCompile>
     <ClCompile Include="Miscellaneous\DynamicString.cpp">
       <Filter>Miscellaneous</Filter>
-    </ClCompile>
-    <ClCompile Include="UserInterface\ControlBase.cpp">
-      <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface\ShapeBase.cpp">
       <Filter>UserInterface</Filter>
@@ -339,9 +360,6 @@
     <ClCompile Include="UserInterface\StaticControls.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
-    <ClCompile Include="PlatformDependent\WindowStation.cpp">
-      <Filter>PlatformDependent</Filter>
-    </ClCompile>
     <ClCompile Include="UserInterface\ButtonControls.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
@@ -350,9 +368,6 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\KeyCodes.cpp">
       <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="UserInterface\OverlappedWindows.cpp">
-      <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="Streaming.cpp">
       <Filter>EngineBase</Filter>
@@ -388,9 +403,6 @@
       <Filter>ImageCodec</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Direct3D.cpp">
-      <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformDependent\NativeStation.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="Network\Punycode.cpp">
@@ -441,9 +453,6 @@
     <ClCompile Include="UserInterface\CombinedControls.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
-    <ClCompile Include="PlatformDependent\Application.cpp">
-      <Filter>PlatformDependent</Filter>
-    </ClCompile>
     <ClCompile Include="Math\MathBase.cpp">
       <Filter>Math</Filter>
     </ClCompile>
@@ -456,19 +465,10 @@
     <ClCompile Include="Math\Matrix.cpp">
       <Filter>Math</Filter>
     </ClCompile>
-    <ClCompile Include="PlatformDependent\SystemColors.cpp">
-      <Filter>PlatformDependent</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformSpecific\WindowsTaskbar.cpp">
-      <Filter>PlatformSpecific</Filter>
-    </ClCompile>
     <ClCompile Include="PlatformSpecific\WindowsShortcut.cpp">
       <Filter>PlatformSpecific</Filter>
     </ClCompile>
     <ClCompile Include="PlatformSpecific\WindowsRegistry.cpp">
-      <Filter>PlatformSpecific</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformSpecific\WindowsEffects.cpp">
       <Filter>PlatformSpecific</Filter>
     </ClCompile>
     <ClCompile Include="Storage\JSON.cpp">
@@ -492,23 +492,14 @@
     <ClCompile Include="UserInterface\RichEditControl.cpp">
       <Filter>UserInterface</Filter>
     </ClCompile>
-    <ClCompile Include="UserInterface\Menus.cpp">
-      <Filter>UserInterface</Filter>
-    </ClCompile>
     <ClCompile Include="Graphics\Graphics.cpp">
       <Filter>Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="PlatformDependent\Notifications.cpp">
-      <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="PlatformDependent\Cryptography.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\GraphicsHelper.cpp">
       <Filter>Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="UserInterface\VirtualStation.cpp">
-      <Filter>UserInterface</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\Drawing.cpp">
       <Filter>Graphics</Filter>
@@ -549,9 +540,6 @@
     <ClCompile Include="Media\Audio.cpp">
       <Filter>Media</Filter>
     </ClCompile>
-    <ClCompile Include="Media\WaveCodec.cpp">
-      <Filter>Media</Filter>
-    </ClCompile>
     <ClCompile Include="PlatformDependent\SystemAudio.cpp">
       <Filter>PlatformDependent</Filter>
     </ClCompile>
@@ -560,6 +548,63 @@
     </ClCompile>
     <ClCompile Include="PlatformDependent\SystemPower.cpp">
       <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemWindows.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemGraphics.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Miscellaneous\WindowsCallbacks.cpp">
+      <Filter>Miscellaneous</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\GraphicsBase.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\ControlBase.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\ControlService.cpp">
+      <Filter>UserInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\Media.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\MPEG4.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\Video.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\Subtitles.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\AudioBase.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemVideo.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\MediaRoutines.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\WaveCodec.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="Media\AudioStorage.cpp">
+      <Filter>Media</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemIPC.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\EffectPlugin.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="PlatformDependent\SystemCodecs.cpp">
+      <Filter>PlatformDependent</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface\MenuBarControl.cpp">
+      <Filter>UserInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -36,6 +36,7 @@ namespace Engine
 			~Semaphore(void) override { CloseHandle(semaphore); }
 			virtual void Wait(void) override { WaitForSingleObject(semaphore, INFINITE); }
 			virtual bool TryWait(void) override { return WaitForSingleObject(semaphore, 0) == WAIT_OBJECT_0; }
+			virtual bool WaitFor(uint time) override { return WaitForSingleObject(semaphore, time) == WAIT_OBJECT_0; }
 			virtual void Open(void) override { ReleaseSemaphore(semaphore, 1, 0); }
 		};
 		struct NewThreadInfo
@@ -64,7 +65,6 @@ namespace Engine
 		HANDLE handle = ::CreateThread(0, stack_size, WinapiThreading::EngineThreadProc, arg, 0, 0);
 		if (handle) return new WinapiThreading::Thread(handle); else { delete arg; return 0; }
 	}
-	Thread * GetCurrentThread(void) { return new WinapiThreading::Thread(::GetCurrentThread()); }
 	Semaphore * CreateSemaphore(uint32 initial)
 	{
 		HANDLE handle = CreateSemaphoreW(0, initial, 0x40000000, 0);

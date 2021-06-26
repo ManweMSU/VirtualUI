@@ -162,7 +162,7 @@ namespace Engine
 						auto val = valnode.Subnodes[1].Expands.AsInteger();
 						if (val > 0xFFFFFFFF) throw Exception();
 						reg_node->CreateValue(entity_name, RegistryValueType::Color);
-						reg_node->SetValue(entity_name, UI::Color(uint32(val)));
+						reg_node->SetValue(entity_name, Color(uint32(val)));
 					} else if (valnode.Label == L"TIMEDEF") {
 						uint32 valarray[7] = { 0, 0, 0, 0, 0, 0, 0 };
 						int r = 0;

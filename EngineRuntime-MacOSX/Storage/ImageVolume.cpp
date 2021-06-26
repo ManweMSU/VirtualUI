@@ -171,7 +171,7 @@ namespace Engine
 					int best_match_index = -1;
 					double best_match = 0.0;
 					for (int i = 0; i < fhdr.Length(); i++) {
-						double res = Math::abs(fhdr[i].DpiUsage - UI::Zoom);
+						double res = Math::abs(fhdr[i].DpiUsage - UI::CurrentScaleFactor);
 						if (res < best_match || best_match_index < 0) { best_match = res; best_match_index = i; }
 					}
 					if (best_match_index > 0) fhdr.SwapAt(0, best_match_index);
@@ -186,7 +186,7 @@ namespace Engine
 					uint8 * data_ptr = reinterpret_cast<uint8 *>(dec.GetBuffer());
 					int32 data_len = int32(dec.Length());
 					for (int j = 1; j < data_len; j++) data_ptr[j] += data_ptr[j - 1];
-					Array<UI::Color> pixel(0x10000);
+					Array<Color> pixel(0x10000);
 					pixel.SetLength(fhdr[i].Width * fhdr[i].Height);
 					int s = fhdr[i].Width * fhdr[i].Height;
 					dec.Seek(0, Streaming::Begin);

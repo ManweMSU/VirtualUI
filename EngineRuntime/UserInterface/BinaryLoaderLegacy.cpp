@@ -1,6 +1,7 @@
 #include "BinaryLoaderLegacy.h"
 
-#include "../Interfaces/SystemColors.h"
+#include "../Interfaces/SystemWindows.h"
+#include "ControlClasses.h"
 
 using namespace Engine::Streaming;
 
@@ -144,19 +145,20 @@ namespace Engine
 				{
 					if (input.a == 0) {
 						if (!input.Value) return 0;
+						SafePointer<Engine::Windows::ITheme> theme = Engine::Windows::GetCurrentTheme();
 						int code = input.r;
 						Color result = 0;
-						if (code == 1) result = GetSystemColor(SystemColor::Theme);
-						else if (code == 2) result = GetSystemColor(SystemColor::WindowBackgroup);
-						else if (code == 3) result = GetSystemColor(SystemColor::WindowText);
-						else if (code == 4) result = GetSystemColor(SystemColor::SelectedBackground);
-						else if (code == 5) result = GetSystemColor(SystemColor::SelectedText);
-						else if (code == 6) result = GetSystemColor(SystemColor::MenuBackground);
-						else if (code == 7) result = GetSystemColor(SystemColor::MenuText);
-						else if (code == 8) result = GetSystemColor(SystemColor::MenuHotBackground);
-						else if (code == 9) result = GetSystemColor(SystemColor::MenuHotText);
-						else if (code == 10) result = GetSystemColor(SystemColor::GrayedText);
-						else if (code == 11) result = GetSystemColor(SystemColor::Hyperlink);
+						if (code == 1) result = theme->GetColor(Engine::Windows::ThemeColor::Accent);
+						else if (code == 2) result = theme->GetColor(Engine::Windows::ThemeColor::WindowBackgroup);
+						else if (code == 3) result = theme->GetColor(Engine::Windows::ThemeColor::WindowText);
+						else if (code == 4) result = theme->GetColor(Engine::Windows::ThemeColor::SelectedBackground);
+						else if (code == 5) result = theme->GetColor(Engine::Windows::ThemeColor::SelectedText);
+						else if (code == 6) result = theme->GetColor(Engine::Windows::ThemeColor::MenuBackground);
+						else if (code == 7) result = theme->GetColor(Engine::Windows::ThemeColor::MenuText);
+						else if (code == 8) result = theme->GetColor(Engine::Windows::ThemeColor::MenuHotBackground);
+						else if (code == 9) result = theme->GetColor(Engine::Windows::ThemeColor::MenuHotText);
+						else if (code == 10) result = theme->GetColor(Engine::Windows::ThemeColor::GrayedText);
+						else if (code == 11) result = theme->GetColor(Engine::Windows::ThemeColor::Hyperlink);
 						if (input.b != 255) {
 							double blend = double(input.b) / 255.0;
 							result.a = uint8(double(result.a) * blend);
@@ -165,10 +167,10 @@ namespace Engine
 					} else return input;
 				}
 
-				void LoadTexture(Texture * Source, uint8 * Data, uint Size, IResourceLoader * ResourceLoader, InterfaceTemplate & Result)
+				void LoadTexture(Texture * Source, uint8 * Data, uint Size, Graphics::I2DDeviceContextFactory * ResourceLoader, InterfaceTemplate & Result)
 				{
 					SafePointer<Stream> TextureSource;
-					if (Zoom > 1.75) {
+					if (CurrentScaleFactor > 1.75) {
 						if (Source->VersionSize20) {
 							TextureSource.SetReference(new MemoryStream(Data + Source->VersionOffset20, Source->VersionSize20));
 						} else if (Source->VersionSize15) {
@@ -176,7 +178,7 @@ namespace Engine
 						} else if (Source->VersionSize10) {
 							TextureSource.SetReference(new MemoryStream(Data + Source->VersionOffset10, Source->VersionSize10));
 						}
-					} else if (Zoom > 1.25) {
+					} else if (CurrentScaleFactor > 1.25) {
 						if (Source->VersionSize15) {
 							TextureSource.SetReference(new MemoryStream(Data + Source->VersionOffset15, Source->VersionSize15));
 						} else if (Source->VersionSize10) {
@@ -191,10 +193,10 @@ namespace Engine
 						SafePointer<Codec::Frame> TextureFrame = Codec::DecodeFrame(TextureSource);
 						if (TextureFrame.Inner()) {
 							string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
-							if (Result.Texture.ElementPresent(Name)) {
+							if (Result.Texture.ElementExists(Name)) {
 								Result.Texture[Name]->Reload(TextureFrame);
 							} else {
-								SafePointer<ITexture> New = ResourceLoader->LoadTexture(TextureFrame);
+								SafePointer<Graphics::IBitmap> New = ResourceLoader->LoadBitmap(TextureFrame);
 								if (New.Inner()) {
 									Result.Texture.Append(Name, New);
 								} else throw InvalidFormatException();
@@ -202,12 +204,12 @@ namespace Engine
 						}
 					}
 				}
-				void LoadFont(Font * Source, uint8 * Data, uint Size, IResourceLoader * ResourceLoader, InterfaceTemplate & Result)
+				void LoadFont(Font * Source, uint8 * Data, uint Size, Graphics::I2DDeviceContextFactory * ResourceLoader, InterfaceTemplate & Result)
 				{
 					string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
-					if (!Result.Font.ElementPresent(Name)) {
+					if (!Result.Font.ElementExists(Name)) {
 						string FontFace = string(Data + Source->FaceOffset, -1, Encoding::UTF16);
-						SafePointer<IFont> New = ResourceLoader->LoadFont(FontFace, Source->HeightA + int(Source->HeightZ * Zoom), Source->Weight, (Source->Flags & 0x01) != 0, (Source->Flags & 0x02) != 0, (Source->Flags & 0x04) != 0);
+						SafePointer<Graphics::IFont> New = ResourceLoader->LoadFont(FontFace, Source->HeightA + int(Source->HeightZ * CurrentScaleFactor), Source->Weight, (Source->Flags & 0x01) != 0, (Source->Flags & 0x02) != 0, (Source->Flags & 0x04) != 0);
 						if (New.Inner()) {
 							Result.Font.Append(Name, New);
 						} else throw InvalidFormatException();
@@ -238,31 +240,31 @@ namespace Engine
 					if (Argument.Length()) return Template::BasicTemplate<string>::Undefined(Argument);
 					else return Template::BasicTemplate<string>(string(Data + Source->Value, -1, Encoding::UTF16));
 				}
-				Template::ObjectTemplate<ITexture> LoadTextureTemplate(Template4 * Source, const uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
+				Template::ObjectTemplate<Graphics::IBitmap> LoadTextureTemplate(Template4 * Source, const uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
 				{
 					string Argument = string(Data + Source->Parameter, -1, Encoding::UTF16);
 					if (!Argument.Length()) {
 						string Resource = string(Data + Source->Value, -1, Encoding::UTF16);
 						if (Resource.Length()) {
-							SafePointer<ITexture> Value = Result.Texture[Resource];
+							SafePointer<Graphics::IBitmap> Value = Result.Texture[Resource];
 							if (!Value.Inner() && ResourceResolver) Value.SetReference(ResourceResolver->GetTexture(Resource));
 							else if (Value.Inner()) Value->Retain();
-							return Template::ObjectTemplate<ITexture>(Value);
-						} else return Template::ObjectTemplate<ITexture>(0);
-					} else return Template::ObjectTemplate<ITexture>::Undefined(Argument);
+							return Template::ObjectTemplate<Graphics::IBitmap>(Value);
+						} else return Template::ObjectTemplate<Graphics::IBitmap>(0);
+					} else return Template::ObjectTemplate<Graphics::IBitmap>::Undefined(Argument);
 				}
-				Template::ObjectTemplate<IFont> LoadFontTemplate(Template4 * Source, const uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
+				Template::ObjectTemplate<Graphics::IFont> LoadFontTemplate(Template4 * Source, const uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
 				{
 					string Argument = string(Data + Source->Parameter, -1, Encoding::UTF16);
 					if (!Argument.Length()) {
 						string Resource = string(Data + Source->Value, -1, Encoding::UTF16);
 						if (Resource.Length()) {
-							SafePointer<IFont> Value = Result.Font[Resource];
+							SafePointer<Graphics::IFont> Value = Result.Font[Resource];
 							if (!Value.Inner() && ResourceResolver) Value.SetReference(ResourceResolver->GetFont(Resource));
 							else if (Value.Inner()) Value->Retain();
-							return Template::ObjectTemplate<IFont>(Value);
-						} else return Template::ObjectTemplate<IFont>(0);
-					} else return Template::ObjectTemplate<IFont>::Undefined(Argument);
+							return Template::ObjectTemplate<Graphics::IFont>(Value);
+						} else return Template::ObjectTemplate<Graphics::IFont>(0);
+					} else return Template::ObjectTemplate<Graphics::IFont>::Undefined(Argument);
 				}
 				Template::Coordinate LoadCoordinateTemplate(Coordinate * Source, const uint8 * Data, uint Size)
 				{
@@ -308,7 +310,13 @@ namespace Engine
 						ShapeBar * Shape = reinterpret_cast<ShapeBar *>(Source);
 						SafePointer<Template::BarShape> Template = new Template::BarShape;
 						Template->Position = Position;
-						Template->GradientAngle = Shape->Horizontal ? 0.0 : (-ENGINE_PI / 2.0);
+						if (Shape->Horizontal) {
+							Template->X1 = Template->Y1 = Template->Y2 = UI::Coordinate(0, 0.0, 0.0);
+							Template->X2 = UI::Coordinate(0, 0.0, 1.0);
+						} else {
+							Template->X1 = Template->Y1 = Template->X2 = UI::Coordinate(0, 0.0, 0.0);
+							Template->Y2 = UI::Coordinate(0, 0.0, 1.0);
+						}
 						for (int i = 0; i < Shape->ColorsCount; i++) {
 							Template->Gradient << LoadGradientTemplate(reinterpret_cast<GradientColor *>(Data + Shape->ColorsOffset[i]), Data, Size);
 						}
@@ -330,12 +338,12 @@ namespace Engine
 						Template->Font = LoadFontTemplate(&Shape->FontName, Data, Size, ResourceResolver, Result);
 						Template->Text = LoadTextTemplate(&Shape->Text, Data, Size);
 						Template->TextColor = LoadColorTemplate(&Shape->Color, Data, Size);
-						if ((Shape->DrawMode & 0x3) == 2) Template->HorizontalAlign = TextShape::TextHorizontalAlign::Right;
-						else if ((Shape->DrawMode & 0x3) == 1) Template->HorizontalAlign = TextShape::TextHorizontalAlign::Center;
-						else if ((Shape->DrawMode & 0x3) == 0) Template->HorizontalAlign = TextShape::TextHorizontalAlign::Left;
-						if ((Shape->DrawMode & 0xC) == 8) Template->VerticalAlign = TextShape::TextVerticalAlign::Bottom;
-						else if ((Shape->DrawMode & 0xC) == 4) Template->VerticalAlign = TextShape::TextVerticalAlign::Center;
-						else if ((Shape->DrawMode & 0xC) == 0) Template->VerticalAlign = TextShape::TextVerticalAlign::Top;
+						if ((Shape->DrawMode & 0x3) == 2) Template->Flags |= TextShape::TextRenderAlignRight;
+						else if ((Shape->DrawMode & 0x3) == 1) Template->Flags |= TextShape::TextRenderAlignCenter;
+						else if ((Shape->DrawMode & 0x3) == 0) Template->Flags |= TextShape::TextRenderAlignLeft;
+						if ((Shape->DrawMode & 0xC) == 8) Template->Flags |= TextShape::TextRenderAlignBottom;
+						else if ((Shape->DrawMode & 0xC) == 4) Template->Flags |= TextShape::TextRenderAlignVCenter;
+						else if ((Shape->DrawMode & 0xC) == 0) Template->Flags |= TextShape::TextRenderAlignTop;
 						Template->Retain();
 						return Template;
 					} return 0;
@@ -343,7 +351,7 @@ namespace Engine
 				void LoadApplication(Application * Source, uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
 				{
 					string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
-					if (!Result.Application.ElementPresent(Name)) {
+					if (!Result.Application.ElementExists(Name)) {
 						Result.Application.Append(Name, LoadShape(reinterpret_cast<ShapeBase *>(Data + Source->RootOffset), Data, Size, ResourceResolver, Result));
 					}
 				}
@@ -351,7 +359,9 @@ namespace Engine
 				Template::ControlTemplate * LoadControl(ControlBase * Source, uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result)
 				{
 					string ClassName = string(Data + Source->ClassName, -1, Encoding::UTF16);
-					auto ControlPropertyBase = Template::Controls::CreateControlByClass(ClassName);
+					Template::ControlReflectedBase * ControlPropertyBase = 0;
+					if (ResourceResolver) ControlPropertyBase = ResourceResolver->CreateCustomTemplate(ClassName);
+					if (!ControlPropertyBase) ControlPropertyBase = Template::Controls::CreateControlByClass(ClassName);
 					Reflection::PropertyZeroInitializer Initializer;
 					ControlPropertyBase->EnumerateProperties(Initializer);
 					if (ControlPropertyBase) {
@@ -380,17 +390,17 @@ namespace Engine
 											Property.Set<string>(Resource);
 										} else if (Property.Type == Reflection::PropertyType::Texture) {
 											if (Resource.Length()) {
-												SafePointer<ITexture> Texture = Result.Texture[Resource];
+												SafePointer<Graphics::IBitmap> Texture = Result.Texture[Resource];
 												if (!Texture.Inner() && ResourceResolver) Texture.SetReference(ResourceResolver->GetTexture(Resource));
 												else if (Texture.Inner()) Texture->Retain();
-												Property.Get<SafePointer<ITexture>>() = Texture;
+												Property.Get<SafePointer<Graphics::IBitmap>>() = Texture;
 											}
 										} else if (Property.Type == Reflection::PropertyType::Font) {
 											if (Resource.Length()) {
-												SafePointer<IFont> Font = Result.Font[Resource];
+												SafePointer<Graphics::IFont> Font = Result.Font[Resource];
 												if (!Font.Inner() && ResourceResolver) Font.SetReference(ResourceResolver->GetFont(Resource));
 												else if (Font.Inner()) Font->Retain();
-												Property.Get<SafePointer<IFont>>() = Font;
+												Property.Get<SafePointer<Graphics::IFont>>() = Font;
 											}
 										} else if (Property.Type == Reflection::PropertyType::Application) {
 											if (Resource.Length()) {
@@ -411,7 +421,7 @@ namespace Engine
 								} else if (Property.Type == Reflection::PropertyType::Integer || Property.Type == Reflection::PropertyType::Double) {
 									auto Ex = reinterpret_cast<SetterMedium *>(PropertySetter);
 									if (Property.Type == Reflection::PropertyType::Integer) {
-										Property.Set<int>(Ex->Value.A + int(Ex->Value.Z * Zoom));
+										Property.Set<int>(Ex->Value.A + int(Ex->Value.Z * CurrentScaleFactor));
 									} else if (Property.Type == Reflection::PropertyType::Double) {
 										Property.Set<double>(Ex->Value.Z);
 									}
@@ -437,12 +447,12 @@ namespace Engine
 				}
 				void LoadDialog(Dialog * Source, uint8 * Data, uint Size, IResourceResolver * ResourceResolver, InterfaceTemplate & Result) {
 					string Name = string(Data + Source->NameOffset, -1, Encoding::UTF16);
-					if (!Result.Dialog.ElementPresent(Name)) {
+					if (!Result.Dialog.ElementExists(Name)) {
 						Result.Dialog.Append(Name, LoadControl(reinterpret_cast<ControlBase *>(Data + Source->RootOffset), Data, Size, ResourceResolver, Result));
 					}
 				}
 
-				void BuildInterface(InterfaceTemplate & Template, Table * Source, uint8 * Data, uint Size, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
+				void BuildInterface(InterfaceTemplate & Template, Table * Source, uint8 * Data, uint Size, Graphics::I2DDeviceContextFactory * ResourceLoader, IResourceResolver * ResourceResolver)
 				{
 					for (int i = 0; i < Source->TextureCount; i++) {
 						LoadTexture(reinterpret_cast<Texture *>(Data + Source->TextureOffset + i * sizeof(Texture)), Data, Size, ResourceLoader, Template);
@@ -458,7 +468,7 @@ namespace Engine
 					}
 				}
 			}
-			void LoadUserInterfaceFromBinaryLegacy(InterfaceTemplate & Template, Streaming::Stream * Source, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver)
+			void LoadUserInterfaceFromBinaryLegacy(InterfaceTemplate & Template, Streaming::Stream * Source, Graphics::I2DDeviceContextFactory * ResourceLoader, IResourceResolver * ResourceResolver)
 			{
 				auto base = Source->Seek(0, Current);
 				auto length = Source->Length() - base;

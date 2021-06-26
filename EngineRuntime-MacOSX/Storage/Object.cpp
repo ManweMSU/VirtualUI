@@ -173,7 +173,7 @@ namespace Engine
 						else if (prop.InnerType == PropertyType::Double) WriteSimpleArray<double>(prop, dest, volume);
 						else if (prop.InnerType == PropertyType::Complex) WriteSimpleArray<Math::Complex>(prop, dest, volume);
 						else if (prop.InnerType == PropertyType::Boolean) WriteSimpleArray<bool>(prop, dest, volume);
-						else if (prop.InnerType == PropertyType::Color) WriteSimpleArray<UI::Color>(prop, dest, volume);
+						else if (prop.InnerType == PropertyType::Color) WriteSimpleArray<Color>(prop, dest, volume);
 						else if (prop.InnerType == PropertyType::Time) WriteSimpleArray<Time>(prop, dest, volume);
 					} else if (prop.Type == PropertyType::SafeArray) {
 						if (prop.InnerType == PropertyType::UInt8) WriteSimpleSafeArray<uint8>(prop, dest, volume);
@@ -188,7 +188,7 @@ namespace Engine
 						else if (prop.InnerType == PropertyType::Double) WriteSimpleSafeArray<double>(prop, dest, volume);
 						else if (prop.InnerType == PropertyType::Complex) WriteSimpleSafeArray<Math::Complex>(prop, dest, volume);
 						else if (prop.InnerType == PropertyType::Boolean) WriteSimpleSafeArray<bool>(prop, dest, volume);
-						else if (prop.InnerType == PropertyType::Color) WriteSimpleSafeArray<UI::Color>(prop, dest, volume);
+						else if (prop.InnerType == PropertyType::Color) WriteSimpleSafeArray<Color>(prop, dest, volume);
 						else if (prop.InnerType == PropertyType::Time) WriteSimpleSafeArray<Time>(prop, dest, volume);
 					} else {
 						volume = uint32(prop.Volume);
@@ -297,7 +297,7 @@ namespace Engine
 										else if (actual == PropertyType::Double) ReadSimpleArray<double>(prop, from + value_ref, volume);
 										else if (actual == PropertyType::Complex) ReadSimpleArray<Math::Complex>(prop, from + value_ref, volume);
 										else if (actual == PropertyType::Boolean) ReadSimpleArray<bool>(prop, from + value_ref, volume);
-										else if (actual == PropertyType::Color) ReadSimpleArray<UI::Color>(prop, from + value_ref, volume);
+										else if (actual == PropertyType::Color) ReadSimpleArray<Color>(prop, from + value_ref, volume);
 										else if (actual == PropertyType::Time) ReadSimpleArray<Time>(prop, from + value_ref, volume);
 									}
 								} else if (prop.Type == PropertyType::SafeArray) {
@@ -333,7 +333,7 @@ namespace Engine
 										else if (actual == PropertyType::Double) ReadSimpleSafeArray<double>(prop, from + value_ref, volume);
 										else if (actual == PropertyType::Complex) ReadSimpleSafeArray<Math::Complex>(prop, from + value_ref, volume);
 										else if (actual == PropertyType::Boolean) ReadSimpleSafeArray<bool>(prop, from + value_ref, volume);
-										else if (actual == PropertyType::Color) ReadSimpleSafeArray<UI::Color>(prop, from + value_ref, volume);
+										else if (actual == PropertyType::Color) ReadSimpleSafeArray<Color>(prop, from + value_ref, volume);
 										else if (actual == PropertyType::Time) ReadSimpleSafeArray<Time>(prop, from + value_ref, volume);
 									}
 								} else {

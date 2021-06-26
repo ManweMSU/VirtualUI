@@ -33,5 +33,11 @@ namespace Engine
 		ID3D11Device * CreateDeviceD3D11(IDXGIAdapter * adapter, D3D_DRIVER_TYPE driver);
 		Graphics::IDevice * CreateWrappedDeviceD3D11(ID3D11Device * device);
 		DXGI_FORMAT MakeDxgiFormat(Graphics::PixelFormat format);
+
+		ID3D11Device * GetD3D11Device(Graphics::IDevice * device);
+		ID3D11Texture2D * GetD3D11Texture2D(Graphics::ITexture * texture);
+		IDXGIDevice * QueryDXGIDevice(Graphics::IDevice * device);
+		IUnknown * GetVideoAccelerationDevice(Graphics::IDevice * device);
+		void SetVideoAccelerationDevice(Graphics::IDevice * device_for, IUnknown * device_set);
 	}
 }

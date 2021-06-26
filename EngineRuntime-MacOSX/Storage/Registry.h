@@ -2,8 +2,7 @@
 
 #include "../EngineBase.h"
 #include "../Streaming.h"
-#include "../Miscellaneous/Dictionary.h"
-#include "../UserInterface/ShapeBase.h"
+#include "../Graphics/GraphicsBase.h"
 
 namespace Engine
 {
@@ -34,7 +33,7 @@ namespace Engine
 			virtual string GetValueString(const string & path) const = 0;
 			virtual int64 GetValueLongInteger(const string & path) const = 0;
 			virtual double GetValueLongFloat(const string & path) const = 0;
-			virtual UI::Color GetValueColor(const string & path) const = 0;
+			virtual Color GetValueColor(const string & path) const = 0;
 			virtual Time GetValueTime(const string & path) const = 0;
 			virtual void GetValueBinary(const string & path, void * buffer) const = 0;
 			virtual int GetValueBinarySize(const string & path) const = 0;
@@ -47,7 +46,7 @@ namespace Engine
 			virtual void SetValue(const string & path, const char * value) = 0;
 			virtual void SetValue(const string & path, int64 value) = 0;
 			virtual void SetValue(const string & path, double value) = 0;
-			virtual void SetValue(const string & path, UI::Color value) = 0;
+			virtual void SetValue(const string & path, Color value) = 0;
 			virtual void SetValue(const string & path, Time value) = 0;
 			virtual void SetValue(const string & path, const void * value, int size) = 0;
 		};

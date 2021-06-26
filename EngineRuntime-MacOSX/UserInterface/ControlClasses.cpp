@@ -46,7 +46,8 @@ namespace Engine
 					else TEST_CLASS(BookmarkView)
 					else TEST_CLASS(Bookmark)
 					else TEST_CLASS(RichEdit)
-					else TEST_CLASS(VirtualStation)
+					else TEST_CLASS(MenuBar)
+					else TEST_CLASS(MenuBarElement)
 					else TEST_CLASS(CustomControl)
 
 					else TEST_CLASS(TouchBar)
@@ -57,7 +58,6 @@ namespace Engine
 					else TEST_CLASS(TouchBarSlider)
 
 					else TEST_CLASS(FrameExtendedData)
-					else TEST_CLASS(VirtualStationData)
 					else return 0;
 				}
 			}

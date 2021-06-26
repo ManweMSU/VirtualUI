@@ -81,6 +81,42 @@
             }
         },
         {
+            "label": "build runtime (linux)",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/bin/linux/ertbuild\"",
+            "args": [
+                "-b"
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+		},
+		{
+            "label": "build runtime (linux, debug mode)",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/bin/linux/ertbuild\"",
+            "args": [
+                "-bd"
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
             "label": "syncronize runtime",
             "type": "shell",
             "command": "\"${workspaceRoot}/Tools/tools/ertsync\"",
@@ -104,6 +140,24 @@
             "command": "\"${workspaceRoot}/bin/macosx/ertbuild\"",
             "args": [
                 "\"${workspaceRoot}/Unix Tests/test.project.ini\"", "-d"
+            ],
+            "group": "build",
+            "presentation": {
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [ "relative", "${workspaceRoot}" ],
+                "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "build test (linux)",
+            "type": "shell",
+            "command": "\"${workspaceRoot}/bin/linux/ertbuild\"",
+            "args": [
+                "\"${workspaceRoot}/lxtest/test.ertproj\"", "-d"
             ],
             "group": "build",
             "presentation": {

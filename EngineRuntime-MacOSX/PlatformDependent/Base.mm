@@ -122,32 +122,40 @@ namespace Engine
 	}
 	bool IsPlatformAvailable(Platform platform)
 	{
-		auto system = GetSystemPlatform();
-		if (system == Platform::X86) {
-			if (platform == Platform::X86) return true;
-			else return false;
-		} else if (system == Platform::X64) {
+		int32 proc_type = 0;
+		int32 proc_emulated = 0;
+		uint64 length = sizeof(proc_type);
+		if (sysctlbyname("hw.cputype", &proc_type, reinterpret_cast<size_t *>(&length), 0, 0) == -1) proc_type = -1;
+		length = sizeof(proc_emulated);
+		if (sysctlbyname("sysctl.proc_translated", &proc_emulated, reinterpret_cast<size_t *>(&length), 0, 0) == -1) proc_emulated = -1;
+		proc_type &= 0xFF;
+		if (proc_type == CPU_TYPE_X86) {
 			if (platform == Platform::X64) return true;
+			else if (platform == Platform::ARM64 && proc_emulated == 1) return true;
 			else return false;
-		} else if (system == Platform::ARM) {
-			if (platform == Platform::ARM) return true;
-			else return false;
-		} else if (system == Platform::ARM64) {
+		} else if (proc_type == CPU_TYPE_ARM) {
 			if (platform == Platform::ARM64) return true;
+			else if (platform == Platform::X64 && proc_emulated == 0) return true;
 			else return false;
 		} else return false;
 	}
 	Platform GetSystemPlatform(void)
 	{
-		uint32 proc_type = 0;
-		uint32 proc_is64 = 0;
+		int32 proc_type = 0;
+		int32 proc_is64 = 0;
+		int32 proc_emulated = 0;
 		uint64 length = sizeof(proc_type);
-		if (sysctlbyname("hw.cputype", &proc_type, reinterpret_cast<size_t *>(&length), 0, 0) == -1) return Platform::Unknown;
-		if (sysctlbyname("hw.cpu64bit_capable", &proc_is64, reinterpret_cast<size_t *>(&length), 0, 0) == -1) return Platform::Unknown;
+		if (sysctlbyname("hw.cputype", &proc_type, reinterpret_cast<size_t *>(&length), 0, 0) == -1) proc_type = -1;
+		length = sizeof(proc_is64);
+		if (sysctlbyname("hw.cpu64bit_capable", &proc_is64, reinterpret_cast<size_t *>(&length), 0, 0) == -1) proc_is64 = 0;
+		length = sizeof(proc_emulated);
+		if (sysctlbyname("sysctl.proc_translated", &proc_emulated, reinterpret_cast<size_t *>(&length), 0, 0) == -1) proc_emulated = -1;
 		proc_type &= 0xFF;
 		if (proc_type == CPU_TYPE_X86) {
-			if (proc_is64) return Platform::X64;
-			else return Platform::X86;
+			if (proc_is64) {
+				if (proc_emulated > 0) return Platform::ARM64;
+				else return Platform::X64;
+			} else return Platform::X86;
 		} else if (proc_type == CPU_TYPE_ARM) {
 			if (proc_is64) return Platform::ARM64;
 			else return Platform::ARM;
@@ -166,5 +174,36 @@ namespace Engine
 		uint64 length = sizeof(result);
 		if (sysctl(name, 2, &result, reinterpret_cast<size_t *>(&length), 0, 0) == 0) return result;
 		return 0;
+	}
+	bool GetSystemInformation(SystemDesc & desc)
+	{
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Architecture = GetSystemPlatform();
+		desc.PhysicalMemory = GetInstalledMemory();
+		int32 cores_physical, cores_logical;
+		uint64 length = sizeof(int32), frequency;
+		if (sysctlbyname("hw.logicalcpu", &cores_logical, reinterpret_cast<size_t *>(&length), 0, 0) != -1) {
+			desc.VirtualCores = cores_logical;
+		}
+		length = sizeof(int32);
+		if (sysctlbyname("hw.physicalcpu", &cores_physical, reinterpret_cast<size_t *>(&length), 0, 0) != -1) {
+			desc.PhysicalCores = cores_physical;
+		}
+		length = sizeof(frequency);
+		if (sysctlbyname("hw.cpufrequency", &frequency, reinterpret_cast<size_t *>(&length), 0, 0) != -1) {
+			desc.ClockFrequency = frequency;
+		}
+		char cpu_brand[0x80];
+		length = sizeof(cpu_brand);
+		if (sysctlbyname("machdep.cpu.brand_string", &cpu_brand, reinterpret_cast<size_t *>(&length), 0, 0) != -1) {
+			for (int i = 0; i < length; i++) desc.ProcessorName[i] = cpu_brand[i];
+		}
+		@autoreleasepool {
+			auto info = [NSProcessInfo processInfo];
+			auto vi = [info operatingSystemVersion];
+			desc.SystemVersionMajor = vi.majorVersion;
+			desc.SystemVersionMinor = vi.minorVersion;
+		}
+		return true;
 	}
 }

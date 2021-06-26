@@ -3,8 +3,9 @@
 #include "../Storage/Archive.h"
 #include "../Storage/Object.h"
 #include "../Storage/ImageVolume.h"
-#include "../Interfaces/SystemColors.h"
-#include "OverlappedWindows.h"
+#include "../Interfaces/SystemWindows.h"
+#include "../Interfaces/SystemGraphics.h"
+#include "ControlClasses.h"
 
 using namespace Engine::Storage;
 using namespace Engine::Streaming;
@@ -19,14 +20,14 @@ namespace Engine
 				ENGINE_DEFINE_REFLECTED_ARRAY(STRING, Keys)
 				ENGINE_DEFINE_REFLECTED_ARRAY(INTEGER, Values)
 			ENGINE_END_REFLECTED_CLASS
-			ITexture * TemplateResourceResolver::GetTexture(const string & Name)
+			Graphics::IBitmap * TemplateResourceResolver::GetTexture(const string & Name)
 			{
 				auto obj = Source->Texture[Name];
 				if (obj) { obj->Retain(); return obj; }
 				else if (DelegateResolver) return DelegateResolver->GetTexture(Name);
 				else return 0;
 			}
-			IFont * TemplateResourceResolver::GetFont(const string & Name)
+			Graphics::IFont * TemplateResourceResolver::GetFont(const string & Name)
 			{
 				auto obj = Source->Font[Name];
 				if (obj) { obj->Retain(); return obj; } else if (DelegateResolver) return DelegateResolver->GetFont(Name);
@@ -44,6 +45,10 @@ namespace Engine
 				if (obj) { obj->Retain(); return obj; } else if (DelegateResolver) return DelegateResolver->GetDialog(Name);
 				else return 0;
 			}
+			Template::ControlReflectedBase * TemplateResourceResolver::CreateCustomTemplate(const string & Class)
+			{
+				if (DelegateResolver) return DelegateResolver->CreateCustomTemplate(Class); else return 0;
+			}
 			typedef TemplateResourceResolver StyleResourceResolver;
 			struct DialogReference {
 				string ObjectName;
@@ -51,31 +56,32 @@ namespace Engine
 			};
 			Color GetSystemColorByValue(Color value)
 			{
+				SafePointer<Engine::Windows::ITheme> theme = Engine::Windows::GetCurrentTheme();
 				int code = value.r;
 				Color result = 0;
-				if (code == 1) result = GetSystemColor(SystemColor::Theme);
-				else if (code == 2) result = GetSystemColor(SystemColor::WindowBackgroup);
-				else if (code == 3) result = GetSystemColor(SystemColor::WindowText);
-				else if (code == 4) result = GetSystemColor(SystemColor::SelectedBackground);
-				else if (code == 5) result = GetSystemColor(SystemColor::SelectedText);
-				else if (code == 6) result = GetSystemColor(SystemColor::MenuBackground);
-				else if (code == 7) result = GetSystemColor(SystemColor::MenuText);
-				else if (code == 8) result = GetSystemColor(SystemColor::MenuHotBackground);
-				else if (code == 9) result = GetSystemColor(SystemColor::MenuHotText);
-				else if (code == 10) result = GetSystemColor(SystemColor::GrayedText);
-				else if (code == 11) result = GetSystemColor(SystemColor::Hyperlink);
+				if (code == 1) result = theme->GetColor(Engine::Windows::ThemeColor::Accent);
+				else if (code == 2) result = theme->GetColor(Engine::Windows::ThemeColor::WindowBackgroup);
+				else if (code == 3) result = theme->GetColor(Engine::Windows::ThemeColor::WindowText);
+				else if (code == 4) result = theme->GetColor(Engine::Windows::ThemeColor::SelectedBackground);
+				else if (code == 5) result = theme->GetColor(Engine::Windows::ThemeColor::SelectedText);
+				else if (code == 6) result = theme->GetColor(Engine::Windows::ThemeColor::MenuBackground);
+				else if (code == 7) result = theme->GetColor(Engine::Windows::ThemeColor::MenuText);
+				else if (code == 8) result = theme->GetColor(Engine::Windows::ThemeColor::MenuHotBackground);
+				else if (code == 9) result = theme->GetColor(Engine::Windows::ThemeColor::MenuHotText);
+				else if (code == 10) result = theme->GetColor(Engine::Windows::ThemeColor::GrayedText);
+				else if (code == 11) result = theme->GetColor(Engine::Windows::ThemeColor::Hyperlink);
 				if (value.a != 255) {
 					double blend = double(value.a) / 255.0;
 					result.a = uint8(double(result.a) * blend);
 				}
 				return result;
 			}
-			InterfaceTemplateImage::InterfaceTemplateImage(void) : Locales(0x10), Textures(0x40), StringIDs(0x40), ColorIDs(0x40), Assets(0x10) {}
+			InterfaceTemplateImage::InterfaceTemplateImage(void) : Assets(0x10) {}
 			InterfaceTemplateImage::InterfaceTemplateImage(Streaming::Stream * Source, const string & Locale, const string & System, double Scale) : InterfaceTemplateImage()
 			{
 				bool load_best_dpi = Storage::IsVolumeCodecLoadsBestDpiOnly();
 				try {
-					if (Scale && Scale == UI::Zoom) Storage::SetVolumeCodecLoadBestDpiOnly(true);
+					if (Scale && Scale == UI::CurrentScaleFactor) Storage::SetVolumeCodecLoadBestDpiOnly(true);
 					SafePointer<Archive> container = OpenArchive(Source, ArchiveMetadataUsage::IgnoreMetadata);
 					if (!container) throw InvalidFormatException();
 					InterfaceManifest manifest;
@@ -147,7 +153,9 @@ namespace Engine
 			InterfaceTemplateImage::~InterfaceTemplateImage(void) {}
 			void InterfaceTemplateImage::Encode(Streaming::Stream * Output, uint32 Flags)
 			{
-				int file_count = 1 + Assets.Length() + Locales.Length() + Textures.Length();
+				int locale_count = Locales.Count();
+				int texture_count = Textures.Count();
+				int file_count = 1 + Assets.Length() + locale_count + texture_count;
 				if (Flags & EncodeFlags::EncodeStringNames) file_count++;
 				SafePointer<NewArchive> container = CreateArchive(Output, file_count, NewArchiveFlags::NoMetadata | NewArchiveFlags::UseFormat32);
 				InterfaceManifest manifest;
@@ -175,30 +183,34 @@ namespace Engine
 					container->SetFileData(current, &asset_stream, MethodChain(CompressionMethod::LempelZivWelch, CompressionMethod::Huffman), CompressionQuality::ExtraVariative, 0, 0x10000);
 					current++;
 				}
-				for (int i = 0; i < Locales.Length(); i++) {
+				auto locale = Locales.GetFirst();
+				for (int i = 0; i < locale_count; i++) {
 					MemoryStream locale_stream(0x10000);
-					Locales.ElementByIndex(i).object->Save(&locale_stream);
+					locale->GetValue().value->Save(&locale_stream);
 					locale_stream.Seek(0, Begin);
 					container->SetFileType(current, L"STT");
 					container->SetFileID(current, i + 1);
-					container->SetFileName(current, (Locales.ElementByIndex(i).key == L"_") ? L"" : Locales.ElementByIndex(i).key);
+					container->SetFileName(current, (locale->GetValue().key == L"_") ? L"" : locale->GetValue().key);
 					container->SetFileData(current, &locale_stream, MethodChain(CompressionMethod::LempelZivWelch, CompressionMethod::Huffman), CompressionQuality::ExtraVariative, 0, 0x10000);
 					current++;
+					locale = locale->GetNext();
 				}
-				for (int i = 0; i < Textures.Length(); i++) {
+				auto texture = Textures.GetFirst();
+				for (int i = 0; i < texture_count; i++) {
 					MemoryStream texture_stream(0x10000);
-					Codec::EncodeImage(&texture_stream, Textures.ElementByIndex(i).object, L"EIWV");
+					Codec::EncodeImage(&texture_stream, texture->GetValue().value, L"EIWV");
 					texture_stream.Seek(0, Begin);
 					container->SetFileType(current, L"IMG");
-					container->SetFileID(current, Textures.ElementByIndex(i).key);
+					container->SetFileID(current, texture->GetValue().key);
 					container->SetFileData(current, &texture_stream);
 					current++;
+					texture = texture->GetNext();
 				}
 				if (Flags & EncodeFlags::EncodeStringNames) {
 					InterfaceStringMapping mapping;
-					for (int i = 0; i < StringIDs.Length(); i++) {
-						mapping.Keys << StringIDs.ElementByIndex(i).key;
-						mapping.Values << StringIDs.ElementByIndex(i).value;
+					for (auto & sid : StringIDs) {
+						mapping.Keys << sid.key;
+						mapping.Values << sid.value;
 					}
 					MemoryStream mapping_stream(0x1000);
 					Reflection::SerializeToBinaryObject(mapping, &mapping_stream);
@@ -248,16 +260,33 @@ namespace Engine
 					}
 					int gp = 0;
 					for (int i = 0; i < shape.DoubleValues.Length(); i++) {
-						if (shape.DoubleValues[i].Name == L"GradientAngle") {
-							result->GradientAngle = shape.DoubleValues[i].ToTemplate();
-						} else if (shape.DoubleValues[i].Name == L"Gradient") {
+						if (shape.DoubleValues[i].Name == L"Gradient") {
 							result->Gradient[gp].Position = shape.DoubleValues[i].ToTemplate();
 							gp++;
+						} else if (shape.DoubleValues[i].Name == L"GradientAngle") {
+							auto value = shape.DoubleValues[i].ToTemplate();
+							if (value.IsDefined()) {
+								auto angle = value.GetValue();
+								double dx = Math::cos(angle);
+								double dy = -Math::sin(angle);
+								double mx = 2.0 * max(Math::abs(dx), Math::abs(dy));
+								dx /= mx; dy /= mx;
+								result->X1 = Coordinate(0, 0.0, 0.5 - dx);
+								result->X2 = Coordinate(0, 0.0, 0.5 + dx);
+								result->Y1 = Coordinate(0, 0.0, 0.5 - dy);
+								result->Y2 = Coordinate(0, 0.0, 0.5 + dy);
+							}
 						}
 					}
 					for (int i = 0; i < shape.RectangleValues.Length(); i++) {
 						if (shape.RectangleValues[i].Name == L"Position") {
 							result->Position = shape.RectangleValues[i].ToTemplate();
+						} else if (shape.RectangleValues[i].Name == L"GradientPoints") {
+							auto t = shape.RectangleValues[i].ToTemplate();
+							result->X1 = t.Left;
+							result->Y1 = t.Top;
+							result->X2 = t.Right;
+							result->Y2 = t.Bottom;
 						}
 					}
 					result->Retain();
@@ -315,13 +344,19 @@ namespace Engine
 						if (shape.IntegerValues[i].Name == L"Text") {
 							result->Text = shape.IntegerValues[i].ToStringTemplate(image);
 						} else if (shape.IntegerValues[i].Name == L"HorizontalAlign") {
-							if (shape.IntegerValues[i].Value == 0) result->HorizontalAlign = TextShape::TextHorizontalAlign::Left;
-							else if (shape.IntegerValues[i].Value == 1) result->HorizontalAlign = TextShape::TextHorizontalAlign::Center;
-							else if (shape.IntegerValues[i].Value == 2) result->HorizontalAlign = TextShape::TextHorizontalAlign::Right;
+							if (shape.IntegerValues[i].Value == 0) result->Flags |= TextShape::TextRenderAlignLeft;
+							else if (shape.IntegerValues[i].Value == 1) result->Flags |= TextShape::TextRenderAlignCenter;
+							else if (shape.IntegerValues[i].Value == 2) result->Flags |= TextShape::TextRenderAlignRight;
 						} else if (shape.IntegerValues[i].Name == L"VerticalAlign") {
-							if (shape.IntegerValues[i].Value == 0) result->VerticalAlign = TextShape::TextVerticalAlign::Top;
-							else if (shape.IntegerValues[i].Value == 1) result->VerticalAlign = TextShape::TextVerticalAlign::Center;
-							else if (shape.IntegerValues[i].Value == 2) result->VerticalAlign = TextShape::TextVerticalAlign::Bottom;
+							if (shape.IntegerValues[i].Value == 0) result->Flags |= TextShape::TextRenderAlignTop;
+							else if (shape.IntegerValues[i].Value == 1) result->Flags |= TextShape::TextRenderAlignVCenter;
+							else if (shape.IntegerValues[i].Value == 2) result->Flags |= TextShape::TextRenderAlignBottom;
+						} else if (shape.IntegerValues[i].Name == L"Multiline") {
+							if (shape.IntegerValues[i].Value) result->Flags |= TextShape::TextRenderMultiline;
+						} else if (shape.IntegerValues[i].Name == L"WordWrap") {
+							if (shape.IntegerValues[i].Value) result->Flags |= TextShape::TextRenderAllowWordWrap;
+						} else if (shape.IntegerValues[i].Name == L"Ellipsis") {
+							if (shape.IntegerValues[i].Value) result->Flags |= TextShape::TextRenderAllowEllipsis;
 						}
 					}
 					for (int i = 0; i < shape.ColorValues.Length(); i++) {
@@ -348,7 +383,9 @@ namespace Engine
 			}
 			Template::ControlTemplate * CompileControl(InterfaceTemplateImage * image, InterfaceControl & control, InterfaceTemplate & Template, InterfaceTemplate * Style, IResourceResolver * ResourceResolver, Array<DialogReference> & References)
 			{
-				auto base = Template::Controls::CreateControlByClass(control.Class);
+				Template::ControlReflectedBase * base = 0;
+				if (ResourceResolver) base = ResourceResolver->CreateCustomTemplate(control.Class);
+				if (!base) base = Template::Controls::CreateControlByClass(control.Class);
 				if (base) {
 					Template::ControlTemplate * base_control = 0;
 					if (Style) base_control = Style->Dialog[L"@default:" + control.Class];
@@ -370,7 +407,7 @@ namespace Engine
 						auto & setter = control.CoordinateSetters[i];
 						auto prop = base->GetProperty(setter.Name);
 						if (prop.Type == Reflection::PropertyType::Integer) {
-							prop.Set<int>(setter.Absolute + int(setter.Scalable * Zoom));
+							prop.Set<int>(setter.Absolute + int(setter.Scalable * CurrentScaleFactor));
 						} else if (prop.Type == Reflection::PropertyType::Double) {
 							prop.Set<double>(setter.Scalable);
 						} else if (prop.Type == Reflection::PropertyType::String) {
@@ -386,16 +423,16 @@ namespace Engine
 							prop.Set<string>(setter.Value);
 						} else if (prop.Type == Reflection::PropertyType::Texture) {
 							if (setter.Value.Length()) {
-								ITexture * texture = Template.Texture[setter.Value];
+								Graphics::IBitmap * texture = Template.Texture[setter.Value];
 								if (!texture && ResourceResolver) texture = ResourceResolver->GetTexture(setter.Value);
-								prop.Get< SafePointer<ITexture> >().SetRetain(texture);
-							} else prop.Get< SafePointer<ITexture> >().SetReference(0);
+								prop.Get< SafePointer<Graphics::IBitmap> >().SetRetain(texture);
+							} else prop.Get< SafePointer<Graphics::IBitmap> >().SetReference(0);
 						} else if (prop.Type == Reflection::PropertyType::Font) {
 							if (setter.Value.Length()) {
-								IFont * font = Template.Font[setter.Value];
+								Graphics::IFont * font = Template.Font[setter.Value];
 								if (!font && ResourceResolver) font = ResourceResolver->GetFont(setter.Value);
-								prop.Get< SafePointer<IFont> >().SetRetain(font);
-							} else prop.Get< SafePointer<IFont> >().SetReference(0);
+								prop.Get< SafePointer<Graphics::IFont> >().SetRetain(font);
+							} else prop.Get< SafePointer<Graphics::IFont> >().SetReference(0);
 						} else if (prop.Type == Reflection::PropertyType::Application) {
 							if (setter.Value.Length()) {
 								Template::Shape * application = Template.Application[setter.Value];
@@ -468,25 +505,25 @@ namespace Engine
 				}
 				for (int i = 0; i < control.Children.Length(); i++) BuildStyle(styles, control.Children[i], StyleReporter);
 			}
-			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver, IMissingStylesReporter * StyleReporter)
+			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, Graphics::I2DDeviceContextFactory * ResourceLoader, IResourceResolver * ResourceResolver, IMissingStylesReporter * StyleReporter)
 			{
-				SafePointer<IResourceLoader> Loader;
+				SafePointer<Graphics::I2DDeviceContextFactory> Loader;
 				if (ResourceLoader) {
 					Loader.SetRetain(ResourceLoader);
 				} else {
-					Loader = UI::CreateObjectFactory();
+					Loader = Graphics::CreateDeviceContextFactory();
 				}
 				Array<DialogReference> References(0x20);
 				for (int a = 0; a < Assets.Length(); a++) {
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Textures.Length(); i++) {
 						auto & name = asset.Textures[i].Name;
-						auto image = Textures.ElementByKey(asset.Textures[i].ImageID);
+						auto image = Textures.GetObjectByKey(asset.Textures[i].ImageID);
 						if (image) {
-							if (Template.Texture.ElementPresent(name)) {
+							if (Template.Texture.ElementExists(name)) {
 								Template.Texture[name]->Reload(image->Frames.FirstElement());
 							} else {
-								SafePointer<ITexture> texture = Loader->LoadTexture(image->Frames.FirstElement());
+								SafePointer<Graphics::IBitmap> texture = Loader->LoadBitmap(image->Frames.FirstElement());
 								Template.Texture.Append(name, texture);
 							}
 						}
@@ -496,7 +533,7 @@ namespace Engine
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Fonts.Length(); i++) {
 						auto & name = asset.Fonts[i].Name;
-						SafePointer<IFont> font = Loader->LoadFont(asset.Fonts[i].FontFace, asset.Fonts[i].Height.Absolute + int(asset.Fonts[i].Height.Scalable * Zoom), asset.Fonts[i].Weight, asset.Fonts[i].IsItalic, asset.Fonts[i].IsUnderline, asset.Fonts[i].IsStrikeout);
+						SafePointer<Graphics::IFont> font = Loader->LoadFont(asset.Fonts[i].FontFace, asset.Fonts[i].Height.Absolute + int(asset.Fonts[i].Height.Scalable * CurrentScaleFactor), asset.Fonts[i].Weight, asset.Fonts[i].IsItalic, asset.Fonts[i].IsUnderline, asset.Fonts[i].IsStrikeout);
 						Template.Font.Append(name, font);
 					}
 				}
@@ -532,32 +569,32 @@ namespace Engine
 					if (!dialog && ResourceResolver) dialog = ResourceResolver->GetDialog(References[i].ObjectName);
 					References[i].Property.Get< SafePointer<Template::ControlTemplate> >().SetRetain(dialog);
 				}
-				for (int i = 0; i < ColorIDs.Length(); i++) {
-					Template.Colors.Append(ColorIDs.ElementByIndex(i).key, GetColorByID(ColorIDs.ElementByIndex(i).value));
+				for (auto & clr : ColorIDs) {
+					Template.Colors.Append(clr.key, GetColorByID(clr.value));
 				}
-				for (int i = 0; i < StringIDs.Length(); i++) {
-					Template.Strings.Append(StringIDs.ElementByIndex(i).key, GetStringByID(StringIDs.ElementByIndex(i).value));
+				for (auto & str : StringIDs) {
+					Template.Strings.Append(str.key, GetStringByID(str.value));
 				}
 			}
-			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader, IResourceResolver * ResourceResolver, IMissingStylesReporter * StyleReporter)
+			void InterfaceTemplateImage::Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, Graphics::I2DDeviceContextFactory * ResourceLoader, IResourceResolver * ResourceResolver, IMissingStylesReporter * StyleReporter)
 			{
-				SafePointer<IResourceLoader> Loader;
+				SafePointer<Graphics::I2DDeviceContextFactory> Loader;
 				if (ResourceLoader) {
 					Loader.SetRetain(ResourceLoader);
 				} else {
-					Loader = UI::CreateObjectFactory();
+					Loader = Graphics::CreateDeviceContextFactory();
 				}
 				Array<DialogReference> References(0x20);
 				for (int a = 0; a < Assets.Length(); a++) {
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Textures.Length(); i++) {
 						auto & name = asset.Textures[i].Name;
-						auto image = Textures.ElementByKey(asset.Textures[i].ImageID);
+						auto image = Textures.GetObjectByKey(asset.Textures[i].ImageID);
 						if (image) {
-							if (Template.Texture.ElementPresent(name)) {
+							if (Template.Texture.ElementExists(name)) {
 								Template.Texture[name]->Reload(image->Frames.FirstElement());
 							} else {
-								SafePointer<ITexture> texture = Loader->LoadTexture(image->Frames.FirstElement());
+								SafePointer<Graphics::IBitmap> texture = Loader->LoadBitmap(image->Frames.FirstElement());
 								Template.Texture.Append(name, texture);
 							}
 						}
@@ -567,7 +604,7 @@ namespace Engine
 					auto & asset = Assets[a];
 					for (int i = 0; i < asset.Fonts.Length(); i++) {
 						auto & name = asset.Fonts[i].Name;
-						SafePointer<IFont> font = Loader->LoadFont(asset.Fonts[i].FontFace, asset.Fonts[i].Height.Absolute + int(asset.Fonts[i].Height.Scalable * Zoom), asset.Fonts[i].Weight, asset.Fonts[i].IsItalic, asset.Fonts[i].IsUnderline, asset.Fonts[i].IsStrikeout);
+						SafePointer<Graphics::IFont> font = Loader->LoadFont(asset.Fonts[i].FontFace, asset.Fonts[i].Height.Absolute + int(asset.Fonts[i].Height.Scalable * CurrentScaleFactor), asset.Fonts[i].Weight, asset.Fonts[i].IsItalic, asset.Fonts[i].IsUnderline, asset.Fonts[i].IsStrikeout);
 						Template.Font.Append(name, font);
 					}
 				}
@@ -606,20 +643,27 @@ namespace Engine
 					if (!dialog) dialog = style_resolver.GetDialog(References[i].ObjectName);
 					References[i].Property.Get< SafePointer<Template::ControlTemplate> >().SetRetain(dialog);
 				}
-				for (int i = 0; i < ColorIDs.Length(); i++) {
-					Template.Colors.Append(ColorIDs.ElementByIndex(i).key, GetColorByID(ColorIDs.ElementByIndex(i).value));
+				for (auto & clr : ColorIDs) {
+					Template.Colors.Append(clr.key, GetColorByID(clr.value));
 				}
-				for (int i = 0; i < StringIDs.Length(); i++) {
-					Template.Strings.Append(StringIDs.ElementByIndex(i).key, GetStringByID(StringIDs.ElementByIndex(i).value));
+				for (auto & str : StringIDs) {
+					Template.Strings.Append(str.key, GetStringByID(str.value));
 				}
 			}
 			void InterfaceTemplateImage::Specialize(const string & Locale, const string & System, double Scale)
 			{
 				ColorIDs.Clear();
-				if (Locale.Length()) for (int i = Locales.Length() - 1; i >= 0; i--) if (Locales.ElementByIndex(i).key != L"_" && Locales.ElementByIndex(i).key != Locale) Locales.RemoveAt(i);
+				if (Locale.Length()) {
+					auto locale = Locales.GetFirst();
+					while (locale) {
+						auto next = locale->GetNext();
+						if (locale->GetValue().key != L"_" && locale->GetValue().key != Locale) Locales.BinaryTree::Remove(locale);
+						locale = next;
+					}
+				}
 				if (System.Length()) for (int i = Assets.Length() - 1; i >= 0; i--) if (Assets.ElementAt(i).SystemFilter.Length() && Assets.ElementAt(i).SystemFilter != System) Assets.Remove(i);
-				if (Scale) for (int i = 0; i < Textures.Length(); i++) {
-					auto image = Textures.ElementByIndex(i).object;
+				if (Scale) for (auto & tx : Textures) {
+					auto image = tx.value.Inner();
 					SafePointer<Codec::Frame> frame_ref;
 					frame_ref.SetRetain(image->GetFrameBestDpiFit(Scale));
 					image->Frames.Clear();
@@ -634,10 +678,10 @@ namespace Engine
 			{
 				SafePointer<InterfaceTemplateImage> copy = new InterfaceTemplateImage;
 				copy->Assets = Assets;
-				for (int i = 0; i < Textures.Length(); i++) copy->Textures.Append(Textures.ElementByIndex(i).key, Textures.ElementByIndex(i).object);
-				for (int i = 0; i < Locales.Length(); i++) copy->Locales.Append(Locales.ElementByIndex(i).key, Locales.ElementByIndex(i).object);
-				for (int i = 0; i < StringIDs.Length(); i++) copy->StringIDs.Append(StringIDs.ElementByIndex(i).key, StringIDs.ElementByIndex(i).value);
-				for (int i = 0; i < ColorIDs.Length(); i++) copy->ColorIDs.Append(ColorIDs.ElementByIndex(i).key, ColorIDs.ElementByIndex(i).value);
+				for (auto & t : Textures) copy->Textures.Append(t.key, t.value);
+				for (auto & l : Locales) copy->Locales.Append(l.key, l.value);
+				for (auto & s : StringIDs) copy->StringIDs.Append(s.key, s.value);
+				for (auto & c : ColorIDs) copy->ColorIDs.Append(c.key, c.value);
 				copy->Retain();
 				return copy;
 			}
@@ -656,9 +700,9 @@ namespace Engine
 			string InterfaceTemplateImage::GetStringByID(int ID)
 			{
 				try {
-					for (int l = 0; l < Locales.Length(); l++) {
-						if (Locales.ElementByIndex(l).key == L"_") continue;
-						return Locales.ElementByIndex(l).object->GetString(ID);
+					for (auto & locale : Locales) {
+						if (locale.key == L"_") continue;
+						return locale.value->GetString(ID);
 					}
 				} catch (...) {}
 				try {
@@ -704,7 +748,7 @@ namespace Engine
 			Template::FontTemplate InterfaceStringTemplate::ToFontTemplate(InterfaceTemplate & interface, IResourceResolver * ResourceResolver)
 			{
 				if (Argument.Length()) return Template::FontTemplate::Undefined(Argument);
-				IFont * Font = interface.Font[Value];
+				Graphics::IFont * Font = interface.Font[Value];
 				if (!Font && ResourceResolver) {
 					Font = ResourceResolver->GetFont(Value);
 				}
@@ -713,7 +757,7 @@ namespace Engine
 			Template::TextureTemplate InterfaceStringTemplate::ToTextureTemplate(InterfaceTemplate & interface, IResourceResolver * ResourceResolver)
 			{
 				if (Argument.Length()) return Template::TextureTemplate::Undefined(Argument);
-				ITexture * Texture = interface.Texture[Value];
+				Graphics::IBitmap * Texture = interface.Texture[Value];
 				if (!Texture && ResourceResolver) {
 					Texture = ResourceResolver->GetTexture(Value);
 				}

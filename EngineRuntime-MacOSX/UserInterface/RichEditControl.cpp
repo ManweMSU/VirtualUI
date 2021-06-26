@@ -44,18 +44,18 @@ namespace Engine
 				public:
 					LinkContents(RichEdit * edit, RichEdit::ContentBox * parent);
 					~LinkContents(void) override {}
-					virtual void Render(IRenderingDevice * device, const Box & at) override
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						if (_state) hot_box->Render(device, at);
 						else box->Render(device, at);
 					}
-					virtual void RenderBackground(IRenderingDevice * device, const Box & at) override
+					virtual void RenderBackground(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						if (_state) hot_box->RenderBackground(device, at);
 						else box->RenderBackground(device, at);
 					}
 					virtual void ResetCache(void) override { box->ResetCache(); hot_box->ResetCache(); }
-					virtual void AlignContents(IRenderingDevice * device, int box_width) override
+					virtual void AlignContents(Graphics::I2DDeviceContext * device, int box_width) override
 					{
 						box->AlignContents(device, 0x7FFFFFFF);
 						_width = box->GetContentsWidth();
@@ -148,7 +148,7 @@ namespace Engine
 						_parent->ChildContentsChanged(this);
 					}
 					virtual int GetMaximalPosition(void) override { return 1; }
-					virtual SystemCursor RegularCursorForPosition(int x, int y) override { return SystemCursor::Link; }
+					virtual Windows::SystemCursorClass RegularCursorForPosition(int x, int y) override { return Windows::SystemCursorClass::Link; }
 					virtual ContentBox * ActiveBoxForPosition(int x, int y) override { return this; }
 					virtual void MouseMove(int x, int y) override { _state = 1; }
 					virtual void MouseLeft(void) override { _state = 0; }
@@ -228,8 +228,8 @@ namespace Engine
 					RichEdit::ContentBox * _parent;
 					string _image_resource;
 					SafePointer<Codec::Image> _image;
-					SafePointer<ITexture> _texture;
-					SafePointer<ITextureRenderingInfo> _info;
+					SafePointer<Graphics::IBitmap> _texture;
+					SafePointer<Graphics::IBitmapBrush> _info;
 					int _box_width, _box_height;
 					int _width, _height;
 					int _org_x, _org_y;
@@ -237,18 +237,18 @@ namespace Engine
 					PictureContents(RichEdit * edit, RichEdit::ContentBox * parent) : _edit(edit), _parent(parent),
 						_box_width(0), _box_height(0), _width(0), _height(0), _org_x(0), _org_y(0) {}
 					~PictureContents(void) override {}
-					virtual void Render(IRenderingDevice * device, const Box & at) override
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						if (!_texture) {
-							if (_image) _texture = device->LoadTexture(_image->GetFrameBestDpiFit(Zoom));
+							if (_image) _texture = device->GetParentFactory()->LoadBitmap(_image->GetFrameBestDpiFit(CurrentScaleFactor));
 							else if (_edit->GetHook()) _texture = _edit->GetHook()->GetImageByName(_image_resource, _edit);
 						}
-						if (!_info && _texture) _info = device->CreateTextureRenderingInfo(_texture, Box(0, 0, _texture->GetWidth(), _texture->GetHeight()), false);
-						if (_info) device->RenderTexture(_info, Box(at.Left, at.Top, at.Left + _box_width, at.Top + _box_height));
+						if (!_info && _texture) _info = device->CreateBitmapBrush(_texture, Box(0, 0, _texture->GetWidth(), _texture->GetHeight()), false);
+						if (_info) device->Render(_info, Box(at.Left, at.Top, at.Left + _box_width, at.Top + _box_height));
 					}
-					virtual void RenderBackground(IRenderingDevice * device, const Box & at) override {}
+					virtual void RenderBackground(Graphics::I2DDeviceContext * device, const Box & at) override {}
 					virtual void ResetCache(void) override { _texture.SetReference(0); _info.SetReference(0); }
-					virtual void AlignContents(IRenderingDevice * device, int box_width) override {}
+					virtual void AlignContents(Graphics::I2DDeviceContext * device, int box_width) override {}
 					virtual int GetContentsOriginX(void) override { return _org_x; }
 					virtual int GetContentsOriginY(void) override { return _org_y; }
 					virtual int GetContentsWidth(void) override { return _box_width; }
@@ -266,7 +266,7 @@ namespace Engine
 					virtual void RemoveForward(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) override {}
 					virtual void ChildContentsChanged(ContentBox * child) override {}
 					virtual int GetMaximalPosition(void) override { return 0; }
-					virtual SystemCursor RegularCursorForPosition(int x, int y) override { return SystemCursor::Beam; }
+					virtual Windows::SystemCursorClass RegularCursorForPosition(int x, int y) override { return Windows::SystemCursorClass::Beam; }
 					virtual ContentBox * ActiveBoxForPosition(int x, int y) override { return 0; }
 					virtual void MouseMove(int x, int y) override {}
 					virtual void MouseLeft(void) override {}
@@ -300,8 +300,8 @@ namespace Engine
 							}
 							ResetCache();
 							_width = width; _height = height;
-							_box_width = int(_width * Zoom);
-							_box_height = int(_height * Zoom);
+							_box_width = int(_width * CurrentScaleFactor);
+							_box_height = int(_height * CurrentScaleFactor);
 						} else pos = text.Length();
 					}
 					virtual void SerializeToPlainText(const Array<int> & index, Array<uint32> & text, uint64 attr_lo, uint64 attr_hi) override
@@ -334,8 +334,8 @@ namespace Engine
 					void SetSize(int width, int height)
 					{
 						_width = width; _height = height;
-						_box_width = int(_width * Zoom);
-						_box_height = int(_height * Zoom);
+						_box_width = int(_width * CurrentScaleFactor);
+						_box_height = int(_height * CurrentScaleFactor);
 						_parent->ChildContentsChanged(this);
 					}
 					int GetWidth(void) { return _width; }
@@ -356,15 +356,15 @@ namespace Engine
 					Array<int> _cell_aligns;
 					int _width, _height;
 					int _org_x, _org_y;
-					SafePointer<IBarRenderingInfo> _border_info;
-					ObjectArray<IBarRenderingInfo> _cells_info;
+					SafePointer<Graphics::IColorBrush> _border_info;
+					ObjectArray<Graphics::IColorBrush> _cells_info;
 				public:
 					TableContents(RichEdit * edit, RichEdit::ContentBox * parent) : _edit(edit), _parent(parent),
 						_cells(0x10), _aabb(0x10), _size_x(0), _size_y(0), _border_w(0), _border_v(0), _border_h(0), _border_c(0),
 						_col_widths(0x10), _cell_colors(0x10), _cell_aligns(0x10),
 						_width(0), _height(0), _org_x(0), _org_y(0) {}
 					~TableContents(void) override {}
-					virtual void Render(IRenderingDevice * device, const Box & at) override
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						for (int i = 0; i < _cells.Length(); i++) {
 							int dy = 0;
@@ -383,41 +383,41 @@ namespace Engine
 							device->PopClip();
 						}
 						if (_border_c) {
-							if (!_border_info) _border_info = device->CreateBarRenderingInfo(_border_c);
-							int w = int(_border_w * Zoom);
+							if (!_border_info) _border_info = device->CreateSolidColorBrush(_border_c);
+							int w = int(_border_w * CurrentScaleFactor);
 							if (_border_w) {
-								device->RenderBar(_border_info, Box(at.Left, at.Top, at.Left + _width, at.Top + w));
-								device->RenderBar(_border_info, Box(at.Left, at.Top + w, at.Left + w, at.Top + _height));
-								device->RenderBar(_border_info, Box(at.Left + _width - w, at.Top + w, at.Left + _width, at.Top + _height));
-								device->RenderBar(_border_info, Box(at.Left + w, at.Top + _height - w, at.Left + _width - w, at.Top + _height));
+								device->Render(_border_info, Box(at.Left, at.Top, at.Left + _width, at.Top + w));
+								device->Render(_border_info, Box(at.Left, at.Top + w, at.Left + w, at.Top + _height));
+								device->Render(_border_info, Box(at.Left + _width - w, at.Top + w, at.Left + _width, at.Top + _height));
+								device->Render(_border_info, Box(at.Left + w, at.Top + _height - w, at.Left + _width - w, at.Top + _height));
 							}
 							if (_border_v) {
 								for (int i = 0; i < _size_x - 1; i++) {
-									device->RenderBar(_border_info, Box(at.Left + _aabb[i].Right, at.Top + w, at.Left + _aabb[i + 1].Left, at.Top + _height - w));
+									device->Render(_border_info, Box(at.Left + _aabb[i].Right, at.Top + w, at.Left + _aabb[i + 1].Left, at.Top + _height - w));
 								}
 							}
 							if (_border_h) {
 								for (int i = 0; i < _size_y - 1; i++) {
 									auto & aabb_1 = _aabb[i * _size_x];
 									auto & aabb_2 = _aabb[(i + 1) * _size_x];
-									device->RenderBar(_border_info, Box(at.Left + w, at.Top + aabb_1.Bottom, at.Left + _width - w, at.Top + aabb_2.Top));
+									device->Render(_border_info, Box(at.Left + w, at.Top + aabb_1.Bottom, at.Left + _width - w, at.Top + aabb_2.Top));
 								}
 							}
 						}
 					}
-					virtual void RenderBackground(IRenderingDevice * device, const Box & at) override
+					virtual void RenderBackground(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						if (!_cells_info.Length()) {
 							for (int i = 0; i < _cell_colors.Length(); i++) {
 								if (_cell_colors[i]) {
-									SafePointer<IBarRenderingInfo> info = device->CreateBarRenderingInfo(_cell_colors[i]);
+									SafePointer<Graphics::IColorBrush> info = device->CreateSolidColorBrush(_cell_colors[i]);
 									_cells_info.Append(info);
 								} else _cells_info.Append(0);
 							}
 						}
 						for (int i = 0; i < _cells_info.Length(); i++) {
 							auto info = _cells_info.ElementAt(i);
-							if (info) device->RenderBar(info, Box(_aabb[i].Left + at.Left, _aabb[i].Top + at.Top, _aabb[i].Right + at.Left, _aabb[i].Bottom + at.Top));
+							if (info) device->Render(info, Box(_aabb[i].Left + at.Left, _aabb[i].Top + at.Top, _aabb[i].Right + at.Left, _aabb[i].Bottom + at.Top));
 						}
 					}
 					virtual void ResetCache(void) override
@@ -426,20 +426,20 @@ namespace Engine
 						_cells_info.Clear();
 						for (int i = 0; i < _cells.Length(); i++) _cells[i].ResetCache();
 					}
-					virtual void AlignContents(IRenderingDevice * device, int box_width) override
+					virtual void AlignContents(Graphics::I2DDeviceContext * device, int box_width) override
 					{
 						_aabb.SetLength(_cells.Length());
-						int _act_bw = int(_border_w * Zoom);
-						int _act_bv = int(_border_v * Zoom);
-						int _act_bh = int(_border_h * Zoom);
+						int _act_bw = int(_border_w * CurrentScaleFactor);
+						int _act_bv = int(_border_v * CurrentScaleFactor);
+						int _act_bh = int(_border_h * CurrentScaleFactor);
 						_width = 2 * _act_bw + (_size_x - 1) * _act_bv;
-						for (int x = 0; x < _size_x; x++) _width += int(_col_widths[x] * Zoom);
+						for (int x = 0; x < _size_x; x++) _width += int(_col_widths[x] * CurrentScaleFactor);
 						for (int y = 0; y < _size_y; y++) {
 							int mh = 0;
 							for (int x = 0; x < _size_x; x++) {
 								int lx = x ? (_aabb[x + _size_x * y - 1].Right + _act_bv) : _act_bw;
 								int ly = y ? (_aabb[x + _size_x * y - _size_x].Bottom + _act_bh) : _act_bw;
-								int lw = int(_col_widths[x] * Zoom);
+								int lw = int(_col_widths[x] * CurrentScaleFactor);
 								_cells[x + _size_x * y].SetAbsoluteOrigin(_org_x + lx, _org_y + ly);
 								_cells[x + _size_x * y].AlignContents(device, lw);
 								int lh = _cells[x + _size_x * y].GetContentsHeight();
@@ -555,7 +555,7 @@ namespace Engine
 					virtual void RemoveForward(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2) override {}
 					virtual void ChildContentsChanged(ContentBox * child) override { _parent->ChildContentsChanged(this); }
 					virtual int GetMaximalPosition(void) override { return _cells.Length(); }
-					virtual SystemCursor RegularCursorForPosition(int x, int y) override
+					virtual Windows::SystemCursorClass RegularCursorForPosition(int x, int y) override
 					{
 						for (int i = 0; i < _cells.Length(); i++) if (_aabb[i].IsInside(Point(x, y))) {
 							int dy = 0;
@@ -569,7 +569,7 @@ namespace Engine
 							}
 							return _cells[i].RegularCursorForPosition(x - _aabb[i].Left, y - _aabb[i].Top - dy);
 						}
-						return SystemCursor::Beam;
+						return Windows::SystemCursorClass::Beam;
 					}
 					virtual ContentBox * ActiveBoxForPosition(int x, int y) override
 					{
@@ -652,7 +652,7 @@ namespace Engine
 						int range_right;
 						int embedded_object_index; // >= 0 - index, -1 - word, -2 - linebreak, -3 - tab
 						int width, height, align;
-						ObjectArray<ITextRenderingInfo> text;
+						ObjectArray<Graphics::ITextBrush> text;
 						Array<int> advances;
 
 						Word(void) : text(2), advances(8) {}
@@ -676,7 +676,7 @@ namespace Engine
 					TextContents(RichEdit * edit, RichEdit::ContentBox * parent) : _edit(edit), _parent(parent),
 						_text(0x400), _objs(0x10), _words(0x100), _aabb(0x400), _width(0), _height(0), _act_width(0), _org_x(0), _org_y(0) {}
 					~TextContents(void) override {}
-					virtual void Render(IRenderingDevice * device, const Box & at) override
+					virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						for (int i = 0; i < _words.Length(); i++) {
 							auto & w = _words[i];
@@ -688,14 +688,14 @@ namespace Engine
 								int ofs = 0;
 								for (int j = 0; j < w.text.Length(); j++) {
 									int sw, sh;
-									w.text[j].GetExtent(sw, sh);
-									device->RenderText(w.text.ElementAt(j), Box(wb.Left + ofs, wb.Top, wb.Left + ofs + sw, wb.Bottom), false);
+									w.text[j].GetExtents(sw, sh);
+									device->Render(w.text.ElementAt(j), Box(wb.Left + ofs, wb.Top, wb.Left + ofs + sw, wb.Bottom), false);
 									ofs += sw;
 								}
 							}
 						}
 					}
-					virtual void RenderBackground(IRenderingDevice * device, const Box & at) override
+					virtual void RenderBackground(Graphics::I2DDeviceContext * device, const Box & at) override
 					{
 						for (int i = 0; i < _objs.Length(); i++) {
 							auto & w = _objs[i];
@@ -705,7 +705,7 @@ namespace Engine
 						}
 					}
 					virtual void ResetCache(void) override { _words.Clear(); for (int i = 0; i < _objs.Length(); i++) _objs[i].inner->ResetCache(); }
-					virtual void AlignContents(IRenderingDevice * device, int box_width) override
+					virtual void AlignContents(Graphics::I2DDeviceContext * device, int box_width) override
 					{
 						if (!_words.Length()) {
 							int pos = 0;
@@ -762,12 +762,12 @@ namespace Engine
 										while (lp < pos && _text[lp].hi == attr) lp++;
 										ss.Clear();
 										for (int i = lsp; i < lp; i++) ss << (_text[i].lo & MaskUcsCode);
-										IFont * fnt = _edit->GetCachedFont(int((attr & MaskObjectCacheIndex) >> 32));
+										Graphics::IFont * fnt = _edit->GetCachedFont(int((attr & MaskObjectCacheIndex) >> 32));
 										Color clr = uint32(attr & MaskColor);
-										SafePointer<ITextRenderingInfo> obj = device->CreateTextRenderingInfo(fnt, ss, 0, 1, clr);
+										SafePointer<Graphics::ITextBrush> obj = device->CreateTextBrush(fnt, ss, ss.Length(), 0, 1, clr);
 										for (int i = 0; i < ss.Length(); i++) _words.LastElement().advances << adv + obj->EndOfChar(i);
 										int w, h;
-										obj->GetExtent(w, h);
+										obj->GetExtents(w, h);
 										adv += w;
 										_words.LastElement().width += w;
 										if (h > _words.LastElement().height) _words.LastElement().height = h;
@@ -785,7 +785,7 @@ namespace Engine
 						int space, tab, align, font_height;
 						int last_line_top = 0;
 						int last_line_end = 0;
-						IFont * fnt;
+						Graphics::IFont * fnt;
 						if (tpos < _text.Length()) {
 							int f = int(_text[tpos].hi >> 32);
 							fnt = _edit->GetCachedFont(f);
@@ -1141,11 +1141,11 @@ namespace Engine
 						else _edit->RealignContents();
 					}
 					virtual int GetMaximalPosition(void) override { return _text.Length(); }
-					virtual SystemCursor RegularCursorForPosition(int x, int y) override
+					virtual Windows::SystemCursorClass RegularCursorForPosition(int x, int y) override
 					{
 						for (int i = 0; i < _objs.Length(); i++) if (_objs[i].align_rect.IsInside(Point(x, y)))
 							return _objs[i].inner->RegularCursorForPosition(x - _objs[i].align_rect.Left, y - _objs[i].align_rect.Top);
-						return SystemCursor::Beam;
+						return Windows::SystemCursorClass::Beam;
 					}
 					virtual ContentBox * ActiveBoxForPosition(int x, int y) override
 					{
@@ -1159,7 +1159,7 @@ namespace Engine
 					virtual Box CaretBoxFromPosition(int pos, ContentBox * box) override
 					{
 						if (pos == 0) {
-							int dh = _aabb.Length() ? (_aabb.FirstElement().Bottom - _aabb.FirstElement().Top) : int(_edit->DefaultFontHeight * Zoom);
+							int dh = _aabb.Length() ? (_aabb.FirstElement().Bottom - _aabb.FirstElement().Top) : int(_edit->DefaultFontHeight * CurrentScaleFactor);
 							return Box(_org_x, _org_y, _org_x, _org_y + dh);
 						} else {
 							auto & aabb = _aabb[pos - 1];
@@ -1575,11 +1575,10 @@ namespace Engine
 					} else pos = text.Length();
 				}
 			}
-			void RichEdit::_align_contents(const Box & box)
+			void RichEdit::_align_contents(Graphics::I2DDeviceContext * device, const Box & box)
 			{
 				if (_init) return;
-				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetStation()->GetVisualStyles().CaretWidth;
-				auto device = GetStation()->GetRenderingDevice();
+				if (_caret_width < 0) _caret_width = CaretWidth ? CaretWidth : GetControlSystem()->GetCaretWidth();
 				_root->AlignContents(device, box.Right - box.Left - (ReadOnly ? 0 : _caret_width) - 2 * Border);
 				if (_root->GetContentsHeight() > box.Bottom - box.Top - 2 * Border) {
 					_root->AlignContents(device, box.Right - box.Left - ScrollSize - (ReadOnly ? 0 : _caret_width) - 2 * Border);
@@ -1613,7 +1612,7 @@ namespace Engine
 				for (int i = 0; i < index.Length(); i++) { if (index[i]) { index[i] = reint; reint++; } else index[i] = -1; }
 				if (!reint) index[0] = 0;
 			}
-			RichEdit::RichEdit(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _undo_interface(this), _undo(&_undo_interface, 10), _font_faces(0x10), _fonts(0x20)
+			RichEdit::RichEdit(void) : _undo_interface(this), _undo(&_undo_interface, 10), _font_faces(0x10), _fonts(0x20)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
@@ -1622,49 +1621,49 @@ namespace Engine
 				_root->SetAbsoluteOrigin(0, 0);
 				ResetCache();
 			}
-			RichEdit::RichEdit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _undo_interface(this), _undo(&_undo_interface, 10), _font_faces(0x10), _fonts(0x20)
+			RichEdit::RichEdit(Template::ControlTemplate * Template) : _undo_interface(this), _undo(&_undo_interface, 10), _font_faces(0x10), _fonts(0x20)
 			{
 				if (Template->Properties->GetTemplateClass() != L"RichEdit") throw InvalidArgumentException();
 				static_cast<Template::Controls::RichEdit &>(*this) = static_cast<Template::Controls::RichEdit &>(*Template->Properties);
-				_menu.SetReference(ContextMenu ? new Menus::Menu(ContextMenu) : 0);
+				if (ContextMenu) _menu.SetReference(CreateMenu(ContextMenu));
 				_root = new RichEditContents::TextContents(this, 0);
 				_root->SetAbsoluteOrigin(0, 0);
 				ResetCache();
 				SetText(Text); Text = L"";
 			}
 			RichEdit::~RichEdit(void) {}
-			void RichEdit::Render(const Box & at)
+			void RichEdit::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
-				if (BackgroundColor) {
-					if (!_background) _background = device->CreateBarRenderingInfo(BackgroundColor);
-					device->RenderBar(_background, at);
-				}
+				device->PushClip(at);
 				if (_init) {
 					for (int i = 0; i < _fonts.Length(); i++) RecreateCachedFont(i);
 					_init = false;
-					_align_contents(at);
+					_align_contents(device, at);
 				}
 				if (_deferred_scroll) { _scroll_to_caret(); _deferred_scroll = false; }
+				if (BackgroundColor) {
+					if (!_background) _background = device->CreateSolidColorBrush(BackgroundColor);
+					device->Render(_background, at);
+				}
 				int dx = at.Left + Border;
 				int dy = at.Top + Border - _vscroll->Position;
 				Box rect = Box(at.Left + Border, at.Top + Border - _vscroll->Position, at.Right, at.Bottom);
 				_root->RenderBackground(device, rect);
-				if (!_selection) _selection.SetReference(device->CreateBarRenderingInfo(SelectionColor));
+				if (!_selection) _selection.SetReference(device->CreateSolidColorBrush(SelectionColor));
 				if (_selection_pos != _caret_pos && _selection_box) {
 					int min_sel = min(_selection_pos, _caret_pos);
 					int max_sel = max(_selection_pos, _caret_pos);
 					auto frame_begin = _caret_box->CaretBoxFromPosition(min_sel, _caret_box);
 					auto frame_end = _caret_box->CaretBoxFromPosition(max_sel, _caret_box);
 					if (frame_begin.Top == frame_end.Top) {
-						device->RenderBar(_selection, Box(dx + frame_begin.Left, dy + frame_begin.Top, dx + frame_end.Right, dy + frame_end.Bottom));
+						device->Render(_selection, Box(dx + frame_begin.Left, dy + frame_begin.Top, dx + frame_end.Right, dy + frame_end.Bottom));
 					} else {
 						int left_bound = _caret_box->GetContentsOriginX();
 						int right_bound = left_bound + _caret_box->GetContentsCurrentWidth();
-						device->RenderBar(_selection, Box(dx + frame_begin.Left, dy + frame_begin.Top, dx + right_bound, dy + frame_begin.Bottom));
-						device->RenderBar(_selection, Box(dx + left_bound, dy + frame_end.Top, dx + frame_end.Right, dy + frame_end.Bottom));
+						device->Render(_selection, Box(dx + frame_begin.Left, dy + frame_begin.Top, dx + right_bound, dy + frame_begin.Bottom));
+						device->Render(_selection, Box(dx + left_bound, dy + frame_end.Top, dx + frame_end.Right, dy + frame_end.Bottom));
 						if (frame_begin.Bottom != frame_end.Top) {
-							device->RenderBar(_selection, Box(dx + left_bound, dy + frame_begin.Bottom, dx + right_bound, dy + frame_end.Top));
+							device->Render(_selection, Box(dx + left_bound, dy + frame_begin.Bottom, dx + right_bound, dy + frame_end.Top));
 						}
 					}
 				}
@@ -1673,54 +1672,60 @@ namespace Engine
 					auto caret = _caret_box->CaretBoxFromPosition(_caret_pos, _caret_box);
 					if (!_inversion) {
 						if (CaretColor.a) {
-							_inversion.SetReference(device->CreateBarRenderingInfo(CaretColor));
+							_inversion.SetReference(device->CreateSolidColorBrush(CaretColor));
 							_use_color_caret = true;
 						} else {
-							_inversion.SetReference(device->CreateInversionEffectRenderingInfo());
+							_inversion.SetReference(device->CreateInversionEffectBrush());
 							_use_color_caret = false;
 						}
 					}
 					caret.Left += dx; caret.Right += dx + _caret_width; caret.Top += dy; caret.Bottom += dy;
-					if (_use_color_caret) { if (device->CaretShouldBeVisible()) device->RenderBar(static_cast<IBarRenderingInfo *>(_inversion.Inner()), caret); }
-					else device->ApplyInversion(static_cast<IInversionEffectRenderingInfo *>(_inversion.Inner()), caret, true);
+					if (_use_color_caret) { if (device->IsCaretVisible()) device->Render(static_cast<Graphics::IColorBrush *>(_inversion.Inner()), caret); }
+					else device->Render(static_cast<Graphics::IInversionEffectBrush *>(_inversion.Inner()), caret, true);
 				}
-				ParentWindow::Render(at);
+				device->PopClip();
+				ParentControl::Render(device, at);
 			}
 			void RichEdit::ResetCache(void)
 			{
 				_caret_width = -1;
-				for (int i = 0; i < _fonts.Length(); i++) RecreateCachedFont(i);
 				bool scroll_visible = _vscroll ? _vscroll->IsVisible() : false;
-				if (_vscroll) _vscroll->Destroy();
-				_vscroll = GetStation()->CreateWindow<VerticalScrollBar>(this, this);
-				_vscroll->SetRectangle(Rectangle(
-					Coordinate::Right() - ScrollSize, 0,
-					Coordinate::Right(), Coordinate::Bottom()));
+				if (_vscroll) _vscroll->RemoveFromParent();
+				SafePointer<VerticalScrollBar> vert = new VerticalScrollBar(this);
+				_vscroll = vert; AddChild(vert);
+				_vscroll->SetRectangle(Rectangle(Coordinate::Right() - ScrollSize, 0, Coordinate::Right(), Coordinate::Bottom()));
 				_vscroll->Disabled = Disabled;
-				_vscroll->Line = int(Zoom * 20.0);
+				_vscroll->Line = int(CurrentScaleFactor * 20.0);
 				_vscroll->Show(scroll_visible);
 				_inversion.SetReference(0);
 				_selection.SetReference(0);
 				_background.SetReference(0);
-				ParentWindow::ResetCache();
+				ParentControl::ResetCache();
 				_root->ResetCache();
-				Box box(0, 0, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
-				_align_contents(box);
+				_init = true;
+				Invalidate();
 			}
-			void RichEdit::Enable(bool enable) { Disabled = !enable; _state = 0; }
+			void RichEdit::Enable(bool enable) { Disabled = !enable; _state = 0; Invalidate(); }
 			bool RichEdit::IsEnabled(void) { return !Disabled; }
-			void RichEdit::Show(bool visible) { Invisible = !visible; _state = 0; }
+			void RichEdit::Show(bool visible) { Invisible = !visible; _state = 0; Invalidate(); }
 			bool RichEdit::IsVisible(void) { return !Invisible; }
 			bool RichEdit::IsTabStop(void) { return true; }
 			void RichEdit::SetID(int _ID) { ID = _ID; }
 			int RichEdit::GetID(void) { return ID; }
-			void RichEdit::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void RichEdit::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); }
 			Rectangle RichEdit::GetRectangle(void) { return ControlPosition; }
-			void RichEdit::SetPosition(const Box & box) { ParentWindow::SetPosition(box); _align_contents(box); }
+			void RichEdit::SetPosition(const Box & box)
+			{
+				ParentControl::SetPosition(box);
+				auto device = GetRenderingDevice();
+				if (device) _align_contents(device, box); else _init = true;
+				Invalidate();
+			}
 			void RichEdit::SetText(const string & text)
 			{
 				if (text[0] == L'\33' && text[1] == L'X') SetAttributedText(text.Fragment(2, -1).NormalizedForm());
 				else SetAttributedText(L"\33n*\33e\33f00\33h****\33c********" + text + L"\33e\33e\33e");
+				Invalidate();
 			}
 			string RichEdit::GetText(void)
 			{
@@ -1728,20 +1733,20 @@ namespace Engine
 				_root->SerializeUnattributedToPlainText(ucs);
 				return string(ucs.GetBuffer(), ucs.Length(), Encoding::UTF32);
 			}
-			void RichEdit::RaiseEvent(int ID, Event event, Window * sender)
+			void RichEdit::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
-				if (event == Event::MenuCommand) {
+				if (event == ControlEvent::MenuCommand) {
 					if (ID == 1001) Undo();
 					else if (ID == 1000) Redo();
 					else if (ID == 1002) Cut();
 					else if (ID == 1003) Copy();
 					else if (ID == 1004) Paste();
 					else if (ID == 1005) Delete();
-					else GetParent()->RaiseEvent(ID, Event::Command, this);
+					else GetParent()->RaiseEvent(ID, ControlEvent::Command, this);
 				} else if (ID) GetParent()->RaiseEvent(ID, event, sender);
 			}
-			void RichEdit::FocusChanged(bool got_focus) { if (!got_focus) { _save = true; } }
-			void RichEdit::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; if (_hot_box) { _hot_box->MouseLeft(); _hot_box = 0; } } }
+			void RichEdit::FocusChanged(bool got_focus) { if (!got_focus) { _save = true; } Invalidate(); }
+			void RichEdit::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; if (_hot_box) { _hot_box->MouseLeft(); _hot_box = 0; Invalidate(); } } }
 			void RichEdit::LeftButtonDown(Point at)
 			{
 				if (!_hot_box || !ReadOnly) {
@@ -1762,8 +1767,10 @@ namespace Engine
 						_selection_pos = _caret_pos;
 					}
 					_scroll_to_caret();
-					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-						prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+					Invalidate();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
+					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
 			void RichEdit::LeftButtonUp(Point at)
@@ -1783,8 +1790,8 @@ namespace Engine
 					auto prev_selection_pos = _selection_pos;
 					_root->SelectWord(at.x - Border, at.y - Border + _vscroll->Position, &_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
 					_scroll_to_caret();
-					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-						prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+					Invalidate();
+					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 				}
 			}
 			void RichEdit::RightButtonDown(Point at)
@@ -1813,30 +1820,30 @@ namespace Engine
 						_selection_box = _caret_box = click_box;
 						_selection_pos = _caret_pos = click_pos;
 						_scroll_to_caret();
-						if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-							prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+						Invalidate();
+						auto device = GetRenderingDevice();
+						if (device) device->SetCaretReferenceTime(GetTimerValue());
+						if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 					}
 				}
 			}
 			void RichEdit::RightButtonUp(Point at)
 			{
 				if (_menu) {
-					auto pos = GetStation()->GetCursorPos();
-					auto undo = _menu->FindChild(1001);
-					auto redo = _menu->FindChild(1000);
-					auto cut = _menu->FindChild(1002);
-					auto copy = _menu->FindChild(1003);
-					auto paste = _menu->FindChild(1004);
-					auto remove = _menu->FindChild(1005);
-					if (undo) undo->Disabled = ReadOnly || !_undo.CanUndo();
-					if (redo) redo->Disabled = ReadOnly || !_undo.CanRedo();
-					if (cut) cut->Disabled = ReadOnly || (_caret_pos == _selection_pos && _caret_box == _selection_box);
-					if (copy) copy->Disabled = _caret_pos == _selection_pos && _caret_box == _selection_box;
-					if (paste) paste->Disabled = ReadOnly || (!Clipboard::IsFormatAvailable(Clipboard::Format::Text) &&
-						!Clipboard::IsFormatAvailable(Clipboard::Format::Image) && !Clipboard::IsFormatAvailable(Clipboard::Format::RichText));
-					if (remove) remove->Disabled = ReadOnly || (_caret_pos == _selection_pos && _caret_box == _selection_box);
+					auto undo = _menu->FindMenuItem(1001);
+					auto redo = _menu->FindMenuItem(1000);
+					auto cut = _menu->FindMenuItem(1002);
+					auto copy = _menu->FindMenuItem(1003);
+					auto paste = _menu->FindMenuItem(1004);
+					auto remove = _menu->FindMenuItem(1005);
+					if (undo) undo->Enable(!ReadOnly && _undo.CanUndo());
+					if (redo) redo->Enable(!ReadOnly && _undo.CanRedo());
+					if (cut) cut->Enable(!ReadOnly && (_caret_pos != _selection_pos || _caret_box != _selection_box));
+					if (copy) copy->Enable(_caret_pos != _selection_pos || _caret_box != _selection_box);
+					if (paste) paste->Enable(!ReadOnly && (Clipboard::IsFormatAvailable(Clipboard::Format::Text) || Clipboard::IsFormatAvailable(Clipboard::Format::Image) || Clipboard::IsFormatAvailable(Clipboard::Format::RichText)));
+					if (remove) remove->Enable(!ReadOnly && (_caret_pos != _selection_pos || _caret_box != _selection_box));
 					if (_hook) _hook->InitializeContextMenu(_menu, this);
-					_menu->RunPopup(this, pos);
+					RunMenu(_menu, this, at);
 				}
 			}
 			void RichEdit::MouseMove(Point at)
@@ -1849,20 +1856,21 @@ namespace Engine
 					_root->GetTextPositionFromCursor(at.x - Border, at.y - Border + _vscroll->Position, &_caret_pos, &_caret_box);
 					_root->UnifyBoxForSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);					
 					_scroll_to_caret();
-					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-						prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+					Invalidate();
+					auto device = GetRenderingDevice();
+					if (device) device->SetCaretReferenceTime(GetTimerValue());
+					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 				} else if (ReadOnly) {
 					bool inside;
-					if (at.x >= 0 && at.y >= 0 &&
-						at.x < WindowPosition.Right - WindowPosition.Left - (_vscroll->IsVisible() ? ScrollSize : 0) &&
-						at.y < WindowPosition.Bottom - WindowPosition.Top) inside = true;
+					if (at.x >= 0 && at.y >= 0 && at.x < ControlBoundaries.Right - ControlBoundaries.Left - (_vscroll->IsVisible() ? ScrollSize : 0) && at.y < ControlBoundaries.Bottom - ControlBoundaries.Top) inside = true;
 					else inside = false;
-					if (inside && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+					if (inside && IsHovered()) {
 						SetCapture();
 						auto box = _root->ActiveBoxForPosition(at.x - Border, at.y - Border + _vscroll->Position);
 						if (box != _hot_box) {
 							if (_hot_box) _hot_box->MouseLeft();
 							_hot_box = box;
+							Invalidate();
 						}
 						if (_hot_box) _hot_box->MouseMove(at.x - Border, at.y - Border + _vscroll->Position);
 					} else if (GetCapture() == this) ReleaseCapture();
@@ -1871,10 +1879,12 @@ namespace Engine
 			void RichEdit::ScrollVertically(double delta)
 			{
 				if (_vscroll->IsVisible()) _vscroll->SetScrollerPositionSilent(_vscroll->Position + int(delta * double(_vscroll->Line)));
-				else ParentWindow::ScrollVertically(delta);
+				else ParentControl::ScrollVertically(delta);
 			}
 			bool RichEdit::KeyDown(int key_code)
 			{
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
 				if (key_code == KeyCodes::Back && !ReadOnly) {
 					if (!_caret_box) { _caret_box = _selection_box = _root; _caret_pos = _selection_pos = 0; }
 					if (_save) {
@@ -1887,8 +1897,9 @@ namespace Engine
 						if (_caret_box) _caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
 					}
 					_deferred_scroll = true;
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					return true;
 				} else if (key_code == KeyCodes::Delete && !ReadOnly) {
 					if (!_caret_box) { _caret_box = _selection_box = _root; _caret_pos = _selection_pos = 0; }
@@ -1902,8 +1913,9 @@ namespace Engine
 						if (_caret_box) _caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
 					}
 					_deferred_scroll = true;
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					return true;
 				} else if (key_code == KeyCodes::Left || key_code == KeyCodes::Right) {
 					_save = true;
@@ -1925,8 +1937,8 @@ namespace Engine
 						_caret_pos = _selection_pos = 0;
 					}
 					_scroll_to_caret();
-					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-						prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+					Invalidate();
+					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 					return true;
 				} else if (key_code == KeyCodes::Escape && _caret_box) {
 					_save = true;
@@ -1934,6 +1946,7 @@ namespace Engine
 					auto prev_selection_pos = _selection_pos;
 					_selection_box = _caret_box;
 					_selection_pos = _caret_pos;
+					Invalidate();
 					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos) if (_hook) _hook->CaretPositionChanged(this);
 					return true;
 				} else if (key_code == KeyCodes::Home || key_code == KeyCodes::End) {
@@ -1952,8 +1965,8 @@ namespace Engine
 						_caret_pos = _selection_pos = 0;
 					}
 					_scroll_to_caret();
-					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-						prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+					Invalidate();
+					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 					return true;
 				} else if (key_code == KeyCodes::Up || key_code == KeyCodes::Down || key_code == KeyCodes::PageUp || key_code == KeyCodes::PageDown) {
 					_save = true;
@@ -1981,15 +1994,14 @@ namespace Engine
 						_caret_pos = _selection_pos = 0;
 					}
 					_scroll_to_caret();
-					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos ||
-						prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
+					Invalidate();
+					if (prev_selection_box != _selection_box || prev_selection_pos != _selection_pos || prev_caret_box != _caret_box || prev_caret_pos != _caret_pos) if (_hook) _hook->CaretPositionChanged(this);
 					return true;
 				} else if (key_code == KeyCodes::Return && !ReadOnly) {
 					_save = true;
 					CharDown(L'\n');
 					return true;
-				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) && Keyboard::IsKeyPressed(KeyCodes::Control) &&
-					!Keyboard::IsKeyPressed(KeyCodes::Alternative) && !Keyboard::IsKeyPressed(KeyCodes::System)) {
+				} else if (!Keyboard::IsKeyPressed(KeyCodes::Shift) && Keyboard::IsKeyPressed(KeyCodes::Control) && !Keyboard::IsKeyPressed(KeyCodes::Alternative) && !Keyboard::IsKeyPressed(KeyCodes::System)) {
 					if (key_code == KeyCodes::Z) { Undo(); return true; }
 					else if (key_code == KeyCodes::X) { Cut(); return true; }
 					else if (key_code == KeyCodes::C) { Copy(); return true; }
@@ -2000,6 +2012,8 @@ namespace Engine
 			}
 			void RichEdit::CharDown(uint32 ucs_code)
 			{
+				auto device = GetRenderingDevice();
+				if (device) device->SetCaretReferenceTime(GetTimerValue());
 				if (!ReadOnly) {
 					if (_save) {
 						_undo.PushCurrentVersion();
@@ -2011,18 +2025,45 @@ namespace Engine
 			}
 			void RichEdit::SetCursor(Point at)
 			{
-				if (ReadOnly) GetStation()->SetCursor(GetStation()->GetSystemCursor(
-					_root->RegularCursorForPosition(at.x - Border, at.y - Border + _vscroll->Position)));
-				else GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::Beam));
+				if (ReadOnly) SelectCursor(_root->RegularCursorForPosition(at.x - Border, at.y - Border + _vscroll->Position));
+				else SelectCursor(Windows::SystemCursorClass::Beam);
 			}
-			Window::RefreshPeriod RichEdit::FocusedRefreshPeriod(void) { return ReadOnly ? Window::RefreshPeriod::None : Window::RefreshPeriod::CaretBlink; }
+			bool RichEdit::IsWindowEventEnabled(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) return !ReadOnly && _undo.CanUndo();
+				else if (handler == Windows::WindowHandler::Redo) return !ReadOnly && _undo.CanRedo();
+				else if (handler == Windows::WindowHandler::Cut) return !ReadOnly && (_caret_pos != _selection_pos || _caret_box != _selection_box);
+				else if (handler == Windows::WindowHandler::Copy) return _caret_pos != _selection_pos || _caret_box != _selection_box;
+				else if (handler == Windows::WindowHandler::Paste) return !ReadOnly && (Clipboard::IsFormatAvailable(Clipboard::Format::Text) || Clipboard::IsFormatAvailable(Clipboard::Format::Image) || Clipboard::IsFormatAvailable(Clipboard::Format::RichText));
+				else if (handler == Windows::WindowHandler::Delete) return !ReadOnly && (_caret_pos != _selection_pos || _caret_box != _selection_box);
+				else if (handler == Windows::WindowHandler::SelectAll) return true;
+				else return false;
+			}
+			void RichEdit::HandleWindowEvent(Windows::WindowHandler handler)
+			{
+				if (handler == Windows::WindowHandler::Undo) Undo();
+				else if (handler == Windows::WindowHandler::Redo) Redo();
+				else if (handler == Windows::WindowHandler::Cut) Cut();
+				else if (handler == Windows::WindowHandler::Copy) Copy();
+				else if (handler == Windows::WindowHandler::Paste) Paste();
+				else if (handler == Windows::WindowHandler::Delete) Delete();
+				else if (handler == Windows::WindowHandler::SelectAll) {
+					_save = true;
+					_caret_box = _selection_box = _root;
+					_selection_pos = 0;
+					_caret_pos = _caret_box->GetMaximalPosition();
+					Invalidate();
+				}
+			}
+			ControlRefreshPeriod RichEdit::GetFocusedRefreshPeriod(void) { return ReadOnly ? ControlRefreshPeriod::None : ControlRefreshPeriod::CaretBlink; }
 			string RichEdit::GetControlClass(void) { return L"RichEdit"; }
 			void RichEdit::Undo(void)
 			{
 				if (!ReadOnly && _undo.CanUndo()) {
 					_undo.Undo();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			void RichEdit::Redo(void)
@@ -2030,7 +2071,8 @@ namespace Engine
 				if (!ReadOnly && _undo.CanRedo()) {
 					_undo.Redo();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			void RichEdit::Cut(void)
@@ -2040,8 +2082,9 @@ namespace Engine
 					_save = true;
 					Copy();
 					_caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					_deferred_scroll = true;
 				}
 			}
@@ -2099,8 +2142,9 @@ namespace Engine
 					_undo.PushCurrentVersion();
 					_save = true;
 					_caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					_deferred_scroll = true;
 				}
 			}
@@ -2113,6 +2157,7 @@ namespace Engine
 					SetAttributedText(contents);
 				}
 				ReadOnly = read_only;
+				Invalidate();
 			}
 			void RichEdit::SetAttributedText(const string & text)
 			{
@@ -2132,8 +2177,10 @@ namespace Engine
 				norm.Encode(ucs.GetBuffer(), Encoding::UTF32, true);
 				_root->DeserializeFromPlainText(index, ucs, pos, 0, 0);
 				_vscroll->SetScrollerPositionSilent(0);
-				_align_contents(WindowPosition);
+				auto device = GetRenderingDevice();
+				if (device) _align_contents(device, ControlBoundaries); else _init = true;
 				_undo.RemoveAllVersions();
+				Invalidate();
 			}
 			string RichEdit::GetAttributedText(void)
 			{
@@ -2165,9 +2212,9 @@ namespace Engine
 					return string(ucs.GetBuffer(), ucs.Length(), Encoding::UTF32);
 				} else return L"";
 			}
-			void RichEdit::ScrollToCaret(void) { _deferred_scroll = true; }
-			void RichEdit::SetContextMenu(Menus::Menu * menu) { _menu.SetRetain(menu); }
-			Menus::Menu * RichEdit::GetContextMenu(void) { return _menu; }
+			void RichEdit::ScrollToCaret(void) { _deferred_scroll = true; Invalidate(); }
+			void RichEdit::SetContextMenu(Windows::IMenu * menu) { _menu.SetRetain(menu); }
+			Windows::IMenu * RichEdit::GetContextMenu(void) { return _menu; }
 			void RichEdit::SetHook(IRichEditHook * hook) { _hook = hook; }
 			RichEdit::IRichEditHook * RichEdit::GetHook(void) { return _hook; }
 			void RichEdit::ClearFontCollection(void) { _font_faces.Clear(); _fonts.Clear(); }
@@ -2192,17 +2239,16 @@ namespace Engine
 			}
 			void RichEdit::RecreateCachedFont(int index)
 			{
-				auto device = GetStation()->GetRenderingDevice();
+				auto device = GetRenderingDevice();
 				if (!device) return;
 				int weight = (_fonts[index].attr & 1) ? 700 : 400;
 				bool italic = (_fonts[index].attr & 2);
 				bool underline = (_fonts[index].attr & 4);
 				bool strikeout = (_fonts[index].attr & 8);
-				_fonts[index].font = device->LoadFont(_font_faces[_fonts[index].face],
-					int(_fonts[index].height * Zoom), weight, italic, underline, strikeout);
+				_fonts[index].font = device->GetParentFactory()->LoadFont(_font_faces[_fonts[index].face], int(_fonts[index].height * CurrentScaleFactor), weight, italic, underline, strikeout);
 			}
-			IFont * RichEdit::GetCachedFont(int index) { if (index < 0 || index >= _fonts.Length()) return 0; return _fonts[index].font; }
-			void RichEdit::RealignContents(void) { _align_contents(WindowPosition); }
+			Graphics::IFont * RichEdit::GetCachedFont(int index) { if (index < 0 || index >= _fonts.Length()) return 0; return _fonts[index].font; }
+			void RichEdit::RealignContents(void) { if (GetRenderingDevice()) _align_contents(GetRenderingDevice(), ControlBoundaries); Invalidate(); }
 			bool RichEdit::IsSelectionEmpty(void) { return !_caret_box || _caret_pos == _selection_pos; }
 			void RichEdit::Print(const string & text)
 			{
@@ -2216,7 +2262,8 @@ namespace Engine
 				_selection_box = _caret_box;
 				_selection_pos = _caret_pos;
 				if (_hook) _hook->CaretPositionChanged(this);
-				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+				Invalidate();
+				GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 			}
 			void RichEdit::PrintAttributed(const string & text)
 			{
@@ -2230,7 +2277,8 @@ namespace Engine
 				_selection_box = _caret_box;
 				_selection_pos = _caret_pos;
 				if (_hook) _hook->CaretPositionChanged(this);
-				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+				Invalidate();
+				GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 			}
 			void RichEdit::SetSelectedTextStyle(int attributes_new, int attributes_mask)
 			{
@@ -2243,7 +2291,8 @@ namespace Engine
 						_caret_box->SetAttributesForRange(_caret_pos, _caret_pos + 1,
 							uint64(attributes_new) << 32, 0, (uint64(attributes_mask) << 32) & RichEditContents::MaskStyleAttributes, 0);
 					}
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			int RichEdit::GetSelectedTextStyle(void)
@@ -2273,7 +2322,8 @@ namespace Engine
 					} else if (_caret_pos < _caret_box->GetMaximalPosition()) {
 						_caret_box->SetAttributesForRange(_caret_pos, _caret_pos + 1, align, 0, RichEditContents::MaskAlignment, 0);
 					}
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			RichEdit::TextAlignment RichEdit::GetSelectedTextAlignment(void)
@@ -2303,7 +2353,8 @@ namespace Engine
 					} else if (_caret_pos < _caret_box->GetMaximalPosition()) {
 						_caret_box->SetAttributesForRange(_caret_pos, _caret_pos + 1, ff, 0, RichEditContents::MaskFontFamily, 0);
 					}
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			string RichEdit::GetSelectedTextFontFamily(void)
@@ -2331,7 +2382,8 @@ namespace Engine
 					} else if (_caret_pos < _caret_box->GetMaximalPosition()) {
 						_caret_box->SetAttributesForRange(_caret_pos, _caret_pos + 1, fh, 0, RichEditContents::MaskFontHeight, 0);
 					}
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			int RichEdit::GetSelectedTextHeight(void)
@@ -2358,7 +2410,8 @@ namespace Engine
 					} else if (_caret_pos < _caret_box->GetMaximalPosition()) {
 						_caret_box->SetAttributesForRange(_caret_pos, _caret_pos + 1, 0, color.Value, 0, RichEditContents::MaskColor);
 					}
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			Color RichEdit::GetSelectedTextColor(void)
@@ -2376,9 +2429,9 @@ namespace Engine
 			}
 			void RichEdit::InsertImage(Codec::Image * image)
 			{
-				auto best_frame = image->GetFrameBestDpiFit(Zoom);
-				uint width = uint(best_frame->GetWidth() / Zoom);
-				uint height = uint(best_frame->GetHeight() / Zoom);
+				auto best_frame = image->GetFrameBestDpiFit(CurrentScaleFactor);
+				uint width = uint(best_frame->GetWidth() / CurrentScaleFactor);
+				uint height = uint(best_frame->GetHeight() / CurrentScaleFactor);
 				Streaming::MemoryStream stream(0x10000);
 				Codec::EncodeImage(&stream, image, L"EIWV");
 				string code = L"\33p" + string(width, HexadecimalBase, 4) + string(height, HexadecimalBase, 4) +
@@ -2393,8 +2446,9 @@ namespace Engine
 				_caret_box->InsertText(ucs, _caret_pos, &_caret_box, &_caret_pos);
 				_selection_box = _caret_box;
 				_selection_pos = _caret_pos;
+				Invalidate();
 				if (_hook) _hook->CaretPositionChanged(this);
-				GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+				GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				_deferred_scroll = true;
 			}
 			bool RichEdit::IsImageSelected(void)
@@ -2420,7 +2474,8 @@ namespace Engine
 							_undo.PushCurrentVersion();
 							_save = true;
 							static_cast<RichEditContents::PictureContents *>(box)->SetImage(image);
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					}
 				}
@@ -2450,7 +2505,8 @@ namespace Engine
 							_undo.PushCurrentVersion();
 							_save = true;
 							static_cast<RichEditContents::PictureContents *>(box)->SetSize(width, height);
-							GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+							Invalidate();
+							GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						}
 					}
 				}
@@ -2511,8 +2567,9 @@ namespace Engine
 					link_code.Encode(ucs.GetBuffer(), Encoding::UTF32, false);
 					_caret_box->InsertText(ucs, _caret_pos, &_caret_box, &_caret_pos);
 					_caret_box->SetAttributesForRange(mn, mn + 1, attr_lo, attr_hi, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					_deferred_scroll = true;
 				}
 			}
@@ -2537,8 +2594,9 @@ namespace Engine
 					_caret_box->ClearSelection(&_caret_pos, &_caret_box, &_selection_pos, &_selection_box);
 					_caret_box->InsertText(ucs, ext_pos, &_caret_box, &_caret_pos);
 					_caret_box->SetAttributesForRange(_selection_pos, _caret_pos, attr_lo, attr_hi, RichEditContents::StyleUnderline, RichEditContents::MaskColor);
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					_deferred_scroll = true;
 				}
 			}
@@ -2549,7 +2607,7 @@ namespace Engine
 					_undo.PushCurrentVersion();
 					_save = true;
 					static_cast<RichEditContents::LinkContents *>(box)->GetResource() = resource;
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			string RichEdit::GetSelectedLinkResource(void)
@@ -2590,8 +2648,9 @@ namespace Engine
 					_caret_box->InsertText(ucs, _caret_pos, &_caret_box, &_caret_pos);
 					_selection_box = _caret_box; _selection_pos = _caret_pos;
 					_caret_box->SetAttributesForRange(mn, mn + 1, attr_lo, attr_hi, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
+					Invalidate();
 					if (_hook) _hook->CaretPositionChanged(this);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 					_deferred_scroll = true;
 				}
 			}
@@ -2635,8 +2694,9 @@ namespace Engine
 						tab->ChildContentsChanged(tab);
 						_caret_box = _selection_box = tab->_cells.ElementAt(index_at);
 						_caret_pos = _selection_pos = 0;
+						Invalidate();
 						if (_hook) _hook->CaretPositionChanged(this);
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						_deferred_scroll = true;
 					}
 				}
@@ -2662,8 +2722,9 @@ namespace Engine
 						tab->ChildContentsChanged(tab);
 						_caret_box = _selection_box = tab->_cells.ElementAt(index_at);
 						_caret_pos = _selection_pos = 0;
+						Invalidate();
 						if (_hook) _hook->CaretPositionChanged(this);
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						_deferred_scroll = true;
 					}
 				}
@@ -2693,8 +2754,9 @@ namespace Engine
 							_caret_box = _selection_box = tab;
 							_caret_pos = _selection_pos = 0;
 						}
+						Invalidate();
 						if (_hook) _hook->CaretPositionChanged(this);
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						_deferred_scroll = true;
 					}
 				}
@@ -2725,8 +2787,9 @@ namespace Engine
 							_caret_box = _selection_box = tab;
 							_caret_pos = _selection_pos = 0;
 						}
+						Invalidate();
 						if (_hook) _hook->CaretPositionChanged(this);
-						GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+						GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 						_deferred_scroll = true;
 					}
 				}
@@ -2746,7 +2809,8 @@ namespace Engine
 					}
 					for (int i = from; i < to; i++) tab->_col_widths[i % tab->_size_x] = width;
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			void RichEdit::AdjustSelectedTableColumnWidth(void)
@@ -2769,10 +2833,11 @@ namespace Engine
 							int lw = tab->_cells[col + j * tab->_size_x].GetContentsWidth();
 							if (lw > width) width = lw;
 						}
-						tab->_col_widths[col] = int(width / Zoom) + 1;
+						tab->_col_widths[col] = int(width / CurrentScaleFactor) + 1;
 					}
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			int RichEdit::GetSelectedTableColumnWidth(int index)
@@ -2792,7 +2857,8 @@ namespace Engine
 					tab->_border_c = color;
 					tab->ResetCache();
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			Color RichEdit::GetSelectedTableBorderColor(void)
@@ -2820,7 +2886,8 @@ namespace Engine
 					for (int i = from; i < to; i++) tab->_cell_colors[i] = color;
 					tab->ResetCache();
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			Color RichEdit::GetSelectedTableCellBackground(Point cell)
@@ -2851,7 +2918,8 @@ namespace Engine
 					else if (align == RichEdit::TextVerticalAlignment::Bottom) alg = 2;
 					for (int i = from; i < to; i++) tab->_cell_aligns[i] = alg;
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			RichEdit::TextVerticalAlignment RichEdit::GetSelectedTableCellVerticalAlignment(Point cell)
@@ -2873,7 +2941,8 @@ namespace Engine
 					auto tab = static_cast<RichEditContents::TableContents *>(table);
 					tab->_border_w = width;
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			int RichEdit::GetSelectedTableBorderWidth(void)
@@ -2892,7 +2961,8 @@ namespace Engine
 					auto tab = static_cast<RichEditContents::TableContents *>(table);
 					tab->_border_v = width;
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			int RichEdit::GetSelectedTableVerticalBorderWidth(void)
@@ -2911,7 +2981,8 @@ namespace Engine
 					auto tab = static_cast<RichEditContents::TableContents *>(table);
 					tab->_border_h = width;
 					tab->ChildContentsChanged(tab);
-					GetParent()->RaiseEvent(ID, Event::ValueChange, this);
+					Invalidate();
+					GetParent()->RaiseEvent(ID, ControlEvent::ValueChange, this);
 				}
 			}
 			int RichEdit::GetSelectedTableHorizontalBorderWidth(void)
@@ -2923,10 +2994,10 @@ namespace Engine
 				}
 				return 0;
 			}
-			void RichEdit::IRichEditHook::InitializeContextMenu(Menus::Menu * menu, RichEdit * sender) {}
+			void RichEdit::IRichEditHook::InitializeContextMenu(Windows::IMenu * menu, RichEdit * sender) {}
 			void RichEdit::IRichEditHook::LinkPressed(const string & resource, RichEdit * sender) {}
 			void RichEdit::IRichEditHook::CaretPositionChanged(RichEdit * sender) {}
-			ITexture * RichEdit::IRichEditHook::GetImageByName(const string & resource, RichEdit * sender) { return 0; }
+			Graphics::IBitmap * RichEdit::IRichEditHook::GetImageByName(const string & resource, RichEdit * sender) { return 0; }
 			void RichEdit::ContentBox::UnifyBoxForSelection(int * pos1, ContentBox ** box1, int * pos2, ContentBox ** box2)
 			{
 				if (*box1 == *box2) return;
@@ -3025,8 +3096,10 @@ namespace Engine
 				_edit->_hot_box = 0;
 				_edit->_state = 0;
 				_edit->_save = true;
-				_edit->_align_contents(_edit->WindowPosition);
+				auto device = _edit->GetRenderingDevice();
+				if (device) _edit->_align_contents(device, _edit->ControlBoundaries); else _edit->_init = true;
 				_edit->ScrollToCaret();
+				_edit->Invalidate();
 			}
 		}
 	}

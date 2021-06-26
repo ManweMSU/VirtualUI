@@ -14,9 +14,9 @@ namespace Engine
 				class BookmarkArgumentProvider : public IArgumentProvider
 				{
 				public:
-					IFont * font;
+					Graphics::IFont * font;
 					const string * text;
-					BookmarkArgumentProvider(IFont * fnt, const string * txt) : font(fnt), text(txt) {}
+					BookmarkArgumentProvider(Graphics::IFont * fnt, const string * txt) : font(fnt), text(txt) {}
 					virtual void GetArgument(const string & name, int * value) override { *value = 0; }
 					virtual void GetArgument(const string & name, double * value) override { *value = 0.0; }
 					virtual void GetArgument(const string & name, Color * value) override { *value = 0; }
@@ -25,8 +25,8 @@ namespace Engine
 						if (name == L"Text") *value = *text;
 						else *value = L"";
 					}
-					virtual void GetArgument(const string & name, ITexture ** value) override { *value = 0; }
-					virtual void GetArgument(const string & name, IFont ** value) override
+					virtual void GetArgument(const string & name, Graphics::IBitmap ** value) override { *value = 0; }
+					virtual void GetArgument(const string & name, Graphics::IFont ** value) override
 					{
 						if (name == L"Font" && font) {
 							*value = font;
@@ -35,145 +35,147 @@ namespace Engine
 					}
 				};
 			}
-			ControlGroup::ControlGroup(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
-			ControlGroup::ControlGroup(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			ControlGroup::ControlGroup(void) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			ControlGroup::ControlGroup(Template::ControlTemplate * Template, IControlFactory * Factory)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ControlGroup") throw InvalidArgumentException();
 				static_cast<Template::Controls::ControlGroup &>(*this) = static_cast<Template::Controls::ControlGroup &>(*Template->Properties);
-				Constructor::ConstructChildren(this, Template);
+				CreateChildrenControls(this, Template, Factory);
 			}
 			ControlGroup::~ControlGroup(void) {}
-			void ControlGroup::Render(const Box & at)
+			void ControlGroup::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				auto args = ZeroArgumentProvider();
 				if (!_background && Background) _background.SetReference(Background->Initialize(&args));
-				if (_background) _background->Render(GetStation()->GetRenderingDevice(), at);
-				ParentWindow::Render(at);
+				if (_background) _background->Render(device, at);
+				device->PushClip(at);
+				ParentControl::Render(device, at);
+				device->PopClip();
 			}
-			void ControlGroup::ResetCache(void) { _background.SetReference(0); ParentWindow::ResetCache(); }
+			void ControlGroup::ResetCache(void) { _background.SetReference(0); ParentControl::ResetCache(); }
 			void ControlGroup::Enable(bool enable) {}
 			bool ControlGroup::IsEnabled(void) { return true; }
-			void ControlGroup::Show(bool visible) { Invisible = !visible; }
+			void ControlGroup::Show(bool visible) { Invisible = !visible; Invalidate(); }
 			bool ControlGroup::IsVisible(void) { return !Invisible; }
 			void ControlGroup::SetID(int _ID) { ID = _ID; }
 			int ControlGroup::GetID(void) { return ID; }
-			void ControlGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void ControlGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle ControlGroup::GetRectangle(void) { return ControlPosition; }
 			string ControlGroup::GetControlClass(void) { return L"ControlGroup"; }
-			void ControlGroup::SetInnerControls(Template::ControlTemplate * Template)
+			void ControlGroup::SetInnerControls(Template::ControlTemplate * Template, IControlFactory * Factory)
 			{
-				while (ChildrenCount()) Child(0)->Destroy();
-				if (Template) Constructor::ConstructChildren(this, Template);
+				while (ChildrenCount()) RemoveChildAt(0);
+				if (Template) CreateChildrenControls(this, Template, Factory);
 			}
 
-			RadioButtonGroup::RadioButtonGroup(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
-			RadioButtonGroup::RadioButtonGroup(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			RadioButtonGroup::RadioButtonGroup(void) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			RadioButtonGroup::RadioButtonGroup(Template::ControlTemplate * Template)
 			{
 				if (Template->Properties->GetTemplateClass() != L"RadioButtonGroup") throw InvalidArgumentException();
 				static_cast<Template::Controls::RadioButtonGroup &>(*this) = static_cast<Template::Controls::RadioButtonGroup &>(*Template->Properties);
 				for (int i = 0; i < Template->Children.Length(); i++) {
-					Station->CreateWindow<RadioButton>(this, &Template->Children[i]);
+					SafePointer<Control> child = new RadioButton(&Template->Children[i]);
+					AddChild(child);
 				}
 			}
 			RadioButtonGroup::~RadioButtonGroup(void) {}
-			void RadioButtonGroup::Render(const Box & at)
+			void RadioButtonGroup::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				auto args = ZeroArgumentProvider();
 				if (!_background && Background) _background.SetReference(Background->Initialize(&args));
-				if (_background) _background->Render(GetStation()->GetRenderingDevice(), at);
-				ParentWindow::Render(at);
+				if (_background) _background->Render(device, at);
+				ParentControl::Render(device, at);
 			}
-			void RadioButtonGroup::ResetCache(void) { _background.SetReference(0); ParentWindow::ResetCache(); }
-			void RadioButtonGroup::Enable(bool enable) { Disabled = !enable; }
+			void RadioButtonGroup::ResetCache(void) { _background.SetReference(0); ParentControl::ResetCache(); }
+			void RadioButtonGroup::Enable(bool enable) { Disabled = !enable; Invalidate(); }
 			bool RadioButtonGroup::IsEnabled(void) { return !Disabled; }
-			void RadioButtonGroup::Show(bool visible) { Invisible = !visible; }
+			void RadioButtonGroup::Show(bool visible) { Invisible = !visible; Invalidate(); }
 			bool RadioButtonGroup::IsVisible(void) { return !Invisible; }
 			void RadioButtonGroup::SetID(int _ID) { ID = _ID; }
 			int RadioButtonGroup::GetID(void) { return ID; }
-			void RadioButtonGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void RadioButtonGroup::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle RadioButtonGroup::GetRectangle(void) { return ControlPosition; }
 			string RadioButtonGroup::GetControlClass(void) { return L"RadioButtonGroup"; }
-			void RadioButtonGroup::CheckRadioButton(Window * window) { for (int i = 0; i < ChildrenCount(); i++) static_cast<RadioButton *>(Child(i))->Checked = window == Child(i); }
-			void RadioButtonGroup::CheckRadioButton(int ID) { for (int i = 0; i < ChildrenCount(); i++) static_cast<RadioButton *>(Child(i))->Checked = ID == Child(i)->GetID(); }
+			void RadioButtonGroup::CheckRadioButton(Control * window) { for (int i = 0; i < ChildrenCount(); i++) static_cast<RadioButton *>(Child(i))->Checked = window == Child(i); Invalidate(); }
+			void RadioButtonGroup::CheckRadioButton(int ID) { for (int i = 0; i < ChildrenCount(); i++) static_cast<RadioButton *>(Child(i))->Checked = ID == Child(i)->GetID(); Invalidate(); }
 			int RadioButtonGroup::GetCheckedButton(void)
 			{
 				for (int i = 0; i < ChildrenCount(); i++) if (static_cast<RadioButton *>(Child(i))->Checked) return Child(i)->GetID();
 				return 0;
 			}
 
-			ScrollBoxVirtual::ScrollBoxVirtual(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) {}
+			ScrollBoxVirtual::ScrollBoxVirtual(void) {}
 			ScrollBoxVirtual::~ScrollBoxVirtual(void) {}
-			void ScrollBoxVirtual::SetPosition(const Box & box) { WindowPosition = box; }
-			void ScrollBoxVirtual::ArrangeChildren(void) { GetParent()->ArrangeChildren(); }
+			void ScrollBoxVirtual::SetPosition(const Box & box) { ControlBoundaries = box; }
+			void ScrollBoxVirtual::ArrangeChildren(void) { if (GetParent()) GetParent()->ArrangeChildren(); }
 			string ScrollBoxVirtual::GetControlClass(void) { return L"ScrollBoxVirtual"; }
 
-			ScrollBox::ScrollBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station)
+			ScrollBox::ScrollBox(void)
 			{
 				ControlPosition = Rectangle::Invalid();
 				Reflection::PropertyZeroInitializer Initializer;
 				EnumerateProperties(Initializer);
-				_virtual = Station->CreateWindow<ScrollBoxVirtual>(this);
+				SafePointer<ScrollBoxVirtual> virt = new ScrollBoxVirtual;
+				AddChild(virt);
+				_virtual = virt;
 				ResetCache();
 			}
-			ScrollBox::ScrollBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			ScrollBox::ScrollBox(Template::ControlTemplate * Template, IControlFactory * Factory)
 			{
 				if (Template->Properties->GetTemplateClass() != L"ScrollBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::ScrollBox &>(*this) = static_cast<Template::Controls::ScrollBox &>(*Template->Properties);
-				_virtual = Station->CreateWindow<ScrollBoxVirtual>(this);
+				SafePointer<ScrollBoxVirtual> virt = new ScrollBoxVirtual;
+				AddChild(virt);
+				_virtual = virt;
 				ResetCache();
-				Constructor::ConstructChildren(_virtual, Template);
+				CreateChildrenControls(_virtual, Template, Factory);
 			}
 			ScrollBox::~ScrollBox(void) {}
-			void ScrollBox::Render(const Box & at)
+			void ScrollBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				if (!_background && Background) {
 					auto args = ZeroArgumentProvider();
 					_background.SetReference(Background->Initialize(&args));
 				}
-				auto device = GetStation()->GetRenderingDevice();
 				if (_background) _background->Render(device, at);
-				if (_show_vs) {
-					auto vs_box = _vertical->GetPosition();
-					auto vsr_box = Box(vs_box.Left + at.Left, vs_box.Top + at.Top,
-						vs_box.Right + at.Left, vs_box.Bottom + at.Top);
-					device->PushClip(vsr_box);
-					_vertical->Render(vsr_box);
-					device->PopClip();
-				}
-				if (_show_hs) {
-					auto hs_box = _horizontal->GetPosition();
-					auto hsr_box = Box(hs_box.Left + at.Left, hs_box.Top + at.Top,
-						hs_box.Right + at.Left, hs_box.Bottom + at.Top);
-					device->PushClip(hsr_box);
-					_horizontal->Render(hsr_box);
-					device->PopClip();
-				}
 				auto box = _virtual->GetPosition();
-				auto width = WindowPosition.Right - WindowPosition.Left;
-				auto height = WindowPosition.Bottom - WindowPosition.Top;
+				auto width = ControlBoundaries.Right - ControlBoundaries.Left;
+				auto height = ControlBoundaries.Bottom - ControlBoundaries.Top;
 				auto vbox = Box(Border + at.Left, Border + at.Top,
 					width - Border - (_show_vs ? VerticalScrollSize : 0) + at.Left,
 					height - Border - (_show_hs ? HorizontalScrollSize : 0) + at.Top);
-				auto render_box = Box(box.Left + at.Left, box.Top + at.Top,
-					box.Right + at.Left, box.Bottom + at.Top);
+				auto render_box = Box(box.Left + at.Left, box.Top + at.Top, box.Right + at.Left, box.Bottom + at.Top);
 				device->PushClip(vbox);
-				_virtual->Render(render_box);
+				_virtual->Render(device, render_box);
 				device->PopClip();
+				if (_show_vs) {
+					auto vs_box = _vertical->GetPosition();
+					auto vsr_box = Box(vs_box.Left + at.Left, vs_box.Top + at.Top, vs_box.Right + at.Left, vs_box.Bottom + at.Top);
+					_vertical->Render(device, vsr_box);
+				}
+				if (_show_hs) {
+					auto hs_box = _horizontal->GetPosition();
+					auto hsr_box = Box(hs_box.Left + at.Left, hs_box.Top + at.Top, hs_box.Right + at.Left, hs_box.Bottom + at.Top);
+					_horizontal->Render(device, hsr_box);
+				}
 			}
 			void ScrollBox::ResetCache(void)
 			{
 				_background.SetReference(0);
 				for (int i = 0; i < ChildrenCount(); i++) Child(i)->ResetCache();
 				if (_vertical) {
-					_vertical->Destroy();
+					_vertical->RemoveFromParent();
 					_vertical = 0;
 				}
 				if (_horizontal) {
-					_horizontal->Destroy();
+					_horizontal->RemoveFromParent();
 					_horizontal = 0;
 				}
-				_vertical = GetStation()->CreateWindow<VerticalScrollBar>(this, static_cast<Template::Controls::ScrollBox *>(this));
-				_horizontal = GetStation()->CreateWindow<HorizontalScrollBar>(this, static_cast<Template::Controls::ScrollBox *>(this));
+				SafePointer<VerticalScrollBar> vert = new VerticalScrollBar(static_cast<Template::Controls::ScrollBox *>(this));
+				SafePointer<HorizontalScrollBar> horz = new HorizontalScrollBar(static_cast<Template::Controls::ScrollBox *>(this));
+				AddChild(vert); AddChild(horz);
+				_vertical = vert;
+				_horizontal = horz;
 				_vertical->Line = VerticalLine;
 				_horizontal->Line = HorizontalLine;
 				_vertical->Disabled = Disabled;
@@ -187,11 +189,11 @@ namespace Engine
 					auto position = _virtual->Child(i)->GetRectangle();
 					if (position.IsValid()) {
 						if (position.Right.Anchor == 0.0) {
-							int w = position.Right.Absolute + int(position.Right.Zoom * Zoom);
+							int w = position.Right.Absolute + int(position.Right.Zoom * CurrentScaleFactor);
 							if (w > mw) mw = w;
 						}
 						if (position.Bottom.Anchor == 0.0) {
-							int h = position.Bottom.Absolute + int(position.Bottom.Zoom * Zoom);
+							int h = position.Bottom.Absolute + int(position.Bottom.Zoom * CurrentScaleFactor);
 							if (h > mh) mh = h;
 						}
 					} else {
@@ -200,8 +202,8 @@ namespace Engine
 						if (box.Bottom > mh) mh = box.Bottom;
 					}
 				}
-				int available_width = WindowPosition.Right - WindowPosition.Left - (Border << 1);
-				int available_height = WindowPosition.Bottom - WindowPosition.Top - (Border << 1);
+				int available_width = ControlBoundaries.Right - ControlBoundaries.Left - (Border << 1);
+				int available_height = ControlBoundaries.Bottom - ControlBoundaries.Top - (Border << 1);
 				_show_vs = (mh > available_height) || (mw > available_width && mh > available_height - HorizontalScrollSize);
 				_show_hs = (mw > available_width) || (mh > available_height && mw > available_width - VerticalScrollSize);
 				if (_show_vs) available_width -= VerticalScrollSize;
@@ -226,21 +228,20 @@ namespace Engine
 				_virtual->SetPosition(Box(Border + dx, Border + dy, Border + dx + mw, Border + dy + mh));
 				for (int i = 0; i < _virtual->ChildrenCount(); i++) {
 					auto rect = _virtual->Child(i)->GetRectangle();
-					if (rect.IsValid()) {
-						_virtual->Child(i)->SetPosition(Box(rect, align_box));
-					}
+					if (rect.IsValid()) _virtual->Child(i)->SetPosition(Box(rect, align_box));
 				}
+				Invalidate();
 			}
-			void ScrollBox::Enable(bool enable) { Disabled = !enable; _vertical->Enable(enable); _horizontal->Enable(enable); }
+			void ScrollBox::Enable(bool enable) { Disabled = !enable; _vertical->Enable(enable); _horizontal->Enable(enable); Invalidate(); }
 			bool ScrollBox::IsEnabled(void) { return !Disabled; }
-			void ScrollBox::Show(bool visible) { Invisible = !visible; }
+			void ScrollBox::Show(bool visible) { Invisible = !visible; Invalidate(); }
 			bool ScrollBox::IsVisible(void) { return !Invisible; }
 			void ScrollBox::SetID(int _ID) { ID = _ID; }
 			int ScrollBox::GetID(void) { return ID; }
-			void ScrollBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void ScrollBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle ScrollBox::GetRectangle(void) { return ControlPosition; }
-			void ScrollBox::SetPosition(const Box & box) { WindowPosition = box; ArrangeChildren(); }
-			void ScrollBox::RaiseEvent(int ID, Event event, Window * sender)
+			void ScrollBox::SetPosition(const Box & box) { ControlBoundaries = box; ArrangeChildren(); }
+			void ScrollBox::RaiseEvent(int ID, ControlEvent event, Control * sender)
 			{
 				if (sender == _vertical || sender == _horizontal) {
 					auto pos = _virtual->GetPosition();
@@ -249,11 +250,12 @@ namespace Engine
 					auto dx = -_horizontal->Position;
 					auto dy = -_vertical->Position;
 					_virtual->SetPosition(Box(Border + dx, Border + dy, Border + dx + vw, Border + dy + vh));
-				} else GetParent()->RaiseEvent(ID, event, sender);
+					Invalidate();
+				} else if (GetParent()) GetParent()->RaiseEvent(ID, event, sender);
 			}
 			void ScrollBox::ScrollVertically(double delta) { _vertical->SetScrollerPosition(_vertical->Position + int(delta * double(_vertical->Line))); }
 			void ScrollBox::ScrollHorizontally(double delta) { _horizontal->SetScrollerPosition(_horizontal->Position + int(delta * double(_horizontal->Line))); }
-			Window * ScrollBox::HitTest(Point at)
+			Control * ScrollBox::HitTest(Point at)
 			{
 				if (Disabled) return this;
 				auto vs_box = _vertical->GetPosition();
@@ -265,8 +267,8 @@ namespace Engine
 					return _horizontal->HitTest(Point(at.x - hs_box.Left, at.y - hs_box.Top));
 				}
 				auto box = _virtual->GetPosition();
-				auto width = WindowPosition.Right - WindowPosition.Left;
-				auto height = WindowPosition.Bottom - WindowPosition.Top;
+				auto width = ControlBoundaries.Right - ControlBoundaries.Left;
+				auto height = ControlBoundaries.Bottom - ControlBoundaries.Top;
 				auto vbox = Box(Border, Border, width - Border - (_show_vs ? VerticalScrollSize : 0), height - Border - (_show_hs ? HorizontalScrollSize : 0));
 				if (vbox.IsInside(at)) {
 					return _virtual->HitTest(Point(at.x - box.Left, at.y - box.Top));
@@ -274,18 +276,24 @@ namespace Engine
 				return this;
 			}
 			string ScrollBox::GetControlClass(void) { return L"ScrollBox"; }
-			Window * ScrollBox::GetVirtualGroup(void) { return _virtual; }
+			Control * ScrollBox::GetVirtualGroup(void) { return _virtual; }
 
-			SplitBoxPart::SplitBoxPart(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Size = 0; }
-			SplitBoxPart::SplitBoxPart(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			SplitBoxPart::SplitBoxPart(void) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); Size = 0; }
+			SplitBoxPart::SplitBoxPart(Template::ControlTemplate * Template, IControlFactory * Factory)
 			{
 				if (Template->Properties->GetTemplateClass() != L"SplitBoxPart") throw InvalidArgumentException();
 				static_cast<Template::Controls::SplitBoxPart &>(*this) = static_cast<Template::Controls::SplitBoxPart &>(*Template->Properties);
 				Size = 0;
-				Constructor::ConstructChildren(this, Template);
+				CreateChildrenControls(this, Template, Factory);
 			}
 			SplitBoxPart::~SplitBoxPart(void) {}
-			void SplitBoxPart::Show(bool visible) { Invisible = !visible; GetParent()->ArrangeChildren(); }
+			void SplitBoxPart::Render(Graphics::I2DDeviceContext * device, const Box & at)
+			{
+				device->PushClip(at);
+				ParentControl::Render(device, at);
+				device->PopClip();
+			}
+			void SplitBoxPart::Show(bool visible) { Invisible = !visible; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			bool SplitBoxPart::IsVisible(void){ return !Invisible; }
 			void SplitBoxPart::SetID(int _ID) { ID = _ID; }
 			int SplitBoxPart::GetID(void) { return ID; }
@@ -293,23 +301,25 @@ namespace Engine
 			Rectangle SplitBoxPart::GetRectangle(void) { return ControlPosition; }
 			string SplitBoxPart::GetControlClass(void) { return L"SplitBoxPart"; }
 
-			VerticalSplitBox::VerticalSplitBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
-			VerticalSplitBox::VerticalSplitBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			VerticalSplitBox::VerticalSplitBox(void) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
+			VerticalSplitBox::VerticalSplitBox(Template::ControlTemplate * Template, IControlFactory * Factory)
 			{
 				if (Template->Properties->GetTemplateClass() != L"VerticalSplitBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::VerticalSplitBox &>(*this) = static_cast<Template::Controls::VerticalSplitBox &>(*Template->Properties);
 				ResetCache();
-				for (int i = 0; i < Template->Children.Length(); i++) auto part = Station->CreateWindow<SplitBoxPart>(this, &Template->Children[i]);
+				for (int i = 0; i < Template->Children.Length(); i++) {
+					SafePointer<SplitBoxPart> part = new SplitBoxPart(&Template->Children[i], Factory);
+					AddChild(part);
+				}
 			}
 			VerticalSplitBox::~VerticalSplitBox(void) {}
-			void VerticalSplitBox::Render(const Box & at)
+			void VerticalSplitBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				int index = 0;
 				for (int i = 0; i < ChildrenCount() - 1; i++) {
 					if (!Child(i)->IsVisible()) continue;
 					auto box = Child(i)->GetPosition();
 					auto splitter = Box(at.Left, at.Top + box.Bottom, at.Right, at.Top + box.Bottom + SplitterSize);
-					auto device = GetStation()->GetRenderingDevice();
 					if (_part == index && _state == 2) {
 						if (_splitter_pressed) _splitter_pressed->Render(device, splitter);
 					} else if (_part == i && _state == 1) {
@@ -319,7 +329,7 @@ namespace Engine
 					}
 					index++;
 				}
-				ParentWindow::Render(at);
+				ParentControl::Render(device, at);
 			}
 			void VerticalSplitBox::ResetCache(void)
 			{
@@ -327,19 +337,19 @@ namespace Engine
 				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&args) : 0);
 				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&args) : 0);
 				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&args) : 0);
-				ParentWindow::ResetCache();
+				ParentControl::ResetCache();
 			}
-			void VerticalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } }
+			void VerticalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } Invalidate(); }
 			bool VerticalSplitBox::IsEnabled(void) { return !Disabled; }
-			void VerticalSplitBox::Show(bool visible) { Invisible = !visible; if (Invisible) { _state = 0; _part = -1; } }
+			void VerticalSplitBox::Show(bool visible) { Invisible = !visible; if (Invisible) { _state = 0; _part = -1; } Invalidate(); }
 			bool VerticalSplitBox::IsVisible(void) { return !Invisible; }
 			void VerticalSplitBox::SetID(int _ID) { ID = _ID; }
 			int VerticalSplitBox::GetID(void) { return ID; }
-			void VerticalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void VerticalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle VerticalSplitBox::GetRectangle(void) { return ControlPosition; }
 			void VerticalSplitBox::ArrangeChildren(void)
 			{
-				auto & box = WindowPosition;
+				auto & box = ControlBoundaries;
 				int visible_count = 0;
 				for (int i = 0; i < ChildrenCount(); i++) if (Child(i)->IsVisible()) visible_count++;
 				int size = box.Bottom - box.Top;
@@ -350,7 +360,7 @@ namespace Engine
 						auto child = static_cast<SplitBoxPart *>(Child(i));
 						auto rect = child->GetRectangle();
 						child->SetRectangle(Rectangle::Invalid());
-						int part_size = rect.Bottom.Absolute + int(rect.Bottom.Zoom * Zoom) + int(available_size * rect.Bottom.Anchor);
+						int part_size = rect.Bottom.Absolute + int(rect.Bottom.Zoom * CurrentScaleFactor) + int(available_size * rect.Bottom.Anchor);
 						child->Size = part_size;
 					}
 					_initialized = true;
@@ -391,23 +401,26 @@ namespace Engine
 					Child(i)->SetPosition(Box(0, pos, width, pos + part_size));
 					pos += part_size + SplitterSize;
 				}
+				Invalidate();
 			}
-			void VerticalSplitBox::SetPosition(const Box & box) { WindowPosition = box; ArrangeChildren(); }
-			void VerticalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; } }
+			void VerticalSplitBox::SetPosition(const Box & box) { ControlBoundaries = box; ArrangeChildren(); Invalidate(); }
+			void VerticalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; Invalidate(); } }
 			void VerticalSplitBox::LeftButtonDown(Point at)
 			{
 				if (_state == 1 && _part != -1) {
 					_state = 2;
 					_mouse = at.y;
+					Invalidate();
 				}
 			}
 			void VerticalSplitBox::LeftButtonUp(Point at) { ReleaseCapture(); }
 			void VerticalSplitBox::MouseMove(Point at)
 			{
 				if (_state != 2) {
+					int part = _part, state = _state;
 					int pos = 0;
 					_part = -1;
-					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+					if (IsHovered()) {
 						int index = 0;
 						for (int i = 0; i < ChildrenCount() - 1; i++) {
 							auto child = static_cast<SplitBoxPart *>(Child(i));
@@ -421,6 +434,7 @@ namespace Engine
 						_state = 1;
 						SetCapture();
 					} else if (_state == 1) ReleaseCapture();
+					if (part != _part || state != _state) Invalidate();
 				} else {
 					int mouse = at.y;
 					int ds = at.y - _mouse;
@@ -451,29 +465,32 @@ namespace Engine
 						right_box.Top += ds;
 						left->SetPosition(left_box);
 						right->SetPosition(right_box);
+						Invalidate();
 					}
 				}
 			}
-			void VerticalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeUpDown)); }
+			void VerticalSplitBox::SetCursor(Point at) { SelectCursor(Windows::SystemCursorClass::SizeUpDown); }
 			string VerticalSplitBox::GetControlClass(void) { return L"VerticalSplitBox"; }
 
-			HorizontalSplitBox::HorizontalSplitBox(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
-			HorizontalSplitBox::HorizontalSplitBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station)
+			HorizontalSplitBox::HorizontalSplitBox(void) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); ResetCache(); }
+			HorizontalSplitBox::HorizontalSplitBox(Template::ControlTemplate * Template, IControlFactory * Factory)
 			{
 				if (Template->Properties->GetTemplateClass() != L"HorizontalSplitBox") throw InvalidArgumentException();
 				static_cast<Template::Controls::HorizontalSplitBox &>(*this) = static_cast<Template::Controls::HorizontalSplitBox &>(*Template->Properties);
 				ResetCache();
-				for (int i = 0; i < Template->Children.Length(); i++) auto part = Station->CreateWindow<SplitBoxPart>(this, &Template->Children[i]);
+				for (int i = 0; i < Template->Children.Length(); i++) {
+					SafePointer<SplitBoxPart> part = new SplitBoxPart(&Template->Children[i], Factory);
+					AddChild(part);
+				}
 			}
 			HorizontalSplitBox::~HorizontalSplitBox(void) {}
-			void HorizontalSplitBox::Render(const Box & at)
+			void HorizontalSplitBox::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
 				int index = 0;
 				for (int i = 0; i < ChildrenCount() - 1; i++) {
 					if (!Child(i)->IsVisible()) continue;
 					auto box = Child(i)->GetPosition();
 					auto splitter = Box(at.Left + box.Right, at.Top, at.Left + box.Right + SplitterSize, at.Bottom);
-					auto device = GetStation()->GetRenderingDevice();
 					if (_part == index && _state == 2) {
 						if (_splitter_pressed) _splitter_pressed->Render(device, splitter);
 					} else if (_part == i && _state == 1) {
@@ -483,7 +500,7 @@ namespace Engine
 					}
 					index++;
 				}
-				ParentWindow::Render(at);
+				ParentControl::Render(device, at);
 			}
 			void HorizontalSplitBox::ResetCache(void)
 			{
@@ -491,19 +508,19 @@ namespace Engine
 				_splitter_normal.SetReference(ViewSplitterNormal ? ViewSplitterNormal->Initialize(&args) : 0);
 				_splitter_hot.SetReference(ViewSplitterHot ? ViewSplitterHot->Initialize(&args) : 0);
 				_splitter_pressed.SetReference(ViewSplitterPressed ? ViewSplitterPressed->Initialize(&args) : 0);
-				ParentWindow::ResetCache();
+				ParentControl::ResetCache();
 			}
-			void HorizontalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } }
+			void HorizontalSplitBox::Enable(bool enable) { Disabled = !enable; if (Disabled) { _state = 0; _part = -1; } Invalidate(); }
 			bool HorizontalSplitBox::IsEnabled(void) { return !Disabled; }
-			void HorizontalSplitBox::Show(bool visible) { Invisible = !visible; if (Invisible) { _state = 0; _part = -1; } }
+			void HorizontalSplitBox::Show(bool visible) { Invisible = !visible; if (Invisible) { _state = 0; _part = -1; } Invalidate(); }
 			bool HorizontalSplitBox::IsVisible(void) { return !Invisible; }
 			void HorizontalSplitBox::SetID(int _ID) { ID = _ID; }
 			int HorizontalSplitBox::GetID(void) { return ID; }
-			void HorizontalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void HorizontalSplitBox::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle HorizontalSplitBox::GetRectangle(void) { return ControlPosition; }
 			void HorizontalSplitBox::ArrangeChildren(void)
 			{
-				auto & box = WindowPosition;
+				auto & box = ControlBoundaries;
 				int visible_count = 0;
 				for (int i = 0; i < ChildrenCount(); i++) if (Child(i)->IsVisible()) visible_count++;
 				int size = box.Right - box.Left;
@@ -514,7 +531,7 @@ namespace Engine
 						auto child = static_cast<SplitBoxPart *>(Child(i));
 						auto rect = child->GetRectangle();
 						child->SetRectangle(Rectangle::Invalid());
-						int part_size = rect.Right.Absolute + int(rect.Right.Zoom * Zoom) + int(available_size * rect.Right.Anchor);
+						int part_size = rect.Right.Absolute + int(rect.Right.Zoom * CurrentScaleFactor) + int(available_size * rect.Right.Anchor);
 						child->Size = part_size;
 					}
 					_initialized = true;
@@ -555,23 +572,26 @@ namespace Engine
 					Child(i)->SetPosition(Box(pos, 0, pos + part_size, height));
 					pos += part_size + SplitterSize;
 				}
+				Invalidate();
 			}
-			void HorizontalSplitBox::SetPosition(const Box & box) { WindowPosition = box; ArrangeChildren(); }
-			void HorizontalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; } }
+			void HorizontalSplitBox::SetPosition(const Box & box) { ControlBoundaries = box; ArrangeChildren(); Invalidate(); }
+			void HorizontalSplitBox::CaptureChanged(bool got_capture) { if (!got_capture) { _state = 0; _part = -1; Invalidate(); } }
 			void HorizontalSplitBox::LeftButtonDown(Point at)
 			{
 				if (_state == 1 && _part != -1) {
 					_state = 2;
 					_mouse = at.x;
+					Invalidate();
 				}
 			}
 			void HorizontalSplitBox::LeftButtonUp(Point at) { ReleaseCapture(); }
 			void HorizontalSplitBox::MouseMove(Point at)
 			{
 				if (_state != 2) {
+					int part = _part, state = _state;
 					int pos = 0;
 					_part = -1;
-					if (GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+					if (IsHovered()) {
 						int index = 0;
 						for (int i = 0; i < ChildrenCount() - 1; i++) {
 							auto child = static_cast<SplitBoxPart *>(Child(i));
@@ -585,6 +605,7 @@ namespace Engine
 						_state = 1;
 						SetCapture();
 					} else if (_state == 1) ReleaseCapture();
+					if (part != _part || state != _state) Invalidate();
 				} else {
 					int mouse = at.x;
 					int ds = at.x - _mouse;
@@ -615,14 +636,15 @@ namespace Engine
 						right_box.Left += ds;
 						left->SetPosition(left_box);
 						right->SetPosition(right_box);
+						Invalidate();
 					}
 				}
 			}
-			void HorizontalSplitBox::SetCursor(Point at) { GetStation()->SetCursor(GetStation()->GetSystemCursor(SystemCursor::SizeLeftRight)); }
+			void HorizontalSplitBox::SetCursor(Point at) { SelectCursor(Windows::SystemCursorClass::SizeLeftRight); }
 			string HorizontalSplitBox::GetControlClass(void) { return L"HorizontalSplitBox"; }
 
-			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station) : ParentWindow(Parent, Station), _bookmarks(4) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
-			BookmarkView::BookmarkView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template) : ParentWindow(Parent, Station), _bookmarks(4)
+			BookmarkView::BookmarkView(void) : _bookmarks(4) { ControlPosition = Rectangle::Invalid(); Reflection::PropertyZeroInitializer Initializer; EnumerateProperties(Initializer); }
+			BookmarkView::BookmarkView(Template::ControlTemplate * Template, IControlFactory * Factory) : _bookmarks(4)
 			{
 				if (Template->Properties->GetTemplateClass() != L"BookmarkView") throw InvalidArgumentException();
 				static_cast<Template::Controls::BookmarkView &>(*this) = static_cast<Template::Controls::BookmarkView &>(*Template->Properties);
@@ -630,9 +652,9 @@ namespace Engine
 					auto & bmt = Template->Children[i];
 					if (bmt.Children.Length() > 1 || bmt.Properties->GetTemplateClass() != L"Bookmark") throw InvalidArgumentException();
 					auto & props = static_cast<Template::Controls::Bookmark &>(*bmt.Properties);
-					int width = props.ControlPosition.Right.Absolute + int(props.ControlPosition.Right.Zoom * Zoom);
+					int width = props.ControlPosition.Right.Absolute + int(props.ControlPosition.Right.Zoom * CurrentScaleFactor);
 					if (bmt.Children.Length()) {
-						AddBookmark(width, props.ID, props.Text, bmt.Children.FirstElement());
+						AddBookmark(width, props.ID, props.Text, bmt.Children.FirstElement(), Factory);
 					} else {
 						AddBookmark(width, props.ID, props.Text);
 					}
@@ -640,9 +662,8 @@ namespace Engine
 				if (_bookmarks.Length()) ActivateBookmark(0);
 			}
 			BookmarkView::~BookmarkView(void) {}
-			void BookmarkView::Render(const Box & at)
+			void BookmarkView::Render(Graphics::I2DDeviceContext * device, const Box & at)
 			{
-				auto device = GetStation()->GetRenderingDevice();
 				int tabs_width = 0;
 				int active_center = -1;
 				for (int i = 0; i < _bookmarks.Length(); i++) {
@@ -684,6 +705,9 @@ namespace Engine
 					Box bk_box(at.Left, at.Top + TabHeight, at.Right, at.Bottom);
 					_view_background->Render(device, bk_box);
 				}
+				device->PushClip(at);
+				ParentControl::Render(device, at);
+				device->PopClip();
 				last_edge = at.Left - _shift;
 				for (int i = 0; i < _bookmarks.Length(); i++) {
 					int next_edge = last_edge + _bookmarks[i]._width;
@@ -706,7 +730,6 @@ namespace Engine
 					if (*shape) (*shape)->Render(device, tab_box);
 					last_edge = next_edge;
 				}
-				ParentWindow::Render(at);
 			}
 			void BookmarkView::ResetCache(void)
 			{
@@ -717,31 +740,33 @@ namespace Engine
 					_bookmarks[i]._view_active.SetReference(0);
 					_bookmarks[i]._view_active_focused.SetReference(0);
 				}
-				ParentWindow::ResetCache();
+				ParentControl::ResetCache();
 			}
 			void BookmarkView::ArrangeChildren(void)
 			{
-				Box inner = Box(0, TabHeight, WindowPosition.Right - WindowPosition.Left, WindowPosition.Bottom - WindowPosition.Top);
+				Box inner = Box(0, TabHeight, ControlBoundaries.Right - ControlBoundaries.Left, ControlBoundaries.Bottom - ControlBoundaries.Top);
 				for (int i = 0; i < ChildrenCount(); i++) {
 					auto rect = Child(i)->GetRectangle();
 					if (rect.IsValid()) Child(i)->SetPosition(Box(rect, inner));
 				}
+				Invalidate();
 			}
-			void BookmarkView::Show(bool visible) { Invisible = !visible; }
+			void BookmarkView::Show(bool visible) { Invisible = !visible; Invalidate(); }
 			bool BookmarkView::IsVisible(void) { return !Invisible; }
 			bool BookmarkView::IsTabStop(void) { return true; }
 			void BookmarkView::SetID(int _ID) { ID = _ID; }
 			int BookmarkView::GetID(void) { return ID; }
-			void BookmarkView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; GetParent()->ArrangeChildren(); }
+			void BookmarkView::SetRectangle(const Rectangle & rect) { ControlPosition = rect; if (GetParent()) GetParent()->ArrangeChildren(); Invalidate(); }
 			Rectangle BookmarkView::GetRectangle(void) { return ControlPosition; }
-			void BookmarkView::SetPosition(const Box & box) { _hot = -1; ParentWindow::SetPosition(box); }
-			void BookmarkView::CaptureChanged(bool got_capture) { if (!got_capture) _hot = -1; }
+			void BookmarkView::SetPosition(const Box & box) { _hot = -1; ParentControl::SetPosition(box); Invalidate(); }
+			void BookmarkView::FocusChanged(bool got_focus) { Invalidate(); }
+			void BookmarkView::CaptureChanged(bool got_capture) { if (!got_capture) { _hot = -1; Invalidate(); }}
 			void BookmarkView::LeftButtonDown(Point at) { if (_hot >= 0) { ActivateBookmark(_hot); ReleaseCapture(); } }
 			void BookmarkView::MouseMove(Point at)
 			{
-				int w = WindowPosition.Right - WindowPosition.Left;
-				int h = WindowPosition.Bottom - WindowPosition.Top;
-				if (at.x >= 0 && at.x < w && at.y >= 0 && at.y < h && at.y < TabHeight && GetStation()->HitTest(GetStation()->GetCursorPos()) == this) {
+				int w = ControlBoundaries.Right - ControlBoundaries.Left;
+				int h = ControlBoundaries.Bottom - ControlBoundaries.Top;
+				if (at.x >= 0 && at.x < w && at.y >= 0 && at.y < h && at.y < TabHeight && IsHovered()) {
 					int x = at.x + _shift;
 					int oh = _hot; _hot = -1;
 					int right = 0;
@@ -751,6 +776,7 @@ namespace Engine
 					}
 					if (oh == -1 && _hot != -1) SetCapture();
 					else if (oh != -1 && _hot == -1) ReleaseCapture();
+					if (oh != _hot) Invalidate();
 				} else {
 					if (_hot != -1) ReleaseCapture();
 				}
@@ -774,7 +800,7 @@ namespace Engine
 			int BookmarkView::GetBookmarkID(int index) { return _bookmarks[index].ID; }
 			string BookmarkView::GetBookmarkText(int index) { return _bookmarks[index].Text; }
 			int BookmarkView::GetBookmarkWidth(int index) { return _bookmarks[index]._width; }
-			Window * BookmarkView::GetBookmarkView(int index) { return _bookmarks[index].Group; }
+			Control * BookmarkView::GetBookmarkView(int index) { return _bookmarks[index].Group; }
 			void BookmarkView::SetBookmarkID(int index, int _ID) { _bookmarks[index].ID = _ID; }
 			void BookmarkView::SetBookmarkText(int index, const string & text)
 			{
@@ -783,8 +809,9 @@ namespace Engine
 				_bookmarks[index]._view_hot.SetReference(0);
 				_bookmarks[index]._view_active.SetReference(0);
 				_bookmarks[index]._view_active_focused.SetReference(0);
+				Invalidate();
 			}
-			void BookmarkView::SetBookmarkWidth(int index, int width) { _bookmarks[index]._width = width; _hot = -1; }
+			void BookmarkView::SetBookmarkWidth(int index, int width) { _bookmarks[index]._width = width; _hot = -1; Invalidate(); }
 			void BookmarkView::OrderBookmark(int index, int new_index)
 			{
 				if (_active == index) _active = new_index;
@@ -794,33 +821,44 @@ namespace Engine
 				} else if (new_index > index) {
 					for (int i = index; i < new_index; i++) _bookmarks.SwapAt(i, i + 1);
 				}
+				Invalidate();
 			}
 			void BookmarkView::RemoveBookmark(int index)
 			{
 				if (_active == index) _active = -1;
 				_hot = -1;
-				_bookmarks[index].Group->Destroy();
+				_bookmarks[index].Group->RemoveFromParent();
 				_bookmarks.Remove(index);
+				Invalidate();
 			}
 			void BookmarkView::AddBookmark(int width, int _ID, const string & text)
 			{
+				SafePointer<Control> group = new ControlGroup;
+				AddChild(group);
 				_bookmarks << Bookmark();
 				_bookmarks.LastElement()._width = width;
 				_bookmarks.LastElement().ID = _ID;
 				_bookmarks.LastElement().Text = text;
-				_bookmarks.LastElement().Group = GetStation()->CreateWindow<ControlGroup>(this);
+				_bookmarks.LastElement().Group = group;
 				_bookmarks.LastElement().Group->Show(false);
 				_hot = -1;
+				Invalidate();
 			}
-			void BookmarkView::AddBookmark(int width, int _ID, const string & text, Template::ControlTemplate * view_template)
+			void BookmarkView::AddBookmark(int width, int _ID, const string & text, Template::ControlTemplate * view_template, IControlFactory * factory)
 			{
+				SafePointer<Control> group;
+				if (factory) group = factory->CreateControl(view_template, factory);
+				if (!group) group = CreateStandardControl(view_template, factory);
+				if (!group) throw InvalidArgumentException();
+				AddChild(group);
 				_bookmarks << Bookmark();
 				_bookmarks.LastElement()._width = width;
 				_bookmarks.LastElement().ID = _ID;
 				_bookmarks.LastElement().Text = text;
-				_bookmarks.LastElement().Group = Constructor::CreateChildWindow(this, view_template);
+				_bookmarks.LastElement().Group = group;
 				_bookmarks.LastElement().Group->Show(false);
 				_hot = -1;
+				Invalidate();
 			}
 			int BookmarkView::GetActiveBookmark(void) { return _active; }
 			void BookmarkView::ActivateBookmark(int index)
@@ -829,6 +867,7 @@ namespace Engine
 				_active = index;
 				_hot = -1;
 				for (int i = 0; i < _bookmarks.Length(); i++) _bookmarks[i].Group->Show(i == index);
+				Invalidate();
 			}
 		}
 	}

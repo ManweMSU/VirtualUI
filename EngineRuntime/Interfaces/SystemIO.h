@@ -25,7 +25,12 @@ namespace Engine
 		void RemoveFile(const string & path);
 		void CreateDirectory(const string & path);
 		void RemoveDirectory(const string & path);
+
 		void CreateSymbolicLink(const string & at, const string & to);
+		void CreateHardLink(const string & at, const string & to);
+		FileType GetFileType(const string & file);
+		string GetSymbolicLinkDestination(const string & file);
+		void GetVolumeSpace(const string & volume, uint64 * total_bytes, uint64 * free_bytes, uint64 * user_available_bytes);
 
 		string ExpandPath(const string & path);
 		string GetCurrentDirectory(void);

@@ -351,7 +351,7 @@ namespace Engine
 				} else {
 					New.EntityAddress = Address::CreateAny();
 				}
-				if (!cname.Length()) cname = string(current->ai_canonname, -1, Encoding::ANSI);
+				if (!cname.Length() && current->ai_canonname) cname = string(current->ai_canonname, -1, Encoding::ANSI);
 				New.EntityName = cname;
 				result->Append(New);
 				current = current->ai_next;

@@ -1,9 +1,14 @@
 {
     "files.associations": {
-        "limits": "cpp",
-        "type_traits": "cpp",
-        "xstddef": "cpp",
-        "xtr1common": "cpp",
-        "*.mm": "cpp"
-    }
+		"limits": "cpp",
+		"type_traits": "cpp",
+		"xstddef": "cpp",
+		"xtr1common": "cpp",
+		"*.mm": "cpp",
+		"__locale": "cpp",
+		"locale": "cpp",
+		"thread": "cpp",
+		"new": "cpp",
+		"random": "cpp"
+	}
 }

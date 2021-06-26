@@ -40,6 +40,8 @@ namespace Engine
 	constexpr Encoding SystemEncoding = Encoding::UTF32;
 #ifdef ENGINE_MACOSX
 	constexpr const widechar * OperatingSystemName = L"Mac OS";
+#elif defined(ENGINE_LINUX)
+	constexpr const widechar * OperatingSystemName = L"Linux";
 #else
 	constexpr const widechar * OperatingSystemName = L"Unix";
 #endif
@@ -47,24 +49,40 @@ namespace Engine
 
 #ifdef ENGINE_ARM
 #ifdef ENGINE_X64
-	typedef uint64 intptr;
 	constexpr Platform ApplicationPlatform = Platform::ARM64;
 #else
-	typedef uint32 intptr;
 	constexpr Platform ApplicationPlatform = Platform::ARM;
 #endif
 #else
 #ifdef ENGINE_X64
-	typedef uint64 intptr;
 	constexpr Platform ApplicationPlatform = Platform::X64;
 #else
-	typedef uint32 intptr;
 	constexpr Platform ApplicationPlatform = Platform::X86;
 #endif
+#endif
+#ifdef ENGINE_X64
+	typedef uint64 intptr;
+	typedef uint64 uintptr;
+	typedef int64 sintptr;
+#else
+	typedef uint32 intptr;
+	typedef uint32 uintptr;
+	typedef int32 sintptr;
 #endif
 
 	typedef intptr eint;
 	typedef void * handle;
+
+	struct SystemDesc {
+		Platform Architecture;
+		widechar ProcessorName[0x80];
+		uint PhysicalCores;
+		uint VirtualCores;
+		uint64 ClockFrequency;
+		uint64 PhysicalMemory;
+		uint SystemVersionMajor;
+		uint SystemVersionMinor;
+	};
 
 	// Atomic increment and decrement; memory initialization
 	uint InterlockedIncrement(uint & Value);
@@ -99,4 +117,5 @@ namespace Engine
 	Platform GetSystemPlatform(void);
 	int GetProcessorsNumber(void);
 	uint64 GetInstalledMemory(void);
+	bool GetSystemInformation(SystemDesc & desc);
 }

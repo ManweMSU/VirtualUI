@@ -296,7 +296,7 @@ namespace Engine
 			return result;
 		}
 
-		ITexture * LoadTexture(IDevice * device, Codec::Frame * frame, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		ITexture * LoadTexture(IDevice * device, Codec::Frame * frame, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool, Codec::AlphaMode alpha, Codec::ScanOrigin origin)
 		{
 			Codec::PixelFormat codec_format;
 			if (format == PixelFormat::Invalid) {
@@ -336,9 +336,9 @@ namespace Engine
 			SafePointer<Codec::Frame> converted;
 			bool convert = false;
 			if (frame->GetPixelFormat() != codec_format) convert = true;
-			if (frame->GetAlphaMode() != Codec::AlphaMode::Normal) convert = true;
-			if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
-			if (convert) converted = frame->ConvertFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
+			if (frame->GetAlphaMode() != alpha) convert = true;
+			if (frame->GetScanOrigin() != origin) convert = true;
+			if (convert) converted = frame->ConvertFormat(codec_format, alpha, origin);
 			else converted.SetRetain(frame);
 			Array<ResourceInitDesc> init(0x10);
 			ObjectArray<Codec::Frame> mips(0x10);
@@ -362,13 +362,13 @@ namespace Engine
 			} while ((mip_levels && current_mip < mip_levels) || (!mip_levels && converted));
 			return device->CreateTexture(desc, init.GetBuffer());
 		}
-		ITexture * LoadTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		ITexture * LoadTexture(IDevice * device, Streaming::Stream * stream, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool, Codec::AlphaMode alpha, Codec::ScanOrigin origin)
 		{
 			SafePointer<Codec::Frame> frame = Codec::DecodeFrame(stream);
 			if (!frame) throw InvalidFormatException();
-			return LoadTexture(device, frame, mip_levels, usage, format, pool);
+			return LoadTexture(device, frame, mip_levels, usage, format, pool, alpha, origin);
 		}
-		ITexture * LoadCubeTexture(IDevice * device, Codec::Image * image, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool)
+		ITexture * LoadCubeTexture(IDevice * device, Codec::Image * image, uint32 mip_levels, uint32 usage, PixelFormat format, ResourceMemoryPool pool, Codec::AlphaMode alpha, Codec::ScanOrigin origin)
 		{
 			if (image->Frames.Length() != 6) throw InvalidArgumentException();
 			for (int i = 0; i < image->Frames.Length(); i++) {
@@ -426,9 +426,9 @@ namespace Engine
 				SafePointer<Codec::Frame> converted;
 				bool convert = false;
 				if (frame->GetPixelFormat() != codec_format) convert = true;
-				if (frame->GetAlphaMode() != Codec::AlphaMode::Normal) convert = true;
-				if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
-				if (convert) converted = frame->ConvertFormat(codec_format, Codec::AlphaMode::Normal, Codec::ScanOrigin::TopDown);
+				if (frame->GetAlphaMode() != alpha) convert = true;
+				if (frame->GetScanOrigin() != origin) convert = true;
+				if (convert) converted = frame->ConvertFormat(codec_format, alpha, origin);
 				else converted.SetRetain(frame);
 				uint current_mip = 0;
 				do {
@@ -455,21 +455,21 @@ namespace Engine
 			if (width == 1 && height == 1) return 0;
 			SafePointer<Codec::Frame> mip = new Codec::Frame(mw, mh, -1, source_corrected->GetPixelFormat(), source_corrected->GetAlphaMode(), source_corrected->GetScanOrigin());
 			for (int y = 0; y < mh; y++) for (int x = 0; x < mw; x++) {
-				Math::Color sum = Math::Color(UI::Color(source_corrected->GetPixel(x << 1, y << 1)));
+				Math::ColorF sum = Math::ColorF(Color(source_corrected->GetPixel(x << 1, y << 1)));
 				int c = 1;
 				if (width > 1) {
-					sum += Math::Color(UI::Color(source_corrected->GetPixel((x << 1) + 1, y << 1)));
+					sum += Math::ColorF(Color(source_corrected->GetPixel((x << 1) + 1, y << 1)));
 					c++;
 					if (height > 1) {
-						sum += Math::Color(UI::Color(source_corrected->GetPixel(x << 1, (y << 1) + 1)));
-						sum += Math::Color(UI::Color(source_corrected->GetPixel((x << 1) + 1, (y << 1) + 1)));
+						sum += Math::ColorF(Color(source_corrected->GetPixel(x << 1, (y << 1) + 1)));
+						sum += Math::ColorF(Color(source_corrected->GetPixel((x << 1) + 1, (y << 1) + 1)));
 						c += 2;
 					}
 				} else {
-					sum += Math::Color(UI::Color(source_corrected->GetPixel(x << 1, (y << 1) + 1)));
+					sum += Math::ColorF(Color(source_corrected->GetPixel(x << 1, (y << 1) + 1)));
 					c++;
 				}
-				auto pixel = UI::Color(sum / double(c));
+				auto pixel = Color(sum / double(c));
 				mip->SetPixel(x, y, pixel);
 			}
 			if (mip->GetPixelFormat() != source->GetPixelFormat()) mip = mip->ConvertFormat(source->GetPixelFormat());

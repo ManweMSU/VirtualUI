@@ -23,10 +23,11 @@
     <ClInclude Include="EngineRuntime.h" />
     <ClInclude Include="Graphics\Drawing.h" />
     <ClInclude Include="Graphics\Graphics.h" />
+    <ClInclude Include="Graphics\GraphicsBase.h" />
     <ClInclude Include="Graphics\GraphicsHelper.h" />
+    <ClInclude Include="Graphics\PresentationCore.h" />
     <ClInclude Include="ImageCodec\CodecBase.h" />
     <ClInclude Include="ImageCodec\IconCodec.h" />
-    <ClInclude Include="Interfaces\Application.h" />
     <ClInclude Include="Interfaces\Assembly.h" />
     <ClInclude Include="Interfaces\Base.h" />
     <ClInclude Include="Interfaces\Clipboard.h" />
@@ -34,16 +35,17 @@
     <ClInclude Include="Interfaces\Cryptography.h" />
     <ClInclude Include="Interfaces\DynamicLibrary.h" />
     <ClInclude Include="Interfaces\KeyCodes.h" />
-    <ClInclude Include="Interfaces\NativeStation.h" />
-    <ClInclude Include="Interfaces\Notifications.h" />
     <ClInclude Include="Interfaces\Process.h" />
     <ClInclude Include="Interfaces\SecureSocket.h" />
     <ClInclude Include="Interfaces\Shell.h" />
     <ClInclude Include="Interfaces\Socket.h" />
     <ClInclude Include="Interfaces\SystemAudio.h" />
-    <ClInclude Include="Interfaces\SystemColors.h" />
+    <ClInclude Include="Interfaces\SystemGraphics.h" />
     <ClInclude Include="Interfaces\SystemIO.h" />
+    <ClInclude Include="Interfaces\SystemIPC.h" />
     <ClInclude Include="Interfaces\SystemPower.h" />
+    <ClInclude Include="Interfaces\SystemVideo.h" />
+    <ClInclude Include="Interfaces\SystemWindows.h" />
     <ClInclude Include="Interfaces\Threading.h" />
     <ClInclude Include="Math\Color.h" />
     <ClInclude Include="Math\Complex.h" />
@@ -51,10 +53,17 @@
     <ClInclude Include="Math\Matrix.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Media\Audio.h" />
+    <ClInclude Include="Media\AudioBase.h" />
+    <ClInclude Include="Media\AudioStorage.h" />
+    <ClInclude Include="Media\Media.h" />
+    <ClInclude Include="Media\MediaOptions.h" />
+    <ClInclude Include="Media\MediaRoutines.h" />
     <ClInclude Include="Media\Metadata.h" />
+    <ClInclude Include="Media\MPEG4.h" />
+    <ClInclude Include="Media\Subtitles.h" />
+    <ClInclude Include="Media\Video.h" />
     <ClInclude Include="Media\WaveCodec.h" />
     <ClInclude Include="Miscellaneous\ConsoleServices.h" />
-    <ClInclude Include="Miscellaneous\Dictionary.h" />
     <ClInclude Include="Miscellaneous\DynamicString.h" />
     <ClInclude Include="Miscellaneous\Encoding.h" />
     <ClInclude Include="Miscellaneous\FileServices.h" />
@@ -62,16 +71,16 @@
     <ClInclude Include="Miscellaneous\ThreadPool.h" />
     <ClInclude Include="Miscellaneous\Time.h" />
     <ClInclude Include="Miscellaneous\UndoBuffer.h" />
+    <ClInclude Include="Miscellaneous\Volumes.h" />
     <ClInclude Include="Network\HTTP.h" />
     <ClInclude Include="Network\Punycode.h" />
     <ClInclude Include="PlatformDependent\ComInterop.h" />
     <ClInclude Include="PlatformDependent\Direct2D.h" />
     <ClInclude Include="PlatformDependent\Direct3D.h" />
-    <ClInclude Include="PlatformDependent\WindowStation.h" />
-    <ClInclude Include="PlatformSpecific\WindowsEffects.h" />
+    <ClInclude Include="PlatformDependent\EffectPlugin.h" />
+    <ClInclude Include="PlatformDependent\SystemCodecs.h" />
     <ClInclude Include="PlatformSpecific\WindowsRegistry.h" />
     <ClInclude Include="PlatformSpecific\WindowsShortcut.h" />
-    <ClInclude Include="PlatformSpecific\WindowsTaskbar.h" />
     <ClInclude Include="Storage\Archive.h" />
     <ClInclude Include="Storage\Chain.h" />
     <ClInclude Include="Storage\Compression.h" />
@@ -88,30 +97,30 @@
     <ClInclude Include="Syntax\MathExpression.h" />
     <ClInclude Include="Syntax\Regular.h" />
     <ClInclude Include="Syntax\Tokenization.h" />
-    <ClInclude Include="UserInterface\Animation.h" />
+    <ClInclude Include="UserInterface\ControlService.h" />
     <ClInclude Include="UserInterface\BinaryLoader.h" />
     <ClInclude Include="UserInterface\BinaryLoaderLegacy.h" />
     <ClInclude Include="UserInterface\ButtonControls.h" />
     <ClInclude Include="UserInterface\CombinedControls.h" />
     <ClInclude Include="UserInterface\ControlBase.h" />
     <ClInclude Include="UserInterface\ControlClasses.h" />
+    <ClInclude Include="UserInterface\ControlServiceEx.h" />
     <ClInclude Include="UserInterface\EditControls.h" />
     <ClInclude Include="UserInterface\GroupControls.h" />
     <ClInclude Include="UserInterface\InterfaceFormat.h" />
     <ClInclude Include="UserInterface\ListControls.h" />
-    <ClInclude Include="UserInterface\Menus.h" />
-    <ClInclude Include="UserInterface\OverlappedWindows.h" />
+    <ClInclude Include="UserInterface\MenuBarControl.h" />
     <ClInclude Include="UserInterface\RichEditControl.h" />
     <ClInclude Include="UserInterface\ScrollableControls.h" />
     <ClInclude Include="UserInterface\ShapeBase.h" />
     <ClInclude Include="UserInterface\StaticControls.h" />
     <ClInclude Include="UserInterface\Templates.h" />
-    <ClInclude Include="UserInterface\VirtualStation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="Graphics\Drawing.cpp" />
     <ClCompile Include="Graphics\Graphics.cpp" />
+    <ClCompile Include="Graphics\GraphicsBase.cpp" />
     <ClCompile Include="Graphics\GraphicsHelper.cpp" />
     <ClCompile Include="ImageCodec\CodecBase.cpp" />
     <ClCompile Include="ImageCodec\IconCodec.cpp" />
@@ -121,7 +130,14 @@
     <ClCompile Include="Math\Matrix.cpp" />
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Media\Audio.cpp" />
+    <ClCompile Include="Media\AudioBase.cpp" />
+    <ClCompile Include="Media\AudioStorage.cpp" />
+    <ClCompile Include="Media\Media.cpp" />
+    <ClCompile Include="Media\MediaRoutines.cpp" />
     <ClCompile Include="Media\Metadata.cpp" />
+    <ClCompile Include="Media\MPEG4.cpp" />
+    <ClCompile Include="Media\Subtitles.cpp" />
+    <ClCompile Include="Media\Video.cpp" />
     <ClCompile Include="Media\WaveCodec.cpp" />
     <ClCompile Include="Miscellaneous\ConsoleServices.cpp" />
     <ClCompile Include="Miscellaneous\DynamicString.cpp" />
@@ -130,9 +146,9 @@
     <ClCompile Include="Miscellaneous\Reflection.cpp" />
     <ClCompile Include="Miscellaneous\ThreadPool.cpp" />
     <ClCompile Include="Miscellaneous\Time.cpp" />
+    <ClCompile Include="Miscellaneous\WindowsCallbacks.cpp" />
     <ClCompile Include="Network\HTTP.cpp" />
     <ClCompile Include="Network\Punycode.cpp" />
-    <ClCompile Include="PlatformDependent\Application.cpp" />
     <ClCompile Include="PlatformDependent\Assembly.cpp" />
     <ClCompile Include="PlatformDependent\Base.cpp" />
     <ClCompile Include="PlatformDependent\Clipboard.cpp" />
@@ -142,23 +158,23 @@
     <ClCompile Include="PlatformDependent\Direct2D.cpp" />
     <ClCompile Include="PlatformDependent\Direct3D.cpp" />
     <ClCompile Include="PlatformDependent\DynamicLibrary.cpp" />
+    <ClCompile Include="PlatformDependent\EffectPlugin.cpp" />
     <ClCompile Include="PlatformDependent\KeyCodes.cpp" />
-    <ClCompile Include="PlatformDependent\NativeStation.cpp" />
-    <ClCompile Include="PlatformDependent\Notifications.cpp" />
     <ClCompile Include="PlatformDependent\Process.cpp" />
     <ClCompile Include="PlatformDependent\SecureSocket.cpp" />
     <ClCompile Include="PlatformDependent\Shell.cpp" />
     <ClCompile Include="PlatformDependent\Socket.cpp" />
     <ClCompile Include="PlatformDependent\SystemAudio.cpp" />
-    <ClCompile Include="PlatformDependent\SystemColors.cpp" />
+    <ClCompile Include="PlatformDependent\SystemCodecs.cpp" />
+    <ClCompile Include="PlatformDependent\SystemGraphics.cpp" />
     <ClCompile Include="PlatformDependent\SystemIO.cpp" />
+    <ClCompile Include="PlatformDependent\SystemIPC.cpp" />
     <ClCompile Include="PlatformDependent\SystemPower.cpp" />
+    <ClCompile Include="PlatformDependent\SystemVideo.cpp" />
+    <ClCompile Include="PlatformDependent\SystemWindows.cpp" />
     <ClCompile Include="PlatformDependent\Threading.cpp" />
-    <ClCompile Include="PlatformDependent\WindowStation.cpp" />
-    <ClCompile Include="PlatformSpecific\WindowsEffects.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsRegistry.cpp" />
     <ClCompile Include="PlatformSpecific\WindowsShortcut.cpp" />
-    <ClCompile Include="PlatformSpecific\WindowsTaskbar.cpp" />
     <ClCompile Include="Storage\Archive.cpp" />
     <ClCompile Include="Storage\Chain.cpp" />
     <ClCompile Include="Storage\Compression.cpp" />
@@ -181,18 +197,17 @@
     <ClCompile Include="UserInterface\CombinedControls.cpp" />
     <ClCompile Include="UserInterface\ControlBase.cpp" />
     <ClCompile Include="UserInterface\ControlClasses.cpp" />
+    <ClCompile Include="UserInterface\ControlService.cpp" />
     <ClCompile Include="UserInterface\EditControls.cpp" />
     <ClCompile Include="UserInterface\GroupControls.cpp" />
     <ClCompile Include="UserInterface\InterfaceFormat.cpp" />
     <ClCompile Include="UserInterface\ListControls.cpp" />
-    <ClCompile Include="UserInterface\Menus.cpp" />
-    <ClCompile Include="UserInterface\OverlappedWindows.cpp" />
+    <ClCompile Include="UserInterface\MenuBarControl.cpp" />
     <ClCompile Include="UserInterface\RichEditControl.cpp" />
     <ClCompile Include="UserInterface\ScrollableControls.cpp" />
     <ClCompile Include="UserInterface\ShapeBase.cpp" />
     <ClCompile Include="UserInterface\StaticControls.cpp" />
     <ClCompile Include="UserInterface\Templates.cpp" />
-    <ClCompile Include="UserInterface\VirtualStation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineRuntime.natvis" />
@@ -263,6 +278,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>ENGINE_WINDOWS;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -275,6 +291,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>ENGINE_WINDOWS;ENGINE_X64;_WIN64;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -290,6 +307,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>ENGINE_WINDOWS;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -307,6 +325,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>ENGINE_WINDOWS;ENGINE_X64;_WIN64;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

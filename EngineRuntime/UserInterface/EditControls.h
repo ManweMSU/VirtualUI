@@ -2,7 +2,6 @@
 
 #include "ControlBase.h"
 #include "ControlClasses.h"
-#include "Menus.h"
 #include "ScrollableControls.h"
 
 #include "../Miscellaneous/UndoBuffer.h"
@@ -13,16 +12,16 @@ namespace Engine
 	{
 		namespace Controls
 		{
-			class Edit : public Window, public Template::Controls::Edit
+			class Edit : public Control, public Template::Controls::Edit
 			{
 			public:
 				class IEditHook
 				{
 				public:
-					virtual void InitializeContextMenu(Menus::Menu * menu, Edit * sender);
+					virtual void InitializeContextMenu(Windows::IMenu * menu, Edit * sender);
 					virtual string Filter(Edit * sender, const string & input);
 					virtual Array<uint8> * ColorHighlight(Edit * sender, const Array<uint32> & text);
-					virtual Array<UI::Color> * GetPalette(Edit * sender);
+					virtual Array<Engine::Color> * GetPalette(Edit * sender);
 				};
 			private:
 				SafePointer<Shape> _normal;
@@ -30,9 +29,9 @@ namespace Engine
 				SafePointer<Shape> _normal_readonly;
 				SafePointer<Shape> _focused_readonly;
 				SafePointer<Shape> _disabled;
-				SafePointer<Menus::Menu> _menu;
-				SafePointer<ITextRenderingInfo> _text_info;
-				SafePointer<ITextRenderingInfo> _placeholder_info;
+				SafePointer<Windows::IMenu> _menu;
+				SafePointer<Graphics::ITextBrush> _text_info;
+				SafePointer<Graphics::ITextBrush> _placeholder_info;
 				SafePointer<Object> _inversion;
 				Array<uint32> _text;
 				UndoBuffer< Array<uint32> > _undo;
@@ -47,11 +46,11 @@ namespace Engine
 				bool _use_color_caret = false;
 				IEditHook * _hook = 0;
 			public:
-				Edit(Window * Parent, WindowStation * Station);
-				Edit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				Edit(void);
+				Edit(Template::ControlTemplate * Template);
 				~Edit(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -60,12 +59,12 @@ namespace Engine
 				virtual bool IsTabStop(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetText(const string & text) override;
 				virtual string GetText(void) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
@@ -78,7 +77,9 @@ namespace Engine
 				virtual bool KeyDown(int key_code) override;
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void SetCursor(Point at) override;
-				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
+				virtual bool IsWindowEventEnabled(Windows::WindowHandler handler) override;
+				virtual void HandleWindowEvent(Windows::WindowHandler handler) override;
+				virtual ControlRefreshPeriod GetFocusedRefreshPeriod(void) override;
 				virtual string GetControlClass(void) override;
 
 				void Undo(void);
@@ -94,8 +95,8 @@ namespace Engine
 				string GetPlaceholder(void);
 				void SetCharacterFilter(const string & filter);
 				string GetCharacterFilter(void);
-				void SetContextMenu(Menus::Menu * menu);
-				Menus::Menu * GetContextMenu(void);
+				void SetContextMenu(Windows::IMenu * menu);
+				Windows::IMenu * GetContextMenu(void);
 				void SetPasswordMode(bool hide);
 				bool GetPasswordMode(void);
 				void SetPasswordChar(uint32 ucs);
@@ -105,16 +106,16 @@ namespace Engine
 				string FilterInput(const string & input);
 				void Print(const string & text);
 			};
-			class MultiLineEdit : public ParentWindow, public Template::Controls::MultiLineEdit
+			class MultiLineEdit : public ParentControl, public Template::Controls::MultiLineEdit
 			{
 			public:
 				class IMultiLineEditHook
 				{
 				public:
-					virtual void InitializeContextMenu(Menus::Menu * menu, MultiLineEdit * sender);
+					virtual void InitializeContextMenu(Windows::IMenu * menu, MultiLineEdit * sender);
 					virtual string Filter(MultiLineEdit * sender, const string & input, Point insert_at);
 					virtual Array<uint8> * ColorHighlight(MultiLineEdit * sender, const Array<uint32> & text, int line);
-					virtual Array<UI::Color> * GetPalette(MultiLineEdit * sender);
+					virtual Array<Engine::Color> * GetPalette(MultiLineEdit * sender);
 					virtual void CaretPositionChanged(MultiLineEdit * sender);
 				};
 				struct EditorCoord
@@ -156,10 +157,10 @@ namespace Engine
 				SafePointer<Shape> _normal_readonly;
 				SafePointer<Shape> _focused_readonly;
 				SafePointer<Shape> _disabled;
-				SafePointer<Menus::Menu> _menu;
+				SafePointer<Windows::IMenu> _menu;
 				SafePointer<Object> _inversion;
 				EditorContent _content;
-				ObjectArray<ITextRenderingInfo> _text_info;
+				ObjectArray<Graphics::ITextBrush> _text_info;
 				LimitedUndoBuffer<EditorContent> _undo;
 				Array<uint32> _chars_enabled;
 				int _state = 0;
@@ -171,11 +172,11 @@ namespace Engine
 				int _fh = 1, _fw = 1;
 				IMultiLineEditHook * _hook = 0;
 			public:
-				MultiLineEdit(Window * Parent, WindowStation * Station);
-				MultiLineEdit(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				MultiLineEdit(void);
+				MultiLineEdit(Template::ControlTemplate * Template);
 				~MultiLineEdit(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -189,7 +190,7 @@ namespace Engine
 				virtual void SetPosition(const Box & box) override;
 				virtual void SetText(const string & text) override;
 				virtual string GetText(void) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
 				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
@@ -204,7 +205,9 @@ namespace Engine
 				virtual void CharDown(uint32 ucs_code) override;
 				virtual void PopupMenuCancelled(void) override;
 				virtual void SetCursor(Point at) override;
-				virtual RefreshPeriod FocusedRefreshPeriod(void) override;
+				virtual bool IsWindowEventEnabled(Windows::WindowHandler handler) override;
+				virtual void HandleWindowEvent(Windows::WindowHandler handler) override;
+				virtual ControlRefreshPeriod GetFocusedRefreshPeriod(void) override;
 				virtual string GetControlClass(void) override;
 
 				void Undo(void);
@@ -220,8 +223,8 @@ namespace Engine
 				void ScrollToCaret(void);
 				void SetCharacterFilter(const string & filter);
 				string GetCharacterFilter(void);
-				void SetContextMenu(Menus::Menu * menu);
-				Menus::Menu * GetContextMenu(void);
+				void SetContextMenu(Windows::IMenu * menu);
+				Windows::IMenu * GetContextMenu(void);
 				void SetHook(IMultiLineEditHook * hook);
 				IMultiLineEditHook * GetHook(void);
 				const Array<uint32> & GetRawLine(int line_index);

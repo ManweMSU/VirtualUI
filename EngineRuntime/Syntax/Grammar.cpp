@@ -105,7 +105,7 @@ namespace Engine
 					}
 				}
 			} else if (Class == RuleClass::Reference) {
-				if (!grammar.Rules.ElementPresent(Reference)) throw Exception();
+				if (!grammar.Rules.ElementExists(Reference)) throw Exception();
 				auto rule = grammar.Rules[Reference];
 				if (!rule->CanBeginWith.Length()) {
 					if (rule->_sinal) throw Exception();
@@ -124,7 +124,7 @@ namespace Engine
 			_sinal = false;
 		}
 
-		Grammar::Grammar(void) : Rules(0x20) {}
+		Grammar::Grammar(void) {}
 
 		SyntaxTreeNode::SyntaxTreeNode(void) : Subnodes(0x20) {}
 

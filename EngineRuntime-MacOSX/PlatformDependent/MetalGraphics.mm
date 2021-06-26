@@ -1,19 +1,17 @@
 #include "MetalGraphics.h"
 
-#include "NativeStationBackdoors.h"
+#include "SystemWindowsAPI.h"
 #include "MetalDevice.h"
 #include "CocoaInterop.h"
+#include "../Storage/Archive.h"
 
 using namespace Engine;
 using namespace Engine::Graphics;
 
-// Begin Interface Declaration
-	@interface EngineMetalView : NSView<CALayerDelegate>
+@interface ERTMetalView : NSView<CALayerDelegate>
 	{
 	@public
-		Engine::UI::WindowStation * station_ref;
-		Engine::MetalGraphics::PresentationRenderContentsCallback callback_ref;
-		Engine::MetalGraphics::MetalPresentationInterface * presentation_interface;
+		Engine::Windows::ICoreWindow * window_ref;
 		CAMetalLayer * layer;
 		double w, h;
 		bool autosize;
@@ -23,33 +21,38 @@ using namespace Engine::Graphics;
 	- (void) displayLayer: (CALayer *) layer;
 	- (void) setFrame: (NSRect) frame;
 	- (void) setFrameSize: (NSSize) newSize;
-	@end
-	@implementation EngineMetalView
+@end
+@implementation ERTMetalView
 	- (instancetype) init
 	{
-		[super init];
-		layer = [CAMetalLayer layer];
-		[layer setDelegate: self];
-		[self setLayer: layer];
-		[self setWantsLayer: YES];
-		w = h = 1;
-		autosize = false;
-		return self;
+		@autoreleasepool {
+			[super init];
+			layer = [CAMetalLayer layer];
+			[layer setDelegate: self];
+			[self setLayer: layer];
+			[self setWantsLayer: YES];
+			w = h = 1.0;
+			autosize = false;
+			return self;
+		}
 	}
-	- (void) dealloc
+	- (void) dealloc { [super dealloc]; }
+	- (void) displayLayer: (CALayer *) layer
 	{
-		if (presentation_interface) presentation_interface->metal_view = 0;
-		[super dealloc];
+		@autoreleasepool {
+			auto callback = Engine::Cocoa::GetWindowCallback(window_ref);
+			if (callback) callback->RenderWindow(static_cast<Engine::Windows::IWindow *>(window_ref));
+		}
 	}
-	- (void) displayLayer: (CALayer *) sender { @autoreleasepool { if (callback_ref) callback_ref(station_ref); } }
 	- (void) setFrame: (NSRect) frame
 	{
 		[super setFrame: frame];
 		if (autosize) {
 			double scale = [[self window] backingScaleFactor];
 			w = max(frame.size.width * scale, 1.0); h = max(frame.size.height * scale, 1.0);
-			[layer setDrawableSize: NSMakeSize(w, h)]; [layer setNeedsDisplay];
+			[layer setDrawableSize: NSMakeSize(w, h)];
 		}
+		[layer setNeedsDisplay];
 	}
 	- (void) setFrameSize: (NSSize) newSize
 	{
@@ -57,54 +60,57 @@ using namespace Engine::Graphics;
 		if (autosize) {
 			double scale = [[self window] backingScaleFactor];
 			w = max(newSize.width * scale, 1.0); h = max(newSize.height * scale, 1.0);
-			[layer setDrawableSize: NSMakeSize(w, h)]; [layer setNeedsDisplay];
+			[layer setDrawableSize: NSMakeSize(w, h)];
 		}
+		[layer setNeedsDisplay];
 	}
-	@end
-// End Interface Declaration
+@end
 
 namespace Engine
 {
 	namespace MetalGraphics
 	{
-		MetalPresentationInterface::MetalPresentationInterface(NSView * parent_view, UI::WindowStation * station, PresentationRenderContentsCallback callback)
+		MetalPresentationEngine::MetalPresentationEngine(void) : _root_view(0), _metal_view(0) {}
+		MetalPresentationEngine::~MetalPresentationEngine(void) { [_metal_view release]; }
+		void MetalPresentationEngine::Attach(Windows::ICoreWindow * window)
 		{
-			EngineMetalView * _metal_view = [[EngineMetalView alloc] init];
-			_metal_view->station_ref = station;
-			_metal_view->callback_ref = callback;
-			_metal_view->presentation_interface = this;
-			[parent_view addSubview: _metal_view];
-			[parent_view setWantsLayer: YES];
-			[_metal_view setFrameSize: [parent_view frame].size];
+			auto view = [[ERTMetalView alloc] init];
+			if (view) view->window_ref = window;
+			_metal_view = view;
+			_root_view = Cocoa::GetWindowCoreView(window);
+			Cocoa::UnsetWindowRenderCallback(window);
+			[_root_view addSubview: _metal_view];
+			[_root_view setWantsLayer: YES];
+			[_metal_view setFrameSize: [_root_view frame].size];
 			[_metal_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
-			metal_view = _metal_view;
 		}
-		MetalPresentationInterface::~MetalPresentationInterface(void)
+		void MetalPresentationEngine::Detach(void)
 		{
-			if (metal_view) {
-				reinterpret_cast<EngineMetalView *>(metal_view)->presentation_interface = 0;
-				reinterpret_cast<EngineMetalView *>(metal_view)->callback_ref = 0;
-				reinterpret_cast<EngineMetalView *>(metal_view)->station_ref = 0;
-				[metal_view release];
+			if (_metal_view) {
+				[_metal_view removeFromSuperview];
+				[_metal_view release];
+				[_root_view setWantsLayer: NO];
+				_metal_view = _root_view = 0;
 			}
 		}
-		id<MTLDevice> MetalPresentationInterface::GetLayerDevice(void) { if (metal_view) return [reinterpret_cast<EngineMetalView *>(metal_view)->layer device]; else return 0; }
-		void MetalPresentationInterface::SetLayerDevice(id<MTLDevice> device) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setDevice: device]; }
-		MTLPixelFormat MetalPresentationInterface::GetPixelFormat(void) { if (metal_view) return [reinterpret_cast<EngineMetalView *>(metal_view)->layer pixelFormat]; else return MTLPixelFormatInvalid; }
-		void MetalPresentationInterface::SetPixelFormat(MTLPixelFormat format) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setPixelFormat: format]; }
-		UI::Point MetalPresentationInterface::GetLayerSize(void)
+		void MetalPresentationEngine::Invalidate(void) { if (_metal_view) [reinterpret_cast<ERTMetalView *>(_metal_view)->layer setNeedsDisplay]; }
+		void MetalPresentationEngine::Resize(int width, int height) {}
+		I2DDeviceContext * MetalPresentationEngine::GetContext(void) noexcept { return 0; }
+		bool MetalPresentationEngine::BeginRenderingPass(void) noexcept { return false; }
+		bool MetalPresentationEngine::EndRenderingPass(void) noexcept { return false; }
+		id<MTLDevice> MetalPresentationEngine::GetDevice(void) { if (_metal_view) return [reinterpret_cast<ERTMetalView *>(_metal_view)->layer device]; else return 0; }
+		void MetalPresentationEngine::SetDevice(id<MTLDevice> device) { if (_metal_view) [reinterpret_cast<ERTMetalView *>(_metal_view)->layer setDevice: device]; }
+		MTLPixelFormat MetalPresentationEngine::GetPixelFormat(void) { if (_metal_view) return [reinterpret_cast<ERTMetalView *>(_metal_view)->layer pixelFormat]; else return MTLPixelFormatInvalid; }
+		void MetalPresentationEngine::SetPixelFormat(MTLPixelFormat format) { if (_metal_view) [reinterpret_cast<ERTMetalView *>(_metal_view)->layer setPixelFormat: format]; }
+		Point MetalPresentationEngine::GetSize(void) { if (_metal_view) return Point(reinterpret_cast<ERTMetalView *>(_metal_view)->w, reinterpret_cast<ERTMetalView *>(_metal_view)->h); else return Point(1, 1); }
+		void MetalPresentationEngine::SetSize(Point size) { if (_metal_view) [reinterpret_cast<ERTMetalView *>(_metal_view)->layer setDrawableSize: NSMakeSize(size.x, size.y)]; }
+		void MetalPresentationEngine::SetAutosize(bool autosize)
 		{
-			if (metal_view) return UI::Point(reinterpret_cast<EngineMetalView *>(metal_view)->w, reinterpret_cast<EngineMetalView *>(metal_view)->h);
-			else return UI::Point(1, 1);
-		}
-		void MetalPresentationInterface::SetLayerSize(UI::Point size) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setDrawableSize: NSMakeSize(size.x, size.y)]; }
-		void MetalPresentationInterface::SetLayerAutosize(bool set)
-		{
-			if (metal_view) {
-				auto view = reinterpret_cast<EngineMetalView *>(metal_view);
-				auto size = [metal_view frame].size;
-				view->autosize = set;
-				if (set) {
+			if (_metal_view) {
+				auto view = reinterpret_cast<ERTMetalView *>(_metal_view);
+				view->autosize = autosize;
+				if (autosize) {
+					auto size = [view frame].size;
 					double scale = [[view window] backingScaleFactor];
 					view->w = max(size.width * scale, 1.0);
 					view->h = max(size.height * scale, 1.0);
@@ -113,10 +119,9 @@ namespace Engine
 				}
 			}
 		}
-		void MetalPresentationInterface::SetLayerOpaque(bool set) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setOpaque: set]; }
-		void MetalPresentationInterface::SetLayerFramebufferOnly(bool set) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setFramebufferOnly: set]; }
-		id<CAMetalDrawable> MetalPresentationInterface::GetLayerDrawable(void) { if (metal_view) return [reinterpret_cast<EngineMetalView *>(metal_view)->layer nextDrawable]; else return 0; }
-		void MetalPresentationInterface::InvalidateContents(void) { if (metal_view) [reinterpret_cast<EngineMetalView *>(metal_view)->layer setNeedsDisplay]; }
+		void MetalPresentationEngine::SetOpaque(bool opaque) { if (_metal_view) [reinterpret_cast<ERTMetalView *>(_metal_view)->layer setOpaque: opaque]; }
+		void MetalPresentationEngine::SetFramebufferOnly(bool framebuffer_only) { if (_metal_view) [reinterpret_cast<ERTMetalView *>(_metal_view)->layer setFramebufferOnly: framebuffer_only]; }
+		id<CAMetalDrawable> MetalPresentationEngine::GetDrawable(void) { if (_metal_view) return [reinterpret_cast<ERTMetalView *>(_metal_view)->layer nextDrawable]; else return 0; }
 
 		class MTL_Buffer : public IBuffer
 		{
@@ -241,7 +246,7 @@ namespace Engine
 		};
 		class MTL_DeviceContext : public IDeviceContext
 		{
-			SafePointer<UI::IRenderingDevice> device_2d;
+			SafePointer<I2DDeviceContext> device_2d;
 			SafePointer<MTL_Buffer> index_buffer;
 			MTLIndexType index_buffer_format;
 			MTLPrimitiveType primitive_type;
@@ -569,7 +574,7 @@ namespace Engine
 				[render_command_encoder drawIndexedPrimitives: primitive_type indexCount: index_count indexType: index_buffer_format
 					indexBuffer: index_buffer->buffer indexBufferOffset: 0 instanceCount: instance_count baseVertex: base_vertex baseInstance: first_instance];
 			}
-			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
+			virtual I2DDeviceContext * Get2DContext(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
 			{
 				if (state != 3 || !texture) { error_state = false; return; }
@@ -698,36 +703,32 @@ namespace Engine
 		{
 			SafePointer<MTL_DeviceContext> context;
 			SafePointer<MTL_Texture> texture;
-			SafePointer<MetalPresentationInterface> presentation;
+			SafePointer<MetalPresentationEngine> engine;
 			IDevice * wrapper;
-			NSWindow * window;
+			Windows::ICoreWindow * window;
 			PixelFormat format;
 			uint32 width, height, usage;
 			id<CAMetalDrawable> last_drawable;
-			bool fullscreen;
 		public:
-			MTL_WindowLayer(IDevice * _wrapper, MTL_DeviceContext * _context, const WindowLayerDesc & desc, UI::WindowStation * station) : wrapper(_wrapper), last_drawable(0)
+			MTL_WindowLayer(IDevice * _wrapper, MTL_DeviceContext * _context, const WindowLayerDesc & desc, Windows::ICoreWindow * _window) : wrapper(_wrapper), last_drawable(0)
 			{
-				presentation.SetRetain(NativeWindows::InitWindowPresentationInterface(station));
-				context.SetRetain(_context);
-				fullscreen = false;
-				window = NativeWindows::GetWindowObject(station);
-				presentation->SetLayerDevice(GetInnerMetalDevice(wrapper));
-				if (!(desc.Usage & ResourceUsageRenderTarget)) throw InvalidArgumentException();
-				if (desc.Usage & ResourceUsageShaderRead) presentation->SetLayerFramebufferOnly(false);
-				else presentation->SetLayerFramebufferOnly(true);
-				presentation->SetLayerOpaque(true);
-				presentation->SetLayerSize(UI::Point(max(desc.Width, 1U), max(desc.Height, 1U)));
 				if (desc.Format != PixelFormat::Invalid) {
-					if (desc.Format == PixelFormat::B8G8R8A8_unorm) presentation->SetPixelFormat(MTLPixelFormatBGRA8Unorm);
-					else if (desc.Format == PixelFormat::R16G16B16A16_float) presentation->SetPixelFormat(MTLPixelFormatRGBA16Float);
-					else if (desc.Format == PixelFormat::R10G10B10A2_unorm) presentation->SetPixelFormat(MTLPixelFormatRGB10A2Unorm);
+					if (desc.Format == PixelFormat::B8G8R8A8_unorm) format = desc.Format;
+					else if (desc.Format == PixelFormat::R16G16B16A16_float) format = desc.Format;
+					else if (desc.Format == PixelFormat::R10G10B10A2_unorm) format = desc.Format;
 					else throw InvalidArgumentException();
-					format = desc.Format;
-				} else {
-					presentation->SetPixelFormat(MTLPixelFormatBGRA8Unorm);
-					format = PixelFormat::B8G8R8A8_unorm;
-				}
+				} else format = PixelFormat::B8G8R8A8_unorm;
+				if (!(desc.Usage & ResourceUsageRenderTarget)) throw InvalidArgumentException();
+				window = _window;
+				context.SetRetain(_context);
+				engine = new MetalPresentationEngine;
+				window->SetPresentationEngine(engine);
+				engine->SetDevice(GetInnerMetalDevice(wrapper));
+				if (desc.Usage & ResourceUsageShaderRead) engine->SetFramebufferOnly(false);
+				else engine->SetFramebufferOnly(true);
+				engine->SetOpaque(!Cocoa::WindowNeedsAlphaBackbuffer(_window));
+				engine->SetSize(Point(max(desc.Width, 1U), max(desc.Height, 1U)));
+				engine->SetPixelFormat(MakeMetalPixelFormat(format));
 				width = max(desc.Width, 1U);
 				height = max(desc.Height, 1U);
 				usage = ResourceUsageRenderTarget;
@@ -737,6 +738,7 @@ namespace Engine
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
 			virtual bool Present(void) noexcept override
 			{
+				if (texture && texture->GetReferenceCount() > 1) return false;
 				if (last_drawable) {
 					if (context->state) return false;
 					if (!context->current_command) {
@@ -773,7 +775,7 @@ namespace Engine
 					[texture->texture release];
 					texture->texture = 0;
 				}
-				last_drawable = presentation->GetLayerDrawable();
+				last_drawable = engine->GetDrawable();
 				if (!last_drawable) return 0;
 				[last_drawable retain];
 				texture->texture = [last_drawable texture];
@@ -783,32 +785,17 @@ namespace Engine
 			}
 			virtual bool ResizeSurface(uint32 _width, uint32 _height) noexcept override
 			{
+				if (texture && texture->GetReferenceCount() > 1) return false;
 				if (_width > 16384 || _height > 16384) return false;
 				width = max(_width, 1U);
 				height = max(_height, 1U);
-				presentation->SetLayerSize(UI::Point(width, height));
+				engine->SetSize(Point(width, height));
 				texture.SetReference(0);
 				return true;
 			}
-			virtual bool SwitchToFullscreen(void) noexcept override
-			{
-				if (!fullscreen) {
-					[window toggleFullScreen: nil];
-					[NSApp setPresentationOptions: NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar];
-					fullscreen = true;
-				}
-				return true;
-			}
-			virtual bool SwitchToWindow(void) noexcept override
-			{
-				if (fullscreen) {
-					[window toggleFullScreen: nil];
-					[NSApp setPresentationOptions: NSApplicationPresentationDefault];
-					fullscreen = false;
-				}
-				return true;
-			}
-			virtual bool IsFullscreen(void) noexcept override { return fullscreen; }
+			virtual bool SwitchToFullscreen(void) noexcept override { return Cocoa::SetWindowFullscreenMode(window, true); }
+			virtual bool SwitchToWindow(void) noexcept override { return Cocoa::SetWindowFullscreenMode(window, false); }
+			virtual bool IsFullscreen(void) noexcept override { return Cocoa::IsWindowInFullscreenMode(window); }
 			virtual string ToString(void) const override { return L"MTL_WindowLayer"; }
 		};
 		class MTL_Device : public IDevice
@@ -936,6 +923,59 @@ namespace Engine
 					SafePointer<DataBlock> data = stream->ReadAll();
 					return LoadShaderLibrary(data);
 				} catch (...) { return 0; }
+			}
+			virtual IShaderLibrary * CompileShaderLibrary(const void * data, int length, ShaderError * error) noexcept override
+			{
+				try {
+					SafePointer<Streaming::Stream> stream = new Streaming::MemoryStream(data, length);
+					SafePointer<Storage::Archive> archive = Storage::OpenArchive(stream);
+					if (!archive) throw InvalidFormatException();
+					for (Storage::ArchiveFile file = 1; file <= archive->GetFileCount(); file++) {
+						auto flags = archive->GetFileCustomData(file);
+						if ((flags & 0xFFFF0000) == 0x20000) {
+							SafePointer<MTL_ShaderLibrary> result = new (std::nothrow) MTL_ShaderLibrary(this);
+							if (!result) throw OutOfMemoryException();
+							SafePointer<Streaming::Stream> data_stream = archive->QueryFileStream(file, Storage::ArchiveStream::Native);
+							if (!data_stream) throw InvalidFormatException();
+							SafePointer<DataBlock> code = data_stream->ReadAll();
+							auto code_ns = Cocoa::CocoaString(string(code->GetBuffer(), code->Length(), Encoding::ANSI));
+							auto options = [[MTLCompileOptions alloc] init];
+							if (!code_ns || !options) {
+								[code_ns release];
+								[options release];
+								throw OutOfMemoryException();
+							}
+							NSError * error_ns;
+							auto library = [device newLibraryWithSource: code_ns options: options error: &error_ns];
+							if (error_ns) [error_ns release];
+							[code_ns release];
+							[options release];
+							if (!library) {
+								if (error) *error = ShaderError::Compilation;
+								return 0;
+							}
+							if (error) *error = ShaderError::Success;
+							result->ref = library;
+							result->Retain();
+							return result;
+						}
+					}
+					if (error) *error = ShaderError::NoPlatformVersion;
+				} catch (InvalidFormatException &) {
+					if (error) *error = ShaderError::InvalidContainerData;
+				} catch (...) {
+					if (error) *error = ShaderError::IO;
+				}
+				return 0;
+			}
+			virtual IShaderLibrary * CompileShaderLibrary(const DataBlock * data, ShaderError * error) noexcept override { return CompileShaderLibrary(data->GetBuffer(), data->Length(), error); }
+			virtual IShaderLibrary * CompileShaderLibrary(Streaming::Stream * stream, ShaderError * error) noexcept override
+			{
+				try {
+					SafePointer<DataBlock> data = stream->ReadAll();
+					if (!data) throw Exception();
+					return CompileShaderLibrary(data, error);
+				} catch (...) { if (error) *error = ShaderError::IO; return 0; }
 			}
 			virtual IDeviceContext * GetDeviceContext(void) noexcept override { return context; }
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept override
@@ -1203,8 +1243,8 @@ namespace Engine
 					if (Graphics::IsColorFormat(desc.Format)) texture->usage |= ResourceUsageRenderTarget;
 					if (Graphics::IsDepthStencilFormat(desc.Format)) texture->usage |= ResourceUsageDepthStencil;
 				}
-				if (desc.Usage & ResourceUsageCPUAll) texture->usage |= ResourceUsageCPUAll;
-				if (texture->usage & ResourceUsageCPUAll) descriptor.storageMode = MTLStorageModeManaged;
+				if (desc.Usage & (ResourceUsageCPUAll | ResourceUsageVideoAll)) texture->usage |= ResourceUsageCPUAll | ResourceUsageVideoAll;
+				if (texture->usage & (ResourceUsageCPUAll | ResourceUsageVideoAll)) descriptor.storageMode = MTLStorageModeManaged;
 				else descriptor.storageMode = MTLStorageModePrivate;
 				texture->texture = [device newTextureWithDescriptor: descriptor];
 				[descriptor release];
@@ -1221,6 +1261,7 @@ namespace Engine
 					if (desc.Usage & ResourceUsageCPUAll) return 0;
 					if (desc.Usage & ResourceUsageRenderTarget) return 0;
 					if (desc.Usage & ResourceUsageDepthStencil) return 0;
+					if (desc.Usage & ResourceUsageVideoWrite) return 0;
 				}
 				if (desc.Usage & ResourceUsageRenderTarget) {
 					if (!Graphics::IsColorFormat(desc.Format)) return 0;
@@ -1300,7 +1341,7 @@ namespace Engine
 					if (Graphics::IsColorFormat(desc.Format)) texture->usage |= ResourceUsageRenderTarget;
 					if (Graphics::IsDepthStencilFormat(desc.Format)) texture->usage |= ResourceUsageDepthStencil;
 				}
-				texture->usage |= ResourceUsageCPUAll;
+				texture->usage |= ResourceUsageCPUAll | ResourceUsageVideoAll;
 				descriptor.storageMode = MTLStorageModeManaged;
 				texture->texture = [device newTextureWithDescriptor: descriptor];
 				[descriptor release];
@@ -1365,12 +1406,11 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
-			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept override
+			virtual IWindowLayer * CreateWindowLayer(Windows::ICoreWindow * window, const WindowLayerDesc & desc) noexcept override
 			{
 				try {
-					if (!window->GetStation()->IsNativeStationWrapper()) return 0;
 					if (desc.Width > 16384 || desc.Height > 16384) return 0;
-					SafePointer<MTL_WindowLayer> layer = new MTL_WindowLayer(this, context, desc, window->GetStation());
+					SafePointer<MTL_WindowLayer> layer = new MTL_WindowLayer(this, context, desc, window);
 					layer->Retain();
 					return layer;
 				} catch (...) { return 0; }
@@ -1380,9 +1420,9 @@ namespace Engine
 		class MTL_Factory : public IDeviceFactory
 		{
 		public:
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableDevices(void) noexcept override
+			virtual Volumes::Dictionary<uint64, string> * GetAvailableDevices(void) noexcept override
 			{
-				SafePointer< Dictionary::PlainDictionary<uint64, string> > result = new (std::nothrow) Dictionary::PlainDictionary<uint64, string>(0x10);
+				SafePointer< Volumes::Dictionary<uint64, string> > result = new (std::nothrow) Volumes::Dictionary<uint64, string>;
 				NSArray< id<MTLDevice> > * devs = MTLCopyAllDevices();
 				try {
 					for (int i = 0; i < [devs count]; i++) {
@@ -1517,6 +1557,28 @@ namespace Engine
 				else if (format == PixelFormat::D32S8_float) return MTLPixelFormatDepth32Float_Stencil8;
 				else return MTLPixelFormatInvalid;
 			} else return MTLPixelFormatInvalid;
+		}
+		void UpdateMetalTexture(Graphics::ITexture * dest, const void * data, uint stride, Graphics::SubresourceIndex subres)
+		{
+			auto surface = GetInnerMetalTexture(dest);
+			auto region = MTLRegionMake3D(0, 0, 0, dest->GetWidth(), dest->GetHeight(), 1);
+			[surface replaceRegion: region mipmapLevel: subres.mip_level slice: subres.array_index withBytes: data bytesPerRow: stride bytesPerImage: 0];
+		}
+		void QueryMetalTexture(Graphics::ITexture * from, void * buffer, uint stride, Graphics::SubresourceIndex subres)
+		{
+			auto surface = GetInnerMetalTexture(from);
+			auto region = MTLRegionMake3D(0, 0, 0, from->GetWidth(), from->GetHeight(), 1);
+			auto device = GetInnerMetalDevice(from->GetParentDevice());
+			auto queue = GetInnerMetalQueue(from->GetParentDevice());
+			@autoreleasepool {
+				auto command = [queue commandBuffer];
+				auto blt = [command blitCommandEncoder];
+				[blt synchronizeTexture: surface slice: subres.array_index level: subres.mip_level];
+				[blt endEncoding];
+				[command commit];
+				[command waitUntilCompleted];
+			}
+			[surface getBytes: buffer bytesPerRow: stride bytesPerImage: 0 fromRegion: region mipmapLevel: subres.mip_level slice: subres.array_index];
 		}
 	}
 }

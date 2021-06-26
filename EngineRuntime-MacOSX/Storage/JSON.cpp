@@ -87,7 +87,7 @@ namespace Engine
 					} else if (pi.Type == PropertyType::Time) {
 						ps << string(pi.Get<Time>());
 					} else if (pi.Type == PropertyType::Color) {
-						auto & v = pi.Get<UI::Color>();
+						auto & v = pi.Get<Color>();
 						ps << L"{ \"r\": " << string(int32(v.r)) << L", \"g\": " << string(int32(v.g)) << L", \"b\": " << string(int32(v.b)) << L", \"a\": " << string(int32(v.a)) << L" }";
 					} else if (pi.Type == PropertyType::Rectangle) {
 						auto & v = pi.Get<UI::Rectangle>();
@@ -205,7 +205,7 @@ namespace Engine
 							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Color) {
-							auto & v = pi.Get< Array<UI::Color> >();
+							auto & v = pi.Get< Array<Color> >();
 							ps << L"[" << IO::LineFeedSequence;
 							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { v.GetBuffer() + i, inner, PropertyType::Unknown, 1, sizeof(*v.GetBuffer()), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
@@ -294,7 +294,7 @@ namespace Engine
 							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
 						} else if (pi.InnerType == PropertyType::Color) {
-							auto & v = pi.Get< SafeArray<UI::Color> >();
+							auto & v = pi.Get< SafeArray<Color> >();
 							ps << L"[" << IO::LineFeedSequence;
 							for (int i = 0; i < v.Length(); i++) { ps << *pref << L"    "; PropertyInfo spi = { &v[i], inner, PropertyType::Unknown, 1, sizeof(v[i]), L"" }; WriteSimpleProperty(spi); if (i < v.Length() - 1) ps << L","; ps << IO::LineFeedSequence; }
 							ps << *pref << L"]";
@@ -397,12 +397,12 @@ namespace Engine
 					return Math::Complex(val.re, val.im);
 				} else return 0.0;
 			}
-			UI::Color JsonAnalyzeColor(Syntax::SyntaxTreeNode & node)
+			Color JsonAnalyzeColor(Syntax::SyntaxTreeNode & node)
 			{
 				if (node.Subnodes[0].Label == L"STRUCT") {
 					ColorWrapper val;
 					JsonAnalyzeStructure(val, node.Subnodes[0]);
-					return UI::Color(val.r, val.g, val.b, val.a);
+					return Color(val.r, val.g, val.b, val.a);
 				} else return 0;
 			}
 			UI::Rectangle JsonAnalyzeRectangle(Syntax::SyntaxTreeNode & node)
@@ -471,7 +471,7 @@ namespace Engine
 							} else if (pi.Type == PropertyType::String) {
 								pi.Set<string>(JsonAnalyzeString(value));
 							} else if (pi.Type == PropertyType::Color) {
-								pi.Set<UI::Color>(JsonAnalyzeColor(value));
+								pi.Set<Color>(JsonAnalyzeColor(value));
 							} else if (pi.Type == PropertyType::Time) {
 								pi.Set<Time>(uint64(JsonAnalyzeInteger(value)));
 							} else if (pi.Type == PropertyType::Rectangle) {
@@ -505,7 +505,7 @@ namespace Engine
 									} else if (pi.InnerType == PropertyType::String) {
 										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< Array<string> >() << JsonAnalyzeString(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0]));
 									} else if (pi.InnerType == PropertyType::Color) {
-										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< Array<UI::Color> >() << JsonAnalyzeColor(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0]));
+										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< Array<Color> >() << JsonAnalyzeColor(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0]));
 									} else if (pi.InnerType == PropertyType::Time) {
 										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< Array<Time> >() << uint64(JsonAnalyzeInteger(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0])));
 									} else if (pi.InnerType == PropertyType::Rectangle) {
@@ -548,7 +548,7 @@ namespace Engine
 									} else if (pi.InnerType == PropertyType::String) {
 										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< SafeArray<string> >() << JsonAnalyzeString(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0]));
 									} else if (pi.InnerType == PropertyType::Color) {
-										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< SafeArray<UI::Color> >() << JsonAnalyzeColor(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0]));
+										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< SafeArray<Color> >() << JsonAnalyzeColor(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0]));
 									} else if (pi.InnerType == PropertyType::Time) {
 										ENUM_DYNAMIC_ARRAY_ITEMS(value.Subnodes[0]) pi.Get< SafeArray<Time> >() << uint64(JsonAnalyzeInteger(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0])));
 									} else if (pi.InnerType == PropertyType::Rectangle) {
@@ -621,7 +621,7 @@ namespace Engine
 									END_ENUM_STATIC_ARRAY_ITEMS
 								} else if (pi.Type == PropertyType::Color) {
 									ENUM_STATIC_ARRAY_ITEMS(pi.Volume, value.Subnodes[0])
-										GET_STATIC_ARRAY_FIELD(pi).Set<UI::Color>(JsonAnalyzeColor(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0])));
+										GET_STATIC_ARRAY_FIELD(pi).Set<Color>(JsonAnalyzeColor(GET_DYNAMIC_ARRAY_OBJECT(value.Subnodes[0])));
 									END_ENUM_STATIC_ARRAY_ITEMS
 								} else if (pi.Type == PropertyType::Time) {
 									ENUM_STATIC_ARRAY_ITEMS(pi.Volume, value.Subnodes[0])

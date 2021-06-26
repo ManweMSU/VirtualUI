@@ -4,10 +4,12 @@
 #undef LoadCursor
 
 #include "Direct2D.h"
-#include "WindowStation.h"
+#include "EffectPlugin.h"
 #include "../Storage/Archive.h"
+#include "../Interfaces/SystemWindows.h"
 
 #include <VersionHelpers.h>
+#include <d3dcompiler.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -18,8 +20,17 @@ using namespace Engine::Graphics;
 
 namespace Engine
 {
+	namespace Windows
+	{
+		void _set_window_user_render_callback(ICoreWindow * window);
+		void _get_window_layers(ICoreWindow * window, HLAYERS * layers, double * factor);
+		void _set_window_layers(ICoreWindow * window, HLAYERS layers);
+	}
 	namespace Direct3D
 	{
+		typedef HRESULT (* WINAPI func_D3DCompile) (LPCVOID src_data, SIZE_T src_size, LPCSTR name, const D3D_SHADER_MACRO * defines,
+			ID3DInclude * include, LPCSTR entrypoint, LPCSTR target_model, UINT flags1, UINT flags2, ID3DBlob ** result, ID3DBlob ** errors);
+
 		DeviceDriverClass D3DDeviceClass = DeviceDriverClass::None;
 		SafePointer<ID3D11Device> D3DDevice;
 		SafePointer<ID2D1Device> D2DDevice;
@@ -186,6 +197,37 @@ namespace Engine
 			return true;
 		}
 
+		class D3D11_FakeEngine : public Windows::IPresentationEngine
+		{
+			HWND _handle;
+			HLAYERS _layers;
+			Windows::ICoreWindow * _window;
+		public:
+			D3D11_FakeEngine(void) : _handle(0), _layers(0), _window(0) {}
+			virtual ~D3D11_FakeEngine(void) override {}
+			virtual void Attach(Windows::ICoreWindow * window) override
+			{
+				_window = window;
+				_handle = reinterpret_cast<HWND>(window->GetOSHandle());
+				Windows::_set_window_user_render_callback(window);
+			}
+			virtual void Detach(void) override
+			{
+				_window = 0; _handle = 0;
+				if (_layers) { Effect::ReleaseLayers(_layers); _layers = 0; }
+			}
+			virtual void Invalidate(void) override { InvalidateRect(_handle, 0, FALSE); }
+			virtual void Resize(int width, int height) override {}
+			bool IsAttached(void) { return _handle; }
+			void SetLayers(HLAYERS layers)
+			{
+				if (_layers) Effect::ReleaseLayers(_layers);
+				_layers = layers;
+				if (_layers) Effect::RetainLayers(_layers);
+				Windows::_set_window_layers(_window, _layers);
+			}
+			HLAYERS GetLayers(void) { return _layers; }
+		};
 		class D3D11_Buffer : public Graphics::IBuffer
 		{
 			IDevice * wrapper;
@@ -341,6 +383,57 @@ namespace Engine
 			}
 			virtual string ToString(void) const override { return L"D3D11_ShaderLibrary"; }
 		};
+		class D3D11_DynamicShaderLibrary : public Graphics::IShaderLibrary
+		{
+			struct _shader_data { string name; ShaderType type; SafePointer<DataBlock> data; };
+			IDevice * wrapper;
+			ID3D11Device * device;
+			Array<_shader_data> _shaders;
+		public:
+			D3D11_DynamicShaderLibrary(IDevice * _wrapper, ID3D11Device * _device) : wrapper(_wrapper), device(_device), _shaders(0x10) { device->AddRef(); }
+			virtual ~D3D11_DynamicShaderLibrary(void) override { if (device) device->Release(); }
+			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
+			virtual Array<string> * GetShaderNames(void) noexcept override
+			{
+				try {
+					SafePointer< Array<string> > result = new Array<string>(0x10);
+					for (auto & s : _shaders) result->Append(s.name);
+					result->Retain();
+					return result;
+				} catch (...) { return 0; }
+			}
+			virtual IShader * CreateShader(const string & name) noexcept override
+			{
+				try {
+					int index = -1;
+					for (int i = 0; i < _shaders.Length(); i++) if (string::CompareIgnoreCase(_shaders[i].name, name) == 0) { index = i; break; }
+					if (index < 0) return 0;
+					SafePointer<D3D11_Shader> shader = new D3D11_Shader(wrapper, _shaders[index].name);
+					if (_shaders[index].type == ShaderType::Vertex) {
+						if (device->CreateVertexShader(_shaders[index].data->GetBuffer(), _shaders[index].data->Length(), 0, &shader->vs) != S_OK) return 0;
+					} else if (_shaders[index].type == ShaderType::Pixel) {
+						if (device->CreatePixelShader(_shaders[index].data->GetBuffer(), _shaders[index].data->Length(), 0, &shader->ps) != S_OK) return 0;
+					} else return 0;
+					if (shader) {
+						shader->Retain();
+						return shader;
+					} else return 0;
+				} catch (...) { return 0; }
+			}
+			virtual string ToString(void) const override { return L"D3D11_DynamicShaderLibrary"; }
+			bool Append(const string & name, ShaderType type, DataBlock * data) noexcept
+			{
+				try {
+					_shader_data dta;
+					dta.name = name;
+					dta.type = type;
+					dta.data.SetRetain(data);
+					_shaders.Append(dta);
+					return true;
+				} catch (...) { return false; }
+			}
+			bool IsEmpty(void) const noexcept { return _shaders.Length() == 0; }
+		};
 		class D3D11_PipelineState : public Graphics::IPipelineState
 		{
 			IDevice * wrapper;
@@ -383,7 +476,7 @@ namespace Engine
 			ID3D11DepthStencilState * depth_stencil_state;
 			ID2D1RenderTarget * device_2d_render_target;
 			ID2D1DeviceContext * device_2d_device_context;
-			Direct2D::D2DRenderingDevice * device_2d;
+			Direct2D::D2D_DeviceContext * device_2d;
 			int pass_mode;
 			bool pass_state;
 			uint32 stencil_ref;
@@ -453,9 +546,10 @@ namespace Engine
 					if (d2d1_device) {
 						if (d2d1_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &device_2d_device_context) != S_OK) { d2d1_device->Release(); return false; }
 						d2d1_device->Release();
-						try { device_2d = new Direct2D::D2DRenderingDevice(device_2d_device_context); }
+						try { device_2d = new Direct2D::D2D_DeviceContext; }
 						catch (...) { device_2d_device_context->Release(); device_2d_device_context = 0; return false; }
-						device_2d->SetParentWrappedDevice(wrapper);
+						device_2d->SetRenderTargetEx(device_2d_device_context);
+						device_2d->SetWrappedDevice(wrapper);
 						IDXGISurface * surface;
 						if (rsrc->QueryInterface(IID_PPV_ARGS(&surface)) != S_OK) {
 							device_2d_device_context->Release(); device_2d_device_context = 0;
@@ -485,9 +579,10 @@ namespace Engine
 						props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 						if (Direct2D::D2DFactory->CreateDxgiSurfaceRenderTarget(surface, &props, &device_2d_render_target) != S_OK) { surface->Release(); return false; }
 						surface->Release();
-						try { device_2d = new Direct2D::D2DRenderingDevice(device_2d_render_target); }
+						try { device_2d = new Direct2D::D2D_DeviceContext; }
 						catch (...) { device_2d_render_target->Release(); device_2d_render_target = 0; return false; }
-						device_2d->SetParentWrappedDevice(wrapper);
+						device_2d->SetRenderTarget(device_2d_render_target);
+						device_2d->SetWrappedDevice(wrapper);
 						target = device_2d_render_target;
 					}
 				} else {
@@ -510,7 +605,7 @@ namespace Engine
 						props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 						props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 						if (Direct2D::D2DFactory->CreateDxgiSurfaceRenderTarget(surface, &props, &device_2d_render_target) != S_OK) { surface->Release(); return false; }
-						device_2d->UpdateRenderTarget(device_2d_render_target);
+						device_2d->SetRenderTarget(device_2d_render_target);
 						target = device_2d_render_target;
 					}
 					surface->Release();
@@ -542,7 +637,7 @@ namespace Engine
 							device_2d_device_context->SetTarget(0);
 						} else if (device_2d_render_target) {
 							if (device_2d_render_target->EndDraw() != S_OK) pass_state = false;
-							device_2d->UpdateRenderTarget(0);
+							device_2d->SetRenderTarget(0);
 							device_2d_render_target->Release();
 							device_2d_render_target = 0;
 						}
@@ -761,7 +856,7 @@ namespace Engine
 				if (pass_mode != 1) { pass_state = false; return; }
 				context->DrawIndexedInstanced(index_count, instance_count, first_index, base_vertex, first_instance);
 			}
-			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept override { return device_2d; }
+			virtual I2DDeviceContext * Get2DContext(void) noexcept override { return device_2d; }
 			virtual void GenerateMipmaps(ITexture * texture) noexcept override
 			{
 				if (!texture) { pass_state = false; return; }
@@ -903,16 +998,110 @@ namespace Engine
 		class D3D11_WindowLayer : public Graphics::IWindowLayer
 		{
 			IDevice * wrapper;
-			SafePointer<ITexture> backbuffer;
-		public:
 			ID3D11Device * device;
-			IDXGISwapChain * swapchain;
+			ID3D11DeviceContext * context;
+			SafePointer<ITexture> backbuffer;
 			PixelFormat format;
 			DXGI_FORMAT dxgi_format;
 			uint32 usage, width, height;
+			IDXGISwapChain * swapchain;
+			SafePointer<D3D11_FakeEngine> engine;
 
-			D3D11_WindowLayer(IDevice * _wrapper) : wrapper(_wrapper), device(0), swapchain(0), format(PixelFormat::Invalid),
-				dxgi_format(DXGI_FORMAT_UNKNOWN), usage(0), width(0), height(0) {}
+			void _prop_init_swapchain(Windows::ICoreWindow * window)
+			{
+				auto hwnd = reinterpret_cast<HWND>(window->GetOSHandle());
+				DXGI_SWAP_CHAIN_DESC swcd;
+				swcd.BufferDesc.Width = width;
+				swcd.BufferDesc.Height = height;
+				swcd.BufferDesc.RefreshRate.Numerator = 60;
+				swcd.BufferDesc.RefreshRate.Denominator = 1;
+				swcd.BufferDesc.Format = dxgi_format;
+				swcd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+				swcd.BufferDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
+				swcd.SampleDesc.Count = 1;
+				swcd.SampleDesc.Quality = 0;
+				swcd.BufferUsage = 0;
+				if (usage & ResourceUsageShaderRead) swcd.BufferUsage |= DXGI_USAGE_SHADER_INPUT;
+				if (usage & ResourceUsageRenderTarget) swcd.BufferUsage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				swcd.BufferCount = 1;
+				swcd.OutputWindow = hwnd;
+				swcd.Windowed = TRUE;
+				swcd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+				swcd.Flags = 0;
+				IDXGIDevice * dxgi_device;
+				IDXGIAdapter * dxgi_adapter;
+				IDXGIFactory * dxgi_factory;
+				if (device->QueryInterface(IID_PPV_ARGS(&dxgi_device)) != S_OK) throw Exception();
+				if (dxgi_device->GetAdapter(&dxgi_adapter) != S_OK) { dxgi_device->Release(); throw Exception(); }
+				dxgi_device->Release();
+				if (dxgi_adapter->GetParent(IID_PPV_ARGS(&dxgi_factory)) != S_OK) { dxgi_adapter->Release(); throw Exception(); }
+				dxgi_adapter->Release();
+				if (dxgi_factory->CreateSwapChain(device, &swcd, &swapchain) != S_OK) { dxgi_factory->Release(); throw Exception(); }
+				if (dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN) != S_OK) { dxgi_factory->Release(); throw Exception(); }
+				dxgi_factory->Release();
+				window->SetPresentationEngine(engine);
+			}
+			bool _prop_create_surface(void) noexcept
+			{
+				TextureDesc desc;
+				desc.Type = TextureType::Type2D;
+				desc.Format = format;
+				desc.Width = width;
+				desc.Height = height;
+				desc.MipmapCount = 1;
+				desc.Usage = usage;
+				desc.MemoryPool = ResourceMemoryPool::Default;
+				backbuffer = wrapper->CreateTexture(desc);
+				return backbuffer.Inner() != 0;
+			}
+			void _prop_init_layers(Windows::ICoreWindow * window)
+			{
+				if (format != PixelFormat::B8G8R8A8_unorm) throw InvalidArgumentException();
+				if (!_prop_create_surface()) throw Exception();
+				window->SetPresentationEngine(engine);
+				if (!engine->IsAttached()) throw Exception();
+				auto window_full = static_cast<Windows::IWindow *>(window);
+				auto window_handle = reinterpret_cast<HWND>(window_full->GetOSHandle());
+				auto window_flags = window_full->GetBackgroundFlags();
+				HLAYERS current_layers;
+				double blur_factor;
+				Windows::_get_window_layers(window, &current_layers, &blur_factor);
+				Effect::CreateEngineEffectLayersDesc desc;
+				desc.window = window_handle;
+				desc.layer_flags = Effect::CreateEngineEffectTransparentBackground;
+				if (window_flags & Windows::WindowFlagBlurBehind) desc.layer_flags |= Effect::CreateEngineEffectBlurBehind;
+				desc.device = device;
+				desc.width = width;
+				desc.height = height;
+				desc.deviation = blur_factor;
+				auto layers = Effect::CreateLayers(&desc);
+				if (!layers) throw Exception();
+				engine->SetLayers(layers);
+				Effect::ReleaseLayers(layers);
+				device->GetImmediateContext(&context);
+			}
+		public:
+			D3D11_WindowLayer(Windows::ICoreWindow * window, IDevice * parent, const WindowLayerDesc & desc) : wrapper(parent), device(0),
+				context(0), format(PixelFormat::Invalid), dxgi_format(DXGI_FORMAT_UNKNOWN), usage(0), width(0), height(0), swapchain(0)
+			{
+				engine = new D3D11_FakeEngine;
+				device = GetD3D11Device(wrapper);
+				format = desc.Format;
+				dxgi_format = MakeDxgiFormat(desc.Format);
+				width = desc.Width;
+				height = desc.Height;
+				usage = desc.Usage;
+				if (!IsColorFormat(format)) throw InvalidArgumentException();
+				if (!width || !height) throw InvalidArgumentException();
+				if (usage & ~ResourceUsageTextureMask) throw InvalidArgumentException();
+				if (usage & ResourceUsageShaderWrite) throw InvalidArgumentException();
+				if (usage & ResourceUsageDepthStencil) throw InvalidArgumentException();
+				if (usage & ResourceUsageCPUAll) throw InvalidArgumentException();
+				if (usage & ResourceUsageVideoAll) throw InvalidArgumentException();
+				if (static_cast<Windows::IWindow *>(window)->GetBackgroundFlags() & Windows::WindowFlagTransparent) _prop_init_layers(window);
+				else _prop_init_swapchain(window);
+				device->AddRef();
+			}
 			virtual ~D3D11_WindowLayer(void) override
 			{
 				if (IsFullscreen()) SwitchToWindow();
@@ -920,53 +1109,86 @@ namespace Engine
 				if (swapchain) swapchain->Release();
 			}
 			virtual IDevice * GetParentDevice(void) noexcept override { return wrapper; }
-			virtual bool Present(void) noexcept override { if (swapchain->Present(0, 0) != S_OK) return false; return true; }
+			virtual bool Present(void) noexcept override
+			{
+				if (swapchain) {
+					return swapchain->Present(0, 0) == S_OK;
+				} else {
+					auto layers = engine->GetLayers();
+					if (!layers) return false;
+					uint org_x, org_y;
+					ID3D11Texture2D * surface;
+					if (!Effect::BeginDraw(layers, &surface, &org_x, &org_y)) return false;
+					D3D11_BOX box;
+					box.left = box.top = box.front = 0;
+					box.right = width;
+					box.bottom = height;
+					box.back = 1;
+					context->CopySubresourceRegion(surface, 0, org_x, org_y, 0, GetD3D11Texture2D(backbuffer), 0, &box);
+					surface->Release();
+					return Effect::EndDraw(layers);
+				}
+			}
 			virtual ITexture * QuerySurface(void) noexcept override
 			{
 				if (backbuffer) {
 					backbuffer->Retain();
 					return backbuffer;
 				}
-				SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(TextureType::Type2D, wrapper);
-				if (!result) return 0;
-				if (swapchain->GetBuffer(0, IID_PPV_ARGS(&result->tex_2d)) != S_OK) return 0;
-				if (usage & ResourceUsageShaderRead) {
-					if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
-				}
-				if (usage & ResourceUsageRenderTarget) {
-					if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
-				}
-				result->pool = ResourceMemoryPool::Default;
-				result->format = format;
-				result->usage_flags = usage;
-				result->width = width;
-				result->height = height;
-				result->depth = result->size = 1;
-				result->Retain();
-				backbuffer.SetRetain(result);
-				return result;
+				if (swapchain) {
+					SafePointer<D3D11_Texture> result = new (std::nothrow) D3D11_Texture(TextureType::Type2D, wrapper);
+					if (!result) return 0;
+					if (swapchain->GetBuffer(0, IID_PPV_ARGS(&result->tex_2d)) != S_OK) return 0;
+					if (usage & ResourceUsageShaderRead) {
+						if (device->CreateShaderResourceView(result->tex_2d, 0, &result->view) != S_OK) return 0;
+					}
+					if (usage & ResourceUsageRenderTarget) {
+						if (device->CreateRenderTargetView(result->tex_2d, 0, &result->rt_view) != S_OK) return 0;
+					}
+					result->pool = ResourceMemoryPool::Default;
+					result->format = format;
+					result->usage_flags = usage;
+					result->width = width;
+					result->height = height;
+					result->depth = result->size = 1;
+					result->Retain();
+					backbuffer.SetRetain(result);
+					return result;
+				} else return 0;
 			}
 			virtual bool ResizeSurface(uint32 _width, uint32 _height) noexcept override
 			{
 				if (!_width || !_height) return false;
 				backbuffer.SetReference(0);
-				if (swapchain->ResizeBuffers(1, _width, _height, dxgi_format, 0) != S_OK) return false;
-				width = _width;
-				height = _height;
-				return true;
+				if (swapchain) {
+					if (swapchain->ResizeBuffers(1, _width, _height, dxgi_format, 0) != S_OK) return false;
+					width = _width;
+					height = _height;
+					return true;
+				} else {
+					auto layers = engine->GetLayers();
+					if (!layers) return false;
+					if (!Effect::ResizeLayers(layers, _width, _height)) return false;
+					width = _width;
+					height = _height;
+					return _prop_create_surface();
+				}
 			}
 			virtual bool SwitchToFullscreen(void) noexcept override
 			{
+				if (!swapchain) return false;
 				if (swapchain->SetFullscreenState(TRUE, 0) != S_OK) return false;
 				return true;
 			}
 			virtual bool SwitchToWindow(void) noexcept override
 			{
+				if (!swapchain) return false;
 				if (swapchain->SetFullscreenState(FALSE, 0) != S_OK) return false;
 				return true;
 			}
 			virtual bool IsFullscreen(void) noexcept override
 			{
+				if (!swapchain) return false;
 				BOOL result;
 				IDXGIOutput * output;
 				if (swapchain->GetFullscreenState(&result, &output) != S_OK) return false;
@@ -979,6 +1201,7 @@ namespace Engine
 		{
 			ID3D11Device * device;
 			IDeviceContext * context;
+			IUnknown * video_acceleration;
 			D3D11_COMPARISON_FUNC _make_comp_function(CompareFunction func)
 			{
 				if (func == CompareFunction::Always) return D3D11_COMPARISON_ALWAYS;
@@ -1057,8 +1280,8 @@ namespace Engine
 				return r;
 			}
 		public:
-			D3D11_Device(ID3D11Device * _device) { context = new D3D11_DeviceContext(_device, this); device = _device; device->AddRef(); }
-			virtual ~D3D11_Device(void) override { device->Release(); context->Release(); }
+			D3D11_Device(ID3D11Device * _device) { context = new D3D11_DeviceContext(_device, this); device = _device; device->AddRef(); video_acceleration = 0; }
+			virtual ~D3D11_Device(void) override { if (video_acceleration) video_acceleration->Release(); device->Release(); context->Release(); }
 			virtual string GetDeviceName(void) noexcept override
 			{
 				IDXGIDevice * dxgi_device;
@@ -1101,6 +1324,82 @@ namespace Engine
 					if (!data) return 0;
 					return LoadShaderLibrary(data);
 				} catch (...) { return 0; }
+			}
+			virtual IShaderLibrary * CompileShaderLibrary(const void * data, int length, ShaderError * error) noexcept override
+			{
+				HMODULE lib_compiler = LoadLibraryW(L"d3dcompiler_47.dll");
+				if (!lib_compiler) {
+					if (error) *error = ShaderError::NoCompiler;
+					return 0;
+				}
+				auto Compile = reinterpret_cast<func_D3DCompile>(GetProcAddress(lib_compiler, "D3DCompile"));
+				if (!Compile) {
+					FreeLibrary(lib_compiler);
+					if (error) *error = ShaderError::NoCompiler;
+					return 0;
+				}
+				try {
+					SafePointer<Streaming::Stream> stream = new Streaming::MemoryStream(data, length);
+					SafePointer<Storage::Archive> archive = Storage::OpenArchive(stream);
+					SafePointer<D3D11_DynamicShaderLibrary> library = new D3D11_DynamicShaderLibrary(this, device);
+					if (!archive) throw InvalidFormatException();
+					for (Storage::ArchiveFile file = 1; file <= archive->GetFileCount(); file++) {
+						auto flags = archive->GetFileCustomData(file);
+						if ((flags & 0xFFFF0000) == 0x10000) {
+							ShaderType type;
+							if ((flags & 0xFFFF) == 0x01) type = ShaderType::Vertex;
+							else if ((flags & 0xFFFF) == 0x02) type = ShaderType::Pixel;
+							else throw InvalidFormatException();
+							auto names = archive->GetFileName(file).Split(L'!');
+							if (names.Length() != 2) throw InvalidFormatException();
+							SafePointer<Streaming::Stream> data_stream = archive->QueryFileStream(file, Storage::ArchiveStream::Native);
+							if (!data_stream) throw InvalidFormatException();
+							SafePointer<DataBlock> source = data_stream->ReadAll();
+							SafePointer<DataBlock> entry = names[1].EncodeSequence(Encoding::ANSI, true);
+							const char * target;
+							ID3DBlob * shader;
+							if (type == ShaderType::Vertex) target = "vs_4_1";
+							else if (type == ShaderType::Pixel) target = "ps_4_1";
+							if (Compile(source->GetBuffer(), source->Length(), "", 0, 0, reinterpret_cast<char *>(entry->GetBuffer()),
+								target, D3DCOMPILE_PACK_MATRIX_ROW_MAJOR | D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &shader, 0) != S_OK) {
+								if (error) *error = ShaderError::Compilation;
+								FreeLibrary(lib_compiler);
+								return 0;
+							}
+							SafePointer<DataBlock> shader_blob;
+							try {
+								shader_blob = new DataBlock(1);
+								shader_blob->Append(reinterpret_cast<const uint8 *>(shader->GetBufferPointer()), shader->GetBufferSize());
+							} catch (...) { shader->Release(); throw; }
+							shader->Release();
+							library->Append(names[0], type, shader_blob);
+						}
+					}
+					if (library->IsEmpty()) {
+						if (error) *error = ShaderError::NoPlatformVersion;
+						FreeLibrary(lib_compiler);
+						return 0;
+					}
+					if (error) *error = ShaderError::Success;
+					FreeLibrary(lib_compiler);
+					library->Retain();
+					return library;
+				} catch (InvalidFormatException &) {
+					if (error) *error = ShaderError::InvalidContainerData;
+				} catch (...) {
+					if (error) *error = ShaderError::IO;
+				}
+				FreeLibrary(lib_compiler);
+				return 0;
+			}
+			virtual IShaderLibrary * CompileShaderLibrary(const DataBlock * data, ShaderError * error) noexcept override { return CompileShaderLibrary(data->GetBuffer(), data->Length(), error); }
+			virtual IShaderLibrary * CompileShaderLibrary(Streaming::Stream * stream, ShaderError * error) noexcept override
+			{
+				try {
+					SafePointer<DataBlock> data = stream->ReadAll();
+					if (!data) throw Exception();
+					return CompileShaderLibrary(data, error);
+				} catch (...) { if (error) *error = ShaderError::IO; return 0; }
 			}
 			virtual IDeviceContext * GetDeviceContext(void) noexcept override { return context; }
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept override
@@ -1346,6 +1645,7 @@ namespace Engine
 				result->pool = desc.MemoryPool;
 				if ((desc.Usage & ResourceUsageRenderTarget) && !IsColorFormat(desc.Format)) return 0;
 				if ((desc.Usage & ResourceUsageDepthStencil) && !IsDepthStencilFormat(desc.Format)) return 0;
+				result->usage_flags |= ResourceUsageVideoAll;
 				if (desc.Type == TextureType::Type1D || desc.Type == TextureType::TypeArray1D) {
 					D3D11_TEXTURE1D_DESC td;
 					td.Width = desc.Width;
@@ -1598,12 +1898,14 @@ namespace Engine
 				if ((desc.Usage & ResourceUsageRenderTarget) && !IsColorFormat(desc.Format)) return 0;
 				if ((desc.Usage & ResourceUsageDepthStencil) && !IsDepthStencilFormat(desc.Format)) return 0;
 				if (desc.MemoryPool == ResourceMemoryPool::Immutable) {
+					result->usage_flags |= ResourceUsageVideoRead;
 					if (desc.Usage & ResourceUsageShaderWrite) return 0;
 					if (desc.Usage & ResourceUsageRenderTarget) return 0;
 					if (desc.Usage & ResourceUsageDepthStencil) return 0;
 					if (desc.Usage & ResourceUsageCPURead) return 0;
 					if (desc.Usage & ResourceUsageCPUWrite) return 0;
-				}
+					if (desc.Usage & ResourceUsageVideoWrite) return 0;
+				} else result->usage_flags |= ResourceUsageVideoAll;
 				if (desc.Type == TextureType::Type1D || desc.Type == TextureType::TypeArray1D) {
 					D3D11_TEXTURE1D_DESC td;
 					td.Width = desc.Width;
@@ -1914,60 +2216,16 @@ namespace Engine
 				result->Retain();
 				return result;
 			}
-			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept override
-			{
-				if (!window->GetStation()->IsNativeStationWrapper()) return 0;
-				if (!IsColorFormat(desc.Format)) return 0;
-				if (!desc.Width || !desc.Height) return 0;
-				if (desc.Usage & ~ResourceUsageTextureMask) return 0;
-				if (desc.Usage & ResourceUsageShaderWrite) return 0;
-				if (desc.Usage & ResourceUsageDepthStencil) return 0;
-				if (desc.Usage & ResourceUsageCPUAll) return 0;
-				SafePointer<D3D11_WindowLayer> result = new (std::nothrow) D3D11_WindowLayer(this);
-				if (!result) return 0;
-				auto station = static_cast<UI::HandleWindowStation *>(window->GetStation());
-				auto hwnd = station->Handle();
-				station->UseCustomRendering(true);
-				DXGI_SWAP_CHAIN_DESC swcd;
-				swcd.BufferDesc.Width = desc.Width;
-				swcd.BufferDesc.Height = desc.Height;
-				swcd.BufferDesc.RefreshRate.Numerator = 60;
-				swcd.BufferDesc.RefreshRate.Denominator = 1;
-				swcd.BufferDesc.Format = MakeDxgiFormat(desc.Format);
-				swcd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-				swcd.BufferDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
-				swcd.SampleDesc.Count = 1;
-				swcd.SampleDesc.Quality = 0;
-				swcd.BufferUsage = 0;
-				if (desc.Usage & ResourceUsageShaderRead) swcd.BufferUsage |= DXGI_USAGE_SHADER_INPUT;
-				if (desc.Usage & ResourceUsageRenderTarget) swcd.BufferUsage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				swcd.BufferCount = 1;
-				swcd.OutputWindow = hwnd;
-				swcd.Windowed = TRUE;
-				swcd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-				swcd.Flags = 0;
-				IDXGIDevice * dxgi_device;
-				IDXGIAdapter * dxgi_adapter;
-				IDXGIFactory * dxgi_factory;
-				if (device->QueryInterface(IID_PPV_ARGS(&dxgi_device)) != S_OK) return false;
-				if (dxgi_device->GetAdapter(&dxgi_adapter) != S_OK) { dxgi_device->Release(); return false; }
-				dxgi_device->Release();
-				if (dxgi_adapter->GetParent(IID_PPV_ARGS(&dxgi_factory)) != S_OK) { dxgi_adapter->Release(); return false; }
-				dxgi_adapter->Release();
-				if (dxgi_factory->CreateSwapChain(device, &swcd, &result->swapchain) != S_OK) { dxgi_factory->Release(); return 0; }
-				if (dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN) != S_OK) { dxgi_factory->Release(); return 0; }
-				dxgi_factory->Release();
-				result->device = device;
-				result->device->AddRef();
-				result->format = desc.Format;
-				result->dxgi_format = swcd.BufferDesc.Format;
-				result->usage = desc.Usage;
-				result->width = desc.Width;
-				result->height = desc.Height;
-				result->Retain();
-				return result;
-			}
+			virtual IWindowLayer * CreateWindowLayer(Windows::ICoreWindow * window, const WindowLayerDesc & desc) noexcept override { try { return new D3D11_WindowLayer(window, this, desc); } catch (...) { return 0; } }
 			virtual string ToString(void) const override { return L"D3D11_Device"; }
+			ID3D11Device * GetWrappedDevice(void) const { return device; }
+			IUnknown * GetVideoAcceleration(void) const { return video_acceleration; }
+			void SetVideoAcceleration(IUnknown * va)
+			{
+				if (video_acceleration) video_acceleration->Release();
+				video_acceleration = va;
+				if (video_acceleration) video_acceleration->AddRef();
+			}
 		};
 		class D3D11_DeviceFactory : public Graphics::IDeviceFactory
 		{
@@ -1975,10 +2233,10 @@ namespace Engine
 		public:
 			D3D11_DeviceFactory(void) { dxgi_factory = DXGIFactory; dxgi_factory->AddRef(); }
 			virtual ~D3D11_DeviceFactory(void) override { if (dxgi_factory) dxgi_factory->Release(); }
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableDevices(void) noexcept override
+			virtual Volumes::Dictionary<uint64, string> * GetAvailableDevices(void) noexcept override
 			{
 				try {
-					SafePointer< Dictionary::PlainDictionary<uint64, string> > result = new Dictionary::PlainDictionary<uint64, string>(0x10);
+					SafePointer< Volumes::Dictionary<uint64, string> > result = new Volumes::Dictionary<uint64, string>;
 					uint32 index = 0;
 					DXGI_ADAPTER_DESC desc;
 					while (true) {
@@ -2058,7 +2316,9 @@ namespace Engine
 				D3D_FEATURE_LEVEL_9_1
 			};
 			D3D_FEATURE_LEVEL level_selected;
-			if (D3D11CreateDevice(adapter, driver, 0, D3D11_CREATE_DEVICE_BGRA_SUPPORT, feature_level, 7, D3D11_SDK_VERSION, &result, &level_selected, 0) != S_OK) return 0;
+			if (D3D11CreateDevice(adapter, driver, 0, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT, feature_level, 7, D3D11_SDK_VERSION, &result, &level_selected, 0) != S_OK) {
+				if (D3D11CreateDevice(adapter, driver, 0, D3D11_CREATE_DEVICE_BGRA_SUPPORT, feature_level, 7, D3D11_SDK_VERSION, &result, &level_selected, 0) != S_OK) return 0;
+			}
 			return result;
 		}
 		Graphics::IDevice * CreateWrappedDeviceD3D11(ID3D11Device * device) { try { auto wrapper = new D3D11_Device(device); return wrapper; } catch (...) { return 0; } }
@@ -2129,5 +2389,17 @@ namespace Engine
 				else return DXGI_FORMAT_UNKNOWN;
 			} else return DXGI_FORMAT_UNKNOWN;
 		}
+		
+		ID3D11Device * GetD3D11Device(Graphics::IDevice * device) { return static_cast<D3D11_Device *>(device)->GetWrappedDevice(); }
+		ID3D11Texture2D * GetD3D11Texture2D(Graphics::ITexture * texture) { return static_cast<D3D11_Texture *>(texture)->tex_2d; }
+		IDXGIDevice * QueryDXGIDevice(Graphics::IDevice * device)
+		{
+			auto dev = static_cast<D3D11_Device *>(device)->GetWrappedDevice();
+			IDXGIDevice * dxgi_device;
+			if (dev->QueryInterface(IID_PPV_ARGS(&dxgi_device)) != S_OK) return 0;
+			return dxgi_device;
+		}
+		IUnknown * GetVideoAccelerationDevice(Graphics::IDevice * device) { return static_cast<D3D11_Device *>(device)->GetVideoAcceleration(); }
+		void SetVideoAccelerationDevice(Graphics::IDevice * device_for, IUnknown * device_set) { static_cast<D3D11_Device *>(device_for)->SetVideoAcceleration(device_set); }
 	}
 }

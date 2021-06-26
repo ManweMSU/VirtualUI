@@ -4,31 +4,71 @@ namespace Engine
 {
 	namespace Math
 	{
-		Color::Color(void) noexcept {}
-		Color::Color(const double * source) noexcept : Vector4(source) {}
-		Color::Color(double r, double g, double b, double a) noexcept : Vector4(r, g, b, a) {}
-		Color::Color(UI::Color c) noexcept : Vector4(double(c.r) / 255.0, double(c.g) / 255.0, double(c.b) / 255.0, double(c.a) / 255.0) {}
-		Color & Color::operator += (const Color & a) noexcept { x += a.x; y += a.y; z += a.z; w += a.w; return *this; }
-		Color & Color::operator -= (const Color & a) noexcept { x -= a.x; y -= a.y; z -= a.z; w -= a.w; return *this; }
-		Color & Color::operator *= (double a) noexcept { x *= a; y *= a; z *= a; w *= a; return *this; }
-		Color & Color::operator /= (double a) noexcept { x /= a; y /= a; z /= a; w /= a; return *this; }
-		Color Color::operator - (void) const noexcept { return Color(-x, -y, -z, -w); }
-		double & Color::operator [] (int i) noexcept { return c[i]; }
-		const double & Color::operator [] (int i) const noexcept { return c[i]; }
-		Color::operator UI::Color(void) const noexcept { return UI::Color(saturate(x), saturate(y), saturate(z), saturate(w)); }
+		ColorF::ColorF(void) noexcept {}
+		ColorF::ColorF(const double * source) noexcept : Vector4(source) {}
+		ColorF::ColorF(double r, double g, double b, double a) noexcept : Vector4(r, g, b, a) {}
+		ColorF::ColorF(Color c) noexcept : Vector4(double(c.r) / 255.0, double(c.g) / 255.0, double(c.b) / 255.0, double(c.a) / 255.0) {}
+		ColorF::ColorF(StandardColor c) noexcept
+		{
+			if (c == StandardColor::Black) *this = ColorF(0.0, 0.0, 0.0);
+			else if (c == StandardColor::DarkBlue) *this = ColorF(0.0, 0.0, 0.5);
+			else if (c == StandardColor::DarkGreen) *this = ColorF(0.0, 0.5, 0.0);
+			else if (c == StandardColor::DarkCyan) *this = ColorF(0.0, 0.5, 0.5);
+			else if (c == StandardColor::DarkRed) *this = ColorF(0.5, 0.0, 0.0);
+			else if (c == StandardColor::DarkMagenta) *this = ColorF(0.5, 0.0, 0.5);
+			else if (c == StandardColor::DarkYellow) *this = ColorF(0.5, 0.5, 0.0);
+			else if (c == StandardColor::Gray) *this = ColorF(0.75, 0.75, 0.75);
+			else if (c == StandardColor::DarkGray) *this = ColorF(0.5, 0.5, 0.5);
+			else if (c == StandardColor::Blue) *this = ColorF(0.0, 0.0, 1.0);
+			else if (c == StandardColor::Green) *this = ColorF(0.0, 1.0, 0.0);
+			else if (c == StandardColor::Cyan) *this = ColorF(0.0, 1.0, 1.0);
+			else if (c == StandardColor::Red) *this = ColorF(1.0, 0.0, 0.0);
+			else if (c == StandardColor::Magenta) *this = ColorF(1.0, 0.0, 1.0);
+			else if (c == StandardColor::Yellow) *this = ColorF(1.0, 1.0, 0.0);
+			else if (c == StandardColor::White) *this = ColorF(1.0, 1.0, 1.0);
+			else *this = ColorF(0.0, 0.0, 0.0, 0.0);
+		}
+		ColorF::ColorF(CGAColor c) noexcept
+		{
+			if (c == CGAColor::Black) *this = Color(0x00, 0x00, 0x00);
+			else if (c == CGAColor::Blue) *this = Color(0x00, 0x00, 0xAA);
+			else if (c == CGAColor::Green) *this = Color(0x00, 0xAA, 0x00);
+			else if (c == CGAColor::Cyan) *this = Color(0x00, 0xAA, 0xAA);
+			else if (c == CGAColor::Red) *this = Color(0xAA, 0x00, 0x00);
+			else if (c == CGAColor::Magenta) *this = Color(0xAA, 0x00, 0xAA);
+			else if (c == CGAColor::Brown) *this = Color(0xAA, 0x55, 0x00);
+			else if (c == CGAColor::LightGray) *this = Color(0xAA, 0xAA, 0xAA);
+			else if (c == CGAColor::DarkGray) *this = Color(0x55, 0x55, 0x55);
+			else if (c == CGAColor::BrightBlue) *this = Color(0x55, 0x55, 0xFF);
+			else if (c == CGAColor::BrightGreen) *this = Color(0x55, 0xFF, 0x55);
+			else if (c == CGAColor::BrightCyan) *this = Color(0x55, 0xFF, 0xFF);
+			else if (c == CGAColor::BrightRed) *this = Color(0xFF, 0x55, 0x55);
+			else if (c == CGAColor::BrightMagenta) *this = Color(0xFF, 0x55, 0xFF);
+			else if (c == CGAColor::Yellow) *this = Color(0xFF, 0xFF, 0x55);
+			else if (c == CGAColor::White) *this = Color(0xFF, 0xFF, 0xFF);
+			else *this = ColorF(0.0, 0.0, 0.0, 0.0);
+		}
+		ColorF & ColorF::operator += (const ColorF & a) noexcept { x += a.x; y += a.y; z += a.z; w += a.w; return *this; }
+		ColorF & ColorF::operator -= (const ColorF & a) noexcept { x -= a.x; y -= a.y; z -= a.z; w -= a.w; return *this; }
+		ColorF & ColorF::operator *= (double a) noexcept { x *= a; y *= a; z *= a; w *= a; return *this; }
+		ColorF & ColorF::operator /= (double a) noexcept { x /= a; y /= a; z /= a; w /= a; return *this; }
+		ColorF ColorF::operator - (void) const noexcept { return ColorF(-x, -y, -z, -w); }
+		double & ColorF::operator [] (int i) noexcept { return c[i]; }
+		const double & ColorF::operator [] (int i) const noexcept { return c[i]; }
+		ColorF::operator Color(void) const noexcept { return Color(saturate(x), saturate(y), saturate(z), saturate(w)); }
 
-		bool operator == (const Color & a, const Color & b) noexcept { for (int i = 0; i < 4; i++) if (a.c[i] != b.c[i]) return false; return true; }
-		bool operator != (const Color & a, const Color & b) noexcept { for (int i = 0; i < 4; i++) if (a.c[i] != b.c[i]) return true; return false; }
-		Color operator + (const Color & a, const Color & b) noexcept { Color result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] + b.c[i]; return result; }
-		Color operator - (const Color & a, const Color & b) noexcept { Color result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] - b.c[i]; return result; }
-		Color operator * (const Color & a, double b) noexcept { Color result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] * b; return result; }
-		Color operator * (double b, const Color & a) noexcept { Color result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] * b; return result; }
-		Color operator * (const Color & a, const Color & b) noexcept { Color result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] * b.c[i]; return result; }
-		Color operator / (const Color & a, double b) noexcept { Color result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] / b; return result; }
+		bool operator == (const ColorF & a, const ColorF & b) noexcept { for (int i = 0; i < 4; i++) if (a.c[i] != b.c[i]) return false; return true; }
+		bool operator != (const ColorF & a, const ColorF & b) noexcept { for (int i = 0; i < 4; i++) if (a.c[i] != b.c[i]) return true; return false; }
+		ColorF operator + (const ColorF & a, const ColorF & b) noexcept { ColorF result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] + b.c[i]; return result; }
+		ColorF operator - (const ColorF & a, const ColorF & b) noexcept { ColorF result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] - b.c[i]; return result; }
+		ColorF operator * (const ColorF & a, double b) noexcept { ColorF result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] * b; return result; }
+		ColorF operator * (double b, const ColorF & a) noexcept { ColorF result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] * b; return result; }
+		ColorF operator * (const ColorF & a, const ColorF & b) noexcept { ColorF result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] * b.c[i]; return result; }
+		ColorF operator / (const ColorF & a, double b) noexcept { ColorF result; for (int i = 0; i < 4; i++) result.c[i] = a.c[i] / b; return result; }
 
 		ColorHSV::ColorHSV(void) noexcept {}
 		ColorHSV::ColorHSV(double _h, double _s, double _v, double _a) noexcept : h(_h), s(_s), v(_v), a(_a) {}
-		ColorHSV::ColorHSV(const Color & c) noexcept
+		ColorHSV::ColorHSV(const ColorF & c) noexcept
 		{
 			a = c.w;
 			double x = max(c.x, max(c.y, c.z));
@@ -42,40 +82,40 @@ namespace Engine
 			else s = 1.0 - m / x;
 			v = x;
 		}
-		ColorHSV::ColorHSV(UI::Color c) noexcept : ColorHSV(Color(c)) {}
-		ColorHSV::operator UI::Color(void) const noexcept
+		ColorHSV::ColorHSV(Color c) noexcept : ColorHSV(ColorF(c)) {}
+		ColorHSV::operator Color(void) const noexcept
 		{
-			Color c;
+			ColorF c;
 			int Hi = int(3.0 * h / ENGINE_PI);
 			double Hr = (h - Hi * ENGINE_PI / 3.0) * 3.0 / ENGINE_PI;
 			double Vmin = (1.0 - s) * v;
 			double shift = (v - Vmin) * Hr;
 			double Vinc = Vmin + shift;
 			double Vdec = v - shift;
-			if (Hi == 0) c = Color(v, Vinc, Vmin);
-			else if (Hi == 1) c = Color(Vdec, v, Vmin);
-			else if (Hi == 2) c = Color(Vmin, v, Vinc);
-			else if (Hi == 3) c = Color(Vmin, Vdec, v);
-			else if (Hi == 4) c = Color(Vinc, Vmin, v);
-			else if (Hi == 5) c = Color(v, Vmin, Vdec);
+			if (Hi == 0) c = ColorF(v, Vinc, Vmin);
+			else if (Hi == 1) c = ColorF(Vdec, v, Vmin);
+			else if (Hi == 2) c = ColorF(Vmin, v, Vinc);
+			else if (Hi == 3) c = ColorF(Vmin, Vdec, v);
+			else if (Hi == 4) c = ColorF(Vinc, Vmin, v);
+			else if (Hi == 5) c = ColorF(v, Vmin, Vdec);
 			c.w = a;
 			return c;
 		}
-		ColorHSV::operator Color(void) const noexcept
+		ColorHSV::operator ColorF(void) const noexcept
 		{
-			Color c;
+			ColorF c;
 			int Hi = int(3.0 * h / ENGINE_PI);
 			double Hr = (h - Hi * ENGINE_PI / 3.0) * 3.0 / ENGINE_PI;
 			double Vmin = (1.0 - s) * v;
 			double shift = (v - Vmin) * Hr;
 			double Vinc = Vmin + shift;
 			double Vdec = v - shift;
-			if (Hi == 0) c = Color(v, Vinc, Vmin);
-			else if (Hi == 1) c = Color(Vdec, v, Vmin);
-			else if (Hi == 2) c = Color(Vmin, v, Vinc);
-			else if (Hi == 3) c = Color(Vmin, Vdec, v);
-			else if (Hi == 4) c = Color(Vinc, Vmin, v);
-			else if (Hi == 5) c = Color(v, Vmin, Vdec);
+			if (Hi == 0) c = ColorF(v, Vinc, Vmin);
+			else if (Hi == 1) c = ColorF(Vdec, v, Vmin);
+			else if (Hi == 2) c = ColorF(Vmin, v, Vinc);
+			else if (Hi == 3) c = ColorF(Vmin, Vdec, v);
+			else if (Hi == 4) c = ColorF(Vinc, Vmin, v);
+			else if (Hi == 5) c = ColorF(v, Vmin, Vdec);
 			c.w = a;
 			return c;
 		}
@@ -95,5 +135,86 @@ namespace Engine
 			v = saturate(v);
 			a = saturate(a);
 		}
+
+		ColorHSL::ColorHSL(void) noexcept {}
+		ColorHSL::ColorHSL(double _h, double _s, double _l, double _a) noexcept : h(_h), s(_s), l(_l), a(_a) {}
+		ColorHSL::ColorHSL(const ColorF & c) noexcept
+		{
+			auto hsv = Math::ColorHSV(c);
+			h = hsv.h; a = hsv.a;
+			auto x = max(max(c.r, c.g), c.b);
+			auto m = min(min(c.r, c.g), c.b);
+			l = (x + m) / 2.0;
+			s = Math::saturate((l == 0 || l == x || l >= 1.0) ? 0.0 : (x - m) / (1.0 - Math::abs(1.0 - x - m)));
+		}
+		ColorHSL::ColorHSL(const ColorHSV & c) noexcept { ColorF cc = c; *this = ColorHSL(cc); }
+		ColorHSL::ColorHSL(Color c) noexcept { ColorF cc = c; *this = ColorHSL(cc); }
+		ColorHSL::operator Color(void) const noexcept { ColorHSV hsv = *this; return hsv; }
+		ColorHSL::operator ColorF(void) const noexcept { ColorHSV hsv = *this; return hsv; }
+		ColorHSL::operator ColorHSV(void) const noexcept
+		{
+			auto x = (l < 0.5) ? (1.0 + s) * l : (1.0 - s) * l + s;
+			auto m = 2.0 * l - x;
+			Math::ColorHSV hsv;
+			hsv.h = h; hsv.a = a;
+			hsv.v = x;
+			hsv.s = x ? 1.0 - m / x : 0.0;
+			return hsv;
+		}
+		bool operator==(const ColorHSL & a, const ColorHSL & b) noexcept { return a.h == b.h && a.s == b.s && a.l == b.l && a.a == b.a; }
+		bool operator!=(const ColorHSL & a, const ColorHSL & b) noexcept { return a.h != b.h || a.s != b.s || a.l != b.l || a.a != b.a; }
+		ColorHSL ColorHSL::Rotate(double shift) const noexcept
+		{
+			auto clr = ColorHSV(h + shift, s, l, a);
+			clr.ClampChannels();
+			return clr;
+		}
+		void ColorHSL::ClampChannels(void) noexcept
+		{
+			while (h >= 2.0 * ENGINE_PI) h -= 2.0 * ENGINE_PI;
+			while (h < 0.0) h += 2.0 * ENGINE_PI;
+			s = saturate(s);
+			l = saturate(l);
+			a = saturate(a);
+		}
+
+		ColorCMY::ColorCMY(void) noexcept {}
+		ColorCMY::ColorCMY(double _c, double _m, double _y, double _a) noexcept : c(_c), m(_m), y(_m), a(_a) {}
+		ColorCMY::ColorCMY(const ColorF & clr) noexcept : c(1.0 - clr.r), m(1.0 - clr.g), y(1.0 - clr.b), a(clr.a) {}
+		ColorCMY::ColorCMY(const ColorHSV & clr) noexcept { ColorF cc = clr; *this = ColorCMY(cc); }
+		ColorCMY::ColorCMY(const ColorHSL & clr) noexcept { ColorF cc = clr; *this = ColorCMY(cc); }
+		ColorCMY::ColorCMY(Color clr) noexcept { ColorF cc = clr; *this = ColorCMY(cc); }
+		ColorCMY::operator Color(void) const noexcept { ColorF clr = *this; return clr; }
+		ColorCMY::operator ColorF(void) const noexcept { return ColorF(1.0 - c, 1.0 - m, 1.0 - y, a); }
+		ColorCMY::operator ColorHSV(void) const noexcept { ColorF clr = *this; return clr; }
+		ColorCMY::operator ColorHSL(void) const noexcept { ColorF clr = *this; return clr; }
+		bool operator==(const ColorCMY & a, const ColorCMY & b) noexcept { return a.c == b.c && a.m == b.m && a.y == b.y && a.a == b.a; }
+		bool operator!=(const ColorCMY & a, const ColorCMY & b) noexcept { return a.c != b.c || a.m != b.m || a.y != b.y || a.a != b.a; }
+
+		ColorCMYK::ColorCMYK(void) noexcept {}
+		ColorCMYK::ColorCMYK(double _c, double _m, double _y, double _k, double _a) noexcept : c(_c), m(_m), y(_m), k(_k), a(_a) {}
+		ColorCMYK::ColorCMYK(const ColorF & clr) noexcept { ColorCMY cc = clr; *this = ColorCMYK(cc); }
+		ColorCMYK::ColorCMYK(const ColorHSV & clr) noexcept { ColorCMY cc = clr; *this = ColorCMYK(cc); }
+		ColorCMYK::ColorCMYK(const ColorHSL & clr) noexcept { ColorCMY cc = clr; *this = ColorCMYK(cc); }
+		ColorCMYK::ColorCMYK(const ColorCMY & clr) noexcept
+		{
+			k = min(min(clr.c, clr.m), clr.y);
+			if (k == 1.0) {
+				c = m = y = 0.0;
+			} else {
+				c = (clr.c - k) / (1.0 - k);
+				m = (clr.m - k) / (1.0 - k);
+				y = (clr.y - k) / (1.0 - k);
+			}
+			a = clr.a;
+		}
+		ColorCMYK::ColorCMYK(Color clr) noexcept { ColorCMY cc = clr; *this = ColorCMYK(cc); }
+		ColorCMYK::operator Color(void) const noexcept { ColorCMY clr = *this; return clr; }
+		ColorCMYK::operator ColorF(void) const noexcept { ColorCMY clr = *this; return clr; }
+		ColorCMYK::operator ColorHSV(void) const noexcept { ColorCMY clr = *this; return clr; }
+		ColorCMYK::operator ColorHSL(void) const noexcept { ColorCMY clr = *this; return clr; }
+		ColorCMYK::operator ColorCMY(void) const noexcept { return ColorCMY(c * (1.0 - k) + k, m * (1.0 - k) + k, y * (1.0 - k) + k, a); }
+		bool operator==(const ColorCMYK & a, const ColorCMYK & b) noexcept { return a.c == b.c && a.m == b.m && a.y == b.y && a.k == b.k && a.a == b.a; }
+		bool operator!=(const ColorCMYK & a, const ColorCMYK & b) noexcept { return a.c != b.c || a.m != b.m || a.y != b.y || a.k != b.k || a.a != b.a; }
 	}
 }

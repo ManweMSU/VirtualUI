@@ -43,45 +43,54 @@ namespace Engine
 				signal(SIGWINCH, on_size_changed);
 				siginterrupt(SIGWINCH, 1);
 			}
+			uint32 _read_direct(void)
+			{
+				while (true) {
+					int code = 0;
+					int status = read(file_in, &code, 1);
+					if (status == -1) {
+						if (errno == EINTR) return 0xFFFFFFFE;
+						else throw Exception();
+					} else if (status == 0) return 0xFFFFFFFF;
+					if (surrogate_pending) {
+						buffered_code <<= 6;
+						buffered_code |= code & 0x3F;
+						surrogate_pending--;
+						if (!surrogate_pending) return buffered_code;
+					} else {
+						if (code & 0x80) {
+							code &= 0x7F;
+							if (code & 0x20) {
+								code &= 0x1F;
+								if (code & 0x10) {
+									buffered_code = code & 0x07;
+									surrogate_pending = 3;
+								} else {
+									buffered_code = code & 0x0F;
+									surrogate_pending = 2;
+								}
+							} else {
+								buffered_code = code & 0x1F;
+								surrogate_pending = 1;
+							}
+						} else return code;
+					}
+				}
+			}
+			uint32 _read_direct_nointr(void)
+			{
+				while (true) {
+					auto result = _read_direct();
+					if (result != 0xFFFFFFFE) return result;
+				}
+			}
 			uint32 _read_raw(void)
 			{
 				if (unprocessed->Length()) {
 					auto result = unprocessed->FirstElement();
 					unprocessed->RemoveFirst();
 					return result;
-				} else {
-					while (true) {
-						int code = 0;
-						int status = read(file_in, &code, 1);
-						if (status == -1) {
-							if (errno == EINTR) return 0xFFFFFFFE;
-							else throw Exception();
-						} else if (status == 0) return 0xFFFFFFFF;
-						if (surrogate_pending) {
-							buffered_code <<= 6;
-							buffered_code |= code & 0x3F;
-							surrogate_pending--;
-							if (!surrogate_pending) return buffered_code;
-						} else {
-							if (code & 0x80) {
-								code &= 0x7F;
-								if (code & 0x20) {
-									code &= 0x1F;
-									if (code & 0x10) {
-										buffered_code = code & 0x07;
-										surrogate_pending = 3;
-									} else {
-										buffered_code = code & 0x0F;
-										surrogate_pending = 2;
-									}
-								} else {
-									buffered_code = code & 0x1F;
-									surrogate_pending = 1;
-								}
-							} else return code;
-						}
-					}
-				}
+				} else return _read_direct();
 			}
 			uint32 _read_raw_nointr(void)
 			{
@@ -95,9 +104,9 @@ namespace Engine
 			ConsoleObject(handle output, handle input) : file_out(reinterpret_cast<intptr>(output)), file_in(reinterpret_cast<intptr>(input)) { _init_console(); }
 			virtual ~ConsoleObject(void) override {}
 		};
-		Console::Console(void) : internal(new ConsoleObject) {}
-		Console::Console(handle output) : internal(new ConsoleObject(output)) {}
-		Console::Console(handle output, handle input) : internal(new ConsoleObject(output, input)) {}
+		Console::Console(void) : internal(new ConsoleObject) { eof = false; }
+		Console::Console(handle output) : internal(new ConsoleObject(output)) { eof = false; }
+		Console::Console(handle output, handle input) : internal(new ConsoleObject(output, input)) { eof = false; }
 		Console::~Console(void) {}
 		void Console::Write(const string & text) const
 		{
@@ -441,23 +450,42 @@ namespace Engine
 				tcsetattr(in, TCSANOW, &tio);
 				Write(L"\e[6n");
 				while (true) {
-					auto chr = ReadChar();
+					auto chr = object._read_direct_nointr();
 					if (chr == 27) {
-						Array<uint32> cmd(0x10);
-						while (chr != L'R' && chr != 0xFFFFFFFF) { cmd << chr; chr = ReadChar(); }
-						if (chr == 0xFFFFFFFF) object.unprocessed->Append(chr);
-						if (cmd.Length() < 3) { x = y = 0; tcsetattr(in, TCSANOW, &old_tio); return; }
-						string conv = string(cmd.GetBuffer() + 2, cmd.Length() - 2, Encoding::UTF32);
-						int sep = conv.FindFirst(L';');
-						if (sep == -1) { x = y = 0; tcsetattr(in, TCSANOW, &old_tio); return; }
-						try {
-							y = conv.Fragment(0, sep).ToInt32() - 1;
-							x = conv.Fragment(sep + 1, -1).ToInt32() - 1;
-						} catch (...) { x = y = 0; }
+						chr = object._read_direct_nointr();
+						if (chr == L'[') {
+							DynamicString strd;
+							strd << 27 << chr;
+							while (true) {
+								chr = object._read_raw_nointr();
+								strd << chr;
+								if (chr >= L'A' && chr <= L'Z') break;
+								else if (chr == L'~') break;
+								else if (chr == 0xFFFFFFFF) break;
+							}
+							int last_index = strd.Length() - 1;
+							if (strd[last_index] == 0xFFFFFFFF) last_index--;
+							if (strd[last_index] == L'R' && strd.ToString().FindFirst(L';') != -1) {
+								x = y = 0;
+								auto fragment = strd.ToString().Fragment(2, last_index - 3);
+								auto index = fragment.FindFirst(L';');
+								try {
+									y = fragment.Fragment(0, index).ToInt32() - 1;
+									x = fragment.Fragment(index + 1, -1).ToInt32() - 1;
+								} catch (...) {}
+								if (strd[strd.Length() - 1] == 0xFFFFFFFF) object.unprocessed->Append(0xFFFFFFFF);
+								tcsetattr(in, TCSANOW, &old_tio);
+								return;
+							} else for (int i = 0; i < strd.Length(); i++) object.unprocessed->Append(strd[i]);
+						} else {
+							object.unprocessed->Append(27);
+							object.unprocessed->Append(chr);
+						}
+					} else if (chr == 0xFFFFFFFF) {
+						object.unprocessed->Append(chr); x = y = 0;
 						tcsetattr(in, TCSANOW, &old_tio);
 						return;
-					} else if (chr == 0xFFFFFFFF) { object.unprocessed->Append(chr); x = y = 0; tcsetattr(in, TCSANOW, &old_tio); return; }
-					else object.unprocessed->Append(chr);
+					} else object.unprocessed->Append(chr);
 				}
 			} else { x = y = 0; }
 		}

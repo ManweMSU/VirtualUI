@@ -1,11 +1,11 @@
 #pragma once
 
+#include "PresentationCore.h"
 #include "../Streaming.h"
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 
 namespace Engine
 {
-	namespace UI { class IRenderingDevice; class Window; }
 	namespace Graphics
 	{
 		class IDevice;
@@ -20,6 +20,7 @@ namespace Engine
 		class IWindowLayer;
 		class IDeviceContext;
 		class IDeviceFactory;
+		class I2DDeviceContext;
 
 		enum class PixelFormat : uint32 {
 			Invalid = 0x00000000,
@@ -56,6 +57,7 @@ namespace Engine
 		enum class SamplerFilter { Point, Linear, Anisotropic };
 		enum class SamplerAddressMode { Wrap, Mirror, Clamp, Border };
 		enum class ShaderType { Unknown, Vertex, Pixel };
+		enum class ShaderError { Success, IO, InvalidContainerData, NoCompiler, NoPlatformVersion, Compilation, Unknown };
 		enum class BlendingFactor {
 			Zero, One,
 			OverColor, InvertedOverColor, OverAlpha, InvertedOverAlpha,
@@ -96,10 +98,13 @@ namespace Engine
 			ResourceUsageDepthStencil = 0x00000020,
 			ResourceUsageCPURead = 0x00000040,
 			ResourceUsageCPUWrite = 0x00000080,
+			ResourceUsageVideoRead = 0x00000100,
+			ResourceUsageVideoWrite = 0x00000200,
 			ResourceUsageShaderAll = ResourceUsageShaderRead | ResourceUsageShaderWrite,
 			ResourceUsageCPUAll = ResourceUsageCPURead | ResourceUsageCPUWrite,
+			ResourceUsageVideoAll = ResourceUsageVideoRead | ResourceUsageVideoWrite,
 			ResourceUsageBufferMask = ResourceUsageShaderAll | ResourceUsageConstantBuffer | ResourceUsageIndexBuffer | ResourceUsageCPUAll,
-			ResourceUsageTextureMask = ResourceUsageShaderAll | ResourceUsageRenderTarget | ResourceUsageDepthStencil | ResourceUsageCPUAll
+			ResourceUsageTextureMask = ResourceUsageShaderAll | ResourceUsageRenderTarget | ResourceUsageDepthStencil | ResourceUsageCPUAll | ResourceUsageVideoAll
 		};
 
 		struct SamplerDesc
@@ -242,6 +247,9 @@ namespace Engine
 			virtual IShaderLibrary * LoadShaderLibrary(const void * data, int length) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(const DataBlock * data) noexcept = 0;
 			virtual IShaderLibrary * LoadShaderLibrary(Streaming::Stream * stream) noexcept = 0;
+			virtual IShaderLibrary * CompileShaderLibrary(const void * data, int length, ShaderError * error) noexcept = 0;
+			virtual IShaderLibrary * CompileShaderLibrary(const DataBlock * data, ShaderError * error) noexcept = 0;
+			virtual IShaderLibrary * CompileShaderLibrary(Streaming::Stream * stream, ShaderError * error) noexcept = 0;
 			virtual IDeviceContext * GetDeviceContext(void) noexcept = 0;
 			virtual IPipelineState * CreateRenderingPipelineState(const PipelineStateDesc & desc) noexcept = 0;
 			virtual ISamplerState * CreateSamplerState(const SamplerDesc & desc) noexcept = 0;
@@ -250,7 +258,7 @@ namespace Engine
 			virtual ITexture * CreateTexture(const TextureDesc & desc) noexcept = 0;
 			virtual ITexture * CreateTexture(const TextureDesc & desc, const ResourceInitDesc * init) noexcept = 0;
 			virtual ITexture * CreateRenderTargetView(ITexture * texture, uint32 mip_level, uint32 array_offset_or_depth) noexcept = 0;
-			virtual IWindowLayer * CreateWindowLayer(UI::Window * window, const WindowLayerDesc & desc) noexcept = 0;
+			virtual IWindowLayer * CreateWindowLayer(Windows::ICoreWindow * window, const WindowLayerDesc & desc) noexcept = 0;
 		};
 		class IDeviceChild : public Object
 		{
@@ -330,7 +338,7 @@ namespace Engine
 			virtual void DrawIndexedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex) noexcept = 0;
 			virtual void DrawIndexedInstancedPrimitives(uint32 index_count, uint32 first_index, uint32 base_vertex, uint32 instance_count, uint32 first_instance) noexcept = 0;
 
-			virtual UI::IRenderingDevice * Get2DRenderingDevice(void) noexcept = 0;
+			virtual I2DDeviceContext * Get2DContext(void) noexcept = 0;
 
 			virtual void GenerateMipmaps(ITexture * texture) noexcept = 0;
 			virtual void CopyResourceData(IDeviceResource * dest, IDeviceResource * src) noexcept = 0;
@@ -341,13 +349,10 @@ namespace Engine
 		class IDeviceFactory : public Object
 		{
 		public:
-			virtual Dictionary::PlainDictionary<uint64, string> * GetAvailableDevices(void) noexcept = 0;
+			virtual Volumes::Dictionary<uint64, string> * GetAvailableDevices(void) noexcept = 0;
 			virtual IDevice * CreateDevice(uint64 identifier) noexcept = 0;
 			virtual IDevice * CreateDefaultDevice(void) noexcept = 0;
 		};
-
-		IDeviceFactory * CreateDeviceFactory(void);
-		IDevice * GetCommonDevice(void);
 
 		bool IsColorFormat(PixelFormat format);
 		bool IsDepthStencilFormat(PixelFormat format);
@@ -356,4 +361,4 @@ namespace Engine
 	}
 }
 
-#include "../UserInterface/ShapeBase.h"
+#include "GraphicsBase.h"

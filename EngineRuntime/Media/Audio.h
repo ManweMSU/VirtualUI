@@ -1,97 +1,48 @@
 #pragma once
 
-#include "../Streaming.h"
+#include "AudioBase.h"
+#include "Media.h"
 #include "../Miscellaneous/ThreadPool.h"
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 
 namespace Engine
 {
 	namespace Audio
 	{
-		constexpr const widechar * AudioFormatWaveform = L"WAV";
-		constexpr const widechar * AudioFormatEngineRaw = L"ERAU";
-		constexpr const widechar * AudioFormatMPEG3 = L"MP3";
-		constexpr const widechar * AudioFormatMPEG4AAC = L"AAC";
+		constexpr const widechar * AudioFormatEngineWaveform = L"RAW";
+		constexpr const widechar * AudioFormatMicrosoftWaveform = L"WAV";
+		constexpr const widechar * AudioFormatMP3 = L"MP3";
+		constexpr const widechar * AudioFormatAAC = L"AAC";
 		constexpr const widechar * AudioFormatFreeLossless = L"FLAC";
 		constexpr const widechar * AudioFormatAppleLossless = L"ALAC";
 
-		enum class SampleFormat : uint {
-			Invalid = 0,
-			S8_snorm = 0x00010008, S16_snorm = 0x00010010, S24_snorm = 0x00010018, S32_snorm = 0x00010020,
-			S32_float = 0x00020020, S64_float = 0x00020040
-		};
-		enum class AudioObjectType { Unknown, DeviceOutput, DeviceInput, StreamEncoder, StreamDecoder };
+		enum class AudioObjectType { Unknown, DeviceOutput, DeviceInput, Encoder, Decoder, StreamEncoder, StreamDecoder };
 		enum class AudioDeviceEvent { Activated, Inactivated, DefaultChanged };
-		struct StreamDesc
-		{
-			SampleFormat Format;
-			uint ChannelCount;
-			uint FramesPerSecond;
 
-			StreamDesc(void);
-			StreamDesc(SampleFormat format, uint num_channels, uint frames_per_second);
-			operator string(void) const;
-		};
-
-		bool IsFloatingPointFormat(SampleFormat format);
-		uint SampleFormatBitSize(SampleFormat format);
-		uint SampleFormatByteSize(SampleFormat format);
-		uint StreamFrameByteSize(const StreamDesc & format);
-		uint64 ConvertFrameCount(uint64 frame_count, uint old_frame_rate, uint new_frame_rate);
-
-		class WaveBuffer : public Object
-		{
-			StreamDesc desc;
-			uint64 frames_allocated;
-			uint64 frames_used;
-			uint8 * frame_buffer;
-		public:
-			WaveBuffer(const WaveBuffer & src);
-			WaveBuffer(const WaveBuffer * src);
-			WaveBuffer(SampleFormat format, uint num_channels, uint frames_per_second, uint64 size_frames);
-			WaveBuffer(const StreamDesc & desc, uint64 size_frames);
-			virtual ~WaveBuffer(void) override;
-
-			const StreamDesc & GetFormatDescriptor(void) const;
-			uint64 GetSizeInFrames(void) const;
-			uint64 & FramesUsed(void);
-			uint64 FramesUsed(void) const;
-
-			uint8 * GetData(void);
-			const uint8 * GetData(void) const;
-			uint64 GetAllocatedSizeInBytes(void) const;
-			uint64 GetUsedSizeInBytes(void) const;
-			void ReinterpretFrames(uint frames_per_second);
-
-			int32 ReadSampleInteger(uint64 frame_index, uint num_channel) const;
-			double ReadSampleFloat(uint64 frame_index, uint num_channel) const;
-			void WriteSample(uint64 frame_index, uint num_channel, int32 value);
-			void WriteSample(uint64 frame_index, uint num_channel, double value);
-
-			WaveBuffer * ConvertFormat(SampleFormat format) const;
-			WaveBuffer * ConvertFrameRate(uint32 frames_per_second) const;
-			WaveBuffer * RemuxChannels(uint num_channels, const double * remux_matrix) const;
-			WaveBuffer * ReorderChannels(uint num_channels, const uint * indicies) const;
-			WaveBuffer * ReallocateChannels(uint num_channels) const;
-
-			void ConvertFormat(WaveBuffer * buffer, SampleFormat format) const;
-			void ConvertFrameRate(WaveBuffer * buffer, uint32 frames_per_second) const;
-			void RemuxChannels(WaveBuffer * buffer, uint num_channels, const double * remux_matrix) const;
-			void ReorderChannels(WaveBuffer * buffer, uint num_channels, const uint * indicies) const;
-			void ReallocateChannels(WaveBuffer * buffer, uint num_channels) const;
+		enum ChannelLayoutFlags : uint {
+			ChannelLayoutLeft = 0x00001, ChannelLayoutRight = 0x00002, ChannelLayoutCenter = 0x00004,
+			ChannelLayoutLowFrequency = 0x00008,
+			ChannelLayoutBackLeft = 0x00010, ChannelLayoutBackRight = 0x00020,
+			ChannelLayoutFrontLeft = 0x00040, ChannelLayoutFrontRight = 0x00080,
+			ChannelLayoutBackCenter = 0x00100,
+			ChannelLayoutSideLeft = 0x00200, ChannelLayoutSideRight = 0x00400,
+			ChannelLayoutTopCenter = 0x00800,
+			ChannelLayoutTopFrontLeft = 0x01000, ChannelLayoutTopFrontCenter = 0x02000, ChannelLayoutTopFrontRight = 0x04000,
+			ChannelLayoutTopBackLeft = 0x08000, ChannelLayoutTopBackCenter = 0x10000, ChannelLayoutTopBackRight = 0x20000,
 		};
 
 		class IAudioObject;
 		class IAudioSource;
 		class IAudioSink;
 		class IAudioCodec;
-		class IAudioDecoderStream;
-		class IAudioEncoderStream;
+		class IAudioDecoder;
+		class IAudioEncoder;
 
 		class IAudioObject : public Object
 		{
 		public:
 			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept = 0;
+			virtual uint GetChannelLayout(void) const noexcept = 0;
 			virtual AudioObjectType GetObjectType(void) const noexcept = 0;
 		};
 
@@ -103,32 +54,91 @@ namespace Engine
 			virtual Array<string> * GetFormatsCanEncode(void) const = 0;
 			virtual Array<string> * GetFormatsCanDecode(void) const = 0;
 			virtual string GetCodecName(void) const = 0;
-			virtual IAudioDecoderStream * TryDecode(Streaming::Stream * source, const StreamDesc * desired_desc) noexcept = 0;
-			virtual IAudioEncoderStream * Encode(Streaming::Stream * dest, const string & format, const StreamDesc & desc) noexcept = 0;
+			virtual IAudioDecoder * CreateDecoder(const Media::TrackFormatDesc & format, const StreamDesc * desired_desc) noexcept = 0;
+			virtual IAudioEncoder * CreateEncoder(const string & format, const StreamDesc & desc, uint num_options, const uint * options) noexcept = 0;
 		};
+		class IAudioSession : public IAudioObject
+		{
+		public:
+			virtual IAudioCodec * GetParentCodec(void) const = 0;
+			virtual string GetEncodedFormat(void) const = 0;
+			virtual const StreamDesc & GetEncodedDescriptor(void) const noexcept = 0;
+			virtual bool Reset(void) noexcept = 0;
+			virtual int GetPendingPacketsCount(void) const noexcept = 0;
+			virtual int GetPendingFramesCount(void) const noexcept = 0;
+		};
+		class IAudioDecoder : public IAudioSession
+		{
+		public:
+			virtual bool SupplyPacket(const Media::PacketBuffer & packet) noexcept = 0;
+			virtual bool ReadFrames(WaveBuffer * buffer) noexcept = 0;
+		};
+		class IAudioEncoder : public IAudioSession
+		{
+		public:
+			virtual const Media::AudioTrackFormatDesc & GetFullEncodedDescriptor(void) const noexcept = 0;
+			virtual const DataBlock * GetCodecMagic(void) noexcept = 0;
+			virtual bool SupplyFrames(const WaveBuffer * buffer) noexcept = 0;
+			virtual bool SupplyEndOfStream(void) noexcept = 0;
+			virtual bool ReadPacket(Media::PacketBuffer & packet) noexcept = 0;
+		};
+
 		class IAudioStream : public IAudioObject
 		{
 		public:
 			virtual IAudioCodec * GetParentCodec(void) const = 0;
-			virtual string GetInternalFormat(void) const = 0;
-			virtual const StreamDesc & GetNativeDescriptor(void) const noexcept = 0;
+			virtual string GetEncodedFormat(void) const = 0;
+			virtual const StreamDesc & GetEncodedDescriptor(void) const noexcept = 0;
 		};
-		class IAudioDecoderStream : public IAudioStream
+		class AudioDecoderStream : public IAudioStream
 		{
+			SafePointer<Media::IMediaContainerSource> _container;
+			SafePointer<Media::IMediaTrackSource> _track;
+			SafePointer<IAudioDecoder> _decoder;
+			Media::PacketBuffer _packet;
+			bool _eos;
 		public:
-			virtual bool ReadFrames(WaveBuffer * buffer) noexcept = 0;
-			virtual uint64 GetFramesCount(void) const = 0;
-			virtual uint64 GetCurrentFrame(void) const = 0;
-			virtual bool SetCurrentFrame(uint64 frame_index) = 0;
+			AudioDecoderStream(Media::IMediaTrackSource * source, const StreamDesc * desired_desc = 0);
+			AudioDecoderStream(Media::IMediaContainerSource * source, const StreamDesc * desired_desc = 0);
+			AudioDecoderStream(Streaming::Stream * source, const StreamDesc * desired_desc = 0);
+			virtual ~AudioDecoderStream(void) override;
+
+			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override;
+			virtual AudioObjectType GetObjectType(void) const noexcept override;
+			virtual IAudioCodec * GetParentCodec(void) const override;
+			virtual string GetEncodedFormat(void) const override;
+			virtual const StreamDesc & GetEncodedDescriptor(void) const noexcept override;
+			virtual uint GetChannelLayout(void) const noexcept override;
+
+			virtual Media::IMediaTrackSource * GetSourceTrack(void) noexcept;
+			virtual bool ReadFrames(WaveBuffer * buffer) noexcept;
+			virtual uint64 GetFramesCount(void) const noexcept;
+			virtual uint64 GetCurrentFrame(void) const noexcept;
+			virtual uint64 SetCurrentFrame(uint64 frame_index) noexcept;
 		};
-		class IAudioEncoderStream : public IAudioStream
+		class AudioEncoderStream : public IAudioStream
 		{
+			SafePointer<Media::IMediaContainerSink> _container;
+			SafePointer<Media::IMediaTrackSink> _track;
+			SafePointer<IAudioEncoder> _encoder;
+
+			void _init(Media::IMediaContainerSink * dest, const string & format, const StreamDesc & desc, uint num_options, const uint * options);
+			bool _drain_packets(void) noexcept;
 		public:
-			virtual bool WriteFrames(WaveBuffer * buffer) noexcept = 0;
-			virtual bool WriteFramesAsync(WaveBuffer * buffer, bool * write_status) noexcept = 0;
-			virtual bool WriteFramesAsync(WaveBuffer * buffer, bool * write_status, IDispatchTask * execute_on_processed) noexcept = 0;
-			virtual bool WriteFramesAsync(WaveBuffer * buffer, bool * write_status, Semaphore * open_on_processed) noexcept = 0;
-			virtual bool Finalize(void) noexcept = 0;
+			AudioEncoderStream(Media::IMediaContainerSink * dest, const string & format, const StreamDesc & desc, uint num_options = 0, const uint * options = 0);
+			AudioEncoderStream(Streaming::Stream * dest, const string & media_format, const string & audio_format, const StreamDesc & desc, uint num_options = 0, const uint * options = 0);
+			virtual ~AudioEncoderStream(void) override;
+
+			virtual const StreamDesc & GetFormatDescriptor(void) const noexcept override;
+			virtual AudioObjectType GetObjectType(void) const noexcept override;
+			virtual IAudioCodec * GetParentCodec(void) const override;
+			virtual string GetEncodedFormat(void) const override;
+			virtual const StreamDesc & GetEncodedDescriptor(void) const noexcept override;
+			virtual uint GetChannelLayout(void) const noexcept override;
+
+			virtual Media::IMediaTrackSink * GetDestinationSink(void) noexcept;
+			virtual bool WriteFrames(const WaveBuffer * buffer) noexcept;
+			virtual bool Finalize(void) noexcept;
 		};
 
 		class IAudioEventCallback
@@ -165,8 +175,8 @@ namespace Engine
 		class IAudioDeviceFactory : public Object
 		{
 		public:
-			virtual Dictionary::PlainDictionary<string, string> * GetAvailableOutputDevices(void) noexcept = 0;
-			virtual Dictionary::PlainDictionary<string, string> * GetAvailableInputDevices(void) noexcept = 0;
+			virtual Volumes::Dictionary<string, string> * GetAvailableOutputDevices(void) noexcept = 0;
+			virtual Volumes::Dictionary<string, string> * GetAvailableInputDevices(void) noexcept = 0;
 			virtual IAudioOutputDevice * CreateOutputDevice(const string & identifier) noexcept = 0;
 			virtual IAudioOutputDevice * CreateDefaultOutputDevice(void) noexcept = 0;
 			virtual IAudioInputDevice * CreateInputDevice(const string & identifier) noexcept = 0;
@@ -183,8 +193,8 @@ namespace Engine
 		Array<string> * GetDecodeFormats(void);
 		IAudioCodec * FindEncoder(const string & format);
 		IAudioCodec * FindDecoder(const string & format);
-		IAudioDecoderStream * DecodeAudio(Streaming::Stream * stream, const StreamDesc * desired_desc = 0);
-		IAudioEncoderStream * EncodeAudio(Streaming::Stream * stream, const string & format, const StreamDesc & desc);
+		IAudioDecoder * CreateDecoder(const Media::TrackFormatDesc & format, const StreamDesc * desired_desc = 0);
+		IAudioEncoder * CreateEncoder(const string & format, const StreamDesc & desc, uint num_options = 0, const uint * options = 0);
 
 		IAudioDeviceFactory * CreateAudioDeviceFactory(void);
 		void Beep(void);

@@ -9,7 +9,7 @@ namespace Engine
 	{
 		namespace Controls
 		{
-			class VerticalScrollBar : public Window, public Template::Controls::VerticalScrollBar
+			class VerticalScrollBar : public Control, public Template::Controls::VerticalScrollBar
 			{
 				SafePointer<Shape> _up_normal;
 				SafePointer<Shape> _up_hot;
@@ -28,13 +28,13 @@ namespace Engine
 				int _state = 0, _part = 0, _mpos = 0, _ipos = 0, _sd = 0;
 				Box GetScrollerBox(const Box & at);
 			public:
-				VerticalScrollBar(Window * Parent, WindowStation * Station);
-				VerticalScrollBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
-				VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template);
-				VerticalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::VerticallyScrollable * Template);
+				VerticalScrollBar(void);
+				VerticalScrollBar(Template::ControlTemplate * Template);
+				VerticalScrollBar(Template::Controls::Scrollable * Template);
+				VerticalScrollBar(Template::Controls::VerticallyScrollable * Template);
 				~VerticalScrollBar(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -42,7 +42,7 @@ namespace Engine
 				virtual bool IsVisible(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void CaptureChanged(bool got_capture) override;
@@ -59,7 +59,7 @@ namespace Engine
 				void SetPageSilent(int page);
 				void SetRangeSilent(int range_min, int range_max);
 			};
-			class HorizontalScrollBar : public Window, public Template::Controls::HorizontalScrollBar
+			class HorizontalScrollBar : public Control, public Template::Controls::HorizontalScrollBar
 			{
 				SafePointer<Shape> _left_normal;
 				SafePointer<Shape> _left_hot;
@@ -78,12 +78,12 @@ namespace Engine
 				int _state = 0, _part = 0, _mpos = 0, _ipos = 0, _sd = 0;
 				Box GetScrollerBox(const Box & at);
 			public:
-				HorizontalScrollBar(Window * Parent, WindowStation * Station);
-				HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
-				HorizontalScrollBar(Window * Parent, WindowStation * Station, Template::Controls::Scrollable * Template);
+				HorizontalScrollBar(void);
+				HorizontalScrollBar(Template::ControlTemplate * Template);
+				HorizontalScrollBar(Template::Controls::Scrollable * Template);
 				~HorizontalScrollBar(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -91,7 +91,7 @@ namespace Engine
 				virtual bool IsVisible(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void CaptureChanged(bool got_capture) override;
@@ -108,7 +108,7 @@ namespace Engine
 				void SetPageSilent(int page);
 				void SetRangeSilent(int range_min, int range_max);
 			};
-			class VerticalTrackBar : public Window, public Template::Controls::VerticalTrackBar
+			class VerticalTrackBar : public Control, public Template::Controls::VerticalTrackBar
 			{
 				SafePointer<Shape> _tracker_normal;
 				SafePointer<Shape> _tracker_focused;
@@ -122,11 +122,11 @@ namespace Engine
 				int GetTrackerShift(const Box & at);
 				int MouseToTracker(const Box & at, int mouse);
 			public:
-				VerticalTrackBar(Window * Parent, WindowStation * Station);
-				VerticalTrackBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				VerticalTrackBar(void);
+				VerticalTrackBar(Template::ControlTemplate * Template);
 				~VerticalTrackBar(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -135,9 +135,10 @@ namespace Engine
 				virtual bool IsTabStop(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
@@ -150,7 +151,7 @@ namespace Engine
 				void SetTrackerPositionSilent(int position);
 				void SetRangeSilent(int range_min, int range_max);
 			};
-			class HorizontalTrackBar : public Window, public Template::Controls::HorizontalTrackBar
+			class HorizontalTrackBar : public Control, public Template::Controls::HorizontalTrackBar
 			{
 				SafePointer<Shape> _tracker_normal;
 				SafePointer<Shape> _tracker_focused;
@@ -164,11 +165,11 @@ namespace Engine
 				int GetTrackerShift(const Box & at);
 				int MouseToTracker(const Box & at, int mouse);
 			public:
-				HorizontalTrackBar(Window * Parent, WindowStation * Station);
-				HorizontalTrackBar(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				HorizontalTrackBar(void);
+				HorizontalTrackBar(Template::ControlTemplate * Template);
 				~HorizontalTrackBar(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void Enable(bool enable) override;
 				virtual bool IsEnabled(void) override;
@@ -177,9 +178,10 @@ namespace Engine
 				virtual bool IsTabStop(void) override;
 				virtual void SetID(int ID) override;
 				virtual int GetID(void) override;
-				virtual Window * FindChild(int ID) override;
+				virtual Control * FindChild(int ID) override;
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
+				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;

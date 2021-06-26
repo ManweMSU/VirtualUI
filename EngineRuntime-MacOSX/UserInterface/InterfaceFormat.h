@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Streaming.h"
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 #include "../Storage/StringTable.h"
 #include "Templates.h"
 
@@ -157,10 +157,11 @@ namespace Engine
 			public:
 				InterfaceTemplate * Source;
 				IResourceResolver * DelegateResolver;
-				virtual ITexture * GetTexture(const string & Name) override;
-				virtual IFont * GetFont(const string & Name) override;
+				virtual Graphics::IBitmap * GetTexture(const string & Name) override;
+				virtual Graphics::IFont * GetFont(const string & Name) override;
 				virtual Template::Shape * GetApplication(const string & Name) override;
 				virtual Template::ControlTemplate * GetDialog(const string & Name) override;
+				virtual Template::ControlReflectedBase * CreateCustomTemplate(const string & Class) override;
 			};
 			class IMissingStylesReporter : public Object
 			{
@@ -170,10 +171,10 @@ namespace Engine
 			class InterfaceTemplateImage : public Object
 			{
 			public:
-				Dictionary::Dictionary<string, Storage::StringTable> Locales;
-				Dictionary::Dictionary<int, Codec::Image> Textures;
-				Dictionary::PlainDictionary<string, int> StringIDs;
-				Dictionary::PlainDictionary<string, int> ColorIDs;
+				Volumes::ObjectDictionary<string, Storage::StringTable> Locales;
+				Volumes::ObjectDictionary<int, Codec::Image> Textures;
+				Volumes::Dictionary<string, int> StringIDs;
+				Volumes::Dictionary<string, int> ColorIDs;
 				Array<InterfaceAsset> Assets;
 
 				InterfaceTemplateImage(void);
@@ -181,8 +182,8 @@ namespace Engine
 				virtual ~InterfaceTemplateImage(void) override;
 
 				void Encode(Streaming::Stream * Output, uint32 Flags = 0);
-				void Compile(InterfaceTemplate & Template, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0, IMissingStylesReporter * StyleReporter = 0);
-				void Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, IResourceLoader * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0, IMissingStylesReporter * StyleReporter = 0);
+				void Compile(InterfaceTemplate & Template, Graphics::I2DDeviceContextFactory * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0, IMissingStylesReporter * StyleReporter = 0);
+				void Compile(InterfaceTemplate & Template, InterfaceTemplate & Style, Graphics::I2DDeviceContextFactory * ResourceLoader = 0, IResourceResolver * ResourceResolver = 0, IMissingStylesReporter * StyleReporter = 0);
 				void Specialize(const string & Locale, const string & System, double Scale);
 				InterfaceTemplateImage * Clone(void);
 

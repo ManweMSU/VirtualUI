@@ -1,580 +1,631 @@
 #include "QuartzDevice.h"
 
+#include "CocoaInterop2.h"
 #include "../ImageCodec/CodecBase.h"
 #include "../Math/Color.h"
 
 #include <ImageIO/ImageIO.h>
 #include <CoreText/CoreText.h>
 
+using namespace Engine::Graphics;
+
 namespace Engine
 {
 	namespace Cocoa
 	{
-		void QuartzDataRelease(void *info, const void *data, size_t size) { free(info); }
-		CGRect QuartzMakeRect(const UI::Box & box, int w, int h, int scale)
-		{
-			double s = double(scale);
-			return CGRectMake(
-				double(box.Left) / s, double(h - box.Bottom) / s,
-				double(box.Right - box.Left) / s, double(box.Bottom - box.Top) / s
-			);
-		}
-		class QuartzTexture : public UI::ITexture
-		{
-			struct dev_pair { UI::ITexture * dev_tex; UI::IRenderingDevice * dev_ptr; };
-		public:
-			Array<dev_pair> variants;
-			CGImageRef bitmap;
-			int w, h;
+		SafePointer<QuartzDeviceContextFactory> common_factory;
 
-			QuartzTexture(void) : variants(0x10), bitmap(0), w(0), h(0) {}
-			~QuartzTexture(void) override
-			{
-				if (bitmap) CGImageRelease(bitmap);
-				for (int i = 0; i < variants.Length(); i++) {
-		 			variants[i].dev_tex->VersionWasDestroyed(this);
-		 			variants[i].dev_ptr->TextureWasDestroyed(this);
-		 		}
-			}
-			virtual int GetWidth(void) const noexcept override { return w; }
-			virtual int GetHeight(void) const noexcept override { return h; }
-			virtual void VersionWasDestroyed(ITexture * texture) noexcept override
-			{
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_tex == texture) { variants.Remove(i); break; }
-			}
-			virtual void DeviceWasDestroyed(UI::IRenderingDevice * device) noexcept override
-			{
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == device) { variants.Remove(i); break; }
-			}
-			virtual void AddDeviceVersion(UI::IRenderingDevice * device, ITexture * texture) noexcept override
-			{
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == device) return;
-				variants << dev_pair{ texture, device };
-			}
-			virtual bool IsDeviceSpecific(void) const noexcept override { return false; }
-			virtual UI::IRenderingDevice * GetParentDevice(void) const noexcept override { return 0; }
-			virtual UI::ITexture * GetDeviceVersion(UI::IRenderingDevice * target_device) noexcept override
-			{
-				if (!target_device) return this;
-				for (int i = 0; i < variants.Length(); i++) if (variants[i].dev_ptr == target_device) return variants[i].dev_tex;
-				return 0;
-			}
-			virtual void Reload(Codec::Frame * source) override
-			{
-				if (bitmap) CGImageRelease(bitmap);
-				SafePointer<QuartzRenderingDevice> local_device = new QuartzRenderingDevice;
-				SafePointer<QuartzTexture> new_texture = static_cast<QuartzTexture *>(local_device->LoadTexture(source));
-				bitmap = new_texture->bitmap;
-				w = new_texture->w; h = new_texture->h;
-				new_texture->bitmap = 0;
-				for (int i = 0; i < variants.Length(); i++) variants[i].dev_tex->Reload(this);
-			}
-			virtual void Reload(ITexture * device_independent) override {}
-			virtual string ToString(void) const override { return L"Engine.Cocoa.QuartzTexture"; }
+		class QuartzBitmapLink : public IBitmapLink
+		{
+			IBitmap * _parent;
+		public:
+			QuartzBitmapLink(IBitmap * parent) : _parent(parent) {}
+			virtual ~QuartzBitmapLink(void) override {}
+			virtual ImmutableString ToString(void) const override { return L"QuartzBitmapLink"; }
+			virtual IBitmap * GetBitmap(void) const noexcept override { return _parent; }
+			void Invalidate(void) noexcept { _parent = 0; }
 		};
-		class CoreTextFont : public UI::IFont
+		class QuartzBitmap : public IBitmap
 		{
-		public:
-			CTFontRef font;
-			CTFontRef alt_font;
-			bool underline;
-			bool strikeout;
-			double height;
-			double zoomed_height;
-			double width;
-			double scale;
-
-			CoreTextFont(const string & FaceName, double Height, double Scale, int Weight, bool IsItalic, bool IsUnderline, bool IsStrikeout)
+			Volumes::ObjectDictionary<I2DDeviceContext *, IDeviceBitmap> _device;
+			SafePointer<QuartzBitmapLink> _link;
+			SafePointer<Codec::Frame> _surface;
+			CGImageRef _image;
+			static void _release_bitmap_data(void * info, const void * data, size_t size) { reinterpret_cast<Codec::Frame *>(info)->Release(); }
+			bool _reload(Codec::Frame * source) noexcept
 			{
-				CFStringRef font_name = CFStringCreateWithBytes(kCFAllocatorDefault, reinterpret_cast<const uint8 *>(static_cast<const widechar *>(FaceName)),
-					FaceName.Length() * 4, kCFStringEncodingUTF32LE, false);
-				CFStringRef alt_font_name = CFStringCreateWithCString(kCFAllocatorDefault, "Apple Color Emoji", kCFStringEncodingASCII);
-				if (!font_name) throw Exception();
-				zoomed_height = Height * 0.75;
-				CTFontRef base = CTFontCreateWithName(font_name, zoomed_height, 0);
-				alt_font = CTFontCreateWithName(alt_font_name, zoomed_height, 0);
-				CFRelease(font_name);
-				CFRelease(alt_font_name);
+				auto length = source->GetScanLineLength() * source->GetHeight();
+				auto rgb_cs = CGColorSpaceCreateDeviceRGB();
+				if (!rgb_cs) return false;
+				auto provider = CGDataProviderCreateWithData(source, source->GetData(), length, _release_bitmap_data);
+				if (!provider) { CGColorSpaceRelease(rgb_cs); return false; }
+				source->Retain();
+				auto image = CGImageCreate(source->GetWidth(), source->GetHeight(), 8, 32, source->GetScanLineLength(), rgb_cs, kCGImageAlphaPremultipliedLast, provider, 0, false, kCGRenderingIntentDefault);
+				CGColorSpaceRelease(rgb_cs);
+				CGDataProviderRelease(provider);
+				if (image) {
+					if (_image) CGImageRelease(_image);
+					_surface.SetRetain(source);
+					_image = image;
+					for (auto & d : _device) d.value->Reload();
+					return true;
+				} else return false;
+			}
+		public:
+			QuartzBitmap(Codec::Frame * surface) : _image(0) { _link = new QuartzBitmapLink(this); if (!_reload(surface)) throw Exception(); }
+			virtual ~QuartzBitmap(void) override { _link->Invalidate(); if (_image) CGImageRelease(_image); }
+			virtual int GetWidth(void) const noexcept override { return _surface->GetWidth(); }
+			virtual int GetHeight(void) const noexcept override { return _surface->GetHeight(); }
+			virtual bool Reload(Codec::Frame * source) noexcept override
+			{
+				if (!source) return false;
+				try {
+					SafePointer<Codec::Frame> conv = source->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+					return _reload(conv);
+				} catch (...) { return false; }
+			}
+			virtual bool AddDeviceBitmap(IDeviceBitmap * bitmap, I2DDeviceContext * device_for) noexcept override { try { _device.Append(device_for, bitmap); } catch (...) { return false; } return true; }
+			virtual bool RemoveDeviceBitmap(I2DDeviceContext * device_for) noexcept override { _device.Remove(device_for); return true; }
+			virtual IDeviceBitmap * GetDeviceBitmap(I2DDeviceContext * device_for) const noexcept override { return _device.GetObjectByKey(device_for); }
+			virtual IBitmapLink * GetLinkObject(void) const noexcept override { return _link; }
+			virtual Codec::Frame * QueryFrame(void) const noexcept override { try { return new Codec::Frame(*_surface); } catch (...) { return 0; } }
+			virtual ImmutableString ToString(void) const override { return L"QuartzBitmap"; }
+			bool Synchronize(void) noexcept { return _reload(_surface); }
+			Codec::Frame * GetSurface(void) const noexcept { return _surface; }
+			CGImageRef GetCoreImage(void) const noexcept { return _image; }
+		};
+		class CoreTextFont : public IFont
+		{
+			CTFontRef _main, _alt;
+			bool _underline, _strikeout;
+			double _height, _scaled_height, _width, _scale;
+		public:
+			CoreTextFont(const string & face, double height, double scale, int weight, bool italic, bool underline, bool strikeout)
+			{
+				_underline = underline;
+				_strikeout = strikeout;
+				_height = height;
+				_scaled_height = height * 0.75;
+				_scale = scale;
+				auto main_name = CFStringCreateWithBytes(kCFAllocatorDefault, reinterpret_cast<const uint8 *>(static_cast<const widechar *>(face)), face.Length() * 4, kCFStringEncodingUTF32LE, false);
+				auto alt_name = CFStringCreateWithCString(kCFAllocatorDefault, "Apple Color Emoji", kCFStringEncodingASCII);
+				if (!main_name || !alt_name) { CFRelease(main_name); CFRelease(alt_name); throw OutOfMemoryException(); }
+				_main = CTFontCreateWithName(main_name, _scaled_height, 0);
+				_alt = CTFontCreateWithName(alt_name, _scaled_height, 0);
+				CFRelease(main_name); CFRelease(alt_name);
+				if (!_main) { CFRelease(_alt); throw Exception(); }
 				uint32 flags = 0;
-				if (Weight >= 500) flags |= kCTFontBoldTrait;
-				if (IsItalic) flags |= kCTFontItalicTrait;
-				font = CTFontCreateCopyWithSymbolicTraits(base, 0.0, 0, flags, kCTFontItalicTrait | kCTFontBoldTrait);
-				if (font) CFRelease(base); else font = base;
-				underline = IsUnderline;
-				strikeout = IsStrikeout;
-				height = Height;
-				scale = Scale;
-				UniChar space = 32;
-				CGGlyph glyph;
-				CGSize adv;
-				CTFontGetGlyphsForCharacters(font, &space, &glyph, 1);
-				CTFontGetAdvancesForGlyphs(font, kCTFontOrientationHorizontal, &glyph, &adv, 1);
-				width = adv.width;
+				if (weight >= 500) flags |= kCTFontBoldTrait;
+				if (italic) flags |= kCTFontItalicTrait;
+				auto font = CTFontCreateCopyWithSymbolicTraits(_main, 0.0, 0, flags, kCTFontItalicTrait | kCTFontBoldTrait);
+				if (font) { CFRelease(_main); _main = font; }
+				UniChar space = L' ';
+				CGGlyph space_glyph;
+				CGSize space_size;
+				CTFontGetGlyphsForCharacters(_main, &space, &space_glyph, 1);
+				if (space_glyph) {
+					CTFontGetAdvancesForGlyphs(_main, kCTFontOrientationHorizontal, &space_glyph, &space_size, 1);
+					_width = space_size.width;
+				} else _width = _height;
 			}
-			~CoreTextFont(void) override
-			{
-				CFRelease(font);
-				CFRelease(alt_font);
-			}
-
-			virtual int GetWidth(void) const noexcept override { return width; }
-			virtual int GetHeight(void) const noexcept override { return int(height * scale); }
-			virtual int GetLineSpacing(void) const noexcept override { return CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font); }
-			virtual int GetBaselineOffset(void) const noexcept override { return CTFontGetAscent(font); }
-			virtual string ToString(void) const override { return L"Engine.Cocoa.CoreTextFont"; }
+			virtual ~CoreTextFont(void) override { if (_main) CFRelease(_main); if (_alt) CFRelease(_alt); }
+			virtual int GetWidth(void) const noexcept override { return int(_width); }
+			virtual int GetHeight(void) const noexcept override { return int(_height * _scale); }
+			virtual int GetLineSpacing(void) const noexcept override { return int(CTFontGetAscent(_main) + CTFontGetDescent(_main) + CTFontGetLeading(_main)); }
+			virtual int GetBaselineOffset(void) const noexcept override { return int(CTFontGetAscent(_main)); }
+			virtual ImmutableString ToString(void) const override { return L"CoreTextFont"; }
+			CTFontRef GetMainFont(void) const noexcept { return _main; }
+			CTFontRef GetAltFont(void) const noexcept { return _alt; }
+			bool IsUnderline(void) const noexcept { return _underline; }
+			bool IsStrikeout(void) const noexcept { return _strikeout; }
+			int GetScaledHeight(void) const noexcept { return _scaled_height; }
 		};
-		
-		class CoreTextRenderingInfo : public UI::ITextRenderingInfo
+
+		IBitmap * QuartzDeviceContextFactory::CreateBitmap(int width, int height, Color clear_color) noexcept
+		{
+			if (width <= 0 || height <= 0) return 0;
+			try {
+				Color color_prem;
+				color_prem.r = int(clear_color.r) * int(clear_color.a) / 255;
+				color_prem.g = int(clear_color.g) * int(clear_color.a) / 255;
+				color_prem.b = int(clear_color.b) * int(clear_color.a) / 255;
+				color_prem.a = clear_color.a;
+				SafePointer<Codec::Frame> surface = new Codec::Frame(width, height, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+				for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) surface->SetPixel(x, y, color_prem.Value);
+				return new QuartzBitmap(surface);
+			} catch (...) { return 0; }			
+		}
+		IBitmap * QuartzDeviceContextFactory::LoadBitmap(Codec::Frame * source) noexcept
+		{
+			if (!source) return 0;
+			try {
+				SafePointer<Codec::Frame> surface = source->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
+				return new QuartzBitmap(surface);
+			} catch (...) { return 0; }
+		}
+		IFont * QuartzDeviceContextFactory::LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
+		{
+			try {
+				if (face_name[0] == L'@') {
+					bool serif = false;
+					bool sans = false;
+					bool mono = false;
+					auto words = face_name.Fragment(1, -1).Split(L' ');
+					for (auto & w : words) if (w.Length()) {
+						if (string::CompareIgnoreCase(w, Graphics::FontWordSerif) == 0) serif = true;
+						else if (string::CompareIgnoreCase(w, Graphics::FontWordSans) == 0) sans = true;
+						else if (string::CompareIgnoreCase(w, Graphics::FontWordMono) == 0) mono = true;
+						else return 0;
+					}
+					if (!serif) return 0;
+					if (mono) {
+						if (sans) return LoadFont(L"Menlo", height, weight, italic, underline, strikeout);
+						else return LoadFont(L"Courier New", height, weight, italic, underline, strikeout);
+					} else {
+						if (sans) return LoadFont(L"Helvetica Neue", height, weight, italic, underline, strikeout);
+						else return LoadFont(L"Times New Roman", height, weight, italic, underline, strikeout);
+					}
+				} else return new CoreTextFont(face_name, double(height), 1.0, weight, italic, underline, strikeout);
+			} catch (...) { return 0; }
+		}
+		Array<string> * QuartzDeviceContextFactory::GetFontFamilies(void) noexcept
+		{
+			auto fonts = CTFontManagerCopyAvailableFontFamilyNames();
+			if (!fonts) return 0;
+			SafePointer< Array<string> > result;
+			try {
+				auto count = CFArrayGetCount(fonts);
+				result = new Array<string>(count);
+				for (int i = 0; i < count; i++) result->Append(Cocoa::EngineString(reinterpret_cast<CFStringRef>(CFArrayGetValueAtIndex(fonts, i))));
+			} catch (...) { CFRelease(fonts); return 0; }
+			CFRelease(fonts);
+			result->Retain();
+			return result;
+		}
+		IBitmapContext * QuartzDeviceContextFactory::CreateBitmapContext(void) noexcept { try { auto result = new QuartzDeviceContext; result->SetBitmapTarget(true); return result; } catch (...) { return 0; } }
+		ImmutableString QuartzDeviceContextFactory::ToString(void) const { return L"QuartzDeviceContextFactory"; }
+
+		class QuartzColorBrush : public IColorBrush
+		{
+			QuartzDeviceContext * _parent;
+			Math::ColorF _solid_color;
+			CGGradientRef _gradient;
+			Point _begin, _end;
+		public:
+			QuartzColorBrush(QuartzDeviceContext * parent, Color color) : _parent(parent), _solid_color(color), _gradient(0), _begin(0, 0), _end(0, 0) {}
+			QuartzColorBrush(QuartzDeviceContext * parent, const GradientPoint * points, int count, Point begin, Point end) : _parent(parent), _solid_color(0.0, 0.0, 0.0, 0.0), _begin(begin), _end(end)
+			{
+				if (count < 2) throw InvalidArgumentException();
+				Array<double> values(1);
+				values.SetLength(5 * count);
+				for (int i = 0; i < count; i++) {
+					auto color = Math::ColorF(points[i].Value);
+					values[4 * i + 0] = color.r;
+					values[4 * i + 1] = color.g;
+					values[4 * i + 2] = color.b;
+					values[4 * i + 3] = color.a;
+					values[4 * count + i] = points[i].Position;
+				}
+				auto rgb_cs = CGColorSpaceCreateDeviceRGB();
+				if (!rgb_cs) throw OutOfMemoryException();
+				_gradient = CGGradientCreateWithColorComponents(rgb_cs, values.GetBuffer(), values.GetBuffer() + 4 * count, count);
+				CGColorSpaceRelease(rgb_cs);
+				if (!_gradient) throw OutOfMemoryException();
+			}
+			virtual ~QuartzColorBrush(void) override { if (_gradient) CGGradientRelease(_gradient); }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual ImmutableString ToString(void) const override { return L"QuartzColorBrush"; }
+			const Math::ColorF & GetSolidColor(void) const noexcept { return _solid_color; }
+			CGGradientRef GetGradient(void) const noexcept { return _gradient; }
+			const Point & GetBegin(void) const noexcept { return _begin; }
+			const Point & GetEnd(void) const noexcept { return _end; }
+		};
+		class QuartzInversionBrush : public IInversionEffectBrush
+		{
+			QuartzDeviceContext * _parent;
+			SafePointer<QuartzBitmap> _bitmap;
+		public:
+			QuartzInversionBrush(QuartzDeviceContext * parent) : _parent(parent)
+			{
+				auto fact = _parent->GetParentFactory();
+				if (!fact) throw OutOfMemoryException();
+				_bitmap = static_cast<QuartzBitmap *>(fact->CreateBitmap(1, 1, Color(255, 255, 255, 255)));
+				if (!_bitmap) throw OutOfMemoryException();
+			}
+			virtual ~QuartzInversionBrush(void) override {}
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual ImmutableString ToString(void) const override { return L"QuartzInversionBrush"; }
+			QuartzBitmap * GetBitmap(void) const noexcept { return _bitmap; }
+		};
+		class QuartzBitmapBrush : public IBitmapBrush
+		{
+			QuartzDeviceContext * _parent;
+			CGImageRef _fragment;
+			Point _size;
+			bool _tile;
+		public:
+			QuartzBitmapBrush(QuartzDeviceContext * parent, CGImageRef image, Point size, bool tile) : _parent(parent), _fragment(image), _size(size), _tile(tile) { CGImageRetain(_fragment); }
+			virtual ~QuartzBitmapBrush(void) override { CGImageRelease(_fragment); }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual ImmutableString ToString(void) const override { return L"QuartzBitmapBrush"; }
+			CGImageRef GetImage(void) const noexcept { return _fragment; }
+			bool IsTiled(void) const noexcept { return _tile; }
+			const Point & GetSize(void) const noexcept { return _size; }
+		};
+		class QuartzTextBrush : public ITextBrush
 		{
 		public:
-			struct Color { double r, g, b, a; };
-			struct TextRange
-			{
-				int LeftEdge;
-				int RightEdge;
-				Color Brush;
-				CTFontRef FontCT;
-			};
-			SafePointer<CoreTextFont> font;
-			Array<CGGlyph> GlyphString;
-			Array<CGFloat> GlyphAdvances;
-			Array<CGPoint> GlyphPositions;
-			Array<CTFontRef> FontsCT;
-			Array<bool> Surrogate;
-			Array<int> CharEnds32;
-			Array<TextRange> Ranges;
-			Color TextColor;
-			Color BackColor;
-			int BaselineOffset;
-			int halign, valign;
-			int run_length;
-			double UnderlineOffset;
-			double UnderlineHalfWidth;
-			double StrikeoutOffset;
-			double StrikeoutHalfWidth;
-			int hls, hle;
-			Array<Color> ExtraBrushes;
-
-			CoreTextRenderingInfo(void) : GlyphString(0x40), GlyphAdvances(0x40), GlyphPositions(0x40), ExtraBrushes(0x40), FontsCT(0x40), Surrogate(0x40), CharEnds32(0x40), Ranges(0x40) {}
-			~CoreTextRenderingInfo(void) override {}
-
-			int TranslatePositionUtf32ToUtf16(int pos) { int p32 = 0, p16 = 0; while (p32 < pos) { p32++; p16++; if (Surrogate[p16]) p16++; } return p16; }
-			int TranslatePositionUtf16ToUtf32(int pos) { int s = 0; for (int i = 0; i < pos; i++) if (!Surrogate[i]) s++; return s; }
-			virtual void GetExtent(int & width, int & height) noexcept override { width = run_length; height = int(font->height); }
-			virtual void SetHighlightColor(const UI::Color & color) noexcept override
-			{
-				BackColor.r = double(color.r) / 255.0;
-				BackColor.g = double(color.g) / 255.0;
-				BackColor.b = double(color.b) / 255.0;
-				BackColor.a = double(color.a) / 255.0;
-			}
-			virtual void HighlightText(int Start, int End) noexcept override { hls = Start; hle = End; }
-			virtual int TestPosition(int point) noexcept override
-			{
-				if (point < 0) return 0;
-				if (point > run_length) return TranslatePositionUtf16ToUtf32(GlyphString.Length());
-				double p = double(point);
-				double s = 0.0;
-				for (int i = 0; i < GlyphAdvances.Length(); i++) {
-					if (p <= s + GlyphAdvances[i]) {
-						if (p < s + GlyphAdvances[i] / 2.0) return TranslatePositionUtf16ToUtf32(i);
-						else return TranslatePositionUtf16ToUtf32(i + 1);
-						break;
-					}
-					s += GlyphAdvances[i];
-				}
-				return TranslatePositionUtf16ToUtf32(GlyphString.Length());
-			}
-			int EndOfChar16(int Index) noexcept
-			{
-				if (Index < 0) return 0;
-				double summ = 0.0;
-				for (int i = 0; i <= Index; i++) summ += GlyphAdvances[i];
-				return int(summ);
-			}
-			virtual int EndOfChar(int Index) noexcept override
-			{
-				if (Index < 0) return 0;
-				return CharEnds32[Index];
-			}
-			virtual void SetCharPalette(const Array<UI::Color> & colors) override
-			{
-				ExtraBrushes.Clear();
-				for (int i = 0; i < colors.Length(); i++) {
-					ExtraBrushes << Color { double(colors[i].r) / 255.0, double(colors[i].g) / 255.0, double(colors[i].b) / 255.0, double(colors[i].a) / 255.0 };
-				}
-			}
-			void ResetRanges(const Array<uint8> * indicies)
+			struct _text_range { int left, right; Math::ColorF color; CTFontRef font; };
+			QuartzDeviceContext * _parent;
+			SafePointer<CoreTextFont> _font;
+			Array<CGGlyph> _glyphs;
+			Array<CGFloat> _advances;
+			Array<CGPoint> _positions;
+			Array<CTFontRef> _fonts;
+			Array<uint32> _flags; // 0x01 - surrogate upper pair, 0x02 - alternative font
+			Array<int> _ends; // relative to UTF-32
+			Array<_text_range> _ranges;
+			Array<Math::ColorF> _x_brushes;
+			Math::ColorF _text_color, _back_color;
+			CGGlyph _space;
+			int _halign, _valign, _baseline, _run_length, _hl_start, _hl_end;
+			double _underline_offs, _underline_hw, _strikeout_offs, _strikeout_hw;
+		private:
+			void _reset_ranges(const uint8 * indicies)
 			{
 				SafePointer< Array<uint8> > ind;
-				if (indicies) ind = new Array<uint8>(*indicies); else ind = 0;
-				if (ind) for (int i = 0; i < Surrogate.Length(); i++) if (Surrogate[i]) ind->Insert(ind->ElementAt(i - 1), i);
-				Ranges.Clear();
+				if (indicies) {
+					ind = new Array<uint8>(1);
+					ind->Append(indicies, _ends.Length());
+				} else ind = 0;
+				if (ind) for (int i = 0; i < _flags.Length(); i++) if (_flags[i] & 1) ind->Insert(ind->ElementAt(i - 1), i);
+				_ranges.Clear();
 				int cp = 0;
-				while (cp < FontsCT.Length()) {
+				while (cp < _fonts.Length()) {
 					int ep = cp;
-					while (ep < FontsCT.Length() && FontsCT[ep] == FontsCT[cp] && (!ind || ind->ElementAt(ep) == ind->ElementAt(cp))) ep++;
+					while (ep < _fonts.Length() && _fonts[ep] == _fonts[cp] && (!ind || ind->ElementAt(ep) == ind->ElementAt(cp))) ep++;
 					int index = ind ? ind->ElementAt(cp) : 0;
-					CTFontRef font_ref_ct = FontsCT[cp];
-					Ranges << TextRange{ cp, ep, (index == 0) ? TextColor : ExtraBrushes[index - 1], font_ref_ct };
+					CTFontRef font_ref_ct = _fonts[cp];
+					_ranges << _text_range{ cp, ep, (index == 0) ? _text_color : _x_brushes[index - 1], font_ref_ct };
 					cp = ep;
 				}
 			}
-			virtual void SetCharColors(const Array<uint8> & indicies) override { ResetRanges(&indicies); }
-		};
-		class QuartzBarRenderingInfo : public UI::IBarRenderingInfo
-		{
 		public:
-			CGGradientRef gradient;
-			double r, g, b, a;
-			double prop_w, prop_h;
-			QuartzBarRenderingInfo(void) { r = g = b = a = prop_w = prop_h = 0.0; gradient = 0; }
-			~QuartzBarRenderingInfo(void) override { if (gradient) CGGradientRelease(gradient); }
-		};
-		class QuartzInversionRenderingInfo : public UI::IInversionEffectRenderingInfo
-		{
-		public:
-			uint32 pixel;
-			CGImageRef white;
-			QuartzInversionRenderingInfo(void) { pixel = 0xFFFFFFFF; }
-			~QuartzInversionRenderingInfo(void) override { CGImageRelease(white); }
-		};
-		class QuartzTextureRenderingInfo : public UI::ITextureRenderingInfo
-		{
-		public:
-			SafePointer<QuartzTexture> fragment;
-			bool fill;
-			QuartzTextureRenderingInfo(void) {}
-			~QuartzTextureRenderingInfo(void) override {}
-		};
-
-		QuartzRenderingDevice::QuartzRenderingDevice(void) : BrushCache(0x20, Dictionary::ExcludePolicy::ExcludeLeastRefrenced), Clipping(0x20), _animation(0) {}
-		QuartzRenderingDevice::~QuartzRenderingDevice(void) { if (BitmapTarget) CGContextRelease(reinterpret_cast<CGContextRef>(_context)); }
-
-		void * QuartzRenderingDevice::GetContext(void) const noexcept { return _context; }
-		void QuartzRenderingDevice::SetContext(void * context, int width, int height, int scale) noexcept
-		{
-			_context = context; _width = width; _height = height; _scale = scale;
-			CGContextSetInterpolationQuality(reinterpret_cast<CGContextRef>(_context), kCGInterpolationNone);
-		}
-
-		void QuartzRenderingDevice::TextureWasDestroyed(UI::ITexture * texture) noexcept {}
-		void QuartzRenderingDevice::GetImplementationInfo(string & tech, uint32 & version) noexcept { tech = L"Quartz"; version = 1; }
-		uint32 QuartzRenderingDevice::GetFeatureList(void) noexcept
-		{
-			uint32 result = UI::RenderingDeviceFeatureInversionCapable | UI::RenderingDeviceFeaturePolygonCapable | UI::RenderingDeviceFeatureLayersCapable;
-			if (BitmapTarget) result |= UI::RenderingDeviceFeatureTextureTarget;
-			return result;
-		}
-		UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(const Array<UI::GradientPoint>& gradient, double angle) noexcept
-		{
-			if (!gradient.Length()) return 0;
-			if (gradient.Length() == 1) return CreateBarRenderingInfo(gradient[0].Color);
-			SafePointer<QuartzBarRenderingInfo> info = new QuartzBarRenderingInfo;
-			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
-			Array<double> clr(4);
-			Array<double> pos(4);
-			clr.SetLength(gradient.Length() * 4);
-			pos.SetLength(gradient.Length());
-			for (int i = 0; i < gradient.Length(); i++) {
-				clr[i * 4 + 0] = double(gradient[i].Color.r) / 255.0;
-				clr[i * 4 + 1] = double(gradient[i].Color.g) / 255.0;
-				clr[i * 4 + 2] = double(gradient[i].Color.b) / 255.0;
-				clr[i * 4 + 3] = double(gradient[i].Color.a) / 255.0;
-				pos[i] = gradient[i].Position;
-			}
-			info->gradient = CGGradientCreateWithColorComponents(rgb, clr.GetBuffer(), pos.GetBuffer(), gradient.Length());
-			info->prop_w = Math::cos(angle);
-			info->prop_h = Math::sin(angle);
-			CGColorSpaceRelease(rgb);
-			info->Retain();
-			return info;
-		}
-		UI::IBarRenderingInfo * QuartzRenderingDevice::CreateBarRenderingInfo(UI::Color color) noexcept
-		{
-			auto CachedInfo = BrushCache.ElementByKey(color);
-			if (CachedInfo) {
-				CachedInfo->Retain();
-				return CachedInfo;
-			}
-			SafePointer<QuartzBarRenderingInfo> info = new QuartzBarRenderingInfo;
-			info->r = double(color.r) / 255.0;
-			info->g = double(color.g) / 255.0;
-			info->b = double(color.b) / 255.0;
-			info->a = double(color.a) / 255.0;
-			BrushCache.Append(color, info);
-			info->Retain();
-			return info;
-		}
-		UI::IBlurEffectRenderingInfo * QuartzRenderingDevice::CreateBlurEffectRenderingInfo(double power) noexcept { return 0; }
-		UI::IInversionEffectRenderingInfo * QuartzRenderingDevice::CreateInversionEffectRenderingInfo(void) noexcept
-		{
-			if (InversionCache) {
-				InversionCache->Retain();
-				return InversionCache;
-			}
-			SafePointer<QuartzInversionRenderingInfo> info = new QuartzInversionRenderingInfo;
-			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
-			CGDataProviderRef data = CGDataProviderCreateWithData(0, &info->pixel, 4, 0);
-			info->white = CGImageCreate(1, 1, 8, 32, 4, rgb, kCGImageAlphaLast, data, 0, false, kCGRenderingIntentDefault);
-			CGDataProviderRelease(data);
-			CGColorSpaceRelease(rgb);
-			InversionCache.SetRetain(info);
-			info->Retain();
-			return info;
-		}
-		UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(UI::ITexture * texture, const UI::Box & take_area, bool fill_pattern) noexcept
-		{
-			if (!texture) return 0;
-			auto tex = static_cast<QuartzTexture *>(texture);
-			SafePointer<QuartzTextureRenderingInfo> info = new QuartzTextureRenderingInfo;
-			info->fill = fill_pattern;
-			if (take_area.Left == 0 && take_area.Top == 0 && take_area.Right == texture->GetWidth() && take_area.Bottom == texture->GetHeight()) {
-				info->fragment.SetRetain(tex);
-			} else {
-				info->fragment = new QuartzTexture;
-				CGRect rect = CGRectMake(double(take_area.Left), double(take_area.Top),
-					double(take_area.Right - take_area.Left), double(take_area.Bottom - take_area.Top));
-				info->fragment->bitmap = CGImageCreateWithImageInRect(tex->bitmap, rect);
-				info->fragment->w = take_area.Right - take_area.Left;
-				info->fragment->h = take_area.Bottom - take_area.Top;
-			}
-			info->Retain();
-			return info;
-		}
-		UI::ITextureRenderingInfo * QuartzRenderingDevice::CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept { return 0; }
-		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
-		{
-			if (!font) return 0;
-			string copy = text.NormalizedForm();
-			Array<uint32> chars(copy.Length());
-			chars.SetLength(copy.Length());
-			copy.Encode(chars.GetBuffer(), Encoding::UTF32, false);
-			return CreateTextRenderingInfoRaw(font, chars, horizontal_align, vertical_align, color);
-		}
-		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
-		{
-			if (!font) return 0;
-			return CreateTextRenderingInfo(font, string(text.GetBuffer(), text.Length(), Encoding::UTF32), horizontal_align, vertical_align, color);
-		}
-		UI::ITextRenderingInfo * QuartzRenderingDevice::CreateTextRenderingInfoRaw(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const UI::Color & color) noexcept
-		{
-			if (!font) return 0;
-			SafePointer<CoreTextRenderingInfo> info = new CoreTextRenderingInfo;
-			if (!text.Length()) {
-				info->run_length = 0;
-				info->font.SetRetain(reinterpret_cast<CoreTextFont *>(font));
-				info->Retain();
-				return info;
-			}
-			info->CharEnds32.SetLength(text.Length());
-			Array<uint16> utf16(0x100);
-			Array<bool> alt(0x100);
-			Array<CGGlyph> alt_glyph(0x100);
-			utf16.SetLength(MeasureSequenceLength(text.GetBuffer(), text.Length(), Encoding::UTF32, Encoding::UTF16));
-			info->Surrogate.SetLength(utf16.Length());
-			alt.SetLength(utf16.Length());
-			alt_glyph.SetLength(utf16.Length());
-			ZeroMemory(alt.GetBuffer(), utf16.Length());
-			ConvertEncoding(utf16.GetBuffer(), text.GetBuffer(), text.Length(), Encoding::UTF32, Encoding::UTF16);
-			for (int i = 0; i < utf16.Length(); i++) info->Surrogate[i] = (utf16[i] >= 0xDC00 && utf16[i] < 0xE000);
-			info->font.SetRetain(reinterpret_cast<CoreTextFont *>(font));
-			info->GlyphString.SetLength(utf16.Length());
-			CTFontGetGlyphsForCharacters(info->font->font, utf16.GetBuffer(), info->GlyphString.GetBuffer(), utf16.Length());
-			CTFontGetGlyphsForCharacters(info->font->alt_font, utf16.GetBuffer(), alt_glyph.GetBuffer(), utf16.Length());
-			CGGlyph space, alt_space, question; UniChar spc = 32, que = '?';
-			CTFontGetGlyphsForCharacters(info->font->font, &spc, &space, 1);
-			CTFontGetGlyphsForCharacters(info->font->font, &que, &question, 1);
-			CTFontGetGlyphsForCharacters(info->font->alt_font, &spc, &alt_space, 1);
-			for (int i = 0; i < utf16.Length(); i++) {
-				if (utf16[i] == L'\t') {
-					info->GlyphString[i] = 0;
-					alt_glyph[i] = 0;
-				} else {
-					if (!info->GlyphString[i]) {
-						if (alt_glyph[i]) {
-							info->GlyphString[i] = alt_glyph[i];
-							alt[i] = true;
-						} else {
-							if (info->Surrogate[i]) {
-								alt[i] = alt[i - 1];
-								info->GlyphString[i] = alt[i] ? alt_space : space;
-							} else {
-								info->GlyphString[i] = question;
+			QuartzTextBrush(QuartzDeviceContext * parent, Graphics::IFont * font, const uint32 * ucs, int length, uint32 horizontal_align, uint32 vertical_align, const Color & color) :
+				_parent(parent), _glyphs(1), _advances(1), _positions(1), _fonts(1), _flags(1), _ends(1), _ranges(0x40), _x_brushes(1)
+			{
+				_font.SetRetain(static_cast<CoreTextFont *>(font));
+				_text_color = color;
+				_back_color = Math::ColorF(0.0, 0.0, 0.0, 0.0);
+				_hl_start = _hl_end = -1;
+				_halign = horizontal_align;
+				_valign = vertical_align;
+				if (!length) { _run_length = 0; return; }
+				_ends.SetLength(length);
+				auto utf16_length = MeasureSequenceLength(ucs, length, Encoding::UTF32, Encoding::UTF16);
+				Array<uint16> utf16(1);
+				Array<CGGlyph> alt_glyph(1);
+				utf16.SetLength(utf16_length);
+				alt_glyph.SetLength(utf16_length);
+				_flags.SetLength(utf16_length);
+				_glyphs.SetLength(utf16_length);
+				ConvertEncoding(utf16.GetBuffer(), ucs, length, Encoding::UTF32, Encoding::UTF16);
+				for (int i = 0; i < utf16_length; i++) _flags[i] = (utf16[i] >= 0xDC00 && utf16[i] < 0xE000) ? 1 : 0;
+				CTFontGetGlyphsForCharacters(_font->GetMainFont(), utf16.GetBuffer(), _glyphs.GetBuffer(), utf16_length);
+				if (_font->GetAltFont()) CTFontGetGlyphsForCharacters(_font->GetAltFont(), utf16.GetBuffer(), alt_glyph.GetBuffer(), utf16_length);
+				else ZeroMemory(alt_glyph.GetBuffer(), sizeof(CGGlyph) * utf16_length);
+				CGGlyph alt_space, question; UniChar spc = 32, que = '?';
+				CTFontGetGlyphsForCharacters(_font->GetMainFont(), &spc, &_space, 1);
+				CTFontGetGlyphsForCharacters(_font->GetMainFont(), &que, &question, 1);
+				if (_font->GetAltFont()) CTFontGetGlyphsForCharacters(_font->GetAltFont(), &spc, &alt_space, 1);
+				else alt_space = 0;
+				for (int i = 0; i < utf16_length; i++) {
+					if (utf16[i] == L'\t') { _glyphs[i] = 0; alt_glyph[i] = 0; } else {
+						if (!_glyphs[i]) {
+							if (alt_glyph[i]) { _glyphs[i] = alt_glyph[i]; _flags[i] |= 2; } else {
+								if (_flags[i] & 1) {
+									_flags[i] |= _flags[i - 1] & 2;
+									_glyphs[i] = (_flags[i] & 2) ? alt_space : _space;
+								} else _glyphs[i] = question;
 							}
 						}
 					}
 				}
+				_baseline = int(CTFontGetDescent(_font->GetMainFont()));
+				_underline_offs = CTFontGetUnderlinePosition(_font->GetMainFont());
+				_underline_hw = CTFontGetUnderlineThickness(_font->GetMainFont()) / 2.0;
+				_strikeout_offs = (CTFontGetAscent(_font->GetMainFont()) - CTFontGetDescent(_font->GetMainFont())) / 2.0;
+				_strikeout_hw = _underline_hw;
+				_advances.SetLength(utf16_length);
+				_positions.SetLength(utf16_length);
+				_fonts.SetLength(utf16_length);
+				SetCharAdvances(0);
+				_reset_ranges(0);
 			}
-			info->GlyphAdvances.SetLength(info->GlyphString.Length());
-			info->GlyphPositions.SetLength(info->GlyphString.Length());
-			Array<CGSize> adv(0x10);
-			adv.SetLength(info->GlyphString.Length());
-			info->FontsCT.SetLength(info->GlyphString.Length());
-			double v = 0.0;
-			for (int i = 0; i < adv.Length(); i++) {
-				if (alt[i]) {
-					if (!info->Surrogate[i]) {
-						CTFontGetAdvancesForGlyphs(info->font->alt_font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
-						v += adv[i].width;
-					} else adv[i].width = 0.0;
-					info->FontsCT[i] = info->font->alt_font;
-				} else {
-					if (info->GlyphString[i]) {
-						if (!info->Surrogate[i]) {
-							CTFontGetAdvancesForGlyphs(info->font->font, kCTFontOrientationHorizontal, info->GlyphString.GetBuffer() + i, adv.GetBuffer() + i, 1);
-							v += adv[i].width;
-						} else adv[i].width = 0.0;
-					} else if (!info->Surrogate[i]) {
-						info->GlyphString[i] = space;
-						int w = int(int64(v) + 4 * info->font->width) / int64(max(int(4 * info->font->width), 1));
-						double lv = v;
-						v = double(4 * info->font->width * w);
-						adv[i].width = v - lv;
-					} else {
-						info->GlyphString[i] = space;
+			virtual ~QuartzTextBrush(void) override {}
+			virtual void GetExtents(int & width, int & height) noexcept override { width = _run_length; height = _font->GetHeight(); }
+			virtual void SetHighlightColor(const Color & color) noexcept override { _back_color = color; }
+			virtual void HighlightText(int start, int end) noexcept override { _hl_start = start; _hl_end = end; }
+			virtual int TestPosition(int point) noexcept override
+			{
+				if (point < 0) return 0;
+				if (point > _run_length) return _ends.Length();
+				int ci = 0;
+				for (int i = 0; i < _flags.Length(); i++) {
+					if (point <= _positions[i].x + _advances[i]) {
+						if (point <= _positions[i].x + _advances[i] / 2.0) return ci;
+						else return ci + 1;
+						break;
 					}
-					info->FontsCT[i] = info->font->font;
+					if ((_flags[i] & 1) == 0) ci++;
+				}
+				return _ends.Length();
+			}
+			virtual int EndOfChar(int index) noexcept override { if (index < 0) return 0; return _ends[index]; }
+			virtual int GetStringLength(void) noexcept override { return _ends.Length(); }
+			virtual void SetCharPalette(const Color * colors, int count) override { _x_brushes.SetLength(count); for (int i = 0; i < count; i++) _x_brushes[i] = colors[i]; }
+			virtual void SetCharColors(const uint8 * indicies, int count) override { if (_ends.Length() == count) _reset_ranges(indicies); }
+			virtual void SetCharAdvances(const double * advances) override
+			{
+				if (advances) {
+					int r = 0;
+					for (int i = 0; i < _advances.Length(); i++) if (_flags[i] & 1) _advances[i] = 0.0; else { _advances[i] = advances[r]; r++; }
+				} else {
+					Array<CGSize> adv(1);
+					adv.SetLength(_glyphs.Length());
+					double v = 0.0;
+					for (int i = 0; i < adv.Length(); i++) {
+						if (_flags[i] & 2) {
+							_fonts[i] = _font->GetAltFont();
+							if (_flags[i] & 1) adv[i].width = 0.0; else {
+								CTFontGetAdvancesForGlyphs(_font->GetAltFont(), kCTFontOrientationHorizontal, _glyphs.GetBuffer() + i, adv.GetBuffer() + i, 1);
+								v += adv[i].width;
+							}
+						} else {
+							_fonts[i] = _font->GetMainFont();
+							if (_glyphs[i]) {
+								if (_flags[i] & 1) adv[i].width = 0.0; else {
+									CTFontGetAdvancesForGlyphs(_font->GetMainFont(), kCTFontOrientationHorizontal, _glyphs.GetBuffer() + i, adv.GetBuffer() + i, 1);
+									v += adv[i].width;
+								}
+							} else if (_flags[i] & 1) {
+								_glyphs[i] = _space;
+							} else {
+								_glyphs[i] = _space;
+								int w = int(int64(v) + 4 * _font->GetWidth()) / int64(max(int(4 * _font->GetWidth()), 1));
+								double lv = v;
+								v = double(4 * _font->GetWidth() * w);
+								adv[i].width = v - lv;		
+							}
+						}
+					}
+					for (int i = 0; i < adv.Length(); i++) _advances[i] = adv[i].width;
+				}
+				if (_advances.Length()) {
+					_positions[0].x = _positions[0].y = 0.0;
+					for (int i = 1; i < _advances.Length(); i++) {
+						_positions[i].x = _positions[i - 1].x + _advances[i - 1];
+						_positions[i].y = 0.0;
+					}
+					_run_length = int(_positions.LastElement().x + _advances.LastElement());
+				} else _run_length = 0;
+				int w = 0;
+				for (int i = 0; i < _positions.Length(); i++) if ((_flags[i] & 1) == 0) {
+					_ends[w] = int(_positions[i].x + _advances[i]);
+					w++;
 				}
 			}
-			for (int i = 0; i < adv.Length(); i++) info->GlyphAdvances[i] = adv[i].width;
-			if (adv.Length()) {
-				info->GlyphPositions[0].x = 0.0;
-				info->GlyphPositions[0].y = 0.0;
-				for (int i = 1; i < adv.Length(); i++) {
-					info->GlyphPositions[i].x = info->GlyphPositions[i - 1].x + adv[i - 1].width;
-					info->GlyphPositions[i].y = 0.0;
-				}
-			}
-			info->halign = horizontal_align;
-			info->valign = vertical_align;
-			info->run_length = int(info->GlyphPositions.LastElement().x + info->GlyphAdvances.LastElement());
-			info->BaselineOffset = int(CTFontGetDescent(reinterpret_cast<CoreTextFont *>(font)->font));
-			info->UnderlineOffset = CTFontGetUnderlinePosition(reinterpret_cast<CoreTextFont *>(font)->font);
-			info->UnderlineHalfWidth = CTFontGetUnderlineThickness(reinterpret_cast<CoreTextFont *>(font)->font) / 2.0;
-			info->StrikeoutOffset = (CTFontGetAscent(reinterpret_cast<CoreTextFont *>(font)->font) - CTFontGetDescent(reinterpret_cast<CoreTextFont *>(font)->font)) / 2.0;
-			info->StrikeoutHalfWidth = info->UnderlineHalfWidth;
-			info->TextColor.r = double(color.r) / 255.0;
-			info->TextColor.g = double(color.g) / 255.0;
-			info->TextColor.b = double(color.b) / 255.0;
-			info->TextColor.a = double(color.a) / 255.0;
-			info->hls = info->hle = -1;
-			for (int i = 0; i < info->CharEnds32.Length(); i++) info->CharEnds32[i] = info->EndOfChar16(info->TranslatePositionUtf32ToUtf16(i));
-			info->ResetRanges(0);
-			info->Retain();
-			return info;
+			virtual void GetCharAdvances(double * advances) noexcept override { int w = 0; for (int i = 0; i < _advances.Length(); i++) if ((_flags[i] & 1) == 0) { advances[w] = _advances[i]; w++; } }
+			virtual I2DDeviceContext * GetParentDevice(void) const noexcept override { return _parent; }
+			virtual ImmutableString ToString(void) const override { return L"QuartzTextBrush"; }
+		};
+
+		CGRect QuartzMakeRect(const Box & box, int w, int h, int scale)
+		{
+			double s = double(scale);
+			return CGRectMake(double(box.Left) / s, double(h - box.Bottom) / s, double(box.Right - box.Left) / s, double(box.Bottom - box.Top) / s);
 		}
 
-		Graphics::ITexture * QuartzRenderingDevice::CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) { return 0; }
-
-		void QuartzRenderingDevice::RenderBar(UI::IBarRenderingInfo * Info, const UI::Box & At) noexcept
+		QuartzDeviceContext::QuartzDeviceContext(void) : _color_cache(0x80), _bitmap_target_allowed(false), _context(0), _width(0), _height(0), _scale(0), _time(0), _ref_time(0), _blink_time(1000), _blink_htime(500) {}
+		QuartzDeviceContext::~QuartzDeviceContext(void) { if (_bitmap_target_allowed && _context) CGContextRelease(reinterpret_cast<CGContextRef>(_context)); }
+		void * QuartzDeviceContext::GetContext(void) const noexcept { return _context; }
+		void QuartzDeviceContext::SetContext(void * context, int width, int height, int scale) noexcept
 		{
-			if (!Info) return;
-			auto info = static_cast<QuartzBarRenderingInfo *>(Info);
-			if (info->gradient) {
-				int w = At.Right - At.Left, h = At.Bottom - At.Top;
-				if (!w || !h) return;
-				CGPoint s, e;
-				double cx = double(At.Right + At.Left) / 2.0;
-				double cy = double(At.Top + At.Bottom) / 2.0;
-				double rx = double(w) / 2.0;
-				double ry = double(h) / 2.0;
-				double mx = max(abs(info->prop_w), abs(info->prop_h));
-				double boundary_sx = info->prop_w / mx;
-				double boundary_sy = info->prop_h / mx;
-				s.x = cx - rx * boundary_sx;
-				s.y = cy + ry * boundary_sy;
-				e.x = cx + rx * boundary_sx;
-				e.y = cy - ry * boundary_sy;
-				double z = double(_scale);
-				s.y = _height - s.y;
-				e.y = _height - e.y;
-				s.x /= z; s.y /= z; e.x /= z; e.y /= z;
-				PushClip(At);
-				CGContextDrawLinearGradient(reinterpret_cast<CGContextRef>(_context), info->gradient, s, e,
-					kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+			_context = context; _width = width; _height = height; _scale = scale;
+			CGContextSetInterpolationQuality(reinterpret_cast<CGContextRef>(_context), kCGInterpolationNone);
+		}
+		void QuartzDeviceContext::SetBitmapTarget(bool set) noexcept { _bitmap_target_allowed = set; }
+		void QuartzDeviceContext::GetImplementationInfo(string & tech, uint32 & version) { tech = L"Quartz"; version = 1; }
+		uint32 QuartzDeviceContext::GetFeatureList(void) noexcept
+		{
+			uint32 result = DeviceContextFeatureInversionCapable | DeviceContextFeaturePolygonCapable | DeviceContextFeatureLayersCapable;
+			if (_bitmap_target_allowed) result |= DeviceContextFeatureBitmapTarget;
+			return result;
+		}
+		ImmutableString QuartzDeviceContext::ToString(void) const { return L"QuartzDeviceContext"; }
+		Graphics::IColorBrush * QuartzDeviceContext::CreateSolidColorBrush(Color color) noexcept
+		{
+			auto cached = _color_cache.GetObjectByKey(color);
+			if (cached) { cached->Retain(); return cached; }
+			try {
+				SafePointer<QuartzColorBrush> result = new QuartzColorBrush(this, color);
+				try { _color_cache.Push(color, result); } catch (...) {}
+				result->Retain();
+				return result;
+			} catch (...) { return 0; }
+		}
+		Graphics::IColorBrush * QuartzDeviceContext::CreateGradientBrush(Point rel_from, Point rel_to, const GradientPoint * points, int count) noexcept
+		{
+			if (count < 1) return 0;
+			if (count == 1) return CreateSolidColorBrush(points[0].Value);
+			try { return new QuartzColorBrush(this, points, count, rel_from, rel_to); } catch (...) { return 0; }
+		}
+		Graphics::IBlurEffectBrush * QuartzDeviceContext::CreateBlurEffectBrush(double power) noexcept { return 0; }
+		Graphics::IInversionEffectBrush * QuartzDeviceContext::CreateInversionEffectBrush(void) noexcept
+		{
+			if (_inversion_cache) { _inversion_cache->Retain(); return _inversion_cache; }
+			try {
+				_inversion_cache = new QuartzInversionBrush(this);
+				_inversion_cache->Retain();
+				return _inversion_cache;
+			} catch (...) { return 0; }
+		}
+		Graphics::IBitmapBrush * QuartzDeviceContext::CreateBitmapBrush(Graphics::IBitmap * bitmap, const Box & area, bool tile) noexcept
+		{
+			if (!bitmap) return 0;
+			CGImageRef fragment;
+			CGImageRef image = static_cast<QuartzBitmap *>(bitmap)->GetCoreImage();
+			Point size = Point(area.Right - area.Left, area.Bottom - area.Top);
+			if (size.x <= 0 || size.y <= 0) return 0;
+			if (area.Left == 0 && area.Top == 0 && area.Right == bitmap->GetWidth() && area.Bottom == bitmap->GetHeight()) {
+				fragment = image;
+				CGImageRetain(fragment);
+			} else {
+				auto rect = CGRectMake(double(area.Left), double(area.Top), double(area.Right - area.Left), double(area.Bottom - area.Top));
+				fragment = CGImageCreateWithImageInRect(image, rect);
+				if (!fragment) return 0;
+			}
+			SafePointer<QuartzBitmapBrush> result;
+			try { result = new QuartzBitmapBrush(this, fragment, size, tile); } catch (...) {}
+			CGImageRelease(fragment);
+			if (result) { result->Retain(); return result; } else return 0;
+		}
+		Graphics::IBitmapBrush * QuartzDeviceContext::CreateTextureBrush(Graphics::ITexture * texture, Graphics::TextureAlphaMode mode) noexcept { return 0; }
+		Graphics::ITextBrush * QuartzDeviceContext::CreateTextBrush(Graphics::IFont * font, const string & text, uint32 horizontal_align, uint32 vertical_align, const Color & color) noexcept
+		{
+			if (!font) return 0;
+			try {
+				auto norm = text.NormalizedForm();
+				return new QuartzTextBrush(this, font, reinterpret_cast<const uint32 *>(static_cast<const widechar *>(norm)), norm.Length(), horizontal_align, vertical_align, color);
+			} catch (...) { return 0; }
+		}
+		Graphics::ITextBrush * QuartzDeviceContext::CreateTextBrush(Graphics::IFont * font, const uint32 * ucs, int length, uint32 horizontal_align, uint32 vertical_align, const Color & color) noexcept
+		{
+			if (!font) return 0;
+			try {
+				auto text = string(ucs, length, Encoding::UTF32);
+				return CreateTextBrush(font, text, horizontal_align, vertical_align, color);
+			} catch (...) { return 0; }
+		}
+		void QuartzDeviceContext::ClearInternalCache(void) noexcept { _color_cache.Clear(); _inversion_cache.SetReference(0); }
+		void QuartzDeviceContext::PushClip(const Box & rect) noexcept
+		{
+			auto clip = _clipping.IsEmpty() ? rect : Box::Intersect(rect, _clipping.GetLast()->GetValue());
+			try { _clipping.InsertLast(clip); } catch (...) { return; }
+			CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
+			CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(clip, _width, _height, _scale));
+		}
+		void QuartzDeviceContext::PopClip(void) noexcept
+		{
+			_clipping.RemoveLast();
+			CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
+		}
+		void QuartzDeviceContext::BeginLayer(const Box & rect, double opacity) noexcept
+		{
+			CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
+			CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(rect, _width, _height, _scale));
+			CGContextSetAlpha(reinterpret_cast<CGContextRef>(_context), CGFloat(opacity));
+			CGContextBeginTransparencyLayer(reinterpret_cast<CGContextRef>(_context), 0);
+		}
+		void QuartzDeviceContext::EndLayer(void) noexcept
+		{
+			CGContextEndTransparencyLayer(reinterpret_cast<CGContextRef>(_context));
+			CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
+		}
+		void QuartzDeviceContext::Render(Graphics::IColorBrush * brush, const Box & at) noexcept
+		{
+			if (!brush || at.Left >= at.Right || at.Top >= at.Bottom) return;
+			auto info = static_cast<QuartzColorBrush *>(brush);
+			CGGradientRef gradient;
+			if (gradient = info->GetGradient()) {
+				CGPoint from, to;
+				double scale = double(_scale);
+				from.x = (info->GetBegin().x + at.Left) / scale;
+				from.y = (_height - info->GetBegin().y - at.Top) / scale;
+				to.x = (info->GetEnd().x + at.Left) / scale;
+				to.y = (_height - info->GetEnd().y - at.Top) / scale;
+				PushClip(at);
+				CGContextDrawLinearGradient(reinterpret_cast<CGContextRef>(_context), gradient, from, to, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
 				PopClip();
 			} else {
-				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->r, info->g, info->b, info->a);
-				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(At, _width, _height, _scale));
+				auto & color = info->GetSolidColor();
+				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), color.r, color.g, color.b, color.a);
+				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(at, _width, _height, _scale));
 			}
 		}
-		void QuartzRenderingDevice::RenderTexture(UI::ITextureRenderingInfo * Info, const UI::Box & At) noexcept
+		void QuartzDeviceContext::Render(Graphics::IBitmapBrush * brush, const Box & at) noexcept
 		{
-			if (!Info) return;
-			auto info = static_cast<QuartzTextureRenderingInfo *>(Info);
-			if (info->fill) {
-				double s = double(_scale);
-				PushClip(At);
-				CGContextDrawTiledImage(reinterpret_cast<CGContextRef>(_context), CGRectMake(0.0f, 0.0f, double(info->fragment->w) / s, double(info->fragment->h) / s), info->fragment->bitmap);
+			if (!brush || at.Left >= at.Right || at.Top >= at.Bottom) return;
+			auto info = static_cast<QuartzBitmapBrush *>(brush);
+			if (info->IsTiled()) {
+				auto size = info->GetSize();
+				auto scale = double(_scale);
+				PushClip(at);
+				CGContextDrawTiledImage(reinterpret_cast<CGContextRef>(_context), CGRectMake(0.0f, 0.0f, double(size.x) / scale, double(size.y) / scale), info->GetImage());
 				PopClip();
-			} else {
-				CGContextDrawImage(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(At, _width, _height, _scale), info->fragment->bitmap);
-			}
+			} else CGContextDrawImage(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(at, _width, _height, _scale), info->GetImage());
 		}
-		void QuartzRenderingDevice::RenderText(UI::ITextRenderingInfo * Info, const UI::Box & At, bool Clip) noexcept
+		void QuartzDeviceContext::Render(Graphics::ITextBrush * brush, const Box & at, bool clip) noexcept
 		{
-			auto info = reinterpret_cast<CoreTextRenderingInfo *>(Info);
-			if (!Info || !info->GlyphAdvances.Length()) return;
-			CGRect at = QuartzMakeRect(At, _width, _height, _scale);
-			if (Clip) {
+			if (!brush || at.Left >= at.Right || at.Top >= at.Bottom) return;
+			auto info = static_cast<QuartzTextBrush *>(brush);
+			if (!info->_advances.Length()) return;
+			auto rect = QuartzMakeRect(at, _width, _height, _scale);
+			if (clip) {
 				CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
-				CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), at);
+				CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), rect);
 			}
 			int width, height;
-			Info->GetExtent(width, height);
+			info->GetExtents(width, height);
 			int shift_x = 0;
-			int shift_y = (info->font->height - info->font->zoomed_height) / 2 / double(_scale);
-			if (info->halign == 1) shift_x += (At.Right - At.Left - width) / 2;
-			else if (info->halign == 2) shift_x += (At.Right - At.Left - width);
-			if (info->valign == 1) shift_y += (At.Bottom - At.Top - height) / 2;
-			else if (info->valign == 0) shift_y += (At.Bottom - At.Top - height);
+			int shift_y = (info->_font->GetHeight() - info->_font->GetScaledHeight()) / 2 / double(_scale);
+			if (info->_halign == 1) shift_x += (at.Right - at.Left - width) / 2;
+			else if (info->_halign == 2) shift_x += (at.Right - at.Left - width);
+			if (info->_valign == 1) shift_y += (at.Bottom - at.Top - height) / 2;
+			else if (info->_valign == 0) shift_y += (at.Bottom - at.Top - height);
 			CGAffineTransform trans;
 			trans.a = trans.d = 1.0 / double(_scale); trans.b = trans.c = 0.0;
-			trans.tx = at.origin.x + double(shift_x) / double(_scale);
-			trans.ty = at.origin.y + double(shift_y + info->BaselineOffset) / double(_scale);
-			if (info->hls != -1) {
-				double start = double(info->EndOfChar(info->hls - 1));
-				double end = double(info->EndOfChar(info->hle - 1));
-				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->BackColor.r, info->BackColor.g, info->BackColor.b, info->BackColor.a);
+			trans.tx = rect.origin.x + double(shift_x) / double(_scale);
+			trans.ty = rect.origin.y + double(shift_y + info->_baseline) / double(_scale);
+			if (info->_hl_start != -1) {
+				double start = double(info->EndOfChar(info->_hl_start - 1));
+				double end = double(info->EndOfChar(info->_hl_end - 1));
+				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->_back_color.r, info->_back_color.g, info->_back_color.b, info->_back_color.a);
 				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), CGRectMake(trans.tx + start / double(_scale),
-					at.origin.y, (end - start) / double(_scale), at.size.height));
+					rect.origin.y, (end - start) / double(_scale), rect.size.height));
 			}
-			for (int i = 0; i < info->Ranges.Length(); i++) {
-				CGContextSetFontSize(reinterpret_cast<CGContextRef>(_context), info->font->zoomed_height);
+			for (auto & r : info->_ranges) {
+				CGContextSetFontSize(reinterpret_cast<CGContextRef>(_context), info->_font->GetScaledHeight());
 				CGContextSetTextDrawingMode(reinterpret_cast<CGContextRef>(_context), kCGTextFill);
 				CGContextSetTextPosition(reinterpret_cast<CGContextRef>(_context), 0.0, 0.0);
 				CGContextSetTextMatrix(reinterpret_cast<CGContextRef>(_context), trans);
-				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context),
-					info->Ranges[i].Brush.r, info->Ranges[i].Brush.g, info->Ranges[i].Brush.b, info->Ranges[i].Brush.a);
-				CTFontDrawGlyphs(info->Ranges[i].FontCT, info->GlyphString.GetBuffer() + info->Ranges[i].LeftEdge, info->GlyphPositions.GetBuffer() + info->Ranges[i].LeftEdge,
-					info->Ranges[i].RightEdge - info->Ranges[i].LeftEdge, reinterpret_cast<CGContextRef>(_context));
+				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), r.color.r, r.color.g, r.color.b, r.color.a);
+				CTFontDrawGlyphs(r.font, info->_glyphs.GetBuffer() + r.left, info->_positions.GetBuffer() + r.left, r.right - r.left, reinterpret_cast<CGContextRef>(_context));
 			}
-			if (info->font->underline) {
-				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->TextColor.r, info->TextColor.g, info->TextColor.b, info->TextColor.a);
-				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), CGRectMake(trans.tx, trans.ty + (info->UnderlineOffset - info->UnderlineHalfWidth) / double(_scale),
-					double(info->run_length) / double(_scale), 2.0 * info->UnderlineHalfWidth / double(_scale)));
+			if (info->_font->IsUnderline()) {
+				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->_text_color.r, info->_text_color.g, info->_text_color.b, info->_text_color.a);
+				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), CGRectMake(trans.tx, trans.ty + (info->_underline_offs - info->_underline_hw) / double(_scale),
+					double(info->_run_length) / double(_scale), 2.0 * info->_underline_hw / double(_scale)));
 			}
-			if (info->font->strikeout) {
-				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->TextColor.r, info->TextColor.g, info->TextColor.b, info->TextColor.a);
-				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), CGRectMake(trans.tx, trans.ty + (info->StrikeoutOffset - info->StrikeoutHalfWidth) / double(_scale),
-					double(info->run_length) / double(_scale), 2.0 * info->StrikeoutHalfWidth / double(_scale)));
+			if (info->_font->IsStrikeout()) {
+				CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), info->_text_color.r, info->_text_color.g, info->_text_color.b, info->_text_color.a);
+				CGContextFillRect(reinterpret_cast<CGContextRef>(_context), CGRectMake(trans.tx, trans.ty + (info->_strikeout_offs - info->_strikeout_hw) / double(_scale),
+					double(info->_run_length) / double(_scale), 2.0 * info->_strikeout_hw / double(_scale)));
 			}
-			if (Clip) CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
+			if (clip) CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
 		}
-		void QuartzRenderingDevice::ApplyBlur(UI::IBlurEffectRenderingInfo * Info, const UI::Box & At) noexcept {}
-		void QuartzRenderingDevice::ApplyInversion(UI::IInversionEffectRenderingInfo * Info, const UI::Box & At, bool Blink) noexcept
+		void QuartzDeviceContext::Render(Graphics::IBlurEffectBrush * brush, const Box & at) noexcept {}
+		void QuartzDeviceContext::Render(Graphics::IInversionEffectBrush * brush, const Box & at, bool blink) noexcept
 		{
-			if (!Info) return;
-			auto info = static_cast<QuartzInversionRenderingInfo *>(Info);
-			if (!Blink || (_animation % 1000 < 500)) {
+			if (!brush || at.Left >= at.Right || at.Top >= at.Bottom) return;
+			auto info = static_cast<QuartzInversionBrush *>(brush);
+			if (!blink || IsCaretVisible()) {
 				CGContextSetBlendMode(reinterpret_cast<CGContextRef>(_context), kCGBlendModeDifference);
-				CGContextDrawImage(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(At, _width, _height, _scale), info->white);
+				CGContextDrawImage(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(at, _width, _height, _scale), info->GetBitmap()->GetCoreImage());
 				CGContextSetBlendMode(reinterpret_cast<CGContextRef>(_context), kCGBlendModeNormal);
 			}
 		}
-
-		void QuartzRenderingDevice::DrawPolygon(const Math::Vector2 * points, int count, UI::Color color, double width) noexcept
+		void QuartzDeviceContext::RenderPolyline(const Math::Vector2 * points, int count, Color color, double width) noexcept
 		{
 			CGContextSetRGBStrokeColor(reinterpret_cast<CGContextRef>(_context), color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
 			CGContextSetLineWidth(reinterpret_cast<CGContextRef>(_context), width / double(_scale));
@@ -586,7 +637,7 @@ namespace Engine
 			}
 			CGContextStrokePath(reinterpret_cast<CGContextRef>(_context));
 		}
-		void QuartzRenderingDevice::FillPolygon(const Math::Vector2 * points, int count, UI::Color color) noexcept
+		void QuartzDeviceContext::RenderPolygon(const Math::Vector2 * points, int count, Color color) noexcept
 		{
 			CGContextSetRGBFillColor(reinterpret_cast<CGContextRef>(_context), color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
 			CGContextBeginPath(reinterpret_cast<CGContextRef>(_context));
@@ -596,160 +647,60 @@ namespace Engine
 			}
 			CGContextFillPath(reinterpret_cast<CGContextRef>(_context));
 		}
-
-		void QuartzRenderingDevice::PushClip(const UI::Box & Rect) noexcept
+		void QuartzDeviceContext::SetAnimationTime(uint32 value) noexcept { _time = value; }
+		uint32 QuartzDeviceContext::GetAnimationTime(void) noexcept { return _time; }
+		void QuartzDeviceContext::SetCaretReferenceTime(uint32 value) noexcept { _ref_time = value; }
+		uint32 QuartzDeviceContext::GetCaretReferenceTime(void) noexcept { return _ref_time; }
+		void QuartzDeviceContext::SetCaretBlinkPeriod(uint32 value) noexcept { _blink_time = value; _blink_htime = value / 2; }
+		uint32 QuartzDeviceContext::GetCaretBlinkPeriod(void) noexcept { return _blink_time; }
+		bool QuartzDeviceContext::IsCaretVisible(void) noexcept { return (((_time - _ref_time) / _blink_htime) & 1) == 0; }
+		Graphics::IDevice * QuartzDeviceContext::GetParentDevice(void) noexcept { return 0; }
+		Graphics::I2DDeviceContextFactory * QuartzDeviceContext::GetParentFactory(void) noexcept { return GetCommonDeviceContextFactory(); }
+		bool QuartzDeviceContext::BeginRendering(Graphics::IBitmap * dest) noexcept
 		{
-			UI::Box clip = Clipping.Length() ? UI::Box::Intersect(Rect, Clipping.LastElement()) : Rect;
-			Clipping << clip;
-			CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
-			CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(Rect, _width, _height, _scale));
+			if (!dest || !_bitmap_target_allowed || _bitmap_target) return false;
+			auto surface = GetBitmapSurface(dest);
+			auto width = surface->GetWidth();
+			auto height = surface->GetHeight();
+			auto rgb_cs = CGColorSpaceCreateDeviceRGB();
+			if (!rgb_cs) return false;
+			auto context = CGBitmapContextCreateWithData(surface->GetData(), width, height, 8, surface->GetScanLineLength(), rgb_cs, kCGImageAlphaPremultipliedLast, 0, 0);
+			CGColorSpaceRelease(rgb_cs);
+			if (!context) return false;
+			_bitmap_target.SetRetain(dest);
+			SetContext(context, width, height, 1);
+			return true;
 		}
-		void QuartzRenderingDevice::PopClip(void) noexcept
+		bool QuartzDeviceContext::BeginRendering(Graphics::IBitmap * dest, Color clear_color) noexcept
 		{
-			Clipping.RemoveLast();
-			CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
+			if (!dest || !_bitmap_target_allowed || _bitmap_target) return false;
+			auto surface = GetBitmapSurface(dest);
+			Color color_prem;
+			color_prem.r = int(clear_color.r) * int(clear_color.a) / 255;
+			color_prem.g = int(clear_color.g) * int(clear_color.a) / 255;
+			color_prem.b = int(clear_color.b) * int(clear_color.a) / 255;
+			color_prem.a = clear_color.a;
+			for (int y = 0; y < surface->GetHeight(); y++) for (int x = 0; x < surface->GetWidth(); x++) surface->SetPixel(x, y, color_prem.Value);
+			return BeginRendering(dest);
 		}
-		void QuartzRenderingDevice::BeginLayer(const UI::Box & Rect, double Opacity) noexcept
+		bool QuartzDeviceContext::EndRendering(void) noexcept
 		{
-			CGContextSaveGState(reinterpret_cast<CGContextRef>(_context));
-			CGContextClipToRect(reinterpret_cast<CGContextRef>(_context), QuartzMakeRect(Rect, _width, _height, _scale));
-			CGContextSetAlpha(reinterpret_cast<CGContextRef>(_context), CGFloat(Opacity));
-			CGContextBeginTransparencyLayer(reinterpret_cast<CGContextRef>(_context), 0);
-		}
-		void QuartzRenderingDevice::EndLayer(void) noexcept
-		{
-			CGContextEndTransparencyLayer(reinterpret_cast<CGContextRef>(_context));
-			CGContextRestoreGState(reinterpret_cast<CGContextRef>(_context));
-		}
-
-		void QuartzRenderingDevice::SetTimerValue(uint32 time) noexcept { _animation = time; }
-		uint32 QuartzRenderingDevice::GetCaretBlinkHalfTime(void) noexcept { return 500; }
-		bool QuartzRenderingDevice::CaretShouldBeVisible(void) noexcept { return _animation % 1000 < 500; }
-		void QuartzRenderingDevice::ClearCache(void) noexcept
-		{
-			BrushCache.Clear();
-			InversionCache.SetReference(0);
-		}
-
-		UI::ITexture * QuartzRenderingDevice::LoadTexture(Codec::Frame * source) noexcept
-		{
-			return StaticLoadTexture(source);
-		}
-		UI::IFont * QuartzRenderingDevice::LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
-		{
-			return StaticLoadFont(face_name, height, weight, italic, underline, strikeout);
-		}
-		UI::ITextureRenderingDevice * QuartzRenderingDevice::CreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept
-		{
-			return StaticCreateTextureRenderingDevice(width, height, color);
-		}
-		UI::ITextureRenderingDevice * QuartzRenderingDevice::CreateTextureRenderingDevice(Codec::Frame * frame) noexcept
-		{
-			return StaticCreateTextureRenderingDevice(frame);
+			if (!_bitmap_target) return false;
+			_clipping.Clear();
+			CGContextFlush(reinterpret_cast<CGContextRef>(_context));
+			CGContextRelease(reinterpret_cast<CGContextRef>(_context));
+			_context = 0;
+			auto status = static_cast<QuartzBitmap *>(_bitmap_target.Inner())->Synchronize();
+			_bitmap_target.SetReference(0);
+			return status;
 		}
 
-		void QuartzRenderingDevice::BeginDraw(void) noexcept {}
-		void QuartzRenderingDevice::EndDraw(void) noexcept { CGContextFlush(reinterpret_cast<CGContextRef>(_context)); }
-		UI::ITexture * QuartzRenderingDevice::GetRenderTargetAsTexture(void) noexcept
+		Codec::Frame * GetBitmapSurface(Graphics::IBitmap * bitmap) { return static_cast<QuartzBitmap *>(bitmap)->GetSurface(); }
+		void * GetBitmapCoreImage(Graphics::IBitmap * bitmap) { return static_cast<QuartzBitmap *>(bitmap)->GetCoreImage(); }
+		QuartzDeviceContextFactory * GetCommonDeviceContextFactory(void)
 		{
-			if (!BitmapTarget) return 0;
-			SafePointer<Engine::Codec::Frame> frame = GetRenderTargetAsFrame();
-			return LoadTexture(frame);
+			if (!common_factory) try { common_factory = new QuartzDeviceContextFactory; } catch (...) { return 0; }
+			return common_factory;
 		}
-		Engine::Codec::Frame * QuartzRenderingDevice::GetRenderTargetAsFrame(void) noexcept
-		{
-			if (!BitmapTarget) return 0;
-			BitmapTarget->Retain();
-			return BitmapTarget;
-		}
-		string QuartzRenderingDevice::ToString(void) const { return L"Engine.Cocoa.QuartzRenderingDevice"; }
-
-		UI::ITexture * QuartzRenderingDevice::StaticLoadTexture(Codec::Frame * source) noexcept
-		{
-			SafePointer<QuartzTexture> result = new (std::nothrow) QuartzTexture;
-			if (!result) return 0;
-			result->w = source->GetWidth();
-			result->h = source->GetHeight();
-			SafePointer<Codec::Frame> converted;
-			try {
-				if (source->GetScanOrigin() == Codec::ScanOrigin::TopDown && source->GetPixelFormat() == Codec::PixelFormat::R8G8B8A8) {
-					converted.SetRetain(source);
-				} else {
-					converted = source->ConvertFormat(Codec::PixelFormat::R8G8B8A8, source->GetAlphaMode(), Codec::ScanOrigin::TopDown);
-				}
-			} catch (...) { return 0; }
-			int data_len = converted->GetScanLineLength() * converted->GetHeight();
-			uint8 * data = reinterpret_cast<uint8 *>(malloc(data_len));
-			if (!data) return 0;
-			MemoryCopy(data, converted->GetData(), data_len);
-			CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
-			CGDataProviderRef provider = CGDataProviderCreateWithData(data, data, data_len, QuartzDataRelease);
-			CGImageRef frame = CGImageCreate(result->w, result->h, 8, 32, converted->GetScanLineLength(), rgb,
-				(converted->GetAlphaMode() == Codec::AlphaMode::Premultiplied) ? kCGImageAlphaPremultipliedLast : kCGImageAlphaLast,
-				provider, 0, false, kCGRenderingIntentDefault);
-			CGColorSpaceRelease(rgb);
-			CGDataProviderRelease(provider);
-			if (!frame) return 0;
-			result->bitmap = frame;
-			result->Retain();
-			return result;
-		}
-		UI::IFont * QuartzRenderingDevice::StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept
-		{
-			try {
-				UI::IFont * font = new CoreTextFont(face_name, double(height), 1.0, weight, italic, underline, strikeout);
-				return font;
-			} catch (...) { return 0; }
-		}
-		UI::ITextureRenderingDevice * QuartzRenderingDevice::StaticCreateTextureRenderingDevice(int width, int height, UI::Color color) noexcept
-		{
-			try {
-				SafePointer<Codec::Frame> target = new Codec::Frame(width, height, width * 4, Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-				{
-					Math::Color prem = color;
-					prem.x *= prem.w;
-					prem.y *= prem.w;
-					prem.z *= prem.w;
-					UI::Color pixel = prem;
-					UI::Color * data = reinterpret_cast<UI::Color *>(target->GetData());
-					for (int i = 0; i < width * height; i++) data[i] = pixel;
-				}
-				CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
-				if (!clr) return 0;
-				CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
-				if (!context) {
-					CGColorSpaceRelease(clr);
-					return 0;
-				}
-				CGColorSpaceRelease(clr);
-				SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
-				device->SetContext(context, width, height, 1);
-				device->BitmapTarget.SetRetain(target);
-				device->Retain();
-				return device;
-			} catch (...) { return 0; }
-		}
-		UI::ITextureRenderingDevice * QuartzRenderingDevice::StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept
-		{
-			try {
-				SafePointer<Codec::Frame> target = frame->ConvertFormat(Codec::PixelFormat::R8G8B8A8, Codec::AlphaMode::Premultiplied, Codec::ScanOrigin::TopDown);
-				int width = frame->GetWidth();
-				int height = frame->GetHeight();
-				CGColorSpaceRef clr = CGColorSpaceCreateDeviceRGB();
-				if (!clr) return 0;
-				CGContextRef context = CGBitmapContextCreateWithData(target->GetData(), width, height, 8, width * 4, clr, kCGImageAlphaPremultipliedLast, 0, 0);
-				if (!context) {
-					CGColorSpaceRelease(clr);
-					return 0;
-				}
-				CGColorSpaceRelease(clr);
-				SafePointer<QuartzRenderingDevice> device = new QuartzRenderingDevice;
-				device->SetContext(context, width, height, 1);
-				device->BitmapTarget.SetRetain(target);
-				device->Retain();
-				return device;
-			} catch (...) { return 0; }
-		}
-		void * GetCoreImageFromTexture(UI::ITexture * texture) { return static_cast<QuartzTexture *>(texture)->bitmap; }
 	}
 }

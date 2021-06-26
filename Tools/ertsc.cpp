@@ -9,9 +9,9 @@ int Main(void)
 {
 	IO::Console console;
 	SafePointer< Array<string> > args = GetCommandLine();
-	console << ENGINE_VI_APPNAME << IO::NewLineChar;
-	console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::NewLineChar;
-	console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::NewLineChar << IO::NewLineChar;
+	console << ENGINE_VI_APPNAME << IO::LineFeedSequence;
+	console << L"Copyright " << string(ENGINE_VI_COPYRIGHT).Replace(L'\xA9', L"(C)") << IO::LineFeedSequence;
+	console << L"Version " << ENGINE_VI_APPVERSION << L", build " << ENGINE_VI_BUILD << IO::LineFeedSequence << IO::LineFeedSequence;
 	if (args->Length() > 1) {
 		string source_file = IO::ExpandPath(args->ElementAt(1));
 		string air_file = IO::Path::GetDirectory(source_file) + L"/" + IO::Path::GetFileNameWithoutExtension(source_file) + L".air";
@@ -20,15 +20,17 @@ int Main(void)
 		Array<string> cmds(8);
 		cmds << L"-sdk"; cmds << L"macosx"; cmds << L"metal"; cmds << L"-c";
 		cmds << source_file; cmds << L"-o"; cmds << air_file;
+		cmds << L"-std=macos-metal2.4";
+		cmds << L"--target=air64-apple-macos11.0";
 		try {
 			SafePointer<Process> process = CreateCommandProcess(L"xcrun", &cmds);
 			if (!process) throw Exception();
 			process->Wait();
 			if (process->GetExitCode()) throw Exception();
 		} catch (...) {
-			console.SetTextColor(IO::Console::ColorRed);
+			console.SetTextColor(IO::ConsoleColor::Red);
 			console.WriteLine(L"Failed to execute the compiler.");
-			console.SetTextColor(IO::Console::ColorDefault);
+			console.SetTextColor(IO::ConsoleColor::Default);
 			return 1;
 		}
 		cmds.Clear();
@@ -40,9 +42,9 @@ int Main(void)
 			process->Wait();
 			if (process->GetExitCode()) throw Exception();
 		} catch (...) {
-			console.SetTextColor(IO::Console::ColorRed);
+			console.SetTextColor(IO::ConsoleColor::Red);
 			console.WriteLine(L"Failed to execute the library tool.");
-			console.SetTextColor(IO::Console::ColorDefault);
+			console.SetTextColor(IO::ConsoleColor::Default);
 			return 1;
 		}
 		try {
@@ -73,9 +75,9 @@ int Main(void)
 			writer.WriteLine(L"\t}");
 			writer.WriteLine(L"}");
 		} catch (...) {
-			console.SetTextColor(IO::Console::ColorRed);
+			console.SetTextColor(IO::ConsoleColor::Red);
 			console.WriteLine(L"Failed to convert library into constant.");
-			console.SetTextColor(IO::Console::ColorDefault);
+			console.SetTextColor(IO::ConsoleColor::Default);
 			return 1;
 		}
 		console.Write(L"Done successfully! Cleaning intermediate files...");
@@ -83,16 +85,16 @@ int Main(void)
 			IO::RemoveFile(air_file);
 			IO::RemoveFile(lib_file);
 		} catch (...) {
-			console.SetTextColor(IO::Console::ColorRed);
+			console.SetTextColor(IO::ConsoleColor::Red);
 			console.WriteLine(L"Failed.");
-			console.SetTextColor(IO::Console::ColorDefault);
+			console.SetTextColor(IO::ConsoleColor::Default);
 			return 1;
 		}
 		console.WriteLine(L"Done!");
 	} else {
-		console << L"Command line syntax:" << IO::NewLineChar;
-		console << L"  " << ENGINE_VI_APPSYSNAME << L" <shader file.metal>" << IO::NewLineChar;
-		console << IO::NewLineChar;
+		console << L"Command line syntax:" << IO::LineFeedSequence;
+		console << L"  " << ENGINE_VI_APPSYSNAME << L" <shader file.metal>" << IO::LineFeedSequence;
+		console << IO::LineFeedSequence;
 	}
 	return 0;
 }

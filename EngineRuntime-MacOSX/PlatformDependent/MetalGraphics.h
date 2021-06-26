@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../UserInterface/ControlBase.h"
+#include "../UserInterface/ShapeBase.h"
 #include "../Graphics/Graphics.h"
+#include "../Interfaces/SystemWindows.h"
 
 #import "Foundation/Foundation.h"
 #import "QuartzCore/QuartzCore.h"
@@ -12,27 +13,32 @@ namespace Engine
 {
 	namespace MetalGraphics
 	{
-		typedef void (* PresentationRenderContentsCallback) (UI::WindowStation * station);
-
-		class MetalPresentationInterface : public Object
+		class MetalPresentationEngine : public Windows::I2DPresentationEngine
 		{
+			NSView * _root_view;
+			NSView * _metal_view;
 		public:
-			NSView * metal_view;
+			MetalPresentationEngine(void);
+			virtual ~MetalPresentationEngine(void) override;
 
-			MetalPresentationInterface(NSView * parent_view, UI::WindowStation * station, PresentationRenderContentsCallback callback);
-			virtual ~MetalPresentationInterface(void) override;
+			virtual void Attach(Windows::ICoreWindow * window) override;
+			virtual void Detach(void) override;
+			virtual void Invalidate(void) override;
+			virtual void Resize(int width, int height) override;
+			virtual Graphics::I2DDeviceContext * GetContext(void) noexcept override;
+			virtual bool BeginRenderingPass(void) noexcept override;
+			virtual bool EndRenderingPass(void) noexcept override;
 
-			id<MTLDevice> GetLayerDevice(void);
-			void SetLayerDevice(id<MTLDevice> device);
+			id<MTLDevice> GetDevice(void);
+			void SetDevice(id<MTLDevice> device);
 			MTLPixelFormat GetPixelFormat(void);
 			void SetPixelFormat(MTLPixelFormat format);
-			UI::Point GetLayerSize(void);
-			void SetLayerSize(UI::Point size);
-			void SetLayerAutosize(bool set);
-			void SetLayerOpaque(bool set);
-			void SetLayerFramebufferOnly(bool set);
-			id<CAMetalDrawable> GetLayerDrawable(void);
-			void InvalidateContents(void);
+			Point GetSize(void);
+			void SetSize(Point size);
+			void SetAutosize(bool autosize);
+			void SetOpaque(bool opaque);
+			void SetFramebufferOnly(bool framebuffer_only);
+			id<CAMetalDrawable> GetDrawable(void);
 		};
 
 		Graphics::IDeviceFactory * CreateMetalDeviceFactory(void);

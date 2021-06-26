@@ -1,13 +1,15 @@
 #include "../Interfaces/KeyCodes.h"
 
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 
 #import <AppKit/AppKit.h>
 
-extern Engine::Dictionary::PlainDictionary<Engine::KeyCodes::Key, bool> __engine_keyboard_status;
-
 namespace Engine
 {
+	namespace Windows
+	{
+		extern Volumes::Dictionary<KeyCodes::Key, bool> KeyboardStatus;
+	}
 	namespace Keyboard
 	{
         bool IsKeyPressed(uint key_code)
@@ -17,7 +19,7 @@ namespace Engine
             if (key_code == KeyCodes::LeftAlternative || key_code == KeyCodes::RightAlternative || key_code == KeyCodes::Alternative) return [NSEvent modifierFlags] & NSEventModifierFlagOption;
             if (key_code == KeyCodes::LeftSystem || key_code == KeyCodes::RightSystem || key_code == KeyCodes::System) return [NSEvent modifierFlags] & NSEventModifierFlagCommand;
             Engine::KeyCodes::Key key = static_cast<Engine::KeyCodes::Key>(key_code);
-            if (__engine_keyboard_status.ElementByKey(key)) return true;
+            if (Windows::KeyboardStatus.GetElementByKey(key)) return true;
             return false;
         }
 		bool IsKeyToggled(uint key_code)

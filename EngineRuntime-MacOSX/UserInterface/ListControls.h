@@ -11,7 +11,7 @@ namespace Engine
 	{
 		namespace Controls
 		{
-			class ListBox : public ParentWindow, public Template::Controls::ListBox
+			class ListBox : public ParentControl, public Template::Controls::ListBox
 			{
 			private:
 				struct Element
@@ -30,6 +30,7 @@ namespace Engine
 				SafePointer<Shape> _view_normal;
 				SafePointer<Shape> _view_disabled;
 				SafePointer<Shape> _view_focused;
+				SafePointer<Shape> _view_element_alternate;
 				SafePointer<Shape> _view_element_hot;
 				SafePointer<Shape> _view_element_selected;
 
@@ -38,11 +39,11 @@ namespace Engine
 				void select(int index, bool down);
 				void move_selection(int to);
 			public:
-				ListBox(Window * Parent, WindowStation * Station);
-				ListBox(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				ListBox(void);
+				ListBox(Template::ControlTemplate * Template);
 				~ListBox(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void ArrangeChildren(void) override;
 				virtual void Enable(bool enable) override;
@@ -55,7 +56,8 @@ namespace Engine
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetPosition(const Box & box) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
+				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
@@ -65,7 +67,7 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual void ScrollVertically(double delta) override;
 				virtual bool KeyDown(int key_code) override;
-				virtual Window * HitTest(Point at) override;
+				virtual Control * HitTest(Point at) override;
 				virtual string GetControlClass(void) override;
 
 				void AddItem(const string & text, void * user = 0);
@@ -87,11 +89,13 @@ namespace Engine
 				void SetSelectedIndex(int index, bool scroll_to_view = false);
 				bool IsItemSelected(int index);
 				void SelectItem(int index, bool select);
-				Window * CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position = Rectangle::Entire());
-				Window * GetEmbeddedEditor(void);
+				Control * CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position = Rectangle::Entire(), IControlFactory * factory = 0);
+				Control * GetEmbeddedEditor(void);
 				void CloseEmbeddedEditor(void);
+				int GetScrollerPosition(void);
+				void SetScrollerPosition(int position);
 			};
-			class TreeView : public ParentWindow, public Template::Controls::TreeView
+			class TreeView : public ParentControl, public Template::Controls::TreeView
 			{
 				friend class TreeViewItem;
 			public:
@@ -108,7 +112,7 @@ namespace Engine
 
 					int get_height(void) const;
 					void reset_cache(void);
-					int render(IRenderingDevice * device, int left_offset, int & y, const Box & outer, bool enabled);
+					int render(Graphics::I2DDeviceContext * device, int left_offset, int & y, const Box & outer, bool enabled);
 					bool is_generalized_children(TreeViewItem * node) const;
 					TreeViewItem * hit_test(const Point & p, const Box & outer, int left_offset, int & y, bool & node);
 					TreeViewItem * get_topmost(void);
@@ -135,15 +139,15 @@ namespace Engine
 					const TreeViewItem * GetChild(int index) const;
 					TreeViewItem * GetChild(int index);
 					TreeViewItem * AddItem(const string & text, void * user = 0);
-					TreeViewItem * AddItem(const string & text, ITexture * image_normal, ITexture * image_grayed, void * user = 0);
+					TreeViewItem * AddItem(const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed, void * user = 0);
 					TreeViewItem * AddItem(IArgumentProvider * provider, void * user = 0);
 					TreeViewItem * AddItem(Reflection::Reflected & object, void * user = 0);
 					TreeViewItem * InsertItem(const string & text, int at, void * user = 0);
-					TreeViewItem * InsertItem(const string & text, ITexture * image_normal, ITexture * image_grayed, int at, void * user = 0);
+					TreeViewItem * InsertItem(const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed, int at, void * user = 0);
 					TreeViewItem * InsertItem(IArgumentProvider * provider, int at, void * user = 0);
 					TreeViewItem * InsertItem(Reflection::Reflected & object, int at, void * user = 0);
 					void Reset(const string & text);
-					void Reset(const string & text, ITexture * image_normal, ITexture * image_grayed);
+					void Reset(const string & text, Graphics::IBitmap * image_normal, Graphics::IBitmap * image_grayed);
 					void Reset(IArgumentProvider * provider);
 					void Reset(Reflection::Reflected & object);
 					void SwapItems(int i, int j);
@@ -160,6 +164,7 @@ namespace Engine
 				SafePointer<Shape> _view_normal;
 				SafePointer<Shape> _view_disabled;
 				SafePointer<Shape> _view_focused;
+				SafePointer<Shape> _view_element_alternate;
 				SafePointer<Shape> _view_element_hot;
 				SafePointer<Shape> _view_element_selected;
 				SafePointer<Shape> _view_node_collapsed_normal;
@@ -170,8 +175,8 @@ namespace Engine
 				SafePointer<Shape> _view_node_expanded_hot;
 				SafePointer<Codec::Frame> _line_texture_normal;
 				SafePointer<Codec::Frame> _line_texture_disabled;
-				SafePointer<ITextureRenderingInfo> _line_normal;
-				SafePointer<ITextureRenderingInfo> _line_disabled;
+				SafePointer<Graphics::IBitmapBrush> _line_normal;
+				SafePointer<Graphics::IBitmapBrush> _line_disabled;
 
 				void generate_line_textures(void);
 				void reset_scroll_ranges(void);
@@ -179,11 +184,11 @@ namespace Engine
 				void select(TreeViewItem * item);
 				void move_selection(TreeViewItem * to);
 			public:
-				TreeView(Window * Parent, WindowStation * Station);
-				TreeView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				TreeView(void);
+				TreeView(Template::ControlTemplate * Template);
 				~TreeView(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void ArrangeChildren(void) override;
 				virtual void Enable(bool enable) override;
@@ -196,7 +201,8 @@ namespace Engine
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetPosition(const Box & box) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
+				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonDoubleClick(Point at) override;
@@ -205,18 +211,20 @@ namespace Engine
 				virtual void MouseMove(Point at) override;
 				virtual void ScrollVertically(double delta) override;
 				virtual bool KeyDown(int key_code) override;
-				virtual Window * HitTest(Point at) override;
+				virtual Control * HitTest(Point at) override;
 				virtual string GetControlClass(void) override;
 
 				TreeViewItem * GetRootItem(void);
 				void ClearItems(void);
 				TreeViewItem * GetSelectedItem(void);
 				void SetSelectedItem(TreeViewItem * item, bool scroll_to_view = false);
-				Window * CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position = Rectangle::Entire());
-				Window * GetEmbeddedEditor(void);
+				Control * CreateEmbeddedEditor(Template::ControlTemplate * Template, const Rectangle & Position = Rectangle::Entire(), IControlFactory * Factory = 0);
+				Control * GetEmbeddedEditor(void);
 				void CloseEmbeddedEditor(void);
+				int GetScrollerPosition(void);
+				void SetScrollerPosition(int position);
 			};
-			class ListView : public ParentWindow, public Template::Controls::ListView
+			class ListView : public ParentControl, public Template::Controls::ListView
 			{
 				friend class Element;
 				friend class ListViewColumn;
@@ -261,6 +269,7 @@ namespace Engine
 				SafePointer<Shape> _view_normal;
 				SafePointer<Shape> _view_disabled;
 				SafePointer<Shape> _view_focused;
+				SafePointer<Shape> _view_element_alternate;
 				SafePointer<Shape> _view_element_hot;
 				SafePointer<Shape> _view_element_selected;
 				SafePointer<Shape> _view_header_normal;
@@ -275,11 +284,11 @@ namespace Engine
 				void select(int index);
 				void move_selection(int to);
 			public:
-				ListView(Window * Parent, WindowStation * Station);
-				ListView(Window * Parent, WindowStation * Station, Template::ControlTemplate * Template);
+				ListView(void);
+				ListView(Template::ControlTemplate * Template);
 				~ListView(void) override;
 
-				virtual void Render(const Box & at) override;
+				virtual void Render(Graphics::I2DDeviceContext * device, const Box & at) override;
 				virtual void ResetCache(void) override;
 				virtual void ArrangeChildren(void) override;
 				virtual void Enable(bool enable) override;
@@ -292,7 +301,8 @@ namespace Engine
 				virtual void SetRectangle(const Rectangle & rect) override;
 				virtual Rectangle GetRectangle(void) override;
 				virtual void SetPosition(const Box & box) override;
-				virtual void RaiseEvent(int ID, Event event, Window * sender) override;
+				virtual void RaiseEvent(int ID, ControlEvent event, Control * sender) override;
+				virtual void FocusChanged(bool got_focus) override;
 				virtual void CaptureChanged(bool got_capture) override;
 				virtual void LeftButtonDown(Point at) override;
 				virtual void LeftButtonUp(Point at) override;
@@ -304,7 +314,7 @@ namespace Engine
 				virtual void ScrollHorizontally(double delta) override;
 				virtual bool KeyDown(int key_code) override;
 				virtual void Timer(void) override;
-				virtual Window * HitTest(Point at) override;
+				virtual Control * HitTest(Point at) override;
 				virtual void SetCursor(Point at) override;
 				virtual string GetControlClass(void) override;
 
@@ -343,9 +353,11 @@ namespace Engine
 				bool IsItemSelected(int index);
 				void SelectItem(int index, bool select);
 				int GetLastCellID(void);
-				Window * CreateEmbeddedEditor(Template::ControlTemplate * Template, int CellID, const Rectangle & Position = Rectangle::Entire());
-				Window * GetEmbeddedEditor(void);
+				Control * CreateEmbeddedEditor(Template::ControlTemplate * Template, int CellID, const Rectangle & Position = Rectangle::Entire(), IControlFactory * Factory = 0);
+				Control * GetEmbeddedEditor(void);
 				void CloseEmbeddedEditor(void);
+				int GetScrollerPosition(void);
+				void SetScrollerPosition(int position);
 			};
 		}
 	}

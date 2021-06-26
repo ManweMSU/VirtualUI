@@ -35,7 +35,7 @@ namespace Engine
 				} else if (type == PropertyType::Boolean) {
 					Info.Set<bool>(false);
 				} else if (type == PropertyType::Color) {
-					Info.Set<UI::Color>(0);
+					Info.Set<Color>(0);
 				} else if (type == PropertyType::Time) {
 					Info.Set<Time>(0);
 				} else if (type == PropertyType::Rectangle) {
@@ -59,12 +59,12 @@ namespace Engine
 			} else if (type == PropertyType::Texture) {
 				for (int i = 0; i < volume; i++) {
 					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
-					edest.Get< SafePointer<UI::ITexture> >().SetRetain(esrc.Get< SafePointer<UI::ITexture> >());
+					edest.Get< SafePointer<Graphics::IBitmap> >().SetRetain(esrc.Get< SafePointer<Graphics::IBitmap> >());
 				}
 			} else if (type == PropertyType::Font) {
 				for (int i = 0; i < volume; i++) {
 					auto esrc = src.VolumeElement(i), edest = dest.VolumeElement(i);
-					edest.Get< SafePointer<UI::IFont> >().SetRetain(esrc.Get< SafePointer<UI::IFont> >());
+					edest.Get< SafePointer<Graphics::IFont> >().SetRetain(esrc.Get< SafePointer<Graphics::IFont> >());
 				}
 			} else if (type == PropertyType::Application) {
 				for (int i = 0; i < volume; i++) {
@@ -84,8 +84,8 @@ namespace Engine
 				else if (inner == PropertyType::Complex) dest.Get< Array<Math::Complex> >() = src.Get< Array<Math::Complex> >();
 				else if (inner == PropertyType::String) dest.Get< Array<string> >() = src.Get< Array<string> >();
 				else if (inner == PropertyType::Rectangle) dest.Get< Array<UI::Rectangle> >() = src.Get< Array<UI::Rectangle> >();
-				else if (inner == PropertyType::Texture) dest.Get< Array< SafePointer<UI::ITexture> > >() = src.Get< Array< SafePointer<UI::ITexture> > >();
-				else if (inner == PropertyType::Font) dest.Get< Array< SafePointer<UI::IFont> > >() = src.Get< Array< SafePointer<UI::IFont> > >();
+				else if (inner == PropertyType::Texture) dest.Get< Array< SafePointer<Graphics::IBitmap> > >() = src.Get< Array< SafePointer<Graphics::IBitmap> > >();
+				else if (inner == PropertyType::Font) dest.Get< Array< SafePointer<Graphics::IFont> > >() = src.Get< Array< SafePointer<Graphics::IFont> > >();
 				else if (inner == PropertyType::Application) dest.Get< Array< SafePointer<UI::Template::Shape> > >() = src.Get< Array< SafePointer<UI::Template::Shape> > >();
 				else if (inner == PropertyType::Dialog) dest.Get< Array< SafePointer<UI::Template::ControlTemplate> > >() = src.Get< Array< SafePointer<UI::Template::ControlTemplate> > >();
 				else if (inner == PropertyType::Structure) {
@@ -107,8 +107,8 @@ namespace Engine
 				else if (inner == PropertyType::Complex) dest.Get< SafeArray<Math::Complex> >() = src.Get< SafeArray<Math::Complex> >();
 				else if (inner == PropertyType::String) dest.Get< SafeArray<string> >() = src.Get< SafeArray<string> >();
 				else if (inner == PropertyType::Rectangle) dest.Get< SafeArray<UI::Rectangle> >() = src.Get< SafeArray<UI::Rectangle> >();
-				else if (inner == PropertyType::Texture) dest.Get< SafeArray< SafePointer<UI::ITexture> > >() = src.Get< SafeArray< SafePointer<UI::ITexture> > >();
-				else if (inner == PropertyType::Font) dest.Get< SafeArray< SafePointer<UI::IFont> > >() = src.Get< SafeArray< SafePointer<UI::IFont> > >();
+				else if (inner == PropertyType::Texture) dest.Get< SafeArray< SafePointer<Graphics::IBitmap> > >() = src.Get< SafeArray< SafePointer<Graphics::IBitmap> > >();
+				else if (inner == PropertyType::Font) dest.Get< SafeArray< SafePointer<Graphics::IFont> > >() = src.Get< SafeArray< SafePointer<Graphics::IFont> > >();
 				else if (inner == PropertyType::Application) dest.Get< SafeArray< SafePointer<UI::Template::Shape> > >() = src.Get< SafeArray< SafePointer<UI::Template::Shape> > >();
 				else if (inner == PropertyType::Dialog) dest.Get< SafeArray< SafePointer<UI::Template::ControlTemplate> > >() = src.Get< SafeArray< SafePointer<UI::Template::ControlTemplate> > >();
 				else if (inner == PropertyType::Structure) {

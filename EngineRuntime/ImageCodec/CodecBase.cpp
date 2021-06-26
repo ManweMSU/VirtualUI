@@ -1,7 +1,6 @@
 #include "CodecBase.h"
 
 #include "../Math/Color.h"
-#include "../Interfaces/NativeStation.h"
 
 #include <math.h>
 
@@ -490,14 +489,14 @@ namespace Engine
 						}
 						int pos = 0;
 						for (int h = 0; h < 12; h++) for (int s = 1; s <= 4; s++) for (int v = 1; v <= 4; v++) {
-							UI::Color color = Math::ColorHSV(double(h) * ENGINE_PI / 6.0, double(s) / 4.0, double(v) / 4.0);
+							Color color = Math::ColorHSV(double(h) * ENGINE_PI / 6.0, double(s) / 4.0, double(v) / 4.0);
 							New->Palette[pos] = color;
 							pos++;
 						}
 						if (has_transparent) {
 							for (int g = 0; g < 63; g++) {
 								int v = g * 255 / 62;
-								UI::Color color = UI::Color(v, v, v);
+								Color color = Color(v, v, v);
 								New->Palette[pos] = color;
 								pos++;
 							}
@@ -505,7 +504,7 @@ namespace Engine
 						} else {
 							for (int g = 0; g < 64; g++) {
 								int v = g * 255 / 63;
-								UI::Color color = UI::Color(v, v, v);
+								Color color = Color(v, v, v);
 								New->Palette[pos] = color;
 								pos++;
 							}
@@ -599,7 +598,6 @@ namespace Engine
 
 		ObjectArray<ICodec> Codecs(0x10);
 
-		void InitializeDefaultCodecs(void) { NativeWindows::InitializeCodecCollection(); }
 		ICodec * FindEncoder(const string & format)
 		{
 			for (int i = 0; i < Codecs.Length(); i++) if (Codecs[i].CanEncode(format)) return Codecs.ElementAt(i);

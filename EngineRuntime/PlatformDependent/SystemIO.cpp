@@ -11,6 +11,7 @@
 #undef CreateDirectory
 #undef RemoveDirectory
 #undef CreateSymbolicLink
+#undef CreateHardLink
 
 namespace Engine
 {
@@ -76,50 +77,86 @@ namespace Engine
 				Access = GENERIC_WRITE;
 			} else if (access == Streaming::FileAccess::AccessReadWrite) {
 				Access = GENERIC_READ | GENERIC_WRITE;
-			}
+			} else throw InvalidArgumentException();
 			DWORD Creation = 0;
 			if (mode == Streaming::FileCreationMode::CreateAlways) Creation = CREATE_ALWAYS;
 			else if (mode == Streaming::FileCreationMode::CreateNew) Creation = CREATE_NEW;
 			else if (mode == Streaming::FileCreationMode::OpenAlways) Creation = OPEN_ALWAYS;
 			else if (mode == Streaming::FileCreationMode::OpenExisting) Creation = OPEN_EXISTING;
 			else if (mode == Streaming::FileCreationMode::TruncateExisting) Creation = TRUNCATE_EXISTING;
+			else throw InvalidArgumentException();
 			DWORD Flags = FILE_ATTRIBUTE_NORMAL;
 			handle file = CreateFileW(Path::NormalizePath(path), Access, Share, 0, Creation, Flags, 0);
 			if (file == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return file;
 		}
 		void CreatePipe(handle * pipe_in, handle * pipe_out) { if (!::CreatePipe(pipe_out, pipe_in, 0, 0)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
-		handle GetStandardOutput(void) { return GetStdHandle(STD_OUTPUT_HANDLE); }
-		handle GetStandardInput(void) { return GetStdHandle(STD_INPUT_HANDLE); }
-		handle GetStandardError(void) { return GetStdHandle(STD_ERROR_HANDLE); }
+		handle GetStandardOutput(void)
+		{
+			auto ret = GetStdHandle(STD_OUTPUT_HANDLE);
+			if (ret == INVALID_HANDLE_VALUE || !ret) return InvalidHandle;
+			return ret;
+		}
+		handle GetStandardInput(void)
+		{
+			auto ret = GetStdHandle(STD_INPUT_HANDLE);
+			if (ret == INVALID_HANDLE_VALUE || !ret) return InvalidHandle;
+			return ret;
+		}
+		handle GetStandardError(void)
+		{
+			auto ret = GetStdHandle(STD_ERROR_HANDLE);
+			if (ret == INVALID_HANDLE_VALUE || !ret) return InvalidHandle;
+			return ret;
+		}
 		void SetStandardOutput(handle file)
 		{
-			handle dup;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
-			CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
-			SetStdHandle(STD_OUTPUT_HANDLE, dup);
+			if (file != InvalidHandle) {
+				handle dup;
+				if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+				CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
+				SetStdHandle(STD_OUTPUT_HANDLE, dup);
+			} else {
+				CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
+				SetStdHandle(STD_OUTPUT_HANDLE, 0);
+			}
 		}
 		void SetStandardInput(handle file)
 		{
-			handle dup;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
-			CloseHandle(GetStdHandle(STD_INPUT_HANDLE));
-			SetStdHandle(STD_INPUT_HANDLE, dup);
+			if (file != InvalidHandle) {
+				handle dup;
+				if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+				CloseHandle(GetStdHandle(STD_INPUT_HANDLE));
+				SetStdHandle(STD_INPUT_HANDLE, dup);
+			} else {
+				CloseHandle(GetStdHandle(STD_INPUT_HANDLE));
+				SetStdHandle(STD_INPUT_HANDLE, 0);
+			}
 		}
 		void SetStandardError(handle file)
 		{
-			handle dup;
-			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
-			CloseHandle(GetStdHandle(STD_ERROR_HANDLE));
-			SetStdHandle(STD_ERROR_HANDLE, dup);
+			if (file != InvalidHandle) {
+				handle dup;
+				if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &dup, 0, TRUE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+				CloseHandle(GetStdHandle(STD_ERROR_HANDLE));
+				SetStdHandle(STD_ERROR_HANDLE, dup);
+			} else {
+				CloseHandle(GetStdHandle(STD_ERROR_HANDLE));
+				SetStdHandle(STD_ERROR_HANDLE, 0);
+			}
 		}
 		handle CloneHandle(handle file)
 		{
+			if (file == InvalidHandle) return InvalidHandle;
 			handle result;
 			if (!DuplicateHandle(GetCurrentProcess(), file, GetCurrentProcess(), &result, 0, FALSE, DUPLICATE_SAME_ACCESS)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
 			return result;
 		}
-		void CloseHandle(handle file) { if (!::CloseHandle(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
+		void CloseHandle(handle file)
+		{
+			if (file == InvalidHandle) return;
+			if (!::CloseHandle(file)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+		}
 		void Flush(handle file) { if (!FlushFileBuffers(file)) throw FileAccessException(WinErrorToEngineError(GetLastError())); }
 		uint64 GetFileSize(handle file)
 		{
@@ -199,7 +236,60 @@ namespace Engine
 		}
 		void CreateSymbolicLink(const string & at, const string & to)
 		{
-			if (!CreateSymbolicLinkW(Path::NormalizePath(at), Path::NormalizePath(to), SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			auto to_norm = Path::NormalizePath(to);
+			auto attr = GetFileAttributesW(to_norm);
+			if (attr == INVALID_FILE_ATTRIBUTES) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+				if (!CreateSymbolicLinkW(Path::NormalizePath(at), to_norm, SYMBOLIC_LINK_FLAG_DIRECTORY)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			} else {
+				if (!CreateSymbolicLinkW(Path::NormalizePath(at), to_norm, 0)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			}
+		}
+		void CreateHardLink(const string & at, const string & to)
+		{
+			if (!CreateHardLinkW(Path::NormalizePath(at), Path::NormalizePath(to), 0)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+		}
+		FileType GetFileType(const string & file)
+		{
+			auto hobj = CreateFileW(Path::NormalizePath(file), 0, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
+			if (hobj == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			auto result = FileType::Unknown;
+			FILE_ATTRIBUTE_TAG_INFO info;
+			if (GetFileInformationByHandleEx(hobj, FileAttributeTagInfo, &info, sizeof(info))) {
+				if (info.ReparseTag == IO_REPARSE_TAG_SYMLINK) result = FileType::SymbolicLink;
+				else if (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) result = FileType::Directory;
+				else result = FileType::Regular;
+			}
+			CloseHandle(hobj);
+			return result;
+		}
+		string GetSymbolicLinkDestination(const string & file)
+		{
+			DynamicString str;
+			auto hobj = CreateFileW(Path::NormalizePath(file), 0, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+			if (hobj == INVALID_HANDLE_VALUE) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			auto len = GetFinalPathNameByHandleW(hobj, 0, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+			if (!len) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			try {
+				str.ReserveLength(len);
+				auto res = GetFinalPathNameByHandleW(hobj, str, str.ReservedLength(), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+				if (!res) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			} catch (...) {
+				CloseHandle(hobj);
+				throw;
+			}
+			CloseHandle(hobj);
+			auto result = str.ToString();
+			if (result.Fragment(0, 4) == L"\\\\?\\") result = result.Fragment(4, -1);
+			return result;
+		}
+		void GetVolumeSpace(const string & volume, uint64 * total_bytes, uint64 * free_bytes, uint64 * user_available_bytes)
+		{
+			ULARGE_INTEGER total, free, user;
+			if (!GetDiskFreeSpaceExW(Path::NormalizePath(volume), &user, &total, &free)) throw FileAccessException(WinErrorToEngineError(GetLastError()));
+			if (total_bytes) *total_bytes = total.QuadPart;
+			if (free_bytes) *free_bytes = free.QuadPart;
+			if (user_available_bytes) *user_available_bytes = user.QuadPart;
 		}
 		string GetExecutablePath(void)
 		{

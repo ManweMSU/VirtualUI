@@ -1,105 +1,106 @@
 #pragma once
 
-#include "../UserInterface/ShapeBase.h"
-#include "../Miscellaneous/Dictionary.h"
+#include "../Graphics/GraphicsBase.h"
+#include "../Miscellaneous/Volumes.h"
 #include "../ImageCodec/CodecBase.h"
 
 #include <d2d1_1.h>
 #include <dwrite.h>
-#include <wincodec.h>
+
+#undef LoadBitmap
 
 namespace Engine
 {
 	namespace Direct2D
 	{
-		using namespace ::Engine::UI;
-
 		extern ID2D1Factory1 * D2DFactory1;
 		extern ID2D1Factory * D2DFactory;
-		extern IWICImagingFactory * WICFactory;
 		extern IDWriteFactory * DWriteFactory;
+		extern SafePointer<Graphics::I2DDeviceContextFactory> CommonFactory;
 
 		void InitializeFactory(void);
 		void ShutdownFactory(void);
 
-		Engine::Codec::ICodec * CreateWicCodec(void);
-
-		class D2DRenderingDevice : public UI::ITextureRenderingDevice
+		class D2D_DeviceContext : public Graphics::IBitmapContext
 		{
-			struct tex_pair { ITexture * base; ITexture * spec; };
-			ID2D1DeviceContext * ExtendedTarget;
-			ID2D1RenderTarget * Target;
-			Array<ID2D1Layer *> Layers;
-			Array<Box> Clipping;
-			uint32 AnimationTimer;
-			uint32 BlinkPeriod;
-			uint32 HalfBlinkPeriod;
-			Dictionary::ObjectCache<Color, IBarRenderingInfo> BrushCache;
-			Dictionary::ObjectCache<double, IBlurEffectRenderingInfo> BlurCache;
-			Array<tex_pair> TextureCache;
-			SafePointer<IInversionEffectRenderingInfo> InversionInfo;
-			SafePointer<IWICBitmap> BitmapTarget;
-			Graphics::IDevice * ParentWrappedDevice;
-			int BitmapTargetState;
-			int BitmapTargetResX, BitmapTargetResY;
+			ID2D1RenderTarget * _render_target;
+			ID2D1DeviceContext * _render_target_ex;
+			Graphics::IDevice * _wrapped_device;
+			bool _bitmap_context_enabled;
+			uint32 _time, _ref_time, _blink_time, _hblink_time, _bitmap_context_state, _clear_counter;
+			Volumes::ObjectCache<Color, Graphics::IColorBrush> _color_cache;
+			Volumes::ObjectCache<double, Graphics::IBlurEffectBrush> _blur_cache;
+			SafePointer<Graphics::IInversionEffectBrush> _inversion_cache;
+			SafePointer<Graphics::IBitmap> _bitmap_target;
+			Volumes::Stack<ID2D1Layer *> _layers;
+			Volumes::Stack<Box> _clipping;
+			Volumes::List< SafePointer<Graphics::IBitmapLink> > _bitmaps;
 		public:
-			D2DRenderingDevice(ID2D1DeviceContext * target);
-			D2DRenderingDevice(ID2D1RenderTarget * target);
-			~D2DRenderingDevice(void) override;
-
+			D2D_DeviceContext(void);
+			virtual ~D2D_DeviceContext(void) override;
+			// Direct2D control API
+			void SetBitmapContext(bool set) noexcept;
+			void SetRenderTarget(ID2D1RenderTarget * target) noexcept;
+			void SetRenderTargetEx(ID2D1DeviceContext * target) noexcept;
+			void SetWrappedDevice(Graphics::IDevice * device) noexcept;
 			ID2D1RenderTarget * GetRenderTarget(void) const noexcept;
-			void UpdateRenderTarget(ID2D1RenderTarget * target) noexcept;
-			void SetParentWrappedDevice(Graphics::IDevice * device) noexcept;
-			virtual void TextureWasDestroyed(ITexture * texture) noexcept override;
-			virtual string ToString(void) const override;
-
-			virtual void GetImplementationInfo(string & tech, uint32 & version) noexcept override;
+			void ClippingUndo(void) noexcept;
+			void ClippingRedo(void) noexcept;
+			// Core feature API
+			virtual void GetImplementationInfo(string & tech, uint32 & version) override;
 			virtual uint32 GetFeatureList(void) noexcept override;
-
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(const Array<GradientPoint>& gradient, double angle) noexcept override;
-			virtual IBarRenderingInfo * CreateBarRenderingInfo(Color color) noexcept override;
-			virtual IBlurEffectRenderingInfo * CreateBlurEffectRenderingInfo(double power) noexcept override;
-			virtual IInversionEffectRenderingInfo * CreateInversionEffectRenderingInfo(void) noexcept override;
-			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(ITexture * texture, const Box & take_area, bool fill_pattern) noexcept override;
-			virtual ITextureRenderingInfo * CreateTextureRenderingInfo(Graphics::ITexture * texture) noexcept override;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const string & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
-			virtual ITextRenderingInfo * CreateTextRenderingInfo(UI::IFont * font, const Array<uint32> & text, int horizontal_align, int vertical_align, const Color & color) noexcept override;
-
-			virtual Graphics::ITexture * CreateIntermediateRenderTarget(Graphics::PixelFormat format, int width, int height) override;
-
-			virtual void RenderBar(IBarRenderingInfo * Info, const Box & At) noexcept override;
-			virtual void RenderTexture(ITextureRenderingInfo * Info, const Box & At) noexcept override;
-			virtual void RenderText(ITextRenderingInfo * Info, const Box & At, bool Clip) noexcept override;
-			virtual void ApplyBlur(IBlurEffectRenderingInfo * Info, const Box & At) noexcept override;
-			virtual void ApplyInversion(IInversionEffectRenderingInfo * Info, const Box & At, bool Blink) noexcept override;
-
-			virtual void PushClip(const Box & Rect) noexcept override;
+			virtual string ToString(void) const override;
+			// Brush factory API
+			virtual Graphics::IColorBrush * CreateSolidColorBrush(Color color) noexcept override;
+			virtual Graphics::IColorBrush * CreateGradientBrush(Point rel_from, Point rel_to, const GradientPoint * points, int count) noexcept override;
+			virtual Graphics::IBlurEffectBrush * CreateBlurEffectBrush(double power) noexcept override;
+			virtual Graphics::IInversionEffectBrush * CreateInversionEffectBrush(void) noexcept override;
+			virtual Graphics::IBitmapBrush * CreateBitmapBrush(Graphics::IBitmap * bitmap, const Box & area, bool tile) noexcept override;
+			virtual Graphics::IBitmapBrush * CreateTextureBrush(Graphics::ITexture * texture, Graphics::TextureAlphaMode mode) noexcept override;
+			virtual Graphics::ITextBrush * CreateTextBrush(Graphics::IFont * font, const string & text, uint32 horizontal_align, uint32 vertical_align, const Color & color) noexcept override;
+			virtual Graphics::ITextBrush * CreateTextBrush(Graphics::IFont * font, const uint32 * ucs, int length, uint32 horizontal_align, uint32 vertical_align, const Color & color) noexcept override;
+			virtual void ClearInternalCache(void) noexcept override;
+			// Clipping and layers
+			virtual void PushClip(const Box & rect) noexcept override;
 			virtual void PopClip(void) noexcept override;
-			virtual void BeginLayer(const Box & Rect, double Opacity) noexcept override;
+			virtual void BeginLayer(const Box & rect, double opacity) noexcept override;
 			virtual void EndLayer(void) noexcept override;
-
-			virtual void SetTimerValue(uint32 time) noexcept override;
-			virtual uint32 GetCaretBlinkHalfTime(void) noexcept override;
-			virtual bool CaretShouldBeVisible(void) noexcept override;
-			virtual void ClearCache(void) noexcept override;
-
-			virtual void DrawPolygon(const Math::Vector2 * points, int count, Color color, double width) noexcept override;
-			virtual void FillPolygon(const Math::Vector2 * points, int count, Color color) noexcept override;
-
-			virtual void BeginDraw(void) noexcept override;
-			virtual void EndDraw(void) noexcept override;
-			virtual UI::ITexture * GetRenderTargetAsTexture(void) noexcept override;
-			virtual Engine::Codec::Frame * GetRenderTargetAsFrame(void) noexcept override;
-
-			virtual ITexture * LoadTexture(Codec::Frame * source) noexcept override;
-			virtual IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override;
-			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(int width, int height, Color color) noexcept override;
-			virtual ITextureRenderingDevice * CreateTextureRenderingDevice(Codec::Frame * frame) noexcept override;
-
-			static ITexture * StaticLoadTexture(Codec::Frame * source) noexcept;
-			static IFont * StaticLoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept;
-			static ITextureRenderingDevice * StaticCreateTextureRenderingDevice(int width, int height, Color color) noexcept;
-			static ITextureRenderingDevice * StaticCreateTextureRenderingDevice(Codec::Frame * frame) noexcept;
+			// Rendering
+			virtual void Render(Graphics::IColorBrush * brush, const Box & at) noexcept override;
+			virtual void Render(Graphics::IBitmapBrush * brush, const Box & at) noexcept override;
+			virtual void Render(Graphics::ITextBrush * brush, const Box & at, bool clip) noexcept override;
+			virtual void Render(Graphics::IBlurEffectBrush * brush, const Box & at) noexcept override;
+			virtual void Render(Graphics::IInversionEffectBrush * brush, const Box & at, bool blink) noexcept override;
+			// Polygons
+			virtual void RenderPolyline(const Math::Vector2 * points, int count, Color color, double width) noexcept override;
+			virtual void RenderPolygon(const Math::Vector2 * points, int count, Color color) noexcept override;
+			// Time control
+			virtual void SetAnimationTime(uint32 value) noexcept override;
+			virtual uint32 GetAnimationTime(void) noexcept override;
+			virtual void SetCaretReferenceTime(uint32 value) noexcept override;
+			virtual uint32 GetCaretReferenceTime(void) noexcept override;
+			virtual void SetCaretBlinkPeriod(uint32 value) noexcept override;
+			virtual uint32 GetCaretBlinkPeriod(void) noexcept override;
+			virtual bool IsCaretVisible(void) noexcept override;
+			// Interface querying
+			virtual Graphics::IDevice * GetParentDevice(void) noexcept override;
+			virtual Graphics::I2DDeviceContextFactory * GetParentFactory(void) noexcept override;
+			// Bitmap render target function
+			virtual bool BeginRendering(Graphics::IBitmap * dest) noexcept override;
+			virtual bool BeginRendering(Graphics::IBitmap * dest, Color clear_color) noexcept override;
+			virtual bool EndRendering(void) noexcept override;
+		};
+		class D2D_DeviceContextFactory : public Graphics::I2DDeviceContextFactory
+		{
+		public:
+			// Core feature API
+			virtual string ToString(void) const override;
+			// Factory API
+			virtual Graphics::IBitmap * CreateBitmap(int width, int height, Color clear_color) noexcept override;
+			virtual Graphics::IBitmap * LoadBitmap(Codec::Frame * source) noexcept override;
+			virtual Graphics::IFont * LoadFont(const string & face_name, int height, int weight, bool italic, bool underline, bool strikeout) noexcept override;
+			virtual Array<string> * GetFontFamilies(void) noexcept override;
+			virtual Graphics::IBitmapContext * CreateBitmapContext(void) noexcept override;
 		};
 	}
 }

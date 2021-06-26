@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../EngineBase.h"
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 #include "Tokenization.h"
 
 namespace Engine
@@ -57,7 +57,7 @@ namespace Engine
 				void BuildBeginnings(Grammar & grammar);
 			};
 
-			Dictionary::Dictionary<string, GrammarRule> Rules;
+			Volumes::ObjectDictionary<string, GrammarRule> Rules;
 			string EntranceRule;
 
 			Grammar(void);

@@ -4,10 +4,10 @@
 
 namespace Engine
 {
-    namespace Shell
-    {
-        bool OpenFile(const string & file);
-        void ShowInBrowser(const string & path, bool directory);
-        void OpenCommandPrompt(const string & working_directory);
-    }
+	namespace Shell
+	{
+		bool OpenFile(const string & file);
+		void ShowInBrowser(const string & path, bool directory);
+		void OpenCommandPrompt(const string & working_directory);
+	}
 }

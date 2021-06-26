@@ -4,6 +4,61 @@ namespace Engine
 {
 	namespace UI
 	{
+		ZeroArgumentProvider::ZeroArgumentProvider(void) {}
+		void ZeroArgumentProvider::GetArgument(const string & name, int * value) { *value = 0; }
+		void ZeroArgumentProvider::GetArgument(const string & name, double * value) { *value = 0.0; }
+		void ZeroArgumentProvider::GetArgument(const string & name, Color * value) { *value = 0; }
+		void ZeroArgumentProvider::GetArgument(const string & name, string * value) { *value = L""; }
+		void ZeroArgumentProvider::GetArgument(const string & name, Graphics::IBitmap ** value) { *value = 0; }
+		void ZeroArgumentProvider::GetArgument(const string & name, Graphics::IFont ** value) { *value = 0; }
+		ReflectorArgumentProvider::ReflectorArgumentProvider(Reflection::Reflected * source) : Source(source) {}
+		void ReflectorArgumentProvider::GetArgument(const string & name, int * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Integer) *value = prop.Get<int>();
+			else if (prop.Type == Reflection::PropertyType::Double) *value = int(prop.Get<double>());
+			*value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, double * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Integer) *value = double(prop.Get<int>());
+			else if (prop.Type == Reflection::PropertyType::Double) *value = prop.Get<double>();
+			else *value = 0.0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, Color * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Color) *value = prop.Get<Color>();
+			else *value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, string * value)
+		{
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::String) *value = prop.Get<string>();
+			else *value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, Graphics::IBitmap ** value)
+		{
+			Graphics::IBitmap * object = 0;
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Texture) object = prop.Get<SafePointer<Graphics::IBitmap>>();
+			if (object) {
+				*value = object;
+				object->Retain();
+			} else *value = 0;
+		}
+		void ReflectorArgumentProvider::GetArgument(const string & name, Graphics::IFont ** value)
+		{
+			Graphics::IFont * object = 0;
+			auto prop = Source->GetProperty(name);
+			if (prop.Type == Reflection::PropertyType::Font) object = prop.Get<SafePointer<Graphics::IFont>>();
+			if (object) {
+				*value = object;
+				object->Retain();
+			} else *value = 0;
+		}
+
 		namespace Template
 		{
 			ExpressionArgumentProvider::ExpressionArgumentProvider(IArgumentProvider * provider) : Source(provider) {}
@@ -40,25 +95,25 @@ namespace Engine
 			bool Rectangle::IsDefined(void) const { return Left.IsDefined() && Top.IsDefined() && Right.IsDefined() && Bottom.IsDefined(); }
 			Engine::UI::Rectangle Rectangle::Initialize(IArgumentProvider * provider) const { return Engine::UI::Rectangle(Left.Initialize(provider), Top.Initialize(provider), Right.Initialize(provider), Bottom.Initialize(provider)); }
 			GradientPoint::GradientPoint(void) {}
-			GradientPoint::GradientPoint(const Engine::UI::GradientPoint & gradient) : PointColor(gradient.Color), Position(gradient.Position) {}
+			GradientPoint::GradientPoint(const Engine::GradientPoint & gradient) : PointColor(gradient.Value), Position(gradient.Position) {}
 			GradientPoint::GradientPoint(const BasicTemplate<Color>& color, const BasicTemplate<double>& position) : PointColor(color), Position(position) {}
 			bool GradientPoint::IsDefined(void) const { return PointColor.IsDefined() && Position.IsDefined(); }
-			Engine::UI::GradientPoint GradientPoint::Initialize(IArgumentProvider * provider) const { return Engine::UI::GradientPoint(PointColor.Initialize(provider), Position.Initialize(provider)); }
+			Engine::GradientPoint GradientPoint::Initialize(IArgumentProvider * provider) const { return Engine::GradientPoint(PointColor.Initialize(provider), Position.Initialize(provider)); }
 
-			BarShape::BarShape(void) : Gradient(0x4), GradientAngle(0.0) { Position = Engine::UI::Rectangle::Entire(); }
+			BarShape::BarShape(void) : Gradient(0x4), X1(0), Y1(0), X2(0), Y2(0) { Position = Engine::UI::Rectangle::Entire(); }
 			BarShape::~BarShape(void) {}
 			string BarShape::ToString(void) const { return L"Templates::BarShape"; }
 			bool BarShape::IsDefined(void) const
 			{
 				for (int i = 0; i < Gradient.Length(); i++) if (!Gradient[i].IsDefined()) return false;
-				return GradientAngle.IsDefined() && Position.IsDefined();
+				return X1.IsDefined() && X2.IsDefined() && Y1.IsDefined() && Y2.IsDefined() && Position.IsDefined();
 			}
 			Engine::UI::Shape * BarShape::Initialize(IArgumentProvider * provider) const
 			{
-				Array<Engine::UI::GradientPoint> init(1);
+				Array<Engine::GradientPoint> init(1);
 				init.SetLength(Gradient.Length());
 				for (int i = 0; i < Gradient.Length(); i++) init[i] = Gradient[i].Initialize(provider);
-				return new Engine::UI::BarShape(Position.Initialize(provider), init, GradientAngle.Initialize(provider));
+				return new Engine::UI::BarShape(Position.Initialize(provider), init, X1.Initialize(provider), Y1.Initialize(provider), X2.Initialize(provider), Y2.Initialize(provider));
 			}
 			BlurEffectShape::BlurEffectShape(void) : BlurPower(5.0) { Position = Engine::UI::Rectangle::Entire(); }
 			BlurEffectShape::~BlurEffectShape(void) {}
@@ -85,10 +140,10 @@ namespace Engine
 			}
 			Engine::UI::Shape * TextureShape::Initialize(IArgumentProvider * provider) const
 			{
-				SafePointer<ITexture> Query = Texture.Initialize(provider);
+				SafePointer<Graphics::IBitmap> Query = Texture.Initialize(provider);
 				return new Engine::UI::TextureShape(Position.Initialize(provider), Query, From.Initialize(provider), RenderMode);
 			}
-			TextShape::TextShape(void) : HorizontalAlign(Engine::UI::TextShape::TextHorizontalAlign::Left), VerticalAlign(Engine::UI::TextShape::TextVerticalAlign::Top), TextColor(Engine::UI::Color(0)) { Position = Engine::UI::Rectangle::Entire(); }
+			TextShape::TextShape(void) : Flags(0), TextColor(Engine::Color(0)) { Position = Engine::UI::Rectangle::Entire(); }
 			TextShape::~TextShape(void) {}
 			string TextShape::ToString(void) const { return L"Templates::TextShape"; }
 			bool TextShape::IsDefined(void) const
@@ -97,8 +152,8 @@ namespace Engine
 			}
 			Engine::UI::Shape * TextShape::Initialize(IArgumentProvider * provider) const
 			{
-				SafePointer<IFont> Query = Font.Initialize(provider);
-				return new Engine::UI::TextShape(Position.Initialize(provider), Text.Initialize(provider), Query, TextColor.Initialize(provider), HorizontalAlign, VerticalAlign);
+				SafePointer<Graphics::IFont> Query = Font.Initialize(provider);
+				return new Engine::UI::TextShape(Position.Initialize(provider), Text.Initialize(provider), Query, TextColor.Initialize(provider), Flags);
 			}
 			FrameShape::FrameShape(void) : Children(0x4), RenderMode(Engine::UI::FrameShape::FrameRenderMode::Normal), Opacity(1.0) { Position = Engine::UI::Rectangle::Entire(); }
 			FrameShape::~FrameShape(void) {}
@@ -123,7 +178,7 @@ namespace Engine
 			string ControlTemplate::ToString(void) const { return Properties->GetTemplateClass(); }
 			ControlReflectedBase::~ControlReflectedBase(void) {}
 		}
-		InterfaceTemplate::InterfaceTemplate(void) : Texture(0x20), Font(0x10), Application(0x20), Dialog(0x10), Colors(0x20), Strings(0x20) {}
+		InterfaceTemplate::InterfaceTemplate(void) {}
 		InterfaceTemplate::~InterfaceTemplate(void) {}
 		string InterfaceTemplate::ToString(void) const { return L"InterfaceTemplate"; }
 	}

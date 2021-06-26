@@ -46,9 +46,9 @@ namespace Engine
 			ConsoleObject(handle output, handle input) : file_out(output), file_in(input), main_buffer(INVALID_HANDLE_VALUE) { _console_init(); }
 			virtual ~ConsoleObject(void) override {}
 		};
-		Console::Console(void) : internal(new ConsoleObject) {}
-		Console::Console(handle output) : internal(new ConsoleObject(output)) {}
-		Console::Console(handle output, handle input) : internal(new ConsoleObject(output, input)) {}
+		Console::Console(void) : internal(new ConsoleObject) { eof = false; }
+		Console::Console(handle output) : internal(new ConsoleObject(output)) { eof = false; }
+		Console::Console(handle output, handle input) : internal(new ConsoleObject(output, input)) { eof = false; }
 		Console::~Console(void) {}
 		void Console::Write(const string & text) const
 		{

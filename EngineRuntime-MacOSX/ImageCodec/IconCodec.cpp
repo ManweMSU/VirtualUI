@@ -1,6 +1,6 @@
 #include "IconCodec.h"
 
-#include "../Miscellaneous/Dictionary.h"
+#include "../Miscellaneous/Volumes.h"
 
 namespace Engine
 {
@@ -406,7 +406,7 @@ namespace Engine
 						read_length = InverseEndianess(read_length);
 						if (read_length > length) return 0;
 						uint64 position = stream->Seek(0, Current);
-						Dictionary::Dictionary<string, Array<uint8> > Deferred;
+						Volumes::ObjectDictionary< string, Array<uint8> > Deferred;
 						while (position < length) {
 							uint8 type[4];
 							uint32 frame_length;
@@ -432,15 +432,15 @@ namespace Engine
 								Deferred.Append(string(type, 4, Encoding::ANSI), block);
 							}
 						}
-						for (int i = 0; i < Deferred.Length(); i++) {
-							if (Deferred[i].key == L"is32" || Deferred[i].key == L"il32" || Deferred[i].key == L"ih32" || Deferred[i].key == L"it32") {
-								Array<uint8> * color_map = Deferred[i].object;
+						for (auto & d : Deferred) {
+							if (d.key == L"is32" || d.key == L"il32" || d.key == L"ih32" || d.key == L"it32") {
+								Array<uint8> * color_map = d.value.Inner();
 								int32 side = 0;
 								string mask_name = L"";
-								if (Deferred[i].key == L"is32") { side = 16; mask_name = L"s8mk"; }
-								else if (Deferred[i].key == L"il32") { side = 32; mask_name = L"l8mk"; }
-								else if (Deferred[i].key == L"ih32") { side = 48; mask_name = L"h8mk"; }
-								else if (Deferred[i].key == L"it32") { side = 128; mask_name = L"t8mk"; }
+								if (d.key == L"is32") { side = 16; mask_name = L"s8mk"; }
+								else if (d.key == L"il32") { side = 32; mask_name = L"l8mk"; }
+								else if (d.key == L"ih32") { side = 48; mask_name = L"h8mk"; }
+								else if (d.key == L"it32") { side = 128; mask_name = L"t8mk"; }
 								Array<uint8> * mask_map = Deferred[mask_name];
 								SafePointer< Array<uint8> > color_map_dec;
 								color_map_dec.SetReference(AppleRleDecompress(color_map));
