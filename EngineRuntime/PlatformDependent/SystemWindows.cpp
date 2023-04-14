@@ -1196,6 +1196,21 @@ namespace Engine
 				if (!(desc.Flags & WindowFlagMaximizeButton)) EnableMenuItem(GetSystemMenu(_window, FALSE), SC_MAXIMIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 				if (!(desc.Flags & WindowFlagSizeble)) EnableMenuItem(GetSystemMenu(_window, FALSE), SC_SIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 				if (desc.Flags & WindowFlagNonOpaque) SetOpacity(desc.Opacity);
+				UINT w11_window_brush = 2;
+				if ((desc.Flags & WindowFlagWindowsTitleMask) == WindowFlagWindowsTabbedTitle) {
+					w11_window_brush = 4;
+				} else if ((desc.Flags & WindowFlagWindowsTitleMask) == WindowFlagWindowsTransientTitle) {
+					w11_window_brush = 3;
+				} else if ((desc.Flags & WindowFlagWindowsTitleMask) == WindowFlagWindowsColoredTitle) {
+					DWORD color = desc.BackgroundColor.Value & 0xFFFFFF;
+					w11_window_brush = 1;
+					DwmSetWindowAttribute(_window, 35, &color, sizeof(color));
+				}
+				if ((desc.Flags & WindowFlagOverrideTheme) && desc.Theme == ThemeClass::Dark) {
+					UINT value = 1;
+					DwmSetWindowAttribute(_window, 20, &value, sizeof(value));
+				}
+				DwmSetWindowAttribute(_window, 38, &w11_window_brush, sizeof(w11_window_brush));
 				if (_effect_flags) { _effect_flags |= 4; _dwm_reset(); }
 				if (_parent) _parent->_children.Append(this);
 			}
