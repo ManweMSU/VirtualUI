@@ -141,7 +141,9 @@ namespace Engine
 		return result;
 	}
 	Object::~Object(void) {}
+	#ifdef ENGINE_WINDOWS
 	void Object::_delete(void) noexcept { delete this; }
+	#endif
 	ImmutableString Object::ToString(void) const { return ImmutableString(L"Object"); }
 	uint Object::GetReferenceCount(void) const { return _refcount; }
 
