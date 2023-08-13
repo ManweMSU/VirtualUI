@@ -34,6 +34,11 @@ namespace Engine
 		virtual uint Retain(void);
 		virtual uint Release(void);
 		virtual ~Object(void);
+		#ifdef ENGINE_WINDOWS
+		private:
+			virtual void _delete(void) noexcept;
+		public:
+		#endif
 		virtual ImmutableString ToString(void) const;
 		uint GetReferenceCount(void) const;
 	};
@@ -246,7 +251,7 @@ namespace Engine
 			require(count); int i = 0;
 			try { for (i = 0; i < count; i++) new (data + i) V(src.data[i]); }
 			catch (...) {
-				for (int j = i - 1; j >= 0; j--) data[i].V::~V();
+				for (int j = i - 1; j >= 0; j--) data[j].V::~V();
 				free(data); throw;
 			}
 		}
@@ -370,7 +375,7 @@ namespace Engine
 		{
 			require(count); int i = 0;
 			try { for (i = 0; i < count; i++) data[i] = new V(*src.data[i]); } catch (...) {
-				for (int j = i - 1; j >= 0; j--) delete data[i];
+				for (int j = i - 1; j >= 0; j--) delete data[j];
 				free(data); throw;
 			}
 		}
@@ -488,7 +493,7 @@ namespace Engine
 		{
 			require(count); int i = 0;
 			try { for (i = 0; i < count; i++) { data[i] = src.data[i]; if (src.data[i]) src.data[i]->Retain(); } } catch (...) {
-				for (int j = i - 1; j >= 0; j--) if (data[i]) data[i]->Release();
+				for (int j = i - 1; j >= 0; j--) if (data[j]) data[j]->Release();
 				free(data); throw;
 			}
 		}

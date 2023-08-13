@@ -141,6 +141,7 @@ namespace Engine
 		return result;
 	}
 	Object::~Object(void) {}
+	void Object::_delete(void) noexcept { delete this; }
 	ImmutableString Object::ToString(void) const { return ImmutableString(L"Object"); }
 	uint Object::GetReferenceCount(void) const { return _refcount; }
 
