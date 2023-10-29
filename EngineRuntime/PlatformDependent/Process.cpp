@@ -39,7 +39,8 @@ namespace Engine
 			cmd += L'\"';
 			for (int i = 0; i < arg.Length(); i++) {
 				if (arg[i] == L'\"') {
-					cmd += L'\\';
+					cmd += arg[i];
+					cmd += arg[i];
 					cmd += arg[i];
 				} else cmd += arg[i];
 			}
@@ -97,11 +98,12 @@ namespace Engine
 		if (command_line) {
 			for (int i = 0; i < command_line->Length(); i++) WinapiProcess::AppendCommandLine(cmd, command_line->ElementAt(i));
 		}
+		auto image_full = IO::ExpandPath(image);
 		ZeroMemory(&info, sizeof(info));
 		info.cbSize = sizeof(info);
 		info.fMask = SEE_MASK_UNICODE | SEE_MASK_NO_CONSOLE | SEE_MASK_FLAG_NO_UI | SEE_MASK_NOASYNC;
 		info.lpVerb = L"runas";
-		info.lpFile = IO::ExpandPath(image);
+		info.lpFile = image_full;
 		info.lpParameters = cmd;
 		info.nShow = SW_SHOW;
 		if (!ShellExecuteExW(&info)) return false;
