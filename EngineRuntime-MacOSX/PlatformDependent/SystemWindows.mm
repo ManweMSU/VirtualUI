@@ -833,7 +833,6 @@ namespace Engine
 					auto view = (ERTMenuItemView *) [_item view];
 					auto size = _callback->MeasureMenuItem(this, view->device);
 					auto scale = [[NSScreen mainScreen] backingScaleFactor];
-					[view setFrameSize: NSMakeSize(size.x / scale, size.y / scale)];
 					view->ref_size = NSMakeSize(size.x / scale, size.y / scale);
 					if (_menu) [_menu itemChanged: _item];
 				}
@@ -918,6 +917,21 @@ namespace Engine
 			void Detach(void) noexcept { [_item setTarget: nil]; [_item setAction: NULL]; _menu = 0; }
 			void Highlight(bool set) { _highlighted = set; if ([_item view]) [[_item view] setNeedsDisplay: YES]; }
 			bool IsHighlighted(void) { return _highlighted; }
+			double GetElementWidth(void) const noexcept
+			{
+				if (_callback) {
+					auto view = (ERTMenuItemView *) [_item view];
+					return view->ref_size.width;
+				} else return 0.0;
+			}
+			void SetActualWidth(double width) noexcept
+			{
+				if (_callback) {
+					auto view = (ERTMenuItemView *) [_item view];
+					[view setFrameSize: NSMakeSize(width, view->ref_size.height)];
+					if (_menu) [_menu itemChanged: _item];
+				}
+			}
 		};
 		class SystemMenu : public IMenu
 		{
@@ -2932,9 +2946,16 @@ namespace Engine
 	}
 	- (void) menuWillOpen: (NSMenu *) menu
 	{
+		double width = 0.0;
 		for (int i = 0; i < owner->Length(); i++) {
 			auto hitem = static_cast<Engine::Windows::SystemMenuItem *>(owner->ElementAt(i));
 			hitem->Highlight(false);
+			auto lw = hitem->GetElementWidth();
+			if (lw > width) width = lw;
+		}
+		for (int i = 0; i < owner->Length(); i++) {
+			auto hitem = static_cast<Engine::Windows::SystemMenuItem *>(owner->ElementAt(i));
+			hitem->SetActualWidth(width);
 		}
 	}
 	- (void) menuDidClose: (NSMenu *) menu
