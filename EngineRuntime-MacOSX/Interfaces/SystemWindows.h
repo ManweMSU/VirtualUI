@@ -50,6 +50,11 @@ namespace Engine
 			WindowFlagBlurFactor		= 0x00001000,
 
 			WindowFlagWindowsExtendedFrame		= 0x00010000,
+			WindowFlagWindowsNormalTitle		= 0x00000000,
+			WindowFlagWindowsTabbedTitle		= 0x00400000,
+			WindowFlagWindowsTransientTitle		= 0x00800000,
+			WindowFlagWindowsColoredTitle		= 0x00C00000,
+			WindowFlagWindowsTitleMask			= 0x00C00000,
 			WindowFlagCocoaTransparentTitle		= 0x00020000,
 			WindowFlagCocoaEffectBackground		= 0x00040000,
 			WindowFlagCocoaShadowless			= 0x00080000,

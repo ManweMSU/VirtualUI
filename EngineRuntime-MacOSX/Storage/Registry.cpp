@@ -838,7 +838,7 @@ namespace Engine
 			virtual RegistryNode * OpenNode(const string & path) override { return Root->OpenNode(path); }
 			virtual void CreateValue(const string & path, RegistryValueType type) override { Root->CreateValue(path, type); }
 			virtual void RemoveValue(const string & path) override { Root->RemoveValue(path); }
-			virtual void RenameValue(const string & name_from, const string & name_to) override { Root->RenameNode(name_from, name_to); }
+			virtual void RenameValue(const string & name_from, const string & name_to) override { Root->RenameValue(name_from, name_to); }
 			virtual RegistryValueType GetValueType(const string & path) const override { return Root->GetValueType(path); }
 			virtual int32 GetValueInteger(const string & path) const override { return Root->GetValueInteger(path); }
 			virtual float GetValueFloat(const string & path) const override { return Root->GetValueFloat(path); }
