@@ -544,7 +544,7 @@ namespace Engine
 	{
 		int char_length = GetEncodedLength(encoding) + (include_terminator ? 1 : 0);
 		int src_length = Length() + (include_terminator ? 1 : 0);
-		Array<uint8> * result = new Array<uint8>;
+		Array<uint8> * result = new Array<uint8>(1);
 		try {
 			result->SetLength(char_length * GetBytesPerChar(encoding));
 			ConvertEncoding(*result, *this, src_length, SystemEncoding, encoding);

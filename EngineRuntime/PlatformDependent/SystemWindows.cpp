@@ -1196,7 +1196,7 @@ namespace Engine
 				if (!(desc.Flags & WindowFlagMaximizeButton)) EnableMenuItem(GetSystemMenu(_window, FALSE), SC_MAXIMIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 				if (!(desc.Flags & WindowFlagSizeble)) EnableMenuItem(GetSystemMenu(_window, FALSE), SC_SIZE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 				if (desc.Flags & WindowFlagNonOpaque) SetOpacity(desc.Opacity);
-				UINT w11_window_brush = 2;
+				UINT w11_window_brush = need_null_bk ? 1 : 2;
 				if ((desc.Flags & WindowFlagWindowsTitleMask) == WindowFlagWindowsTabbedTitle) {
 					w11_window_brush = 4;
 				} else if ((desc.Flags & WindowFlagWindowsTitleMask) == WindowFlagWindowsTransientTitle) {
