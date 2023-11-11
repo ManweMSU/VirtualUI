@@ -88,9 +88,11 @@ namespace Engine
 		{
 			if (Length == -1) {
 				int pos = Position;
-				uint c;
-				do { c = ReadChar(); } while (c);
-				Length = Position;
+				while (true) {
+					auto cp = Position;
+					auto cc = ReadChar();
+					if (!cc) { Length = cp; break; }
+				}
 				Position = pos;
 			} else {
 				if (Coding == Encoding::UTF16) Length *= 2;
