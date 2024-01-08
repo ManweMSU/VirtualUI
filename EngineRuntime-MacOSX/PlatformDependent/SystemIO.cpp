@@ -385,6 +385,11 @@ namespace Engine
 		{
 			namespace SearchHelper
 			{
+				string GetDirectoryName(const string & path)
+				{
+					auto result = Path::GetDirectory(path);
+					return result.Length() ? result : L"/";
+				}
 				void FillFiles(Array<string> * to, const string & path, const string & filter, const string & prefix, bool recursive)
 				{
 					if (recursive) {
@@ -412,7 +417,7 @@ namespace Engine
 			{
 				SafePointer< Array<string> > result = new Array<string>(0x10);
 				auto epath = ExpandPath(path);
-				SearchHelper::FillFiles(result, Path::GetDirectory(epath), Path::GetFileName(epath), L"", recursive);
+				SearchHelper::FillFiles(result, SearchHelper::GetDirectoryName(epath), Path::GetFileName(epath), L"", recursive);
 				result->Retain();
 				return result;
 			}
@@ -421,7 +426,7 @@ namespace Engine
 				SafePointer< Array<string> > result = new Array<string>(0x10);
 				auto epath = ExpandPath(path);
 				auto filter = Path::GetFileName(epath);
-				SafePointer< Array<uint8> > path_utf8 = Path::GetDirectory(epath).EncodeSequence(Encoding::UTF8, true);
+				SafePointer< Array<uint8> > path_utf8 = SearchHelper::GetDirectoryName(epath).EncodeSequence(Encoding::UTF8, true);
 				struct dirent ** elements;
 				int count = scandir(reinterpret_cast<char *>(path_utf8->GetBuffer()), &elements, 0, alphasort);
 				if (count >= 0) {
