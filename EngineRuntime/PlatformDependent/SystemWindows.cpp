@@ -2335,11 +2335,15 @@ namespace Engine
 			virtual void SetApplicationIcon(Codec::Image * icon) noexcept override
 			{
 				try {
+					HWND wnd = 0;
 					auto icon_sm_frame = icon->GetFrameBestSizeFit(GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON));
 					auto icon_nm_frame = icon->GetFrameBestSizeFit(GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON));
 					auto icon_sm_handle = _create_icon(icon_sm_frame);
 					auto icon_nm_handle = _create_icon(icon_nm_frame);
-					auto wnd = FindWindowExW(0, 0, ENGINE_MAIN_WINDOW_CLASS, 0);
+					do {
+						wnd = FindWindowExW(0, wnd, ENGINE_MAIN_WINDOW_CLASS, 0);
+						if (wnd && reinterpret_cast<HINSTANCE>(GetClassLongPtrW(wnd, GCL_HMODULE)) == _instance) break;
+					} while (wnd);
 					HICON icon_sm_old = icon_sm_handle;
 					HICON icon_nm_old = icon_nm_handle;
 					if (wnd) {
