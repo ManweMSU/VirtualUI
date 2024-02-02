@@ -28,7 +28,7 @@ namespace Engine
 	}
 	namespace Direct3D
 	{
-		typedef HRESULT (* WINAPI func_D3DCompile) (LPCVOID src_data, SIZE_T src_size, LPCSTR name, const D3D_SHADER_MACRO * defines,
+		typedef HRESULT (WINAPI * func_D3DCompile) (LPCVOID src_data, SIZE_T src_size, LPCSTR name, const D3D_SHADER_MACRO * defines,
 			ID3DInclude * include, LPCSTR entrypoint, LPCSTR target_model, UINT flags1, UINT flags2, ID3DBlob ** result, ID3DBlob ** errors);
 
 		DeviceDriverClass D3DDeviceClass = DeviceDriverClass::None;
