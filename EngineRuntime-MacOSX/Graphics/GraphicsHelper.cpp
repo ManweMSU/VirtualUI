@@ -220,7 +220,7 @@ namespace Engine
 			auto s = float(Math::sin(angle));
 			auto z = Math::normalize(axis);
 			Math::Vector3f orth;
-			if (z.x > 0.5f) orth = Math::Vector3f(0.0f, 1.0f, 0.0f);
+			if (abs(z.x) > 0.5f) orth = Math::Vector3f(0.0f, 1.0f, 0.0f);
 			else orth = Math::Vector3f(1.0f, 0.0f, 0.0f);
 			auto x = Math::normalize(Math::cross(z, orth));
 			auto y = Math::cross(z, x);
