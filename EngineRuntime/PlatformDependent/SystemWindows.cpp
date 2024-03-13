@@ -2342,7 +2342,7 @@ namespace Engine
 					auto icon_nm_handle = _create_icon(icon_nm_frame);
 					do {
 						wnd = FindWindowExW(0, wnd, ENGINE_MAIN_WINDOW_CLASS, 0);
-						if (wnd && reinterpret_cast<HINSTANCE>(GetClassLongPtrW(wnd, GCL_HMODULE)) == _instance) break;
+						if (wnd && reinterpret_cast<HINSTANCE>(GetClassLongPtrW(wnd, GCLP_HMODULE)) == _instance) break;
 					} while (wnd);
 					HICON icon_sm_old = icon_sm_handle;
 					HICON icon_nm_old = icon_nm_handle;
