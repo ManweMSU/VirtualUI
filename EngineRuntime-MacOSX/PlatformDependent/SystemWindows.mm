@@ -469,7 +469,7 @@ namespace Engine
 				if (present) {
 					_on_screen = true;
 					if (_callback) _callback->Shown(this, true);
-					[_window orderFrontRegardless];
+					[_window orderFront:nil];
 					if (activate) [_window makeKeyWindow];
 					if (_parent) [_parent->_window addChildWindow: _window ordered: NSWindowAbove];
 					for (auto & child : _children) if (child->_visible) child->_present(true, false);
@@ -532,10 +532,13 @@ namespace Engine
 						_window = [[ERTPopupWindow alloc] initWithContentRect: NSMakeRect(0, 0, 0, 0) styleMask: style backing: NSBackingStoreBuffered defer: NO screen: nil];
 						[_window setFloatingPanel: YES];
 						[_window setHidesOnDeactivate: NO];
+						[_window setAnimationBehavior: NSWindowAnimationBehaviorNone];
 					} else if (desc.Flags & WindowFlagToolWindow) {
 						_window = [[NSPanel alloc] initWithContentRect: NSMakeRect(0, 0, 0, 0) styleMask: style backing: NSBackingStoreBuffered defer: NO screen: nil];
+						[_window setAnimationBehavior: NSWindowAnimationBehaviorUtilityWindow];
 					} else {
 						_window = [[NSWindow alloc] initWithContentRect: NSMakeRect(0, 0, 0, 0) styleMask: style backing: NSBackingStoreBuffered defer: NO screen: nil];
+						[_window setAnimationBehavior: NSWindowAnimationBehaviorDocumentWindow];
 					}
 					if (!_window) { [_delegate release]; throw Exception(); }
 					[_window setReleasedWhenClosed: NO];
