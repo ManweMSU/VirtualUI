@@ -128,6 +128,7 @@ namespace Engine
 				if (out->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video) != S_OK) { transform->Release(); out->Release(); return 0; }
 				if (out->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_ARGB32) != S_OK) { transform->Release(); out->Release(); return 0; }
 				if (out->SetUINT32(MF_MT_ALPHA_MODE, DXGI_ALPHA_MODE_STRAIGHT) != S_OK) { transform->Release(); out->Release(); return 0; }
+				if (out->SetUINT32(MF_MT_DEFAULT_STRIDE, _desc.Width * 4) != S_OK) { transform->Release(); out->Release(); return 0; }
 				if (MFSetAttributeSize(out, MF_MT_FRAME_SIZE, _desc.Width, _desc.Height) != S_OK) { transform->Release(); out->Release(); return 0; }
 				if (transform->SetOutputType(0, out, 0) != S_OK) { transform->Release(); out->Release(); return 0; }
 				out->Release();
@@ -149,7 +150,7 @@ namespace Engine
 				sample->Release();
 				SafePointer<Codec::Frame> result;
 				try {
-					result = new Codec::Frame(_desc.Width, _desc.Height, _desc.Width * 4, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Straight, Codec::ScanOrigin::BottomUp);
+					result = new Codec::Frame(_desc.Width, _desc.Height, _desc.Width * 4, Codec::PixelFormat::B8G8R8A8, Codec::AlphaMode::Straight, Codec::ScanOrigin::TopDown);
 					LPBYTE data;
 					if (buffer->Lock(&data, 0, 0) != S_OK) throw Exception();
 					MemoryCopy(result->GetData(), data, _desc.Width * _desc.Height * 4);
@@ -2194,10 +2195,10 @@ namespace Engine
 						SafePointer<Codec::Frame> image;
 						bool convert = false;
 						if (frame->GetPixelFormat() != Codec::PixelFormat::B8G8R8A8) convert = true;
-						else if (frame->GetScanOrigin() != Codec::ScanOrigin::BottomUp) convert = true;
+						else if (frame->GetScanOrigin() != Codec::ScanOrigin::TopDown) convert = true;
 						else if (frame->GetScanLineLength() != frame->GetWidth() * 4) convert = true;
 						if (convert) {
-							image = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::ScanOrigin::BottomUp);
+							image = frame->ConvertFormat(Codec::PixelFormat::B8G8R8A8, Codec::ScanOrigin::TopDown);
 						} else image.SetRetain(frame);
 						auto length = image->GetHeight() * image->GetScanLineLength();
 						IMFMediaBuffer * buffer;
