@@ -602,11 +602,7 @@ namespace Engine
 				self->_packets[p].PacketData = packet_block;
 				self->_packets[p].PacketDataActuallyUsed = packet_block->Length();
 				self->_packets[p].PacketRenderTime = present.value;
-				for (int i = 0; i < self->_packets.Length(); i++) if (self->_packets[i].PacketDataActuallyUsed >= 0) {
-					self->_packets.SwapAt(i, p);
-					p = i;
-					break;
-				}
+				for (int i = 0; i < p; i++) if (self->_packets[i].PacketDataActuallyUsed < 0) { self->_packets.SwapAt(i, p); break; }
 				self->_sync->Open();
 			}
 		public:
